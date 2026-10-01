@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.format.DateUtils
 import android.util.Patterns
 import android.view.View
 import android.view.ViewGroup
@@ -72,6 +73,9 @@ class MainActivity : AppCompatActivity() {
     private var pendingUrl: String? = null
     private var lastUrl = YT_HOME
     private var pageLoaded = false
+    private var signingIn = false          // Google's sign-in pages are open in the YouTube tab
+    private var signInWasSignedIn = false  // were we already signed in when the flow started?
+    private var sawAccounts = false        // did we reach Google's account pages during this flow?
 
     private var latestTasks: List<DownloadTask> = emptyList()
     private var selecting = false
@@ -170,10 +174,15 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { TaskRepository.tasks.collect { renderTasks(it) } }
-                launch { vm.events.collect { message(it) } }
+                launch {
+                    vm.events.collect {
+                        if (it == MainViewModel.ENGINE_REFRESHED) renderEngine() else message(it)
+                    }
+                }
                 launch {
                     while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
                         updateFloatingBar()
+                        checkSignIn()
                         delay(800)
                     }
                 }
@@ -287,6 +296,7 @@ class MainActivity : AppCompatActivity() {
                 val uri = request?.url ?: return true
                 val scheme = uri.scheme
                 if (scheme != "http" && scheme != "https") return true
+                if (signingIn && !uri.host.orEmpty().lowercase().startsWith("music.")) return false   // any step of Google's sign-in
                 return !isAllowedHost(uri.host.orEmpty())      // in-app browsing is YouTube only (no YouTube Music)
             }
 
@@ -370,6 +380,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectTop(index: Int) {
         topTab = index
+        if (index != 1) signingIn = false      // leaving YouTube ends the sign-in flow
         hm.searchFrame.isVisible = index == 0
         hm.webFrame.isVisible = index == 1
         hm.moreFrame.isVisible = index == 2
@@ -400,12 +411,42 @@ class MainActivity : AppCompatActivity() {
     private fun onPageChanged(url: String?) {
         if (url.isNullOrBlank() || url == "about:blank") return
         if (isAllowedUrl(url)) lastUrl = url
+        trackSignIn(url)
         // Hides "Open app" prompts and ads (the Download button is native, not part of the page)
         if (isAllowedUrl(url)) {
             hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
             hm.webView.evaluateJavascript(INJECT_JS, null)
         }
         updateFloatingBar()
+    }
+
+    /** Follows Google's sign-in so the page never stays stuck after you approve the login. */
+    private fun trackSignIn(url: String) {
+        if (!signingIn) return
+        val host = Uri.parse(url).host.orEmpty().lowercase()
+        if (host.startsWith("accounts.") || host.endsWith("google.com")) sawAccounts = true
+        val onYoutube = host == "m.youtube.com" || host == "www.youtube.com" || host == "youtube.com"
+        if (sawAccounts && onYoutube) finishSignIn(reload = false)
+    }
+
+    /** Called every moment: the login cookie appeared but Google's page did not move on by itself. */
+    private fun checkSignIn() {
+        if (signingIn && !signInWasSignedIn && CookieHelper.isSignedIn()) {
+            signingIn = false
+            hm.webView.postDelayed({
+                if (topTab == 1) hm.webView.loadUrl(YT_HOME)
+                renderAccountStatus()
+                message("Signed in to YouTube")
+            }, 1200)
+        }
+    }
+
+    private fun finishSignIn(reload: Boolean) {
+        signingIn = false
+        CookieManager.getInstance().flush()
+        renderAccountStatus()
+        if (reload && topTab == 1) hm.webView.loadUrl(YT_HOME)
+        message("Signed in to YouTube")
     }
 
     /** The video page that is open right now, or null when the page is not a video. */
@@ -484,7 +525,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTab(index: Int) {
         if (index != 1 && selecting) exitSelection()
-        if (index == 2) renderAccountStatus()
+        if (index == 2) { renderAccountStatus(); renderEngine() }
         tab = index
         hm.root.isVisible = index == 0
         pl.root.isVisible = index == 1
@@ -1115,6 +1156,8 @@ class MainActivity : AppCompatActivity() {
             renderRecents()
             message("Search history cleared")
         }
+        st.updateNowBtn.setOnClickListener { vm.updateNow() }
+        renderEngine()
         st.signInBtn.setOnClickListener { openSignIn() }
         st.signOutBtn.setOnClickListener {
             confirm(
@@ -1139,6 +1182,14 @@ class MainActivity : AppCompatActivity() {
         st.versionText.text = "RAINAX YT DOWNLOADER  v$version"
     }
 
+    private fun renderEngine() {
+        val last = AppPrefs.lastUpdate(this)
+        val auto = "Checks for updates every time you open the app."
+        st.engineStatus.text = if (last == 0L) auto else
+            "Last updated " + DateUtils.getRelativeTimeSpanString(last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS) +
+                ". " + auto
+    }
+
     private fun renderFolder() {
         st.folderPath.text = FileStore.describe(this)
     }
@@ -1146,12 +1197,15 @@ class MainActivity : AppCompatActivity() {
     private fun renderAccountStatus() {
         val signedIn = CookieHelper.isSignedIn()
         st.accountStatus.text = if (signedIn) "Signed in to YouTube" else "Not signed in"
-        st.signInBtn.text = if (signedIn) "Open YouTube sign-in again" else "Sign in to YouTube"
+        st.signInBtn.text = if (signedIn) "Switch Google account" else "Sign in to YouTube"
         st.signOutBtn.isEnabled = signedIn
     }
 
     /** Opens Google's own sign-in page in the YouTube tab. */
     private fun openSignIn() {
+        signingIn = true
+        sawAccounts = false
+        signInWasSignedIn = CookieHelper.isSignedIn()
         b.bottomNav.selectedItemId = R.id.nav_home
         openYoutube(SIGN_IN_URL)
     }

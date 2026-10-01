@@ -33,11 +33,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TaskRepository.init(app)
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { Engine.ensureInit(app) }
-            // The download engine (yt-dlp) keeps itself up to date: no buttons, no questions
+            // yt-dlp is checked and updated in the background every time the app opens, then every 6 hours
+            var first = true
             while (true) {
                 val busy = TaskRepository.tasks.value.any { it.status == Status.RUNNING || it.status == Status.QUEUED }
-                if (!busy && System.currentTimeMillis() - AppPrefs.lastUpdate(app) > UPDATE_EVERY_MS) {
-                    updateEngine()          // never swap yt-dlp underneath a running download
+                val due = first || System.currentTimeMillis() - AppPrefs.lastUpdate(app) > UPDATE_EVERY_MS
+                if (!busy && due) {         // never swap yt-dlp underneath a running download
+                    updateEngine()
+                    first = false
+                    _events.tryEmit(ENGINE_REFRESHED)
                 }
                 delay(CHECK_EVERY_MS)
             }
@@ -52,6 +56,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         true
     } catch (e: Exception) {
         false
+    }
+
+    private var updating = false
+
+    /** Settings > Update yt-dlp now. */
+    fun updateNow() {
+        if (updating) return
+        updating = true
+        viewModelScope.launch {
+            _events.emit("Updating yt-dlp…")
+            val message = try {
+                val result = withContext(Dispatchers.IO) {
+                    Engine.ensureInit(app)
+                    YoutubeDL.getInstance().updateYoutubeDL(app, YoutubeDL.UpdateChannel.STABLE)
+                }
+                AppPrefs.setLastUpdate(app, System.currentTimeMillis())
+                "yt-dlp: " + (result?.toString()?.replace('_', ' ')?.lowercase() ?: "updated")
+            } catch (e: Exception) {
+                "Update failed: ${e.readable()}"
+            }
+            updating = false
+            _events.emit(message)
+            _events.emit(ENGINE_REFRESHED)
+        }
     }
 
     private fun cookiePath(url: String, cookie: String?): String? =
@@ -139,9 +167,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private companion object {
-        const val UPDATE_EVERY_MS = 6 * 3600 * 1000L      // check for a new yt-dlp every 6 hours
-        const val CHECK_EVERY_MS = 30 * 60 * 1000L        // while the app is open
-        const val AUTO_FIX_GAP_MS = 30 * 60 * 1000L       // at most one quick fix per 30 minutes
+    companion object {
+        /** Not shown to the user: tells the screen to refresh the "last updated" text. */
+        const val ENGINE_REFRESHED = "\u0000engine"
+
+        private const val UPDATE_EVERY_MS = 6 * 3600 * 1000L      // check for a new yt-dlp every 6 hours
+        private const val CHECK_EVERY_MS = 30 * 60 * 1000L        // while the app is open
+        private const val AUTO_FIX_GAP_MS = 30 * 60 * 1000L       // at most one quick fix per 30 minutes
     }
 }

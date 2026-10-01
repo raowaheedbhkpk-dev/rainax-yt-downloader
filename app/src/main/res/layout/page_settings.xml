@@ -328,7 +328,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Hides ads and skips video ads in the YouTube and Music tabs"
+                        android:text="Hides ads and skips video ads in the YouTube tab"
                         android:textColor="@color/rx_text2"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -396,6 +396,55 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Sign out" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:letterSpacing="0.08"
+            android:text="DOWNLOAD ENGINE"
+            android:textColor="@color/rx_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="yt-dlp"
+                    android:textColor="@color/rx_text"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/engineStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="14dp"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/updateNowBtn"
+            style="@style/Widget.Rainax.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Update yt-dlp now" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

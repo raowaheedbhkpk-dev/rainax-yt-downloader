@@ -13,14 +13,14 @@ through [youtubedl-android](https://github.com/yausername/youtubedl-android).
 - YouTube sign-in inside the app for private, members-only and age-restricted videos
 - Light, dark or system theme, optional ad blocking, Wi-Fi only mode
 - Choose your own download folder (default: `Downloads/rainax-yt-downloader`)
-- The download engine (yt-dlp) updates itself in the background, no buttons needed
+- The download engine (yt-dlp) updates itself every time the app opens (and has an Update now button)
 
 ## Build
 Push to `main`: the APK is in **Actions > Build RAINAX APK > Artifacts**.
-Push a tag such as `v7.1.2` to publish a **GitHub Release** with the APK and its SHA-256 checksum.
+Push a tag such as `v7.1.4` to publish a **GitHub Release** with the APK and its SHA-256 checksum.
 
 ```
-git tag v7.1.2 && git push origin v7.1.2
+git tag v7.1.4 && git push origin v7.1.4
 ```
 
 Requires Android 10 (API 29) or newer.
