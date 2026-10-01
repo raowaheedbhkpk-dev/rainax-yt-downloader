@@ -11,8 +11,8 @@ android {
         applicationId "com.rainax.ytdownloader"
         minSdk 29
         targetSdk 34
-        versionCode 13
-        versionName "7.5.0"
+        versionCode 14
+        versionName "7.5.1"
         ndk { abiFilters "arm64-v8a", "armeabi-v7a" }
     }
 

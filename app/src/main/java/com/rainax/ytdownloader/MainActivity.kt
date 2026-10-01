@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private var topTab = 0         // Find / YouTube / Sites
     private var pendingUrl: String? = null
     private var lastUrl = YT_HOME
+    private var lastVideoTime = 0.0          // seconds into the open video (kept across theme changes)
     private var pageLoaded = false
 
     private var latestTasks: List<DownloadTask> = emptyList()
@@ -160,6 +161,10 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             handleIntent(intent)
         } else {
+            // Theme switch or rotation rebuilds the screen: reopen the same page at the same second
+            savedInstanceState.getString("webUrl")?.takeIf { isAllowedUrl(it) }?.let {
+                lastUrl = withTime(it, savedInstanceState.getDouble("webTime", 0.0))
+            }
             b.bottomNav.selectedItemId = when (savedInstanceState.getInt("tab", 0)) {
                 1 -> R.id.nav_downloads
                 2 -> R.id.nav_settings
@@ -179,6 +184,7 @@ class MainActivity : AppCompatActivity() {
                 launch {
                     while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
                         updateFloatingBar()
+                        trackVideoTime()
                         delay(800)
                     }
                 }
@@ -190,6 +196,30 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putInt("tab", tab)
         outState.putInt("topTab", topTab)
+        if (pageLoaded) {
+            (hm.webView.url ?: lastUrl).let { outState.putString("webUrl", it) }
+            outState.putDouble("webTime", lastVideoTime)
+        }
+    }
+
+    /** Adds the start second to a video link (watch pages only). */
+    private fun withTime(url: String, sec: Double): String {
+        if (sec < 2 || !url.contains("/watch")) return url
+        val uri = Uri.parse(url)
+        val b = uri.buildUpon().clearQuery()
+        uri.queryParameterNames.filter { it != "t" }.forEach { n ->
+            uri.getQueryParameters(n).forEach { v -> b.appendQueryParameter(n, v) }
+        }
+        b.appendQueryParameter("t", "${sec.toInt()}s")
+        return b.build().toString()
+    }
+
+    /** Remembers how far the open video has played. */
+    private fun trackVideoTime() {
+        if (topTab != 1 || currentVideoUrl() == null) return
+        hm.webView.evaluateJavascript(
+            "(function(){var v=document.querySelector('video');return v?v.currentTime:0;})()"
+        ) { r -> r?.replace("\"", "")?.toDoubleOrNull()?.let { if (it > 0) lastVideoTime = it } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -426,7 +456,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun onPageChanged(url: String?) {
         if (url.isNullOrBlank() || url == "about:blank") return
-        if (isAllowedUrl(url)) lastUrl = url
+        if (isAllowedUrl(url)) {
+            if (url != lastUrl && Uri.parse(url).getQueryParameter("v") != Uri.parse(lastUrl).getQueryParameter("v")) lastVideoTime = 0.0
+            lastUrl = url
+        }
         // Hides "Open app" prompts and ads (the Download button is native, not part of the page)
         if (isAllowedUrl(url)) {
             hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
