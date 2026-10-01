@@ -259,8 +259,7 @@ class MainActivity : AppCompatActivity() {
 
         // Floating buttons (native, never injected into the page)
         hm.nbDownload.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, false) } }
-        hm.nbAudio.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, true) } }
-        hm.nbMore.setOnClickListener { currentVideoUrl()?.let { onMoreClick(it) } }
+        hm.nbAudio.setOnClickListener { currentVideoUrl()?.let { onAudioClick(it) } }
 
         // gradient RAINAX wordmark
         hm.brandWord.post {
@@ -423,7 +422,13 @@ class MainActivity : AppCompatActivity() {
 
     /** The floating Download buttons appear only on video pages of the YouTube tab. */
     private fun updateFloatingBar() {
-        hm.floatingBar.isVisible = tab == 0 && topTab == 1 && customView == null && currentVideoUrl() != null
+        val url = currentVideoUrl()
+        hm.floatingBar.isVisible = tab == 0 && topTab == 1 && customView == null && url != null
+        val playlist = url != null && url.contains("/playlist?")
+        hm.nbAudio.isVisible = !playlist
+        val label = if (playlist) "Download playlist" else "Download"
+        if (hm.nbDownload.text.toString() != label) hm.nbDownload.text = label
+        updateAudioButton(url)
     }
 
     private fun isAllowedUrl(url: String): Boolean {
@@ -436,27 +441,31 @@ class MainActivity : AppCompatActivity() {
         if (isAllowedUrl(url)) showDownloadSheet(listOf(url), preferAudio = audio)
     }
 
-    /** Floating "more" button. */
-    private fun onMoreClick(url: String) {
+    /** Headphones button: plays this video's audio in the background (or pauses/resumes it). */
+    private fun onAudioClick(url: String) {
         if (!isAllowedUrl(url)) return
-        AlertDialog.Builder(this)
-            .setItems(arrayOf("Copy link", "Share link", "Open in browser")) { _, which ->
-                when (which) {
-                    0 -> {
-                        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cm.setPrimaryClip(ClipData.newPlainText("link", url))
-                        AppPrefs.setLastClip(this, url)
-                        message("Link copied")
-                    }
-                    1 -> startActivity(
-                        Intent.createChooser(
-                            Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url), null
-                        )
-                    )
-                    2 -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                }
-            }
-            .show()
+        val playingThis = AudioPlayerService.currentUrl.value == url && AudioPlayerService.state.value != AudioPlayerService.IDLE
+        if (playingThis) {
+            AudioPlayerService.toggle(this)
+            return
+        }
+        hm.webView.evaluateJavascript("document.querySelectorAll('video,audio').forEach(function(v){try{v.pause()}catch(e){}});", null)
+        AudioPlayerService.play(this, url)
+        message("Starting background audio…")
+    }
+
+    private fun updateAudioButton(url: String?) {
+        val mine = url != null && AudioPlayerService.currentUrl.value == url
+        val icon = when {
+            !mine -> R.drawable.ic_headphones
+            AudioPlayerService.state.value == AudioPlayerService.PLAYING -> R.drawable.ic_pause
+            AudioPlayerService.state.value == AudioPlayerService.PAUSED -> R.drawable.ic_play
+            else -> R.drawable.ic_headphones
+        }
+        if (hm.nbAudio.tag != icon) {
+            hm.nbAudio.tag = icon
+            hm.nbAudio.setImageResource(icon)
+        }
     }
 
     /** Text becomes a YouTube search; anything that looks like a link opens the format sheet. */
@@ -652,7 +661,7 @@ class MainActivity : AppCompatActivity() {
             }
             val hasList = Uri.parse(firstUrl).getQueryParameter("list") != null
             sb.playlistBtn.isVisible =
-                mode == MODE_QUICK && single && hasList && !loading && !isPlaylist && error == null
+                false
 
             val rows: List<FormatRow> = when (mode) {
                 MODE_SUBS -> {

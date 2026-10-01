@@ -367,23 +367,11 @@
                     android:visibility="gone">
 
                     <com.google.android.material.floatingactionbutton.FloatingActionButton
-                        android:id="@+id/nbMore"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        android:contentDescription="More"
-                        app:backgroundTint="@color/rx_card"
-                        app:fabSize="mini"
-                        app:rippleColor="@color/rx_primary_container"
-                        app:srcCompat="@drawable/ic_more"
-                        app:tint="@color/rx_text" />
-
-                    <com.google.android.material.floatingactionbutton.FloatingActionButton
                         android:id="@+id/nbAudio"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        android:contentDescription="Download audio"
+                        android:contentDescription="Play audio in background"
                         app:backgroundTint="@color/rx_card"
                         app:fabSize="mini"
                         app:rippleColor="@color/rx_primary_container"

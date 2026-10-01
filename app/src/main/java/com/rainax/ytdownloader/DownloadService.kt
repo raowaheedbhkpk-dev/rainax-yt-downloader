@@ -554,7 +554,7 @@ class DownloadService : Service() {
             val intent = Intent(context, DownloadService::class.java).setAction(action)
             if (id != null) intent.putExtra(EXTRA_ID, id)
             if (ids != null) intent.putExtra(EXTRA_IDS, ids)
-            ContextCompat.startForegroundService(context, intent)
+            try { ContextCompat.startForegroundService(context, intent) } catch (e: Exception) { }
         }
     }
 }
