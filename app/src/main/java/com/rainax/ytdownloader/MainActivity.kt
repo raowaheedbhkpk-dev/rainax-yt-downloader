@@ -312,10 +312,32 @@ class MainActivity : AppCompatActivity() {
                 onPageChanged(url)
             }
 
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                // as early as possible: strip ads from the player data, hide ad frames
+                if (url != null && isAllowedUrl(url)) {
+                    hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
+                    hm.webView.evaluateJavascript(AD_STRIP_JS, null)
+                    hm.webView.evaluateJavascript(INJECT_JS, null)
+                }
+            }
+
+            override fun onPageCommitVisible(view: WebView?, url: String?) {
+                if (url != null && isAllowedUrl(url)) hm.webView.evaluateJavascript(INJECT_JS, null)
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
                 onPageChanged(url)
             }
         }
+        // Runs before any page script (when the WebView supports it): ads never reach the player
+        try {
+            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                androidx.webkit.WebViewCompat.addDocumentStartJavaScript(
+                    hm.webView, AD_STRIP_JS + "\n" + INJECT_JS,
+                    setOf("https://www.youtube.com", "https://m.youtube.com", "https://youtube.com")
+                )
+            }
+        } catch (e: Exception) { }
         hm.webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 hm.webProgress.isVisible = newProgress < 100
@@ -1260,7 +1282,7 @@ class MainActivity : AppCompatActivity() {
             "doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com",
             "imasdk.googleapis.com", "2mdn.net", "moatads.com", "adsrvr.org", "taboola.com", "outbrain.com"
         )
-        private val AD_PATHS = listOf("/pagead/", "/api/stats/ads", "/ptracking", "/get_midroll_info")
+        private val AD_PATHS = listOf("/pagead/", "/api/stats/ads", "/ptracking", "/get_midroll_info", "/api/stats/atr")
 
         /**
          * Runs inside the YouTube page: hides "Open app" prompts and ads.
@@ -1376,7 +1398,48 @@ class MainActivity : AppCompatActivity() {
   try{ dismissAppPrompts(); }catch(e){}
   try{ hideAds(); }catch(e){}
  },700);
- setInterval(function(){try{dismissAppPrompts();}catch(e){} try{adTick();}catch(e){}},300);
+ setInterval(function(){try{dismissAppPrompts();}catch(e){} try{adTick();}catch(e){}},120);
+ ['loadedmetadata','durationchange','playing','timeupdate'].forEach(function(n){
+  document.addEventListener(n,function(){try{adTick();}catch(e){}},true);
+ });
+ // While an ad is being skipped show a plain "Loading video" cover instead of a frozen ad frame
+ try{
+  if(window.__ytdlAdBlock!==false && !document.getElementById('ytdl-adcover')){
+   var st=document.createElement('style'); st.id='ytdl-adcover';
+   st.textContent='.html5-video-player.ad-showing .html5-main-video{opacity:0!important}'
+    +'.html5-video-player.ad-showing::after{content:"Loading video\\2026";position:absolute;left:0;top:0;right:0;bottom:0;'
+    +'background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font:500 14px sans-serif;z-index:60;pointer-events:none}';
+   (document.head||document.documentElement).appendChild(st);
+  }
+ }catch(e){}
+})();
+"""
+
+        /** Removes ad data from YouTube's player responses, so no ad is ever scheduled. */
+        private const val AD_STRIP_JS = """
+(function(){
+ try{
+  if(window.__ytdlStrip) return; window.__ytdlStrip=true;
+  var KEYS=['adPlacements','playerAds','adSlots'];
+  function clean(o){
+   if(!o||typeof o!=='object'||window.__ytdlAdBlock===false) return o;
+   try{
+    for(var i=0;i<KEYS.length;i++){ if(KEYS[i] in o) delete o[KEYS[i]]; }
+    if(o.playerResponse&&typeof o.playerResponse==='object'){
+     for(var j=0;j<KEYS.length;j++){ if(KEYS[j] in o.playerResponse) delete o.playerResponse[KEYS[j]]; }
+    }
+    if(Array.isArray(o)){ for(var k=0;k<o.length;k++){ var r=o[k]; if(r&&r.playerResponse) clean(r); } }
+   }catch(e){}
+   return o;
+  }
+  var P=JSON.parse;
+  JSON.parse=function(){ return clean(P.apply(this,arguments)); };
+  var RJ=Response.prototype.json;
+  Response.prototype.json=function(){ return RJ.apply(this,arguments).then(clean); };
+  var _ipr;
+  Object.defineProperty(window,'ytInitialPlayerResponse',{configurable:true,
+   get:function(){return _ipr;}, set:function(v){_ipr=clean(v);} });
+ }catch(e){}
 })();
 """
 
