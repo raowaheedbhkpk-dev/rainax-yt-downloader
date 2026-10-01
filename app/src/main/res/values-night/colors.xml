@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="rx_bg">#0A0C16</color>
+    <color name="rx_surface">#10132A</color>
+    <color name="rx_card">#171B35</color>
+    <color name="rx_surface_alt">#20254A</color>
+    <color name="rx_text">#F1F2FA</color>
+    <color name="rx_text2">#A0A6CB</color>
+    <color name="rx_outline">#2C3256</color>
+    <color name="rx_primary">#9487FF</color>
+    <color name="rx_on_primary">#0E0833</color>
+    <color name="rx_primary_container">#2D2570</color>
+    <color name="rx_on_primary_container">#E4E0FF</color>
+    <color name="rx_accent">#3CC8F5</color>
+    <color name="rx_error">#FF8A9E</color>
+    <color name="rx_error_container">#5A1A2A</color>
+</resources>
