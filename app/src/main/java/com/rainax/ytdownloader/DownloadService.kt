@@ -205,6 +205,11 @@ class DownloadService : Service() {
         }
     }
 
+    private fun isYoutube(url: String): Boolean {
+        val h = Uri.parse(url).host.orEmpty().lowercase()
+        return h.endsWith("youtube.com") || h == "youtu.be"
+    }
+
     private fun downloadOnce(id: String) {
         val task = TaskRepository.get(id) ?: return
         Engine.ensureInit(this)
@@ -229,7 +234,12 @@ class DownloadService : Service() {
             addOption("--retries", "10")
             addOption("--fragment-retries", "10")
             addOption("--socket-timeout", "30")
-            addOption("-N", "4")
+            // Speed: several pieces at once (HLS/DASH sites), smaller ranged requests for YouTube so it does not
+            // throttle, and a fresh link if the speed ever drops to a crawl
+            addOption("-N", "8")
+            addOption("--throttled-rate", "100K")
+            addOption("--buffer-size", "64K")
+            if (isYoutube(task.url)) addOption("--http-chunk-size", "10M")
             addOption("-o", "${dir.absolutePath}/%(title).80s.%(ext)s")
             cookieFile?.let { addOption("--cookies", it) }
             Formats.configure(this, task.format, task.subLang)
@@ -429,7 +439,10 @@ class DownloadService : Service() {
     // ---------- notifications ----------
 
     private fun promote() {
-        startForeground(FG_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        // Some phones refuse a foreground start in rare background cases: keep going instead of crashing
+        try {
+            startForeground(FG_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } catch (e: Exception) { }
     }
 
     private fun createChannels() {

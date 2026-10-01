@@ -354,7 +354,7 @@
                     app:indicatorColor="@color/rx_primary"
                     app:trackColor="@color/rx_surface_alt" />
 
-                <!-- Floating download buttons: native, shown on video pages only -->
+                <!-- Floating download button: native, shown on video and playlist pages only -->
                 <LinearLayout
                     android:id="@+id/floatingBar"
                     android:layout_width="wrap_content"
@@ -365,18 +365,6 @@
                     android:gravity="end"
                     android:orientation="vertical"
                     android:visibility="gone">
-
-                    <com.google.android.material.floatingactionbutton.FloatingActionButton
-                        android:id="@+id/nbAudio"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        android:contentDescription="Play audio in background"
-                        app:backgroundTint="@color/rx_card"
-                        app:fabSize="mini"
-                        app:rippleColor="@color/rx_primary_container"
-                        app:srcCompat="@drawable/ic_headphones"
-                        app:tint="@color/rx_text" />
 
                     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
                         android:id="@+id/nbDownload"

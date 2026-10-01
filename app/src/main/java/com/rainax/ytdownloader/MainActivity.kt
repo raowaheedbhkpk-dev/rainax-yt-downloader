@@ -71,10 +71,6 @@ class MainActivity : AppCompatActivity() {
     private var tab = 0            // bottom navigation: 0 Download, 1 Play, 2 Settings
     private var topTab = 0         // Find / YouTube / Sites
     private var pendingUrl: String? = null
-    private var leftWithAudio = false          // the app was hidden while background audio was on
-    private var prefetchUrl: String? = null
-    private var prefetchSince = 0L
-    private var prefetchDone = false
     private var lastUrl = YT_HOME
     private var pageLoaded = false
 
@@ -183,7 +179,6 @@ class MainActivity : AppCompatActivity() {
                 launch {
                     while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
                         updateFloatingBar()
-                        maybePrefetch()
                         delay(800)
                     }
                 }
@@ -213,25 +208,12 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    override fun onStop() {
-        leftWithAudio = audioActive
-        super.onStop()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // back from the background: the video takes over again from where the audio is
-        if (leftWithAudio && audioActive) stopAudio(resumeVideo = true)
-        leftWithAudio = false
-    }
-
     override fun onResume() {
         super.onResume()
         hm.webView.onResume()
     }
 
     override fun onDestroy() {
-        if (AudioPlayerService.state.value != AudioPlayerService.IDLE) AudioPlayerService.stop(this)
         sheet?.dismiss()
         (hm.webView.parent as? ViewGroup)?.removeView(hm.webView)
         hm.webView.stopLoading()
@@ -277,7 +259,6 @@ class MainActivity : AppCompatActivity() {
 
         // Floating buttons (native, never injected into the page)
         hm.nbDownload.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, false) } }
-        hm.nbAudio.setOnClickListener { currentVideoUrl()?.let { onAudioClick(it) } }
 
         // gradient RAINAX wordmark
         hm.brandWord.post {
@@ -465,10 +446,8 @@ class MainActivity : AppCompatActivity() {
         val url = currentVideoUrl()
         hm.floatingBar.isVisible = tab == 0 && topTab == 1 && customView == null && url != null
         val playlist = url != null && url.contains("/playlist?")
-        hm.nbAudio.isVisible = !playlist
         val label = if (playlist) "Download playlist" else "Download"
         if (hm.nbDownload.text.toString() != label) hm.nbDownload.text = label
-        updateAudioButton(url)
     }
 
     private fun isAllowedUrl(url: String): Boolean {
@@ -479,81 +458,6 @@ class MainActivity : AppCompatActivity() {
     /** Floating Download button (headphones = audio only). */
     private fun onDownloadClick(url: String, audio: Boolean) {
         if (isAllowedUrl(url)) showDownloadSheet(listOf(url), preferAudio = audio)
-    }
-
-    private val audioActive get() = AudioPlayerService.state.value != AudioPlayerService.IDLE
-
-    /** Headphones button: the video continues as background audio (tap again to go back to the video). */
-    private fun onAudioClick(url: String) {
-        if (!isAllowedUrl(url)) return
-        if (audioActive) {
-            stopAudio(resumeVideo = true)
-            message("Background play off")
-            return
-        }
-        val title = hm.webView.title.orEmpty().removeSuffix(" - YouTube").trim().ifBlank { "YouTube" }
-        AudioPlayerService.controller = { ev ->
-            runOnUiThread {
-                when (ev) {
-                    "ready" -> hm.webView.evaluateJavascript(HANDOFF_JS) { r ->
-                        val sec = r?.replace("\"", "")?.toDoubleOrNull() ?: 0.0
-                        AudioPlayerService.handoff(this, (sec * 1000).toLong())
-                    }
-                    "stop" -> stopAudio(resumeVideo = false)
-                    "failed" -> AudioPlayerService.controller = null
-                }
-            }
-        }
-        hm.webView.evaluateJavascript(TIME_JS) { r ->
-            val sec = r?.replace("\"", "")?.toDoubleOrNull() ?: 0.0
-            AudioPlayerService.play(this, url, title, (sec * 1000).toLong())
-        }
-        message(if (StreamResolver.isReady(url)) "Background play on" else "Getting audio ready. The video keeps playing")
-    }
-
-    /** Audio goes back to the page: the video continues from where the audio stopped. */
-    private fun stopAudio(resumeVideo: Boolean) {
-        val wasPlaying = AudioPlayerService.state.value == AudioPlayerService.PLAYING
-        AudioPlayerService.stop(this)
-        val pos = AudioPlayerService.lastPositionMs / 1000.0
-        if (pos > 1) {
-            val play = if (resumeVideo && wasPlaying) "v.play();" else ""
-            hm.webView.evaluateJavascript(
-                "(function(){var v=document.querySelector('video');if(!v)return;try{v.currentTime=$pos;}catch(e){}$play})()", null
-            )
-        }
-    }
-
-    /** While a video page stays open, find its audio address quietly so the headphones start at once. */
-    private fun maybePrefetch() {
-        val url = currentVideoUrl()
-        if (url == null || url.contains("/playlist?") || tab != 0 || topTab != 1) {
-            prefetchUrl = null
-            return
-        }
-        val now = System.currentTimeMillis()
-        if (url != prefetchUrl) {
-            prefetchUrl = url
-            prefetchSince = now
-            prefetchDone = false
-        } else if (!prefetchDone && now - prefetchSince > 2500) {
-            prefetchDone = true
-            val busy = TaskRepository.tasks.value.any { it.status == Status.RUNNING }
-            if (!busy) StreamResolver.request(this, url)
-        }
-    }
-
-    private fun updateAudioButton(@Suppress("UNUSED_PARAMETER") url: String?) {
-        val on = audioActive
-        if (hm.nbAudio.tag != on) {
-            hm.nbAudio.tag = on
-            hm.nbAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(this, if (on) R.color.rx_primary else R.color.rx_card)
-            )
-            hm.nbAudio.imageTintList = android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(this, if (on) R.color.rx_on_primary else R.color.rx_text)
-            )
-        }
     }
 
     /** Text becomes a YouTube search; anything that looks like a link opens the format sheet. */
@@ -1196,7 +1100,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         renderFolder()
-        st.chooseFolderBtn.setOnClickListener { pickFolder.launch(null) }
+        st.chooseFolderBtn.setOnClickListener {
+            try { pickFolder.launch(null) } catch (e: Exception) { message("This phone has no folder picker") }
+        }
         st.resetFolderBtn.setOnClickListener {
             AppPrefs.setSaveTree(this, "")
             renderFolder()
@@ -1303,11 +1209,6 @@ class MainActivity : AppCompatActivity() {
          * Runs inside the YouTube page: hides "Open app" prompts and ads.
          * It adds no buttons: the Download buttons are native and float above the page.
          */
-        private const val TIME_JS = "(function(){var v=document.querySelector('video');return v?v.currentTime:0;})()"
-
-        /** Pauses the page's video and returns the second it was at. */
-        private const val HANDOFF_JS = "(function(){var v=document.querySelector('video');if(!v)return 0;var t=v.currentTime;try{v.pause();}catch(e){}return t;})()"
-
         private const val INJECT_JS = """
 (function(){
  if(window.__ytdlInit3) return;

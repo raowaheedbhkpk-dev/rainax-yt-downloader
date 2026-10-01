@@ -8,7 +8,7 @@ object AppPrefs {
     fun wifiOnly(c: Context) = p(c).getBoolean("wifi_only", false)
     fun setWifiOnly(c: Context, v: Boolean) = p(c).edit().putBoolean("wifi_only", v).apply()
 
-    fun maxParallel(c: Context) = p(c).getInt("max_parallel", 2)
+    fun maxParallel(c: Context) = p(c).getInt("max_parallel", 3)
     fun setMaxParallel(c: Context, v: Int) = p(c).edit().putInt("max_parallel", v).apply()
 
     fun clipDetect(c: Context) = p(c).getBoolean("clip_detect", true)
