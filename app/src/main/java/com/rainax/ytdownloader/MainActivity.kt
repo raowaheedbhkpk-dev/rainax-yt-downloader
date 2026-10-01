@@ -71,9 +71,10 @@ class MainActivity : AppCompatActivity() {
     private var tab = 0            // bottom navigation: 0 Download, 1 Play, 2 Settings
     private var topTab = 0         // Find / YouTube / Sites
     private var pendingUrl: String? = null
-    private var bgOn = false                  // background play is active
-    private var bgPlaying = true
-    private var bgTitle = ""
+    private var leftWithAudio = false          // the app was hidden while background audio was on
+    private var prefetchUrl: String? = null
+    private var prefetchSince = 0L
+    private var prefetchDone = false
     private var lastUrl = YT_HOME
     private var pageLoaded = false
 
@@ -182,7 +183,7 @@ class MainActivity : AppCompatActivity() {
                 launch {
                     while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
                         updateFloatingBar()
-                        syncBackground()
+                        maybePrefetch()
                         delay(800)
                     }
                 }
@@ -207,9 +208,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        if (!bgOn) hm.webView.onPause()          // background play keeps the video running
+        hm.webView.onPause()
         CookieManager.getInstance().flush()      // keep the YouTube session
         super.onPause()
+    }
+
+    override fun onStop() {
+        leftWithAudio = audioActive
+        super.onStop()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // back from the background: the video takes over again from where the audio is
+        if (leftWithAudio && audioActive) stopAudio(resumeVideo = true)
+        leftWithAudio = false
     }
 
     override fun onResume() {
@@ -218,7 +231,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (bgOn) { bgOn = false; AudioPlayerService.stop(this) }
+        if (AudioPlayerService.state.value != AudioPlayerService.IDLE) AudioPlayerService.stop(this)
         sheet?.dismiss()
         (hm.webView.parent as? ViewGroup)?.removeView(hm.webView)
         hm.webView.stopLoading()
@@ -435,7 +448,6 @@ class MainActivity : AppCompatActivity() {
         if (isAllowedUrl(url)) lastUrl = url
         // Hides "Open app" prompts and ads (the Download button is native, not part of the page)
         if (isAllowedUrl(url)) {
-            if (bgOn) hm.webView.evaluateJavascript(BG_JS, null)
             hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
             hm.webView.evaluateJavascript(INJECT_JS, null)
         }
@@ -469,67 +481,70 @@ class MainActivity : AppCompatActivity() {
         if (isAllowedUrl(url)) showDownloadSheet(listOf(url), preferAudio = audio)
     }
 
-    /** Headphones button: switches background play on/off (the same video keeps playing when the app is hidden). */
+    private val audioActive get() = AudioPlayerService.state.value != AudioPlayerService.IDLE
+
+    /** Headphones button: the video continues as background audio (tap again to go back to the video). */
     private fun onAudioClick(url: String) {
         if (!isAllowedUrl(url)) return
-        if (bgOn) {
-            disableBackground(pauseVideo = false)
+        if (audioActive) {
+            stopAudio(resumeVideo = true)
             message("Background play off")
-        } else {
-            enableBackground()
-            message("Background play on. Press Home and the video keeps playing")
+            return
         }
-    }
-
-    private fun pageTitle(): String =
-        hm.webView.title.orEmpty().removeSuffix(" - YouTube").trim().ifBlank { "YouTube" }
-
-    private fun enableBackground() {
-        bgOn = true
-        bgPlaying = true
-        bgTitle = pageTitle()
-        hm.webView.evaluateJavascript(BG_JS, null)
-        AudioPlayerService.controller = { act ->
+        val title = hm.webView.title.orEmpty().removeSuffix(" - YouTube").trim().ifBlank { "YouTube" }
+        AudioPlayerService.controller = { ev ->
             runOnUiThread {
-                if (act == "toggle") hm.webView.evaluateJavascript(TOGGLE_JS, null)
-                else disableBackground(pauseVideo = true)
+                when (ev) {
+                    "ready" -> hm.webView.evaluateJavascript(HANDOFF_JS) { r ->
+                        val sec = r?.replace("\"", "")?.toDoubleOrNull() ?: 0.0
+                        AudioPlayerService.handoff(this, (sec * 1000).toLong())
+                    }
+                    "stop" -> stopAudio(resumeVideo = false)
+                    "failed" -> AudioPlayerService.controller = null
+                }
             }
         }
-        AudioPlayerService.start(this, bgTitle, true)
-        // make sure it is actually playing
-        hm.webView.evaluateJavascript(
-            "(function(){var v=document.querySelector('video');if(v&&v.paused){v.play();}})()", null
-        )
+        hm.webView.evaluateJavascript(TIME_JS) { r ->
+            val sec = r?.replace("\"", "")?.toDoubleOrNull() ?: 0.0
+            AudioPlayerService.play(this, url, title, (sec * 1000).toLong())
+        }
+        message(if (StreamResolver.isReady(url)) "Background play on" else "Getting audio ready. The video keeps playing")
     }
 
-    private fun disableBackground(pauseVideo: Boolean) {
-        bgOn = false
-        if (pauseVideo) hm.webView.evaluateJavascript(
-            "(function(){var v=document.querySelector('video');if(v){v.pause();}})()", null
-        )
+    /** Audio goes back to the page: the video continues from where the audio stopped. */
+    private fun stopAudio(resumeVideo: Boolean) {
+        val wasPlaying = AudioPlayerService.state.value == AudioPlayerService.PLAYING
         AudioPlayerService.stop(this)
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) hm.webView.onResume() else hm.webView.onPause()
+        val pos = AudioPlayerService.lastPositionMs / 1000.0
+        if (pos > 1) {
+            val play = if (resumeVideo && wasPlaying) "v.play();" else ""
+            hm.webView.evaluateJavascript(
+                "(function(){var v=document.querySelector('video');if(!v)return;try{v.currentTime=$pos;}catch(e){}$play})()", null
+            )
+        }
     }
 
-    /** Keeps the notification in sync with the video (title changes, play/pause). */
-    private fun syncBackground() {
-        if (!bgOn) return
-        hm.webView.evaluateJavascript(
-            "(function(){var v=document.querySelector('video');return v?(v.paused?'p':'r'):'n';})()"
-        ) { r ->
-            val playing = r?.contains("r") == true
-            val none = r?.contains("n") == true
-            val t = pageTitle()
-            if (!none && (playing != bgPlaying || t != bgTitle)) {
-                bgPlaying = playing
-                bgTitle = t
-                AudioPlayerService.update(this, t, playing)
-            }
+    /** While a video page stays open, find its audio address quietly so the headphones start at once. */
+    private fun maybePrefetch() {
+        val url = currentVideoUrl()
+        if (url == null || url.contains("/playlist?") || tab != 0 || topTab != 1) {
+            prefetchUrl = null
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (url != prefetchUrl) {
+            prefetchUrl = url
+            prefetchSince = now
+            prefetchDone = false
+        } else if (!prefetchDone && now - prefetchSince > 2500) {
+            prefetchDone = true
+            val busy = TaskRepository.tasks.value.any { it.status == Status.RUNNING }
+            if (!busy) StreamResolver.request(this, url)
         }
     }
 
     private fun updateAudioButton(@Suppress("UNUSED_PARAMETER") url: String?) {
-        val on = bgOn
+        val on = audioActive
         if (hm.nbAudio.tag != on) {
             hm.nbAudio.tag = on
             hm.nbAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
@@ -1288,26 +1303,10 @@ class MainActivity : AppCompatActivity() {
          * Runs inside the YouTube page: hides "Open app" prompts and ads.
          * It adds no buttons: the Download buttons are native and float above the page.
          */
-        /** Makes the page believe it is always visible, so YouTube does not pause the video when the app is hidden. */
-        private const val BG_JS = """
-(function(){
- try{
-  if(window.__ytdlBg) return; window.__ytdlBg=true;
-  Object.defineProperty(document,'hidden',{configurable:true,get:function(){return false;}});
-  Object.defineProperty(document,'webkitHidden',{configurable:true,get:function(){return false;}});
-  Object.defineProperty(document,'visibilityState',{configurable:true,get:function(){return 'visible';}});
-  Object.defineProperty(document,'webkitVisibilityState',{configurable:true,get:function(){return 'visible';}});
-  ['visibilitychange','webkitvisibilitychange'].forEach(function(n){
-   document.addEventListener(n,function(e){e.stopImmediatePropagation();},true);
-  });
-  ['blur','pagehide','freeze'].forEach(function(n){
-   window.addEventListener(n,function(e){e.stopImmediatePropagation();},true);
-  });
- }catch(e){}
-})();
-"""
+        private const val TIME_JS = "(function(){var v=document.querySelector('video');return v?v.currentTime:0;})()"
 
-        private const val TOGGLE_JS = "(function(){var v=document.querySelector('video');if(!v)return;if(v.paused){v.play();}else{v.pause();}})();"
+        /** Pauses the page's video and returns the second it was at. */
+        private const val HANDOFF_JS = "(function(){var v=document.querySelector('video');if(!v)return 0;var t=v.currentTime;try{v.pause();}catch(e){}return t;})()"
 
         private const val INJECT_JS = """
 (function(){
