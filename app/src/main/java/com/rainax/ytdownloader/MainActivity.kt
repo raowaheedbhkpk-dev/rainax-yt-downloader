@@ -321,6 +321,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * YouTube remembers its own light/dark choice in a cookie, so it would keep the old look after the app theme
+     * changes. Before every load we write the app's current theme into that cookie.
+     */
+    private fun syncYoutubeTheme() {
+        try {
+            val cm = CookieManager.getInstance()
+            val site = "https://www.youtube.com"
+            val pref = cm.getCookie(site).orEmpty().split(";").map { it.trim() }
+                .firstOrNull { it.startsWith("PREF=") }?.removePrefix("PREF=").orEmpty()
+            val map = linkedMapOf<String, String>()
+            pref.split("&").filter { it.contains("=") }.forEach { map[it.substringBefore("=")] = it.substringAfter("=") }
+            val old = map["f6"]?.toLongOrNull(16) ?: 0L
+            val themeBits = 0x400L or 0x80000L                       // dark bit / light bit
+            val now = (old and themeBits.inv()) or (if (isDarkUi()) 0x400L else 0x80000L)
+            map["f6"] = java.lang.Long.toHexString(now)
+            val value = map.entries.joinToString("&") { it.key + "=" + it.value }
+            cm.setCookie(site, "PREF=$value; Domain=.youtube.com; Path=/; Secure; Max-Age=31536000")
+            cm.flush()
+        } catch (e: Exception) {
+            // the page then simply follows the device theme
+        }
+    }
+
     private fun isDarkUi() =
         (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
@@ -352,6 +376,7 @@ class MainActivity : AppCompatActivity() {
         if (index == 1) {
             val target = pendingUrl ?: lastUrl
             if (pendingUrl != null || !pageLoaded) {
+                syncYoutubeTheme()
                 hm.webView.stopLoading()
                 hm.webView.loadUrl(target)
                 pageLoaded = true
@@ -364,6 +389,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openYoutube(url: String) {
         if (topTab == 1) {
+            syncYoutubeTheme()
             hm.webView.loadUrl(url)
         } else {
             pendingUrl = url

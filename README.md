@@ -17,10 +17,10 @@ through [youtubedl-android](https://github.com/yausername/youtubedl-android).
 
 ## Build
 Push to `main`: the APK is in **Actions > Build RAINAX APK > Artifacts**.
-Push a tag such as `v7.1.1` to publish a **GitHub Release** with the APK and its SHA-256 checksum.
+Push a tag such as `v7.1.2` to publish a **GitHub Release** with the APK and its SHA-256 checksum.
 
 ```
-git tag v7.1.1 && git push origin v7.1.1
+git tag v7.1.2 && git push origin v7.1.2
 ```
 
 Requires Android 10 (API 29) or newer.
