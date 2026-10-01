@@ -165,9 +165,6 @@ class DownloadService : Service() {
 
     private suspend fun runTask(id: String) {
         var attempt = TaskRepository.get(id)?.retries ?: return
-        // Long queues on a signed-in account: breathe between videos (yt-dlp's advice to avoid limits)
-        val busy = TaskRepository.tasks.value.count { it.status == Status.QUEUED || it.status == Status.RUNNING }
-        if (busy > 3 && CookieHelper.isSignedIn()) delay((1500..4000).random().toLong())
         while (true) {
             try {
                 downloadOnce(id)
@@ -179,6 +176,10 @@ class DownloadService : Service() {
                 if (cur.status != Status.RUNNING) return            // paused
                 val msg = e.readable()
 
+                if (msg.lowercase().let { "private video" in it || "members-only" in it || "join this channel" in it }) {
+                    TaskRepository.remove(id)                       // private videos are skipped, never listed
+                    return
+                }
                 if (msg.isFatalError()) {
                     TaskRepository.update(id, true) { it.copy(status = Status.FAILED, message = friendlyError(msg)) }
                     notifyDone(cur, false)
@@ -208,7 +209,7 @@ class DownloadService : Service() {
         val task = TaskRepository.get(id) ?: return
         Engine.ensureInit(this)
         // Always use the CURRENT browser sign-in (YouTube rotates cookies during long queues)
-        val cookieFile = CookieHelper.fresh(this, id, task.url)
+        val cookieFile: String? = null
 
         // Links added in bulk have no title yet: look it up now
         if (task.title.isBlank()) {

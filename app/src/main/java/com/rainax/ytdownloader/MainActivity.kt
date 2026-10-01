@@ -73,9 +73,6 @@ class MainActivity : AppCompatActivity() {
     private var pendingUrl: String? = null
     private var lastUrl = YT_HOME
     private var pageLoaded = false
-    private var signingIn = false          // Google's sign-in pages are open in the YouTube tab
-    private var signInWasSignedIn = false  // were we already signed in when the flow started?
-    private var sawAccounts = false        // did we reach Google's account pages during this flow?
 
     private var latestTasks: List<DownloadTask> = emptyList()
     private var selecting = false
@@ -182,7 +179,6 @@ class MainActivity : AppCompatActivity() {
                 launch {
                     while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
                         updateFloatingBar()
-                        checkSignIn()
                         delay(800)
                     }
                 }
@@ -288,6 +284,7 @@ class MainActivity : AppCompatActivity() {
         ws.mediaPlaybackRequiresUserGesture = true
         ws.allowFileAccess = false
         ws.allowContentAccess = false
+        CookieHelper.clearAccount()              // this app has no accounts
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(hm.webView, true)
 
@@ -296,7 +293,7 @@ class MainActivity : AppCompatActivity() {
                 val uri = request?.url ?: return true
                 val scheme = uri.scheme
                 if (scheme != "http" && scheme != "https") return true
-                if (signingIn && !uri.host.orEmpty().lowercase().startsWith("music.")) return false   // any step of Google's sign-in
+                if (uri.host.orEmpty().lowercase().startsWith("accounts.") || uri.path.orEmpty().contains("ServiceLogin")) return true   // no sign-in in this app
                 return !isAllowedHost(uri.host.orEmpty())      // in-app browsing is YouTube only (no YouTube Music)
             }
 
@@ -380,7 +377,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectTop(index: Int) {
         topTab = index
-        if (index != 1) signingIn = false      // leaving YouTube ends the sign-in flow
         hm.searchFrame.isVisible = index == 0
         hm.webFrame.isVisible = index == 1
         hm.moreFrame.isVisible = index == 2
@@ -411,42 +407,12 @@ class MainActivity : AppCompatActivity() {
     private fun onPageChanged(url: String?) {
         if (url.isNullOrBlank() || url == "about:blank") return
         if (isAllowedUrl(url)) lastUrl = url
-        trackSignIn(url)
         // Hides "Open app" prompts and ads (the Download button is native, not part of the page)
         if (isAllowedUrl(url)) {
             hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
             hm.webView.evaluateJavascript(INJECT_JS, null)
         }
         updateFloatingBar()
-    }
-
-    /** Follows Google's sign-in so the page never stays stuck after you approve the login. */
-    private fun trackSignIn(url: String) {
-        if (!signingIn) return
-        val host = Uri.parse(url).host.orEmpty().lowercase()
-        if (host.startsWith("accounts.") || host.endsWith("google.com")) sawAccounts = true
-        val onYoutube = host == "m.youtube.com" || host == "www.youtube.com" || host == "youtube.com"
-        if (sawAccounts && onYoutube) finishSignIn(reload = false)
-    }
-
-    /** Called every moment: the login cookie appeared but Google's page did not move on by itself. */
-    private fun checkSignIn() {
-        if (signingIn && !signInWasSignedIn && CookieHelper.isSignedIn()) {
-            signingIn = false
-            hm.webView.postDelayed({
-                if (topTab == 1) hm.webView.loadUrl(YT_HOME)
-                renderAccountStatus()
-                message("Signed in to YouTube")
-            }, 1200)
-        }
-    }
-
-    private fun finishSignIn(reload: Boolean) {
-        signingIn = false
-        CookieManager.getInstance().flush()
-        renderAccountStatus()
-        if (reload && topTab == 1) hm.webView.loadUrl(YT_HOME)
-        message("Signed in to YouTube")
     }
 
     /** The video page that is open right now, or null when the page is not a video. */
@@ -525,7 +491,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTab(index: Int) {
         if (index != 1 && selecting) exitSelection()
-        if (index == 2) { renderAccountStatus(); renderEngine() }
+        if (index == 2) renderEngine()
         tab = index
         hm.root.isVisible = index == 0
         pl.root.isVisible = index == 1
@@ -626,7 +592,7 @@ class MainActivity : AppCompatActivity() {
 
         val single = urls.size == 1
         val firstUrl = urls[0]
-        val cookies = urls.associateWith { CookieHelper.cookieString(it) }
+        val cookies = urls.associateWith { null as String? }
         val screenH = resources.displayMetrics.heightPixels
 
         var current: PreviewState? = null
@@ -681,7 +647,6 @@ class MainActivity : AppCompatActivity() {
             sb.previewLoading.isVisible = loading
 
             sb.errorBlock.isVisible = error != null
-            sb.signInBtn.isVisible = error != null && error.contains("sign in", ignoreCase = true)
             if (error != null) {
                 sb.errorText.text = error + "\n\nTap Retry, or pick a format below to try anyway."
             }
@@ -737,10 +702,6 @@ class MainActivity : AppCompatActivity() {
             render()
         }
         sb.retryBtn.setOnClickListener { vm.fetchInfo(firstUrl, cookies[firstUrl]) }
-        sb.signInBtn.setOnClickListener {
-            dialog.dismiss()
-            openSignIn()
-        }
         sb.playlistBtn.setOnClickListener {
             val id = Uri.parse(firstUrl).getQueryParameter("list").orEmpty()
             vm.fetchInfo("https://www.youtube.com/playlist?list=$id", cookies[firstUrl], forcePlaylist = true)
@@ -1158,22 +1119,6 @@ class MainActivity : AppCompatActivity() {
         }
         st.updateNowBtn.setOnClickListener { vm.updateNow() }
         renderEngine()
-        st.signInBtn.setOnClickListener { openSignIn() }
-        st.signOutBtn.setOnClickListener {
-            confirm(
-                "Sign out of YouTube?",
-                "Private and age-restricted videos will stop downloading until you sign in again."
-            ) {
-                CookieManager.getInstance().removeAllCookies {
-                    CookieManager.getInstance().flush()
-                    renderAccountStatus()
-                    if (topTab == 1) hm.webView.reload()
-                    message("Signed out")
-                }
-            }
-        }
-        renderAccountStatus()
-
         val version = try {
             packageManager.getPackageInfo(packageName, 0).versionName
         } catch (e: Exception) {
@@ -1192,22 +1137,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderFolder() {
         st.folderPath.text = FileStore.describe(this)
-    }
-
-    private fun renderAccountStatus() {
-        val signedIn = CookieHelper.isSignedIn()
-        st.accountStatus.text = if (signedIn) "Signed in to YouTube" else "Not signed in"
-        st.signInBtn.text = if (signedIn) "Switch Google account" else "Sign in to YouTube"
-        st.signOutBtn.isEnabled = signedIn
-    }
-
-    /** Opens Google's own sign-in page in the YouTube tab. */
-    private fun openSignIn() {
-        signingIn = true
-        sawAccounts = false
-        signInWasSignedIn = CookieHelper.isSignedIn()
-        b.bottomNav.selectedItemId = R.id.nav_home
-        openYoutube(SIGN_IN_URL)
     }
 
     private fun nudgeService() {
@@ -1262,8 +1191,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val YT_HOME = "https://m.youtube.com"
-        private const val SIGN_IN_URL =
-            "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fm.youtube.com%2F"
 
         private const val MODE_QUICK = 0
         private const val MODE_ALL = 1
@@ -1285,8 +1212,9 @@ class MainActivity : AppCompatActivity() {
  window.__ytdlInit3=true;
 
  function norm(s){return (s||'').replace(/\s+/g,' ').trim().toLowerCase();}
- var BAD={'open app':1,'open in app':1,'open the app':1,'get app':1,'use app':1,'try app':1,'open youtube app':1};
+ var BAD={'open app':1,'open in app':1,'open the app':1,'get app':1,'use app':1,'try app':1,'open youtube app':1,'sign in':1,'sign in to youtube':1};
  var HIDE_SEL='ytm-mealbar-promo-renderer,ytm-open-app-button,ytm-app-promo-renderer,ytm-upsell-dialog-renderer,.open-app-button,'
+  +'a[href*="ServiceLogin"],a[href*="accounts.google.com"],ytm-topbar-menu-button-renderer a[aria-label*="ign in" i],'
   +'a[href^="intent:"],a[href^="vnd.youtube:"],a[href*="youtube.com/app/"]';
 
  function hideOpenApp(){

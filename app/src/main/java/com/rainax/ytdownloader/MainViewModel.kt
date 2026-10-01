@@ -82,15 +82,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun cookiePath(url: String, cookie: String?): String? =
-        cookie?.let { CookieHelper.writeFile(app, "info", url, it) } ?: CookieHelper.fresh(app, "info", url)
+    @Suppress("UNUSED_PARAMETER")
+    private fun cookiePath(url: String, cookie: String?, guest: Boolean = false): String? = null
 
-    private suspend fun doFetch(url: String, cookie: String?, forcePlaylist: Boolean): PreviewState = try {
+    private suspend fun doFetch(url: String, cookie: String?, forcePlaylist: Boolean, guest: Boolean = false): PreviewState = try {
         withContext(Dispatchers.IO) {
             if (forcePlaylist || isPlaylistUrl(url)) {
-                InfoFetcher.fetchPlaylist(app, url, cookiePath(url, cookie))
+                InfoFetcher.fetchPlaylist(app, url, cookiePath(url, cookie, guest))
             } else {
-                InfoFetcher.fetch(app, url, cookiePath(url, cookie))
+                InfoFetcher.fetch(app, url, cookiePath(url, cookie, guest))
             }
         }
     } catch (e: CancellationException) {

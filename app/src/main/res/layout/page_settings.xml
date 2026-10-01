@@ -347,61 +347,6 @@
             android:layout_marginTop="24dp"
             android:layout_marginBottom="8dp"
             android:letterSpacing="0.08"
-            android:text="YOUTUBE ACCOUNT"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
-
-                <TextView
-                    android:id="@+id/accountStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:textColor="@color/rx_text"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="Sign in once in the YouTube tab. Private, members-only and age-restricted videos and playlists (like Liked videos) then download with that same session. Your login stays on this phone."
-                    android:textColor="@color/rx_text2"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/signInBtn"
-            style="@style/Widget.Rainax.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Sign in to YouTube" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/signOutBtn"
-            style="@style/Widget.Rainax.Button.Outlined"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Sign out" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
             android:text="DOWNLOAD ENGINE"
             android:textColor="@color/rx_primary"
             android:textSize="12sp"

@@ -32,11 +32,11 @@ fun isPlaylistUrl(url: String): Boolean =
 fun friendlyError(raw: String): String {
     val m = raw.lowercase()
     return when {
-        "private video" in m -> "Private video. Sign in with the account that owns it (Settings > YouTube account)."
+        "private video" in m -> "Private video — skipped."
         "sign in to confirm" in m || "not a bot" in m ->
-            "YouTube wants you signed in. Sign in from Settings > YouTube account."
+            "YouTube blocked this request. Try again in a while."
         "confirm your age" in m || "age-restricted" in m || "inappropriate for some users" in m ->
-            "Age-restricted. Sign in from Settings > YouTube account."
+            "Age-restricted video — can't be downloaded."
         "members-only" in m || "join this channel" in m -> "Members-only video."
         "video unavailable" in m || "has been removed" in m || "is not available" in m ->
             "Video removed or unavailable."

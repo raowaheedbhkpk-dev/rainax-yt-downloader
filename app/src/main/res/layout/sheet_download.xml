@@ -92,14 +92,6 @@
                 android:text="Retry" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/signInBtn"
-            style="@style/Widget.Rainax.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Sign in to YouTube"
-            android:visibility="gone" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton

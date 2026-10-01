@@ -65,7 +65,6 @@ object InfoFetcher {
         val entries = json.optJSONArray("entries") ?: error("No playlist found")
         val list = mutableListOf<PlaylistEntry>()
         var skipped = 0
-        val signedIn = cookiesPath != null
         for (i in 0 until entries.length()) {
             val e = entries.optJSONObject(i) ?: continue
             var u = str(e, "url") ?: str(e, "webpage_url") ?: str(e, "id")
@@ -76,8 +75,8 @@ object InfoFetcher {
             val tl = title.lowercase()
             val avail = str(e, "availability").orEmpty().lowercase()
             val unavailable = tl.contains("private video") || tl.contains("deleted video") ||
-                (!signedIn && (avail == "private" || avail == "needs_auth" ||
-                    avail == "premium_only" || avail == "subscriber_only"))
+                (avail == "private" || avail == "needs_auth" ||
+                    avail == "premium_only" || avail == "subscriber_only")
             if (unavailable) {
                 skipped++
                 continue
