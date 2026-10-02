@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="rxBg" format="color" />
+    <attr name="rxSurface" format="color" />
+    <attr name="rxCard" format="color" />
+    <attr name="rxSurfaceAlt" format="color" />
+    <attr name="rxOutline" format="color" />
+</resources>

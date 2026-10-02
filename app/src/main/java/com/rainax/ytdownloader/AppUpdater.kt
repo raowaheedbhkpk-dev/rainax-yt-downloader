@@ -1,0 +1,242 @@
+package com.rainax.ytdownloader
+
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.view.Gravity
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+
+/**
+ * In-app updates from the GitHub Releases of this app's repository.
+ * The app checks the latest release, shows what's new, downloads the APK and opens the Android installer.
+ * (Works when the repository / its releases are public.)
+ */
+object AppUpdater {
+    const val REPO = "raowaheedbhkpk-dev/rainax-yt-downloader"
+    private const val GAP_MS = 6 * 60 * 60 * 1000L
+
+    private class Release(val version: String, val notes: String, val apkUrl: String, val size: Long)
+
+    private var pendingApk: File? = null
+    private var job: Job? = null
+
+    /** Quiet check when the app opens (at most every 6 hours). */
+    fun checkOnStart(activity: AppCompatActivity) {
+        if (!AppPrefs.autoAppUpdate(activity)) return
+        if (System.currentTimeMillis() - AppPrefs.lastAppCheck(activity) < GAP_MS) return
+        check(activity, manual = false)
+    }
+
+    fun check(activity: AppCompatActivity, manual: Boolean) {
+        if (job?.isActive == true) return
+        job = activity.lifecycleScope.launch {
+            if (manual) toast(activity, "Checking for updates…")
+            val rel = withContext(Dispatchers.IO) {
+                try { fetchLatest() } catch (e: Exception) { null }
+            }
+            AppPrefs.setLastAppCheck(activity, System.currentTimeMillis())
+            if (activity.isFinishing) return@launch
+            val current = currentVersion(activity)
+            when {
+                rel == null -> if (manual) {
+                    AlertDialog.Builder(activity)
+                        .setTitle("Couldn't check for updates")
+                        .setMessage("Check your internet connection. Updates are read from the app's GitHub Releases page, which must be public.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+                !isNewer(rel.version, current) -> if (manual) toast(activity, "You have the latest version (v$current)")
+                !manual && rel.version == AppPrefs.skippedVersion(activity) -> {}
+                else -> offer(activity, rel, current)
+            }
+        }
+    }
+
+    /** Back from "Allow installs from this app": continue the install that was waiting. */
+    fun resumeInstall(activity: AppCompatActivity) {
+        val f = pendingApk ?: return
+        if (activity.packageManager.canRequestPackageInstalls() && f.exists()) {
+            pendingApk = null
+            install(activity, f)
+        }
+    }
+
+    private fun currentVersion(activity: AppCompatActivity): String = try {
+        activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "0"
+    } catch (e: Exception) {
+        "0"
+    }
+
+    private fun fetchLatest(): Release? {
+        val con = URL("https://api.github.com/repos/$REPO/releases/latest").openConnection() as HttpURLConnection
+        con.connectTimeout = 15_000
+        con.readTimeout = 15_000
+        con.setRequestProperty("Accept", "application/vnd.github+json")
+        con.setRequestProperty("User-Agent", "RAINAX-YT-Downloader")
+        try {
+            if (con.responseCode != 200) return null
+            val json = JSONObject(con.inputStream.bufferedReader().use { it.readText() })
+            val tag = json.optString("tag_name").trim().removePrefix("v").removePrefix("V")
+            if (tag.isBlank()) return null
+            val assets = json.optJSONArray("assets") ?: return null
+            for (i in 0 until assets.length()) {
+                val a = assets.optJSONObject(i) ?: continue
+                if (a.optString("name").endsWith(".apk", ignoreCase = true)) {
+                    return Release(tag, json.optString("body").trim(), a.optString("browser_download_url"), a.optLong("size"))
+                }
+            }
+            return null
+        } finally {
+            con.disconnect()
+        }
+    }
+
+    /** "7.10.0" > "7.9.2" (number by number). */
+    private fun isNewer(latest: String, current: String): Boolean {
+        val a = latest.split('.', '-').map { it.filter(Char::isDigit).toIntOrNull() ?: 0 }
+        val b = current.split('.', '-').map { it.filter(Char::isDigit).toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(a.size, b.size)) {
+            val x = a.getOrElse(i) { 0 }
+            val y = b.getOrElse(i) { 0 }
+            if (x != y) return x > y
+        }
+        return false
+    }
+
+    private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
+        val notes = rel.notes.ifBlank { "Improvements and fixes." }.take(1500)
+        val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
+        AlertDialog.Builder(activity)
+            .setTitle("Update available: v${rel.version}")
+            .setMessage("You have v$current.\n\nWhat's new:\n$notes$size")
+            .setPositiveButton("Update") { _, _ -> download(activity, rel) }
+            .setNegativeButton("Later", null)
+            .setNeutralButton("Skip this version") { _, _ -> AppPrefs.setSkippedVersion(activity, rel.version) }
+            .show()
+    }
+
+    private fun download(activity: AppCompatActivity, rel: Release) {
+        val density = activity.resources.displayMetrics.density
+        val bar = LinearProgressIndicator(activity).apply { max = 100; isIndeterminate = true }
+        val text = TextView(activity).apply {
+            text = "Starting…"
+            gravity = Gravity.END
+            setPadding(0, (8 * density).toInt(), 0, 0)
+        }
+        val box = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = (24 * density).toInt()
+            setPadding(p, (12 * density).toInt(), p, 0)
+            addView(bar)
+            addView(text)
+        }
+        var dl: Job? = null
+        val dialog = AlertDialog.Builder(activity)
+            .setTitle("Downloading v${rel.version}")
+            .setView(box)
+            .setCancelable(false)
+            .setNegativeButton("Cancel") { _, _ -> dl?.cancel() }
+            .show()
+
+        dl = activity.lifecycleScope.launch {
+            val dir = File(activity.cacheDir, "updates").apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() }
+            val file = File(dir, "RAINAX-update-${rel.version}.apk")
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    val con = URL(rel.apkUrl).openConnection() as HttpURLConnection
+                    con.instanceFollowRedirects = true
+                    con.connectTimeout = 20_000
+                    con.readTimeout = 30_000
+                    con.setRequestProperty("User-Agent", "RAINAX-YT-Downloader")
+                    val total = con.contentLengthLong.takeIf { it > 0 } ?: rel.size
+                    con.inputStream.use { input ->
+                        file.outputStream().use { out ->
+                            val buf = ByteArray(64 * 1024)
+                            var done = 0L
+                            var last = -1
+                            while (isActive) {
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                out.write(buf, 0, n)
+                                done += n
+                                val pct = if (total > 0) (done * 100 / total).toInt() else -1
+                                if (pct != last) {
+                                    last = pct
+                                    withContext(Dispatchers.Main) {
+                                        if (pct >= 0) {
+                                            bar.isIndeterminate = false
+                                            bar.setProgressCompat(pct, true)
+                                            text.text = "$pct%  •  ${formatSize(done)} of ${formatSize(total)}"
+                                        } else text.text = formatSize(done)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    con.disconnect()
+                    isActive && file.length() > 0
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            try { dialog.dismiss() } catch (e: Exception) { }
+            if (ok) install(activity, file) else if (isActive) {
+                toast(activity, "Update download failed. Try again later.")
+            }
+        }
+    }
+
+    private fun install(activity: AppCompatActivity, file: File) {
+        if (!activity.packageManager.canRequestPackageInstalls()) {
+            pendingApk = file
+            AlertDialog.Builder(activity)
+                .setTitle("Allow app updates")
+                .setMessage("To install the update, allow RAINAX to install apps. Turn on \"Allow from this source\", then come back.")
+                .setPositiveButton("Open settings") { _, _ ->
+                    try {
+                        activity.startActivity(
+                            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.packageName))
+                        )
+                    } catch (e: Exception) {
+                        toast(activity, "Open Settings > Apps > RAINAX and allow installing apps")
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+            return
+        }
+        try {
+            val uri = FileProvider.getUriForFile(activity, activity.packageName + ".files", file)
+            activity.startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (e: Exception) {
+            toast(activity, "Can't open the installer on this phone")
+        }
+    }
+
+    private fun toast(activity: AppCompatActivity, msg: String) =
+        Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
+}

@@ -56,8 +56,20 @@ class DownloadService : Service() {
     private val destRe = Regex("""Destination:\s*(.+)""")
     private val sizeParseRe = Regex("""of\s+~?\s*([\d.]+)\s*([KMGT]?i?B)""")
 
+    // Auto-retry: how many times each failed download was re-tried, and when the next try is due
+    private val autoTries = ConcurrentHashMap<String, Int>()
+    private val retryAt = ConcurrentHashMap<String, Long>()
+    @Volatile private var wentOffline = false
+
     private val netCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) { pump() }
+        override fun onAvailable(network: Network) {
+            if (wentOffline) {           // internet is back: waiting retries go now
+                wentOffline = false
+                retryAt.clear()
+            }
+            pump()
+        }
+        override fun onLost(network: Network) { wentOffline = true }
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) { pump() }
     }
 
@@ -125,7 +137,8 @@ class DownloadService : Service() {
         fillThumbnails()
         // Network came back (or Wi-Fi-only was switched off): waiting tasks rejoin the queue
         if (canDownload()) {
-            TaskRepository.tasks.value.filter { it.status == Status.WAITING }.forEach { t ->
+            val now = System.currentTimeMillis()
+            TaskRepository.tasks.value.filter { it.status == Status.WAITING && (retryAt[it.id] ?: 0L) <= now }.forEach { t ->
                 TaskRepository.update(t.id, true) { it.copy(status = Status.QUEUED, message = "Queued") }
             }
         }
@@ -191,6 +204,7 @@ class DownloadService : Service() {
                     return
                 }
                 if (attempt >= MAX_RETRIES) {
+                    if (scheduleAutoRetry(id)) return
                     TaskRepository.update(id, true) { it.copy(status = Status.FAILED, message = friendlyError(msg)) }
                     notifyDone(cur, false)
                     return
@@ -203,6 +217,29 @@ class DownloadService : Service() {
                 if (TaskRepository.get(id)?.status != Status.RUNNING) return
             }
         }
+    }
+
+    /** Failed after all quick retries: try again by itself after 1, 3 and 10 minutes. */
+    private fun scheduleAutoRetry(id: String): Boolean {
+        if (!AppPrefs.autoRetry(this)) return false
+        val n = autoTries[id] ?: 0
+        if (n >= AUTO_DELAYS.size) return false
+        val wait = AUTO_DELAYS[n]
+        autoTries[id] = n + 1
+        retryAt[id] = System.currentTimeMillis() + wait
+        val min = wait / 60_000
+        TaskRepository.update(id, true) {
+            it.copy(
+                status = Status.WAITING, retries = 0,
+                message = "Failed. Trying again by itself in $min min (${n + 1}/${AUTO_DELAYS.size})"
+            )
+        }
+        scope.launch {
+            delay(wait)
+            retryAt.remove(id)
+            pump()
+        }
+        return true
     }
 
     private fun isYoutube(url: String): Boolean {
@@ -299,6 +336,8 @@ class DownloadService : Service() {
             )
         }
         dir.deleteRecursively()
+        autoTries.remove(id)
+        retryAt.remove(id)
         cookieFile?.let { File(it).delete() }
         TaskRepository.get(id)?.let { notifyDone(it, true) }
     }
@@ -369,7 +408,8 @@ class DownloadService : Service() {
 
     private fun resume(id: String) {
         val t = TaskRepository.get(id) ?: return
-        if (t.status == Status.PAUSED || t.status == Status.FAILED) {
+        retryAt.remove(id)
+        if (t.status == Status.PAUSED || t.status == Status.FAILED || t.status == Status.WAITING) {
             TaskRepository.update(id, true) {
                 it.copy(status = Status.QUEUED, message = "Queued", retries = 0)
             }
@@ -575,6 +615,7 @@ class DownloadService : Service() {
         private const val CH_PROGRESS = "progress"
         private const val CH_DONE = "done"
         private const val MAX_RETRIES = 5
+        private val AUTO_DELAYS = longArrayOf(60_000L, 180_000L, 600_000L)
         private val KEEP_EXT = setOf("mp4", "mkv", "webm", "mp3", "m4a", "opus", "ogg", "mov")
 
         fun send(context: Context, action: String, id: String? = null, ids: Array<String>? = null) {

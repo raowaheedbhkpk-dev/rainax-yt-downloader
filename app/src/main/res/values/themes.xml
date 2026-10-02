@@ -5,6 +5,12 @@
          so every screen follows the same palette. forceDarkAllowed=false stops phone makers
          (Xiaomi/MIUI, Oppo, ...) from re-colouring the app on their own. -->
     <style name="Theme.Rainax" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Surface colours as theme attributes, so the AMOLED theme can turn them pure black -->
+        <item name="rxBg">@color/rx_bg</item>
+        <item name="rxSurface">@color/rx_surface</item>
+        <item name="rxCard">@color/rx_card</item>
+        <item name="rxSurfaceAlt">@color/rx_surface_alt</item>
+        <item name="rxOutline">@color/rx_outline</item>
         <item name="colorPrimary">@color/rx_primary</item>
         <item name="colorOnPrimary">@color/rx_on_primary</item>
         <item name="colorPrimaryContainer">@color/rx_primary_container</item>
@@ -14,24 +20,24 @@
         <item name="colorSecondaryContainer">@color/rx_primary_container</item>
         <item name="colorOnSecondaryContainer">@color/rx_on_primary_container</item>
         <item name="colorTertiary">@color/rx_accent</item>
-        <item name="colorSurface">@color/rx_surface</item>
+        <item name="colorSurface">?attr/rxSurface</item>
         <item name="colorOnSurface">@color/rx_text</item>
-        <item name="colorSurfaceVariant">@color/rx_surface_alt</item>
+        <item name="colorSurfaceVariant">?attr/rxSurfaceAlt</item>
         <item name="colorOnSurfaceVariant">@color/rx_text2</item>
-        <item name="colorSurfaceContainerLowest">@color/rx_bg</item>
-        <item name="colorSurfaceContainerLow">@color/rx_surface</item>
-        <item name="colorSurfaceContainer">@color/rx_surface</item>
-        <item name="colorSurfaceContainerHigh">@color/rx_card</item>
-        <item name="colorSurfaceContainerHighest">@color/rx_surface_alt</item>
+        <item name="colorSurfaceContainerLowest">?attr/rxBg</item>
+        <item name="colorSurfaceContainerLow">?attr/rxSurface</item>
+        <item name="colorSurfaceContainer">?attr/rxSurface</item>
+        <item name="colorSurfaceContainerHigh">?attr/rxCard</item>
+        <item name="colorSurfaceContainerHighest">?attr/rxSurfaceAlt</item>
         <item name="colorOutline">@color/rx_text2</item>
-        <item name="colorOutlineVariant">@color/rx_outline</item>
+        <item name="colorOutlineVariant">?attr/rxOutline</item>
         <item name="colorError">@color/rx_error</item>
         <item name="colorErrorContainer">@color/rx_error_container</item>
-        <item name="android:colorBackground">@color/rx_bg</item>
+        <item name="android:colorBackground">?attr/rxBg</item>
         <item name="colorOnBackground">@color/rx_text</item>
-        <item name="android:windowBackground">@color/rx_bg</item>
-        <item name="android:statusBarColor">@color/rx_bg</item>
-        <item name="android:navigationBarColor">@color/rx_surface</item>
+        <item name="android:windowBackground">?attr/rxBg</item>
+        <item name="android:statusBarColor">?attr/rxBg</item>
+        <item name="android:navigationBarColor">?attr/rxSurface</item>
         <item name="android:windowLightStatusBar">@bool/rx_light_bars</item>
         <item name="android:windowLightNavigationBar">@bool/rx_light_bars</item>
         <item name="android:forceDarkAllowed">false</item>
@@ -46,6 +52,15 @@
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Rainax.Large</item>
     </style>
 
+    <!-- AMOLED: pure black backgrounds (used together with dark mode) -->
+    <style name="Theme.Rainax.Amoled" parent="Theme.Rainax">
+        <item name="rxBg">@color/rx_amoled_bg</item>
+        <item name="rxSurface">@color/rx_amoled_bg</item>
+        <item name="rxCard">@color/rx_amoled_card</item>
+        <item name="rxSurfaceAlt">@color/rx_amoled_alt</item>
+        <item name="rxOutline">@color/rx_amoled_outline</item>
+    </style>
+
     <!-- Full-screen black video player -->
     <style name="Theme.Rainax.Player" parent="Theme.Rainax">
         <item name="android:windowBackground">@color/rx_black</item>
@@ -58,20 +73,20 @@
 
     <style name="ThemeOverlay.Rainax.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/Widget.Rainax.BottomSheet</item>
-        <item name="android:navigationBarColor">@color/rx_surface</item>
+        <item name="android:navigationBarColor">?attr/rxSurface</item>
     </style>
 
     <style name="ThemeOverlay.Rainax.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="buttonBarPositiveButtonStyle">@style/Widget.Rainax.Button.Text</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.Rainax.Button.Text</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.Rainax.Button.Text</item>
-        <item name="colorSurfaceContainerHigh">@color/rx_card</item>
+        <item name="colorSurfaceContainerHigh">?attr/rxCard</item>
         <item name="android:textColorPrimary">@color/rx_text</item>
         <item name="android:textColorSecondary">@color/rx_text2</item>
     </style>
 
     <style name="Widget.Rainax.BottomSheet" parent="Widget.Material3.BottomSheet">
-        <item name="backgroundTint">@color/rx_surface</item>
+        <item name="backgroundTint">?attr/rxSurface</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Sheet</item>
     </style>
 
@@ -108,7 +123,7 @@
     </style>
 
     <style name="Widget.Rainax.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="strokeColor">@color/rx_outline</item>
+        <item name="strokeColor">?attr/rxOutline</item>
         <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="iconTint">@color/rx_text</item>
@@ -130,7 +145,7 @@
 
     <!-- Chips -->
     <style name="Widget.Rainax.Chip" parent="Widget.Material3.Chip.Assist">
-        <item name="chipBackgroundColor">@color/rx_surface_alt</item>
+        <item name="chipBackgroundColor">?attr/rxSurfaceAlt</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="chipStrokeWidth">0dp</item>
         <item name="chipCornerRadius">14dp</item>
@@ -146,8 +161,8 @@
 
     <!-- Cards -->
     <style name="Widget.Rainax.Card" parent="Widget.Material3.CardView.Filled">
-        <item name="cardBackgroundColor">@color/rx_card</item>
-        <item name="strokeColor">@color/rx_outline</item>
+        <item name="cardBackgroundColor">?attr/rxCard</item>
+        <item name="strokeColor">?attr/rxOutline</item>
         <item name="strokeWidth">1dp</item>
         <item name="cardElevation">0dp</item>
         <item name="cardCornerRadius">20dp</item>
@@ -155,7 +170,7 @@
 
     <!-- Bottom navigation -->
     <style name="Widget.Rainax.BottomNav" parent="Widget.Material3.BottomNavigationView">
-        <item name="backgroundTint">@color/rx_surface</item>
+        <item name="backgroundTint">?attr/rxSurface</item>
         <item name="itemIconTint">@color/rx_nav_item</item>
         <item name="itemTextColor">@color/rx_nav_item</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.Rainax.NavIndicator</item>

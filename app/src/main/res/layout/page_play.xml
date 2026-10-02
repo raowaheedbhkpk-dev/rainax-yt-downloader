@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/rx_bg">
+    android:background="?attr/rxBg">
 
     <TextView
         android:layout_width="wrap_content"
@@ -248,7 +248,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_gravity="top"
-        android:background="@color/rx_surface"
+        android:background="?attr/rxSurface"
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -286,7 +286,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="@color/rx_surface"
+        android:background="?attr/rxSurface"
         android:elevation="8dp"
         android:orientation="horizontal"
         android:paddingHorizontal="8dp"

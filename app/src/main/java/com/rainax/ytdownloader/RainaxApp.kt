@@ -11,12 +11,12 @@ class RainaxApp : Application() {
     }
 
     companion object {
-        /** 0 = follow the phone, 1 = light, 2 = dark */
+        /** 0 = follow the phone, 1 = light, 2 = dark, 3 = AMOLED black (dark + pure black) */
         fun applyTheme(mode: Int) {
             AppCompatDelegate.setDefaultNightMode(
                 when (mode) {
                     1 -> AppCompatDelegate.MODE_NIGHT_NO
-                    2 -> AppCompatDelegate.MODE_NIGHT_YES
+                    2, 3 -> AppCompatDelegate.MODE_NIGHT_YES
                     else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 }
             )

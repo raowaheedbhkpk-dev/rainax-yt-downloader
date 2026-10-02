@@ -20,7 +20,7 @@ object AppPrefs {
     fun adBlock(c: Context) = p(c).getBoolean("ad_block", true)
     fun setAdBlock(c: Context, v: Boolean) = p(c).edit().putBoolean("ad_block", v).apply()
 
-    /** 0 = follow the phone, 1 = light, 2 = dark */
+    /** 0 = follow the phone, 1 = light, 2 = dark, 3 = AMOLED black */
     fun themeMode(c: Context) = p(c).getInt("theme_mode", 0)
     fun setThemeMode(c: Context, v: Int) = p(c).edit().putInt("theme_mode", v).apply()
 
@@ -30,6 +30,19 @@ object AppPrefs {
 
     fun lastUpdate(c: Context) = p(c).getLong("last_update", 0L)
     fun setLastUpdate(c: Context, v: Long) = p(c).edit().putLong("last_update", v).apply()
+
+    fun autoRetry(c: Context) = p(c).getBoolean("auto_retry", true)
+    fun setAutoRetry(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_retry", v).apply()
+
+    fun autoAppUpdate(c: Context) = p(c).getBoolean("auto_app_update", true)
+    fun setAutoAppUpdate(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_app_update", v).apply()
+
+    fun lastAppCheck(c: Context) = p(c).getLong("last_app_check", 0L)
+    fun setLastAppCheck(c: Context, v: Long) = p(c).edit().putLong("last_app_check", v).apply()
+
+    /** A version the user chose to skip ("Later" keeps asking; "Skip" hides that one version). */
+    fun skippedVersion(c: Context) = p(c).getString("skipped_version", "").orEmpty()
+    fun setSkippedVersion(c: Context, v: String) = p(c).edit().putString("skipped_version", v).apply()
 
     fun lastClip(c: Context) = p(c).getString("last_clip", "").orEmpty()
     fun setLastClip(c: Context, v: String) = p(c).edit().putString("last_clip", v).apply()

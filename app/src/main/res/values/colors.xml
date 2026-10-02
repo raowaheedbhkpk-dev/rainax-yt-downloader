@@ -24,4 +24,8 @@
 
     <color name="ic_launcher_bg_start">#2A1B8F</color>
     <color name="ic_launcher_bg_end">#0B0F2E</color>
+    <color name="rx_amoled_bg">#000000</color>
+    <color name="rx_amoled_card">#0B0B10</color>
+    <color name="rx_amoled_alt">#16161E</color>
+    <color name="rx_amoled_outline">#22222C</color>
 </resources>

@@ -125,6 +125,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)   // pure black
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
@@ -172,6 +173,9 @@ class MainActivity : AppCompatActivity() {
             }
             hm.topTabs.getTabAt(savedInstanceState.getInt("topTab", 0))?.select()
         }
+
+        // New RAINAX version? (quiet check, a few seconds after start)
+        hm.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -240,6 +244,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppUpdater.resumeInstall(this)
         hm.webView.onResume()
     }
 
@@ -305,7 +310,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val ws = hm.webView.settings
-        hm.webView.setBackgroundColor(ContextCompat.getColor(this, R.color.rx_bg))
+        hm.webView.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(hm.webView, R.attr.rxBg))
         ws.forceDark = if (isDarkUi()) WebSettings.FORCE_DARK_AUTO else WebSettings.FORCE_DARK_OFF
         ws.javaScriptEnabled = true
         ws.domStorageEnabled = true
@@ -1111,6 +1116,7 @@ class MainActivity : AppCompatActivity() {
             when (AppPrefs.themeMode(this)) {
                 1 -> R.id.themeLight
                 2 -> R.id.themeDark
+                3 -> R.id.themeAmoled
                 else -> R.id.themeSystem
             }
         )
@@ -1118,13 +1124,23 @@ class MainActivity : AppCompatActivity() {
             val mode = when (ids.firstOrNull()) {
                 R.id.themeLight -> 1
                 R.id.themeDark -> 2
+                R.id.themeAmoled -> 3
                 else -> 0
             }
-            if (mode != AppPrefs.themeMode(this)) {
+            val old = AppPrefs.themeMode(this)
+            if (mode != old) {
                 AppPrefs.setThemeMode(this, mode)
                 RainaxApp.applyTheme(mode)      // recreates the screen with the new colours
+                // Dark <-> AMOLED keeps night mode, so rebuild the screen ourselves
+                if (old == 3 || mode == 3) recreate()
             }
         }
+
+        st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
+        st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
+        st.autoUpdateSwitch.isChecked = AppPrefs.autoAppUpdate(this)
+        st.autoUpdateSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoAppUpdate(this, on) }
+        st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
 
         st.adSwitch.isChecked = AppPrefs.adBlock(this)
         st.adSwitch.setOnCheckedChangeListener { _, on ->
