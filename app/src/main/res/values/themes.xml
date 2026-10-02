@@ -46,6 +46,16 @@
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Rainax.Large</item>
     </style>
 
+    <!-- Full-screen black video player -->
+    <style name="Theme.Rainax.Player" parent="Theme.Rainax">
+        <item name="android:windowBackground">@color/rx_black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
     <style name="ThemeOverlay.Rainax.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/Widget.Rainax.BottomSheet</item>
         <item name="android:navigationBarColor">@color/rx_surface</item>

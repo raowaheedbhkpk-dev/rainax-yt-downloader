@@ -1020,6 +1020,7 @@ class MainActivity : AppCompatActivity() {
         }
         val popup = PopupMenu(this, anchor)
         popup.menu.add(0, 1, 0, "Play")
+        popup.menu.add(0, 6, 1, "Open with another app")
         popup.menu.add(0, 2, 1, "Share")
         popup.menu.add(0, 3, 2, "Copy link")
         popup.menu.add(0, 4, 3, "Remove from list")
@@ -1028,6 +1029,7 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 1 -> openFile(t)
                 2 -> shareFile(t)
+                6 -> openWithOtherApp(t)
                 3 -> {
                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("link", t.url))
@@ -1046,7 +1048,29 @@ class MainActivity : AppCompatActivity() {
         popup.show()
     }
 
+    private fun isPlayable(t: DownloadTask): Boolean {
+        val m = t.mime.orEmpty()
+        if (m.startsWith("video/") || m.startsWith("audio/")) return true
+        val name = (t.title + " " + t.fileUri.orEmpty()).lowercase()
+        return t.isAudio || listOf(".mp4", ".mkv", ".webm", ".mov", ".m4a", ".mp3", ".opus", ".ogg").any { name.contains(it) }
+    }
+
+    /** Finished videos and music always open in the RAINAX player (with the other downloads as a playlist). */
     private fun openFile(t: DownloadTask) {
+        val uri = t.fileUri ?: return
+        if (isPlayable(t)) {
+            val list = TaskRepository.tasks.value.filter { it.status == Status.DONE && it.fileUri != null && isPlayable(it) }
+            val index = list.indexOfFirst { it.id == t.id }.coerceAtLeast(0)
+            try {
+                if (list.isEmpty()) PlayerActivity.open(this, listOf(uri), listOf(t.title), 0)
+                else PlayerActivity.open(this, list.map { it.fileUri!! }, list.map { it.title }, index)
+                return
+            } catch (e: Exception) { /* fall back to another app */ }
+        }
+        openWithOtherApp(t)
+    }
+
+    private fun openWithOtherApp(t: DownloadTask) {
         val uri = t.fileUri ?: return
         val intent = Intent(Intent.ACTION_VIEW)
             .setDataAndType(Uri.parse(uri), t.mime ?: "*/*")

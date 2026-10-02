@@ -523,9 +523,23 @@ class DownloadService : Service() {
             .setContentTitle(if (doneCount == 1) "Download complete" else "$doneCount downloads complete")
             .setContentText(label(task).take(60))
             .setAutoCancel(true)
-            .setContentIntent(openAppIntent())
+            .setContentIntent(if (doneCount == 1) playIntent(task) ?: openAppIntent() else openAppIntent())
             .build()
         nm.notify(DONE_ID, n)
+    }
+
+    /** Tapping "Download complete" plays the file in the RAINAX player. */
+    private fun playIntent(task: DownloadTask): PendingIntent? {
+        val t = TaskRepository.get(task.id) ?: task
+        val uri = t.fileUri ?: return null
+        val m = t.mime.orEmpty()
+        if (!(m.startsWith("video/") || m.startsWith("audio/") || t.isAudio)) return null
+        val i = Intent(this, PlayerActivity::class.java)
+            .putStringArrayListExtra(PlayerActivity.EXTRA_URIS, arrayListOf(uri))
+            .putStringArrayListExtra(PlayerActivity.EXTRA_TITLES, arrayListOf(t.title))
+            .putExtra(PlayerActivity.EXTRA_INDEX, 0)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(this, 7, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     private fun notifyFailed() {
