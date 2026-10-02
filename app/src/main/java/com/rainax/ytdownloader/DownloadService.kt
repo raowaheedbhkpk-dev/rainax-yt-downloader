@@ -277,7 +277,8 @@ class DownloadService : Service() {
             addOption("--throttled-rate", "100K")
             addOption("--buffer-size", "64K")
             if (isYoutube(task.url)) addOption("--http-chunk-size", "10M")
-            addOption("-o", "${dir.absolutePath}/%(title).80s.%(ext)s")
+            // Names are limited in BYTES (emoji take 4 bytes each); Android allows 255, so 90 leaves room for ".f137.mp4.part"
+            addOption("-o", "${dir.absolutePath}/%(title).90B.%(ext)s")
             cookieFile?.let { addOption("--cookies", it) }
             Formats.configure(this, task.format, task.subLang)
         }

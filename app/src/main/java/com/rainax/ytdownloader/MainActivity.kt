@@ -844,11 +844,14 @@ class MainActivity : AppCompatActivity() {
         pl.activeSection.isVisible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
         pl.activeTitle.text = "Downloading (${active.size})"
-        activeAdapter.submitList(active.asReversed())
+        // Newest always on top, in both lists
+        val newActive = active.sortedByDescending { it.createdAt }
+        val grew = newActive.size > activeAdapter.itemCount && newActive.firstOrNull()?.id != activeAdapter.currentList.firstOrNull()?.id
+        activeAdapter.submitList(newActive) { if (grew) pl.playScroll.smoothScrollTo(0, 0) }
 
         pl.doneSection.isVisible = done.isNotEmpty()
         pl.doneTitle.text = "Downloaded (${done.size})"
-        doneAdapter.submitList(done)
+        doneAdapter.submitList(done.sortedByDescending { it.createdAt })
 
         val badge = b.bottomNav.getOrCreateBadge(R.id.nav_downloads)
         badge.isVisible = active.isNotEmpty()
@@ -1138,8 +1141,6 @@ class MainActivity : AppCompatActivity() {
 
         st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
         st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
-        st.autoUpdateSwitch.isChecked = AppPrefs.autoAppUpdate(this)
-        st.autoUpdateSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoAppUpdate(this, on) }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
 
         st.adSwitch.isChecked = AppPrefs.adBlock(this)

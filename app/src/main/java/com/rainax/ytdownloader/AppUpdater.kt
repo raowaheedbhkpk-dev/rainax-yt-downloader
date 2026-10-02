@@ -26,23 +26,21 @@ import java.net.URL
 /**
  * In-app updates from the GitHub Releases of this app's repository.
  * The app checks the latest release, shows what's new, downloads the APK and opens the Android installer.
- * (Works when the repository / its releases are public.)
+ * When a newer version exists the update is REQUIRED: the app can't be used until it is installed.
+ * (Works when the repository / its releases are public. Offline, the app keeps working.)
  */
 object AppUpdater {
     const val REPO = "raowaheedbhkpk-dev/rainax-yt-downloader"
-    private const val GAP_MS = 6 * 60 * 60 * 1000L
 
     private class Release(val version: String, val notes: String, val apkUrl: String, val size: Long)
 
     private var pendingApk: File? = null
     private var job: Job? = null
+    private var required: Release? = null          // newer version found: must be installed
+    private var dialogShowing = false
 
-    /** Quiet check when the app opens (at most every 6 hours). */
-    fun checkOnStart(activity: AppCompatActivity) {
-        if (!AppPrefs.autoAppUpdate(activity)) return
-        if (System.currentTimeMillis() - AppPrefs.lastAppCheck(activity) < GAP_MS) return
-        check(activity, manual = false)
-    }
+    /** Every time the app opens. */
+    fun checkOnStart(activity: AppCompatActivity) = check(activity, manual = false)
 
     fun check(activity: AppCompatActivity, manual: Boolean) {
         if (job?.isActive == true) return
@@ -63,19 +61,32 @@ object AppUpdater {
                         .show()
                 }
                 !isNewer(rel.version, current) -> if (manual) toast(activity, "You have the latest version (v$current)")
-                !manual && rel.version == AppPrefs.skippedVersion(activity) -> {}
-                else -> offer(activity, rel, current)
+                else -> {
+                    required = rel
+                    offer(activity, rel, current)
+                }
             }
         }
     }
 
-    /** Back from "Allow installs from this app": continue the install that was waiting. */
+    /**
+     * Back in the app (from settings or the installer): continue the waiting install,
+     * or ask again, because the update is required.
+     */
     fun resumeInstall(activity: AppCompatActivity) {
-        val f = pendingApk ?: return
-        if (activity.packageManager.canRequestPackageInstalls() && f.exists()) {
+        val f = pendingApk
+        if (f != null && activity.packageManager.canRequestPackageInstalls() && f.exists()) {
             pendingApk = null
             install(activity, f)
+            return
         }
+        val rel = required ?: return
+        val current = currentVersion(activity)
+        if (!isNewer(rel.version, current)) {        // already updated
+            required = null
+            return
+        }
+        if (!dialogShowing && job?.isActive != true) offer(activity, rel, current)
     }
 
     private fun currentVersion(activity: AppCompatActivity): String = try {
@@ -120,15 +131,25 @@ object AppUpdater {
         return false
     }
 
+    /** Required update: no "Later". The only ways out are Update or closing the app. */
     private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
+        if (dialogShowing || activity.isFinishing) return
         val notes = rel.notes.ifBlank { "Improvements and fixes." }.take(1500)
         val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
+        dialogShowing = true
         AlertDialog.Builder(activity)
-            .setTitle("Update available: v${rel.version}")
-            .setMessage("You have v$current.\n\nWhat's new:\n$notes$size")
-            .setPositiveButton("Update") { _, _ -> download(activity, rel) }
-            .setNegativeButton("Later", null)
-            .setNeutralButton("Skip this version") { _, _ -> AppPrefs.setSkippedVersion(activity, rel.version) }
+            .setTitle("Update required: v${rel.version}")
+            .setMessage("A new version of RAINAX is available. Please update to keep using the app.\n\nYou have v$current.\n\nWhat's new:\n$notes$size")
+            .setCancelable(false)
+            .setPositiveButton("Update now") { _, _ ->
+                dialogShowing = false
+                download(activity, rel)
+            }
+            .setNegativeButton("Close app") { _, _ ->
+                dialogShowing = false
+                activity.finishAffinity()
+            }
+            .setOnDismissListener { dialogShowing = false }
             .show()
     }
 
@@ -152,7 +173,10 @@ object AppUpdater {
             .setTitle("Downloading v${rel.version}")
             .setView(box)
             .setCancelable(false)
-            .setNegativeButton("Cancel") { _, _ -> dl?.cancel() }
+            .setNegativeButton("Cancel") { _, _ ->
+                dl?.cancel()
+                required?.let { offer(activity, it, currentVersion(activity)) }
+            }
             .show()
 
         dl = activity.lifecycleScope.launch {
@@ -200,8 +224,9 @@ object AppUpdater {
                 }
             }
             try { dialog.dismiss() } catch (e: Exception) { }
-            if (ok) install(activity, file) else if (isActive) {
-                toast(activity, "Update download failed. Try again later.")
+            if (ok) install(activity, file) else {
+                toast(activity, "Update download failed. Check your internet and try again.")
+                required?.let { offer(activity, it, currentVersion(activity)) }
             }
         }
     }
@@ -221,7 +246,8 @@ object AppUpdater {
                         toast(activity, "Open Settings > Apps > RAINAX and allow installing apps")
                     }
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Close app") { _, _ -> activity.finishAffinity() }
+                .setCancelable(false)
                 .show()
             return
         }
