@@ -70,7 +70,13 @@ object FileStore {
         }
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             ?: error("Could not create file in Downloads")
-        resolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out) } }
+        try {
+            resolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out) } }
+        } catch (e: Exception) {
+            // never leave a hidden half-written entry behind
+            try { resolver.delete(uri, null, null) } catch (ignored: Exception) { }
+            throw e
+        }
         values.clear()
         values.put(MediaStore.Downloads.IS_PENDING, 0)
         resolver.update(uri, values, null, null)

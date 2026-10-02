@@ -138,7 +138,7 @@ class MainActivity : AppCompatActivity() {
         if (AppPrefs.autoClear(this)) {
             TaskRepository.removeDoneOlderThan(System.currentTimeMillis() - 7L * 24 * 3600 * 1000)
         }
-        requestNotificationPermission()
+        if (savedInstanceState == null) requestNotificationPermission()
 
         setupHome()
         setupPlay()
@@ -476,7 +476,12 @@ class MainActivity : AppCompatActivity() {
     /** The video page that is open right now, or null when the page is not a video. */
     private fun currentVideoUrl(): String? {
         val url = hm.webView.url.orEmpty()
-        return if (YT_VIDEO.containsMatchIn(url) && isAllowedUrl(url)) url else null
+        val uri = Uri.parse(url)
+        val host = uri.host.orEmpty().lowercase()
+        val path = uri.path.orEmpty()
+        val yt = host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
+        val video = host == "youtu.be" || path.startsWith("/watch") || path.startsWith("/shorts/") || path == "/playlist"
+        return if (yt && video && host != "music.youtube.com") url else null
     }
 
     /** The floating Download buttons appear only on video pages of the YouTube tab. */
@@ -585,7 +590,7 @@ class MainActivity : AppCompatActivity() {
     /** Links shared from other apps (Share > RAINAX). */
     private fun handleIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_SEND) return
-        val urls = extractUrls(intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty())
+        val urls = extractUrls(intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty())
         if (urls.isNotEmpty()) {
             AppPrefs.setLastClip(this, urls[0])
             showDownloadSheet(urls)
@@ -605,10 +610,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Offer to download as soon as a link is copied in another app. */
+    private var lastClipTs = 0L
+
     private fun checkClipboard() {
         if (!AppPrefs.clipDetect(this) || sheet?.isShowing == true) return
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        if (cm.primaryClipDescription?.hasMimeType("text/*") != true) return
+        val desc = cm.primaryClipDescription ?: return
+        if (!desc.hasMimeType("text/*")) return
+        // Only read a clip once: every read shows Android's "pasted from your clipboard" message
+        if (desc.timestamp == lastClipTs) return
+        lastClipTs = desc.timestamp
         val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
         val urls = extractUrls(text)
         val first = urls.firstOrNull() ?: return
@@ -777,7 +788,11 @@ class MainActivity : AppCompatActivity() {
 
         dialog.setOnDismissListener {
             collectJob?.cancel()
-            vm.clearPreview()
+            // A newer sheet may already be open (dismiss runs later): only clean up our own
+            if (sheet === dialog) {
+                sheet = null
+                vm.clearPreview()
+            }
         }
         dialog.show()
     }
@@ -1135,7 +1150,7 @@ class MainActivity : AppCompatActivity() {
                 AppPrefs.setThemeMode(this, mode)
                 RainaxApp.applyTheme(mode)      // recreates the screen with the new colours
                 // Dark <-> AMOLED keeps night mode, so rebuild the screen ourselves
-                if (old == 3 || mode == 3) recreate()
+                if (old == 3 || mode == 3) window.decorView.post { if (!isDestroyed) recreate() }
             }
         }
 
@@ -1417,7 +1432,5 @@ class MainActivity : AppCompatActivity() {
 })();
 """
 
-        /** Pages where the floating Download button is shown: videos, shorts and playlists. */
-        private val YT_VIDEO = Regex("(youtube\\.com/(watch|shorts/|playlist\\?)|youtu\\.be/)")
     }
 }

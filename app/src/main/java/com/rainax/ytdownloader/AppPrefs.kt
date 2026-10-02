@@ -34,16 +34,6 @@ object AppPrefs {
     fun autoRetry(c: Context) = p(c).getBoolean("auto_retry", true)
     fun setAutoRetry(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_retry", v).apply()
 
-    fun autoAppUpdate(c: Context) = p(c).getBoolean("auto_app_update", true)
-    fun setAutoAppUpdate(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_app_update", v).apply()
-
-    fun lastAppCheck(c: Context) = p(c).getLong("last_app_check", 0L)
-    fun setLastAppCheck(c: Context, v: Long) = p(c).edit().putLong("last_app_check", v).apply()
-
-    /** A version the user chose to skip ("Later" keeps asking; "Skip" hides that one version). */
-    fun skippedVersion(c: Context) = p(c).getString("skipped_version", "").orEmpty()
-    fun setSkippedVersion(c: Context, v: String) = p(c).edit().putString("skipped_version", v).apply()
-
     fun lastClip(c: Context) = p(c).getString("last_clip", "").orEmpty()
     fun setLastClip(c: Context, v: String) = p(c).edit().putString("last_clip", v).apply()
 

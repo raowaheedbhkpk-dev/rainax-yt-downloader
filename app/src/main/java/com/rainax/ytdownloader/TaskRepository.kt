@@ -90,7 +90,6 @@ object TaskRepository {
     private fun cleanup(t: DownloadTask) {
         t.thumbPath?.let { File(it).delete() }
         File(filesRoot, "downloads/${t.id}").deleteRecursively()
-        File(filesRoot, "cookies/${t.id}.txt").delete()
     }
 
     @Synchronized
@@ -98,6 +97,9 @@ object TaskRepository {
         var doneCount = 0
         val kept = _tasks.value.filter {
             if (it.status == Status.DONE) { doneCount++; doneCount <= MAX_DONE } else true
+        }
+        if (kept.size != _tasks.value.size) {
+            _tasks.value.filter { it !in kept }.forEach { t -> t.thumbPath?.let { File(it).delete() } }
         }
         _tasks.value = kept
         val arr = JSONArray()

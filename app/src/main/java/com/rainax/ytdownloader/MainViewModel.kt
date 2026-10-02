@@ -82,16 +82,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    private fun cookiePath(url: String, cookie: String?, guest: Boolean = false): String? = null
+    /** Each lookup gets its own process id, so stopping an old one can never touch the new one. */
+    @Volatile private var procId = InfoFetcher.PROCESS_ID
 
-    private suspend fun doFetch(url: String, cookie: String?, forcePlaylist: Boolean, guest: Boolean = false): PreviewState = try {
+    private suspend fun doFetch(url: String, forcePlaylist: Boolean): PreviewState = try {
+        val id = procId
         withContext(Dispatchers.IO) {
-            if (forcePlaylist || isPlaylistUrl(url)) {
-                InfoFetcher.fetchPlaylist(app, url, cookiePath(url, cookie, guest))
-            } else {
-                InfoFetcher.fetch(app, url, cookiePath(url, cookie, guest))
-            }
+            if (forcePlaylist || isPlaylistUrl(url)) InfoFetcher.fetchPlaylist(app, url, null, id)
+            else InfoFetcher.fetch(app, url, null, id)
         }
     } catch (e: CancellationException) {
         throw e
@@ -102,22 +100,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Kills a lookup that is still running so old requests don't pile up. */
     private fun stopInfoProcess() {
-        try { YoutubeDL.getInstance().destroyProcessById(InfoFetcher.PROCESS_ID) } catch (e: Exception) { }
+        try { YoutubeDL.getInstance().destroyProcessById(procId) } catch (e: Exception) { }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun fetchInfo(url: String, cookie: String?, forcePlaylist: Boolean = false) {
         infoJob?.cancel()
         stopInfoProcess()
+        procId = "info-" + System.nanoTime()
         infoJob = viewModelScope.launch {
             _preview.value = PreviewState(loading = true)
-            var result = doFetch(url, cookie, forcePlaylist)
+            var result = doFetch(url, forcePlaylist)
             // Just opened from Share and the phone's network is not ready yet? Quietly try again.
             var tries = 0
             while (result.error != null && isNetworkGlitch(result.raw) && tries < 3) {
                 tries++
                 _preview.value = PreviewState(loading = true, title = "Connecting…")
                 delay(1500L * tries)
-                result = doFetch(url, cookie, forcePlaylist)
+                result = doFetch(url, forcePlaylist)
             }
             // A site changed and the engine is out of date? Update it quietly and try once more.
             if (result.error != null && looksOutdated(result.raw) &&
@@ -127,7 +127,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val updated = withContext(Dispatchers.IO) { updateEngine() }
                 if (updated) {
                     _preview.value = PreviewState(loading = true)
-                    result = doFetch(url, cookie, forcePlaylist)
+                    result = doFetch(url, forcePlaylist)
                 }
             }
             _preview.value = result

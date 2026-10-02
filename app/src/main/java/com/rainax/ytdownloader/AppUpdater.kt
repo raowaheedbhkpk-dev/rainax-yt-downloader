@@ -37,7 +37,8 @@ object AppUpdater {
     private var pendingApk: File? = null
     private var job: Job? = null
     private var required: Release? = null          // newer version found: must be installed
-    private var dialogShowing = false
+    private var dialog: AlertDialog? = null
+    private val dialogShowing get() = dialog?.isShowing == true
 
     /** Every time the app opens. */
     fun checkOnStart(activity: AppCompatActivity) = check(activity, manual = false)
@@ -49,7 +50,6 @@ object AppUpdater {
             val rel = withContext(Dispatchers.IO) {
                 try { fetchLatest() } catch (e: Exception) { null }
             }
-            AppPrefs.setLastAppCheck(activity, System.currentTimeMillis())
             if (activity.isFinishing) return@launch
             val current = currentVersion(activity)
             when {
@@ -136,21 +136,21 @@ object AppUpdater {
         if (dialogShowing || activity.isFinishing) return
         val notes = rel.notes.ifBlank { "Improvements and fixes." }.take(1500)
         val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
-        dialogShowing = true
-        AlertDialog.Builder(activity)
+        dialog = AlertDialog.Builder(activity)
             .setTitle("Update required: v${rel.version}")
             .setMessage("A new version of RAINAX is available. Please update to keep using the app.\n\nYou have v$current.\n\nWhat's new:\n$notes$size")
             .setCancelable(false)
-            .setPositiveButton("Update now") { _, _ ->
-                dialogShowing = false
-                download(activity, rel)
-            }
-            .setNegativeButton("Close app") { _, _ ->
-                dialogShowing = false
-                activity.finishAffinity()
-            }
-            .setOnDismissListener { dialogShowing = false }
+            .setPositiveButton("Update now") { _, _ -> download(activity, rel) }
+            .setNegativeButton("Close app") { _, _ -> activity.finishAffinity() }
             .show()
+        // Screen rebuilt (theme change, rotation): close this dialog cleanly; the new screen asks again
+        val shown = dialog
+        activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                try { shown?.dismiss() } catch (e: Exception) { }
+                if (dialog === shown) dialog = null
+            }
+        })
     }
 
     private fun download(activity: AppCompatActivity, rel: Release) {
@@ -191,10 +191,10 @@ object AppUpdater {
                     con.readTimeout = 30_000
                     con.setRequestProperty("User-Agent", "RAINAX-YT-Downloader")
                     val total = con.contentLengthLong.takeIf { it > 0 } ?: rel.size
+                    var done = 0L
                     con.inputStream.use { input ->
                         file.outputStream().use { out ->
                             val buf = ByteArray(64 * 1024)
-                            var done = 0L
                             var last = -1
                             while (isActive) {
                                 val n = input.read(buf)
@@ -216,7 +216,8 @@ object AppUpdater {
                         }
                     }
                     con.disconnect()
-                    isActive && file.length() > 0
+                    // a cut-off download would make the installer say "problem parsing the package"
+                    isActive && file.length() > 0 && (total <= 0 || done == total)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

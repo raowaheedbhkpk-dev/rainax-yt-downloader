@@ -246,13 +246,18 @@ object InfoFetcher {
         return parts.joinToString("  •  ")
     }
 
-    internal fun loadBitmap(url: String): Bitmap? = try {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8000
-            readTimeout = 8000
+    internal fun loadBitmap(url: String): Bitmap? {
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 8000
+                readTimeout = 8000
+            }
+            conn.inputStream.use { BitmapFactory.decodeStream(it) }
+        } catch (e: Exception) {
+            null
+        } finally {
+            conn?.disconnect()
         }
-        conn.inputStream.use { BitmapFactory.decodeStream(it) }
-    } catch (e: Exception) {
-        null
     }
 }

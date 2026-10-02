@@ -44,16 +44,15 @@ class DownloadService : Service() {
     private lateinit var cm: ConnectivityManager
 
     @Volatile private var stopping = false
-    @Volatile private var doneCount = 0
+    private val doneCount = java.util.concurrent.atomic.AtomicInteger(0)
+    @Volatile private var lastStartId = 0
     private var failedStart = false
     private var callbackRegistered = false
     private var thumbJob: Job? = null
     private val thumbTried = ConcurrentHashMap.newKeySet<String>()
 
     private val speedRe = Regex("""at\s+(\S+/s)""")
-    private val sizeRe = Regex("""of\s+~?\s*([\d.]+\S*)""")
     private val formatRe = Regex("""Downloading \d+ format\(s\):\s*(\S+)""")
-    private val destRe = Regex("""Destination:\s*(.+)""")
     private val sizeParseRe = Regex("""of\s+~?\s*([\d.]+)\s*([KMGT]?i?B)""")
 
     // Auto-retry: how many times each failed download was re-tried, and when the next try is due
@@ -81,9 +80,7 @@ class DownloadService : Service() {
         nm = getSystemService(NotificationManager::class.java)
         cm = getSystemService(ConnectivityManager::class.java)
         createChannels()
-        try {
-            promote()
-        } catch (e: Exception) {
+        if (!promote()) {           // Android refused the foreground start: stop cleanly instead of being killed
             failedStart = true
             stopSelf()
             return
@@ -101,8 +98,9 @@ class DownloadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (failedStart) return START_NOT_STICKY
+        lastStartId = startId
         stopping = false
-        try { promote() } catch (e: Exception) { /* already foreground */ }
+        promote()
 
         val id = intent?.getStringExtra(EXTRA_ID)
         val ids = intent?.getStringArrayExtra(EXTRA_IDS)
@@ -134,7 +132,16 @@ class DownloadService : Service() {
 
     @Synchronized
     private fun pump() {
+        if (!scope.isActive) return           // service is shutting down
         fillThumbnails()
+        // Wi-Fi only and the phone moved to mobile data: pause running downloads until Wi-Fi is back
+        if (!canDownload() && running.isNotEmpty()) {
+            val why = if (!isOnline()) "Waiting for network…" else "Waiting for Wi-Fi…"
+            running.keys.toList().forEach { id ->
+                TaskRepository.update(id, true) { it.copy(status = Status.WAITING, message = why) }
+                YoutubeDL.getInstance().destroyProcessById(id)
+            }
+        }
         // Network came back (or Wi-Fi-only was switched off): waiting tasks rejoin the queue
         if (canDownload()) {
             val now = System.currentTimeMillis()
@@ -154,8 +161,9 @@ class DownloadService : Service() {
         }
         if (!busy && running.isEmpty() && thumbJob?.isActive != true) {
             stopping = true
+            doneCount.set(0)
             stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            stopSelf(lastStartId)            // a newer start request keeps the service alive
         }
     }
 
@@ -250,12 +258,10 @@ class DownloadService : Service() {
     private fun downloadOnce(id: String) {
         val task = TaskRepository.get(id) ?: return
         Engine.ensureInit(this)
-        // Always use the CURRENT browser sign-in (YouTube rotates cookies during long queues)
-        val cookieFile: String? = null
 
         // Links added in bulk have no title yet: look it up now
         if (task.title.isBlank()) {
-            runCatching { InfoFetcher.fetch(this, task.url, cookieFile, "info-$id") }.getOrNull()?.let { info ->
+            runCatching { InfoFetcher.fetch(this, task.url, null, "info-$id") }.getOrNull()?.let { info ->
                 val thumbPath = info.thumb?.let { InfoFetcher.saveThumb(this, id, it) }
                 TaskRepository.update(id, true) { it.copy(title = info.title.orEmpty(), thumbPath = thumbPath) }
             }
@@ -279,18 +285,18 @@ class DownloadService : Service() {
             if (isYoutube(task.url)) addOption("--http-chunk-size", "10M")
             // Names are limited in BYTES (emoji take 4 bytes each); Android allows 255, so 90 leaves room for ".f137.mp4.part"
             addOption("-o", "${dir.absolutePath}/%(title).90B.%(ext)s")
-            cookieFile?.let { addOption("--cookies", it) }
             Formats.configure(this, task.format, task.subLang)
         }
 
         // A video+audio download is two separate transfers; fold them into one live 0-100% bar
         val spec = task.format
-        val host = Uri.parse(task.url).host.orEmpty()
-        var streams = if (spec.startsWith("video") && (host.contains("youtube") || host.contains("youtu.be"))) 2 else 1
+        var streams = if (spec.startsWith("video") && isYoutube(task.url)) 2 else 1
         var cur = 0                          // stream being downloaded right now (1-based)
         var lastP = -1
         val sizes = DoubleArray(4)           // bytes of each stream, as reported by yt-dlp
         var best = task.progress.coerceAtMost(98)   // the bar never goes backwards, even after a retry
+        // Paused or cancelled while the title lookup / engine start was running? Don't start the transfer.
+        if (TaskRepository.get(id)?.status != Status.RUNNING) return
         YoutubeDL.getInstance().execute(request, id) { progress, eta, line ->
             formatRe.find(line)?.let { streams = it.groupValues[1].split('+').size.coerceIn(1, 3) }
 
@@ -328,18 +334,19 @@ class DownloadService : Service() {
             }
         }
 
+        // Paused or cancelled at the very end: keep the partial files for resume, save nothing
+        if (TaskRepository.get(id)?.status != Status.RUNNING) return
         val saved = saveToDownloads(dir)
         saveSubtitles(dir)
         TaskRepository.update(id, true) {
             it.copy(
                 status = Status.DONE, progress = 100, message = "Completed",
-                fileUri = saved.uri, mime = saved.mime, title = saved.name
+                fileUri = saved.uri, mime = saved.mime, title = it.title.ifBlank { saved.name }
             )
         }
         dir.deleteRecursively()
         autoTries.remove(id)
         retryAt.remove(id)
-        cookieFile?.let { File(it).delete() }
         TaskRepository.get(id)?.let { notifyDone(it, true) }
     }
 
@@ -404,12 +411,14 @@ class DownloadService : Service() {
         if (t.status != Status.RUNNING && t.status != Status.QUEUED && t.status != Status.WAITING) return
         TaskRepository.update(id, true) { it.copy(status = Status.PAUSED, message = "Paused") }
         YoutubeDL.getInstance().destroyProcessById(id)
+        YoutubeDL.getInstance().destroyProcessById("info-$id")
         running[id]?.cancel()
     }
 
     private fun resume(id: String) {
         val t = TaskRepository.get(id) ?: return
         retryAt.remove(id)
+        autoTries.remove(id)
         if (t.status == Status.PAUSED || t.status == Status.FAILED || t.status == Status.WAITING) {
             TaskRepository.update(id, true) {
                 it.copy(status = Status.QUEUED, message = "Queued", retries = 0)
@@ -421,8 +430,12 @@ class DownloadService : Service() {
         TaskRepository.get(id) ?: return
         TaskRepository.remove(id)
         YoutubeDL.getInstance().destroyProcessById(id)
+        YoutubeDL.getInstance().destroyProcessById("info-$id")
         running[id]?.cancel()
-        File(filesDir, "downloads/$id").deleteRecursively()
+        retryAt.remove(id)
+        autoTries.remove(id)
+        val dir = File(filesDir, "downloads/$id")
+        scope.launch { delay(500); dir.deleteRecursively() }     // big folders: never on the main thread
     }
 
     /** Cancels many downloads with a single write: stops their processes and deletes partial files. */
@@ -432,8 +445,14 @@ class DownloadService : Service() {
         TaskRepository.removeMany(present)
         for (id in present) {
             YoutubeDL.getInstance().destroyProcessById(id)
+            YoutubeDL.getInstance().destroyProcessById("info-$id")
             running[id]?.cancel()
-            File(filesDir, "downloads/$id").deleteRecursively()
+            retryAt.remove(id)
+            autoTries.remove(id)
+        }
+        scope.launch {
+            delay(500)
+            present.forEach { File(filesDir, "downloads/$it").deleteRecursively() }
         }
     }
 
@@ -449,7 +468,8 @@ class DownloadService : Service() {
 
     /** Copies the finished file into the download folder chosen in Settings (default: Downloads/rainax-yt-downloader). */
     private fun saveToDownloads(dir: File): FileStore.Saved {
-        val file = dir.listFiles { f -> f.isFile && f.extension.lowercase() in KEEP_EXT }
+        // The biggest real media file (any format a site may give: mp4, mkv, flv, 3gp, ts, aac, flac, ...)
+        val file = dir.listFiles { f -> f.isFile && f.extension.lowercase() !in SKIP_EXT && f.length() > 0 }
             ?.maxByOrNull { it.length() } ?: error("No output file was produced")
         val mime = MimeTypeMap.getSingleton()
             .getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"
@@ -479,11 +499,12 @@ class DownloadService : Service() {
 
     // ---------- notifications ----------
 
-    private fun promote() {
-        // Some phones refuse a foreground start in rare background cases: keep going instead of crashing
-        try {
-            startForeground(FG_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } catch (e: Exception) { }
+    /** False when Android refuses the foreground start (rare background cases on Android 12+). */
+    private fun promote(): Boolean = try {
+        startForeground(FG_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        true
+    } catch (e: Exception) {
+        false
     }
 
     private fun createChannels() {
@@ -558,13 +579,13 @@ class DownloadService : Service() {
             notifyFailed()
             return
         }
-        doneCount++
+        val count = doneCount.incrementAndGet()
         val n = NotificationCompat.Builder(this, CH_DONE)
             .setSmallIcon(R.drawable.ic_stat_download)
-            .setContentTitle(if (doneCount == 1) "Download complete" else "$doneCount downloads complete")
+            .setContentTitle(if (count == 1) "Download complete" else "$count downloads complete")
             .setContentText(label(task).take(60))
             .setAutoCancel(true)
-            .setContentIntent(if (doneCount == 1) playIntent(task) ?: openAppIntent() else openAppIntent())
+            .setContentIntent(if (count == 1) playIntent(task) ?: openAppIntent() else openAppIntent())
             .build()
         nm.notify(DONE_ID, n)
     }
@@ -617,7 +638,7 @@ class DownloadService : Service() {
         private const val CH_DONE = "done"
         private const val MAX_RETRIES = 5
         private val AUTO_DELAYS = longArrayOf(60_000L, 180_000L, 600_000L)
-        private val KEEP_EXT = setOf("mp4", "mkv", "webm", "mp3", "m4a", "opus", "ogg", "mov")
+        private val SKIP_EXT = setOf("part", "ytdl", "srt", "vtt", "ass", "jpg", "jpeg", "webp", "png", "json", "temp", "tmp", "txt")
 
         fun send(context: Context, action: String, id: String? = null, ids: Array<String>? = null) {
             val intent = Intent(context, DownloadService::class.java).setAction(action)

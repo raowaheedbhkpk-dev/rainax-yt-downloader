@@ -67,6 +67,9 @@ class PlayerActivity : AppCompatActivity() {
     private val extraSubs = mutableMapOf<Int, Uri>()   // item index -> external subtitle file
 
     private var locked = false
+    private var internalNav = false        // our own picker/share screen is opening: don't jump into PiP
+    private var wasInPip = false
+    private var pipExitAt = 0L
     private var userSeeking = false
     private var resizeIndex = 0
     private var rotateMode = 0             // 0 auto (by video), 1 landscape, 2 portrait
@@ -111,8 +114,11 @@ class PlayerActivity : AppCompatActivity() {
             finish()
             return
         }
-        startPlayer(savedInstanceState?.getInt("index") ?: intent.getIntExtra(EXTRA_INDEX, 0),
-            savedInstanceState?.getLong("pos") ?: -1L)
+        val restored = savedInstanceState?.takeIf { it.containsKey("index") }
+        startPlayer(
+            restored?.getInt("index") ?: intent.getIntExtra(EXTRA_INDEX, 0),
+            restored?.getLong("pos") ?: -1L
+        )
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -206,7 +212,6 @@ class PlayerActivity : AppCompatActivity() {
             .build()
         player = p
         b.playerView.player = p
-        b.playerView.keepScreenOn = true
         p.addListener(listener)
 
         val start = index.coerceIn(0, uris.size - 1)
@@ -221,12 +226,14 @@ class PlayerActivity : AppCompatActivity() {
         updateSpeedLabel()
         updateTitle()
         updateNavButtons()
+        handler.removeCallbacks(ticker)
         handler.post(ticker)
         bumpControls()
     }
 
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            b.playerView.keepScreenOn = isPlaying          // screen may sleep while paused
             b.playBtn.setImageResource(if (isPlaying) R.drawable.ic_p_pause else R.drawable.ic_p_play)
             if (isPlaying) bumpControls() else {
                 handler.removeCallbacks(hideControls)
@@ -247,9 +254,16 @@ class PlayerActivity : AppCompatActivity() {
             autoOriented = false
             updateTitle()
             updateNavButtons()
-            if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
                 val saved = savedPosition(mediaItem?.mediaId.orEmpty())
                 if (saved > 5000) player?.seekTo(saved)
+            }
+        }
+
+        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+            // finished one item and moved on by itself: forget its resume point
+            if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
+                oldPosition.mediaItem?.mediaId?.let { prefs.edit().remove(posKey(it)).apply() }
             }
         }
 
@@ -287,7 +301,6 @@ class PlayerActivity : AppCompatActivity() {
             .setMessage("This file could not be played here ($code).")
             .setPositiveButton("Open with another app") { _, _ -> openExternally() }
             .setNegativeButton("Close") { _, _ -> finish() }
-            .setOnCancelListener { }
             .show()
     }
 
@@ -295,6 +308,7 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         val uri = p.currentMediaItem?.mediaId ?: return
         try {
+            internalNav = true
             startActivity(
                 Intent.createChooser(
                     Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), contentResolver.getType(Uri.parse(uri)) ?: "video/*")
@@ -455,6 +469,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun loadSubtitleFile() {
         try {
+            internalNav = true
             pickSubtitle.launch(arrayOf("application/x-subrip", "text/*", "application/octet-stream", "*/*"))
         } catch (e: Exception) {
             Toast.makeText(this, "This phone has no file picker", Toast.LENGTH_SHORT).show()
@@ -511,6 +526,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun share() {
         val uri = player?.currentMediaItem?.mediaId ?: return
         try {
+            internalNav = true
             startActivity(
                 Intent.createChooser(
                     Intent(Intent.ACTION_SEND).setType(contentResolver.getType(Uri.parse(uri)) ?: "video/*")
@@ -669,6 +685,7 @@ class PlayerActivity : AppCompatActivity() {
                 val cur = window.attributes.screenBrightness
                 startBright = if (cur in 0f..1f) cur else systemBrightness()
                 startPos = player?.currentPosition ?: 0L
+                seekTarget = startPos
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = e.x - downX
@@ -745,6 +762,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        if (internalNav) return
         // Home pressed while a video plays: keep watching in a small window
         val p = player ?: return
         if (p.isPlaying && p.currentTracks.isTypeSupported(C.TRACK_TYPE_VIDEO)) enterPip()
@@ -752,6 +770,8 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (wasInPip && !isInPictureInPictureMode) pipExitAt = System.currentTimeMillis()
+        wasInPip = isInPictureInPictureMode
         if (isInPictureInPictureMode) {
             showControls(false)
             b.gestureInfo.isVisible = false
@@ -765,7 +785,6 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun goImmersive() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
@@ -811,6 +830,11 @@ class PlayerActivity : AppCompatActivity() {
 
     // ---------- lifecycle ----------
 
+    override fun onResume() {
+        super.onResume()
+        internalNav = false
+    }
+
     override fun onPause() {
         super.onPause()
         savePosition()
@@ -820,6 +844,8 @@ class PlayerActivity : AppCompatActivity() {
         super.onStop()
         // Closed the small window or left the app: stop the sound
         player?.pause()
+        // The picture-in-picture window was closed: end the player instead of leaving it hidden
+        if (wasInPip || System.currentTimeMillis() - pipExitAt < 1500) finish()
     }
 
     override fun onDestroy() {
