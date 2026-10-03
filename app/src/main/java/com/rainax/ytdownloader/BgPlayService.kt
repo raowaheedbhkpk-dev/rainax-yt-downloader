@@ -36,7 +36,11 @@ class BgPlayService : MediaSessionService() {
             var spec = original
             if (spec.uri.scheme == "rainax") {
                 val page = spec.uri.getQueryParameter("u").orEmpty()
-                val audio = resolved[page] ?: FastExtractor.audioUrl(page).also { resolved[page] = it }
+                val audio = resolved[page] ?: try {
+                    FastExtractor.audioUrl(page).also { resolved[page] = it }
+                } catch (e: Exception) {
+                    throw java.io.IOException(e.message, e)     // the player skips/report it instead of crashing
+                }
                 spec = spec.withUri(android.net.Uri.parse(audio))
             }
             val url = spec.uri.toString()
@@ -59,7 +63,26 @@ class BgPlayService : MediaSessionService() {
             Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        session = MediaSession.Builder(this, player).setSessionActivity(open).build()
+        session = MediaSession.Builder(this, player)
+            .setSessionActivity(open)
+            .setCallback(object : MediaSession.Callback {
+                // Tracks arrive from the app's screen: make sure each keeps its sound address
+                override fun onAddMediaItems(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    mediaItems: MutableList<androidx.media3.common.MediaItem>
+                ): com.google.common.util.concurrent.ListenableFuture<MutableList<androidx.media3.common.MediaItem>> {
+                    val fixed = mediaItems.map { item ->
+                        if (item.localConfiguration != null) item
+                        else {
+                            val uri = item.requestMetadata.mediaUri ?: lazyUri(item.mediaId)
+                            item.buildUpon().setUri(uri).build()
+                        }
+                    }.toMutableList()
+                    return com.google.common.util.concurrent.Futures.immediateFuture(fixed)
+                }
+            })
+            .build()
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_stat_download) }
         )

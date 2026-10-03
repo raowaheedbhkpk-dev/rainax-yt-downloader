@@ -533,12 +533,19 @@ class MainActivity : AppCompatActivity() {
                     .setUri(audio)
                     .setMediaId(url)
                     .setMediaMetadata(meta)
+                    .setRequestMetadata(
+                        androidx.media3.common.MediaItem.RequestMetadata.Builder().setMediaUri(Uri.parse(audio)).build()
+                    )
                     .build()
                 // "Up next" videos become the next tracks (next/previous in the notification and lock screen)
                 val next = info.related.map { e ->
                     androidx.media3.common.MediaItem.Builder()
                         .setUri(BgPlayService.lazyUri(e.url))
                         .setMediaId(e.url)
+                        .setRequestMetadata(
+                            androidx.media3.common.MediaItem.RequestMetadata.Builder()
+                                .setMediaUri(BgPlayService.lazyUri(e.url)).build()
+                        )
                         .setMediaMetadata(
                             androidx.media3.common.MediaMetadata.Builder()
                                 .setTitle(e.title)
@@ -547,11 +554,16 @@ class MainActivity : AppCompatActivity() {
                         )
                         .build()
                 }
-                c.setMediaItems(listOf(item) + next, 0, (sec * 1000).toLong())
-                c.prepare()
-                c.play()
+                try {
+                    c.setMediaItems(listOf(item) + next, 0, (sec * 1000).toLong())
+                    c.prepare()
+                    c.play()
+                    message("Playing in background. Lock the screen or open other apps")
+                } catch (e: Exception) {
+                    hm.webView.evaluateJavascript(PLAY_JS, null)
+                    message("Couldn't start background play: " + (e.message ?: e.javaClass.simpleName).take(80))
+                }
                 updateAudioButton()
-                message("Playing in background. Lock the screen or open other apps")
             }
         }
     }

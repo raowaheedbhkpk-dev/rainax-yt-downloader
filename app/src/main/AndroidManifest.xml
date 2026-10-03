@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- background play keeps the phone (and Wi-Fi) awake while sound plays with the screen off -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- In-app updates: opens the Android installer for a new RAINAX version -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

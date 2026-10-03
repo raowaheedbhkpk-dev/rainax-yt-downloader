@@ -1,3 +1,3 @@
+Fixed crash on background play
 Background player with next and previous
 Lock screen and headphone controls
-Seek, pause and resume from notification
