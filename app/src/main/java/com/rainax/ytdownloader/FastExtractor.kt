@@ -135,7 +135,7 @@ object FastExtractor {
                 val thumb = item.thumbnails
                     .sortedBy { kotlin.math.abs((it.height.takeIf { h -> h > 0 } ?: 180) - 180) }
                     .firstOrNull()?.url
-                PlaylistEntry(item.url, name, thumb)
+                PlaylistEntry(item.url, name, thumb, item.duration.coerceAtLeast(0))
             }
         }
         check(list.isNotEmpty()) {
@@ -143,7 +143,8 @@ object FastExtractor {
         }
         PreviewState(
             title = info.name ?: "Playlist",
-            subtitle = "${list.size} videos" + if (skipped > 0) "  •  $skipped private/deleted skipped" else "",
+            subtitle = "${list.size} videos" + playlistLength(list) +
+                if (skipped > 0) "  •  $skipped private/deleted skipped" else "",
             playlist = list
         )
     }
@@ -224,6 +225,14 @@ object FastExtractor {
     }
 
     // ---------- helpers ----------
+
+    private fun playlistLength(list: List<PlaylistEntry>): String {
+        val total = list.sumOf { it.seconds }
+        if (total <= 0) return ""
+        val h = total / 3600
+        val m = (total % 3600) / 60
+        return "  •  " + if (h > 0) "${h}h ${m}m" else "${m}m"
+    }
 
     private fun checkPlayable(info: StreamInfo) {
         when (info.streamType) {

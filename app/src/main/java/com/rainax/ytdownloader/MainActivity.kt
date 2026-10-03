@@ -592,7 +592,18 @@ class MainActivity : AppCompatActivity() {
             val isPlaylist = p?.playlist?.isNotEmpty() == true
             // While the exact sizes load, the usual choices are already there: pick one and download at once
             val presets = !single || error != null || isPlaylist || (loading && p?.quick.isNullOrEmpty() && !isPlaylistUrl(firstUrl))
-            val quick = if (presets) PRESETS else p?.quick.orEmpty()
+            val quick = when {
+                // playlist: show the approximate total size of every choice
+                isPlaylist -> {
+                    val list = p!!.playlist
+                    val known = list.filter { it.seconds > 0 }
+                    val avg = if (known.isNotEmpty()) known.sumOf { it.seconds } / known.size else 240L
+                    val total = list.sumOf { if (it.seconds > 0) it.seconds else avg }
+                    PRESETS.map { it.copy(size = "≈ " + formatSize(estimatePlaylistBytes(it.spec, total))) }
+                }
+                presets -> PRESETS
+                else -> p?.quick.orEmpty()
+            }
             val all = if (presets) emptyList() else p?.all.orEmpty()
             val subs = if (presets) emptyList() else p?.subtitles.orEmpty()
 

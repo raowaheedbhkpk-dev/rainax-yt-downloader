@@ -69,4 +69,5 @@ jobs:
           files: |
             RAINAX-YT-DOWNLOADER-*.apk
             RAINAX-YT-DOWNLOADER-*.sha256
-          generate_release_notes: true
+          # "What's new" shown inside the app's update window: one short line per change
+          body_path: whatsnew.txt

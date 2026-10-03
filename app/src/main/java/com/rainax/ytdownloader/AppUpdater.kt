@@ -136,7 +136,7 @@ object AppUpdater {
     /** Required update: no "Later". The only ways out are Update or closing the app. */
     private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
         if (dialogShowing || activity.isFinishing || dlJob?.isActive == true) return
-        val notes = rel.notes.ifBlank { "Improvements and fixes." }.take(1500)
+        val notes = friendlyNotes(rel.notes)
         val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
         dialog = AlertDialog.Builder(activity)
             .setTitle("Update required: v${rel.version}")
@@ -156,6 +156,31 @@ object AppUpdater {
                 if (dialog === shown) dialog = null
             }
         })
+    }
+
+    /**
+     * Release notes as simple bullet lines for users: no links, no GitHub text, no markdown.
+     * (Written in whatsnew.txt, one change per line.)
+     */
+    private fun friendlyNotes(raw: String): String {
+        val lines = raw.lines()
+            .map { line ->
+                line.replace(Regex("\\[([^\\]]*)]\\([^)]*\\)"), "$1")       // [text](link) -> text
+                    .replace(Regex("https?://\\S+"), "")                 // bare links
+                    .replace(Regex("[*_`#>]+"), "")                         // markdown symbols
+                    .replace(Regex("\\s+by @\\S+.*$"), "")               // "by @user in ..."
+                    .trim().trimStart('-', '•', ' ').trim()
+            }
+            .filter { it.isNotEmpty() }
+            .filterNot { l ->
+                val low = l.lowercase()
+                low.startsWith("full changelog") || low.startsWith("what's changed") || low.startsWith("whats changed") ||
+                    low.startsWith("new contributors") || low.contains("made their first contribution") ||
+                    low.contains("github") || low.endsWith(":")
+            }
+            .take(8)
+        if (lines.isEmpty()) return "• Improvements and bug fixes"
+        return lines.joinToString("\n") { "• " + it.take(120) }
     }
 
     private fun download(activity: AppCompatActivity, rel: Release) {
