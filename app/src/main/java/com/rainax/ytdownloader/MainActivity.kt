@@ -534,7 +534,20 @@ class MainActivity : AppCompatActivity() {
                     .setMediaId(url)
                     .setMediaMetadata(meta)
                     .build()
-                c.setMediaItem(item, (sec * 1000).toLong())
+                // "Up next" videos become the next tracks (next/previous in the notification and lock screen)
+                val next = info.related.map { e ->
+                    androidx.media3.common.MediaItem.Builder()
+                        .setUri(BgPlayService.lazyUri(e.url))
+                        .setMediaId(e.url)
+                        .setMediaMetadata(
+                            androidx.media3.common.MediaMetadata.Builder()
+                                .setTitle(e.title)
+                                .setArtworkUri(e.thumbUrl?.let { Uri.parse(it) })
+                                .build()
+                        )
+                        .build()
+                }
+                c.setMediaItems(listOf(item) + next, 0, (sec * 1000).toLong())
                 c.prepare()
                 c.play()
                 updateAudioButton()
@@ -550,8 +563,21 @@ class MainActivity : AppCompatActivity() {
     private fun handBackToVideo(force: Boolean = false) {
         val c = controller ?: return
         val url = currentVideoUrl()
-        if (!bgActiveFor(url)) return
         if (!force && tab != 0) return
+        if (!bgActiveFor(url)) {
+            // Back in the app after the player moved on to another track: open that video at the same second
+            val other = c.currentMediaItem?.mediaId
+            if (!force && other != null && c.mediaItemCount > 0 && c.playbackState != androidx.media3.common.Player.STATE_IDLE &&
+                FastExtractor.supports(other)
+            ) {
+                val pos = c.currentPosition / 1000.0
+                c.stop()
+                c.clearMediaItems()
+                openYoutube(withTime(other, pos))
+                updateAudioButton()
+            }
+            return
+        }
         val pos = c.currentPosition / 1000.0
         val wasPlaying = c.isPlaying || c.playWhenReady
         c.stop()

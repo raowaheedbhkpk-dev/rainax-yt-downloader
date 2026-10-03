@@ -31,7 +31,14 @@ class BgPlayService : MediaSessionService() {
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(20_000)
             .setReadTimeoutMs(30_000)
-        val withUa = ResolvingDataSource.Factory(http) { spec ->
+        val withUa = ResolvingDataSource.Factory(http) { original ->
+            // Next tracks are queued as "rainax://play?u=<video page>": find their sound only when needed
+            var spec = original
+            if (spec.uri.scheme == "rainax") {
+                val page = spec.uri.getQueryParameter("u").orEmpty()
+                val audio = resolved[page] ?: FastExtractor.audioUrl(page).also { resolved[page] = it }
+                spec = spec.withUri(android.net.Uri.parse(audio))
+            }
             val url = spec.uri.toString()
             val ua = if (YoutubeParsingHelper.isVisionOsStreamingUrl(url)) YoutubeParsingHelper.getVisionOsUserAgent(null)
             else FastExtractor.UA
@@ -56,6 +63,15 @@ class BgPlayService : MediaSessionService() {
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_stat_download) }
         )
+    }
+
+    companion object {
+        /** Video page -> sound address, so a track is looked up once (addresses stay valid for hours). */
+        private val resolved = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+        /** A queue entry whose sound is found when the player reaches it. */
+        fun lazyUri(page: String): android.net.Uri =
+            android.net.Uri.parse("rainax://play?u=" + android.net.Uri.encode(page))
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session

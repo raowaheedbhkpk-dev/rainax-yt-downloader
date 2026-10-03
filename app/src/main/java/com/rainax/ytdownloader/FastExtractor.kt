@@ -111,8 +111,29 @@ object FastExtractor {
             subtitles = built.subs,
             audioUrl = bestAudioUrl(audios),
             thumbUrl = info.thumbnails.maxByOrNull { it.height }?.url ?: thumbUrl,
-            uploader = info.uploaderName
+            uploader = info.uploaderName,
+            related = relatedOf(info)
         )
+    }
+
+    /** YouTube's "up next" videos (used as next/previous tracks in background play). */
+    private fun relatedOf(info: StreamInfo): List<PlaylistEntry> = runCatching {
+        info.relatedItems.orEmpty()
+            .filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
+            .filter { !it.url.isNullOrBlank() && it.streamType != StreamType.LIVE_STREAM }
+            .take(25)
+            .map { item ->
+                val thumb = item.thumbnails.maxByOrNull { it.height }?.url
+                PlaylistEntry(item.url, item.name.orEmpty(), thumb, item.duration.coerceAtLeast(0))
+            }
+    }.getOrDefault(emptyList())
+
+    /** Blocking. Just the sound address of a video (for the background player's next tracks). */
+    fun audioUrl(url: String): String = guard {
+        init()
+        val info = StreamInfo.getInfo(videoUrl(url))
+        checkPlayable(info)
+        bestAudioUrl(usable(info.audioStreams)) ?: error("No audio found for this link")
     }
 
     /** Sound for background play: the original track, M4A preferred (plays everywhere). */

@@ -84,7 +84,8 @@ data class PreviewState(
     // for background play (no extra lookup when the headphones button is tapped)
     val audioUrl: String? = null,
     val thumbUrl: String? = null,
-    val uploader: String? = null
+    val uploader: String? = null,
+    val related: List<PlaylistEntry> = emptyList()      // "up next" videos: the background player's next tracks
 )
 
 /** Used when we have no format info (several links at once, playlists, or a failed lookup). */
