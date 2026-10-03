@@ -18,6 +18,10 @@ object AppPrefs {
     fun adBlock(c: Context) = p(c).getBoolean("ad_block", true)
     fun setAdBlock(c: Context, v: Boolean) = p(c).edit().putBoolean("ad_block", v).apply()
 
+    /** Leaving the app while a video plays keeps its sound playing (on by default). */
+    fun backgroundPlay(c: Context) = p(c).getBoolean("bg_play", true)
+    fun setBackgroundPlay(c: Context, v: Boolean) = p(c).edit().putBoolean("bg_play", v).apply()
+
     /** 0 = follow the phone, 1 = light, 2 = dark, 3 = AMOLED black */
     fun themeMode(c: Context) = p(c).getInt("theme_mode", 0)
     fun setThemeMode(c: Context, v: Int) = p(c).edit().putInt("theme_mode", v).apply()

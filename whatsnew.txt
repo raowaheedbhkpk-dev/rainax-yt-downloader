@@ -1,4 +1,4 @@
-Sign in to YouTube is back
-Your likes, subscriptions and history in the app
-Sign out anytime from Settings
-Background play now keeps playing
+Background play turns on by itself when you leave the app
+New Background play switch in Settings
+Headphones button removed
+Sign in to YouTube supported

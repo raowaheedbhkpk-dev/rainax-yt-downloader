@@ -234,7 +234,13 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        onLeaveApp()                  // Home / recent apps (the screen is still visible, so Android lets the player start)
+    }
+
     override fun onPause() {
+        snapshotVideo()
         hm.webView.onPause()
         CookieManager.getInstance().flush()      // keep the YouTube session
         super.onPause()
@@ -242,21 +248,27 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        connectPlayer()               // also hands the sound back to the video when returning to the app
+        leftApp = false
+        if (controller != null) handBackToVideo() else connectPlayer()   // the video continues from the sound
     }
 
     override fun onStop() {
-        disconnectPlayer()            // background sound keeps playing in its own service
+        onLeaveApp()                  // screen off and other ways of leaving
         super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
         AppUpdater.resumeInstall(this)
+        if (leftApp) {               // back from recent apps without the screen being hidden
+            leftApp = false
+            handBackToVideo()
+        }
         hm.webView.onResume()
     }
 
     override fun onDestroy() {
+        disconnectPlayer()            // background sound keeps playing in its own service
         sheet?.dismiss()
         (hm.webView.parent as? ViewGroup)?.removeView(hm.webView)
         hm.webView.stopLoading()
@@ -273,7 +285,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupHome() {
         // Floating buttons (native, never injected into the page)
         hm.nbDownload.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, false) } }
-        hm.nbAudio.setOnClickListener { currentVideoUrl()?.let { onAudioClick(it) } }
 
         val ws = hm.webView.settings
         hm.webView.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(hm.webView, R.attr.rxBg))
@@ -467,16 +478,19 @@ class MainActivity : AppCompatActivity() {
         val playlist = url != null && url.contains("/playlist?")
         val label = if (playlist) "Download playlist" else "Download"
         if (hm.nbDownload.text.toString() != label) hm.nbDownload.text = label
-        hm.nbAudio.isVisible = !playlist
-        updateAudioButton()
     }
 
     // =====================================================================
-    // Background play (BgPlayService, standard Android media session)
+    // Background play (Settings switch): leaving the app while a video plays
+    // continues its sound in BgPlayService; coming back continues the video.
     // =====================================================================
 
     private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaController>? = null
     private var controller: androidx.media3.session.MediaController? = null
+    private var leftApp = false
+    private var snapUrl: String? = null          // video playing when the screen was last paused
+    private var snapSec = -1.0
+    private var snapAt = 0L
 
     private fun connectPlayer() {
         if (controllerFuture != null) return
@@ -487,12 +501,7 @@ class MainActivity : AppCompatActivity() {
             val c = try { future.get() } catch (e: Exception) { null } ?: return@addListener
             if (controllerFuture !== future) { c.release(); return@addListener }
             controller = c
-            c.addListener(object : androidx.media3.common.Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) = updateAudioButton()
-                override fun onPlaybackStateChanged(state: Int) = updateAudioButton()
-            })
-            handBackToVideo()
-            updateAudioButton()
+            if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) handBackToVideo()
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -502,129 +511,110 @@ class MainActivity : AppCompatActivity() {
         controller = null
     }
 
-    /** True while background sound for [url] is loaded (playing or paused). */
-    private fun bgActiveFor(url: String?): Boolean {
-        val c = controller ?: return false
-        return url != null && c.mediaItemCount > 0 && c.currentMediaItem?.mediaId == url &&
-            c.playbackState != androidx.media3.common.Player.STATE_IDLE
+    /** The video on screen (not a playlist page) in the YouTube tab, if any. */
+    private fun playableVideoUrl(): String? =
+        currentVideoUrl()?.takeIf { tab == 0 && !it.contains("/playlist?") }
+
+    /** The screen is pausing: remember if a video is playing (YouTube may pause it once hidden). */
+    private fun snapshotVideo() {
+        val url = playableVideoUrl() ?: run { snapUrl = null; return }
+        hm.webView.evaluateJavascript(STATE_JS) { r ->
+            snapSec = r?.replace("\"", "")?.toDoubleOrNull() ?: -1.0
+            snapUrl = url
+            snapAt = System.currentTimeMillis()
+        }
     }
 
-    /** Headphones button: the video continues as sound in the background (tap again to go back to the video). */
-    private fun onAudioClick(url: String) {
-        val c = controller
-        if (c == null) {
-            message("Starting the player… tap again in a moment")
-            connectPlayer()
+    /** Home, recent apps, screen off...: continue the sound in the background, or stop it (Settings). */
+    private fun onLeaveApp() {
+        if (leftApp || isChangingConfigurations) return
+        leftApp = true
+        val url = playableVideoUrl() ?: return
+        if (!AppPrefs.backgroundPlay(this)) {
+            hm.webView.evaluateJavascript(PAUSE_JS, null)   // background play is off: the video stops
             return
         }
-        if (bgActiveFor(url)) {
-            handBackToVideo(force = true)
-            return
-        }
-        // pause the page's video and remember the second it was at
         hm.webView.evaluateJavascript(HANDOFF_JS) { r ->
-            val sec = r?.replace("\"", "")?.toDoubleOrNull() ?: 0.0
-            lifecycleScope.launch {
-                val info = vm.audioInfo(url)
-                val audio = info?.audioUrl
-                if (audio == null) {
-                    hm.webView.evaluateJavascript(PLAY_JS, null)
-                    message("Couldn't start background play for this video")
-                    return@launch
-                }
-                val meta = androidx.media3.common.MediaMetadata.Builder()
-                    .setTitle(info.title)
-                    .setArtist(info.uploader)
-                    .setArtworkUri(info.thumbUrl?.let { Uri.parse(it) })
-                    .build()
-                // the player streams it in small pieces (and finds a fresh address if this one expires)
-                BgPlayService.remember(url, audio)
-                val item = androidx.media3.common.MediaItem.Builder()
-                    .setUri(BgPlayService.lazyUri(url))
-                    .setMediaId(url)
-                    .setMediaMetadata(meta)
+            var sec = r?.replace("\"", "")?.toDoubleOrNull() ?: -1.0
+            if (sec < 0 && snapUrl == url && snapSec >= 0 && System.currentTimeMillis() - snapAt < 5000) sec = snapSec
+            if (sec >= 0) startBackground(url, sec)
+        }
+    }
+
+    /** Plays [url]'s sound from [sec] in BgPlayService, with "Up next" as next tracks. */
+    private fun startBackground(url: String, sec: Double) {
+        lifecycleScope.launch {
+            val c = controller ?: return@launch
+            val info = try { vm.audioInfo(url) } catch (e: Exception) { null } ?: return@launch
+            val audio = info.audioUrl ?: return@launch
+            if (!leftApp) return@launch                       // already back in the app
+            BgPlayService.remember(url, audio)
+            val meta = androidx.media3.common.MediaMetadata.Builder()
+                .setTitle(info.title)
+                .setArtist(info.uploader)
+                .setArtworkUri(info.thumbUrl?.let { Uri.parse(it) })
+                .build()
+            val item = androidx.media3.common.MediaItem.Builder()
+                .setUri(BgPlayService.lazyUri(url))
+                .setMediaId(url)
+                .setMediaMetadata(meta)
+                .setRequestMetadata(
+                    androidx.media3.common.MediaItem.RequestMetadata.Builder().setMediaUri(BgPlayService.lazyUri(url)).build()
+                )
+                .build()
+            val next = info.related.map { e ->
+                androidx.media3.common.MediaItem.Builder()
+                    .setUri(BgPlayService.lazyUri(e.url))
+                    .setMediaId(e.url)
                     .setRequestMetadata(
-                        androidx.media3.common.MediaItem.RequestMetadata.Builder().setMediaUri(BgPlayService.lazyUri(url)).build()
+                        androidx.media3.common.MediaItem.RequestMetadata.Builder()
+                            .setMediaUri(BgPlayService.lazyUri(e.url)).build()
+                    )
+                    .setMediaMetadata(
+                        androidx.media3.common.MediaMetadata.Builder()
+                            .setTitle(e.title)
+                            .setArtworkUri(e.thumbUrl?.let { Uri.parse(it) })
+                            .build()
                     )
                     .build()
-                // "Up next" videos become the next tracks (next/previous in the notification and lock screen)
-                val next = info.related.map { e ->
-                    androidx.media3.common.MediaItem.Builder()
-                        .setUri(BgPlayService.lazyUri(e.url))
-                        .setMediaId(e.url)
-                        .setRequestMetadata(
-                            androidx.media3.common.MediaItem.RequestMetadata.Builder()
-                                .setMediaUri(BgPlayService.lazyUri(e.url)).build()
-                        )
-                        .setMediaMetadata(
-                            androidx.media3.common.MediaMetadata.Builder()
-                                .setTitle(e.title)
-                                .setArtworkUri(e.thumbUrl?.let { Uri.parse(it) })
-                                .build()
-                        )
-                        .build()
-                }
-                try {
-                    c.setMediaItems(listOf(item) + next, 0, (sec * 1000).toLong())
-                    c.prepare()
-                    c.play()
-                    message("Playing in background. Lock the screen or open other apps")
-                } catch (e: Exception) {
-                    hm.webView.evaluateJavascript(PLAY_JS, null)
-                    message("Couldn't start background play: " + (e.message ?: e.javaClass.simpleName).take(80))
-                }
-                updateAudioButton()
             }
+            try {
+                c.setMediaItems(listOf(item) + next, 0, (sec * 1000).toLong())
+                c.prepare()
+                c.play()
+            } catch (e: Exception) { }
         }
+    }
+
+    /** Stops background sound (Settings switch turned off). */
+    private fun stopBackground() {
+        controller?.run { stop(); clearMediaItems() }
     }
 
     /**
-     * Back in the app on the same video (or headphones tapped again): the video continues
-     * from where the sound is, and background play stops.
+     * Back in the app: the video continues from where the sound is, and background play stops.
+     * If the player moved on to another track, that video opens at the same second.
      */
-    private fun handBackToVideo(force: Boolean = false) {
+    private fun handBackToVideo() {
         val c = controller ?: return
+        if (c.mediaItemCount == 0 || c.playbackState == androidx.media3.common.Player.STATE_IDLE) return
         val url = currentVideoUrl()
-        if (!force && tab != 0) return
-        if (!bgActiveFor(url)) {
-            // Back in the app after the player moved on to another track: open that video at the same second
-            val other = c.currentMediaItem?.mediaId
-            if (!force && other != null && c.mediaItemCount > 0 && c.playbackState != androidx.media3.common.Player.STATE_IDLE &&
-                FastExtractor.supports(other)
-            ) {
-                val pos = c.currentPosition / 1000.0
-                c.stop()
-                c.clearMediaItems()
-                openYoutube(withTime(other, pos))
-                updateAudioButton()
-            }
-            return
-        }
         val pos = c.currentPosition / 1000.0
         val wasPlaying = c.isPlaying || c.playWhenReady
+        val other = c.currentMediaItem?.mediaId
         c.stop()
         c.clearMediaItems()
-        val play = if (wasPlaying) "v.play();" else ""
-        hm.webView.evaluateJavascript(
-            "(function(){var v=document.querySelector('video');if(!v)return;try{v.currentTime=$pos;}catch(e){}$play})()", null
-        )
-        updateAudioButton()
-    }
-
-    private fun updateAudioButton() {
-        if (!::b.isInitialized) return
-        val on = bgActiveFor(currentVideoUrl())
-        if (hm.nbAudio.tag != on) {
-            hm.nbAudio.tag = on
-            hm.nbAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (on) ContextCompat.getColor(this, R.color.rx_primary)
-                else com.google.android.material.color.MaterialColors.getColor(hm.nbAudio, R.attr.rxCard)
+        if (other == null || other == url) {
+            val play = if (wasPlaying) "v.play();" else ""
+            hm.webView.evaluateJavascript(
+                "(function(){var v=document.querySelector('video');if(!v)return;try{v.currentTime=$pos;}catch(e){}$play})()", null
             )
-            hm.nbAudio.imageTintList = android.content.res.ColorStateList.valueOf(
-                ContextCompat.getColor(this, if (on) R.color.rx_on_primary else R.color.rx_text)
-            )
+        } else if (FastExtractor.supports(other)) {
+            if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+            openYoutube(withTime(other, pos))
         }
     }
+
 
     private fun isAllowedUrl(url: String): Boolean {
         val uri = Uri.parse(url)
@@ -1262,6 +1252,11 @@ class MainActivity : AppCompatActivity() {
 
         st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
         st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
+        st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
+        st.bgPlaySwitch.setOnCheckedChangeListener { _, on ->
+            AppPrefs.setBackgroundPlay(this, on)
+            if (!on) stopBackground()
+        }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
         st.signOutBtn.setOnClickListener {
             CookieHelper.signOut()
@@ -1390,9 +1385,16 @@ class MainActivity : AppCompatActivity() {
          * It adds no buttons: the Download buttons are native and float above the page.
          */
         /** Pauses the page's video and returns the second it was at. */
-        private const val HANDOFF_JS = "(function(){var v=document.querySelector('video');if(!v)return 0;var t=v.currentTime;try{v.pause();}catch(e){}return t;})()"
+        /** Playing: pauses the video and returns its second (0 during an ad). Not playing: -1. */
+        private const val HANDOFF_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
+            "var t=document.querySelector('.ad-showing')?0:v.currentTime;try{v.pause();}catch(e){}return t;})()"
 
-        private const val PLAY_JS = "(function(){var v=document.querySelector('video');if(v){try{v.play();}catch(e){}}})()"
+        /** The second the video is at if it is playing, else -1 (changes nothing). */
+        private const val STATE_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
+            "return document.querySelector('.ad-showing')?0:v.currentTime;})()"
+
+        private const val PAUSE_JS = "(function(){var v=document.querySelector('video');if(v){try{v.pause();}catch(e){}}})()"
+
 
         private const val INJECT_JS = """
 (function(){

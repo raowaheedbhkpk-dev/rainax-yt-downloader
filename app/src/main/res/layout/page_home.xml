@@ -32,18 +32,6 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/nbAudio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:contentDescription="Play in background"
-            app:backgroundTint="?attr/rxCard"
-            app:elevation="6dp"
-            app:fabSize="mini"
-            app:srcCompat="@drawable/ic_headphones"
-            app:tint="@color/rx_text" />
-
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/nbDownload"
             android:layout_width="wrap_content"
