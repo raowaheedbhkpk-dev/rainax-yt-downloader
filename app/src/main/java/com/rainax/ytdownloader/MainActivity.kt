@@ -1509,7 +1509,6 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
             "return document.querySelector('.ad-showing')?0:v.currentTime;})()"
 
-        private const val YT_HOME = "https://m.youtube.com/"
         private const val YT_SHORTS = "https://m.youtube.com/shorts"
         private const val SIGN_IN_URL = "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true" +
             "&continue=https%3A%2F%2Fm.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Dm%26next%3Dhttps%253A%252F%252Fm.youtube.com%252F"
