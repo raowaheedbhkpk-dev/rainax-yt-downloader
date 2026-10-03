@@ -1,2 +1,2 @@
-Home, Library and Settings icons visible again in light theme
-Nothing on YouTube is hidden anymore
+Background player now shows in notifications while downloading
+Lock screen player controls fixed

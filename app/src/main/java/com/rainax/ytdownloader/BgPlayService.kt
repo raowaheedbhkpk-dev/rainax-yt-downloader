@@ -95,11 +95,17 @@ class BgPlayService : MediaSessionService() {
             })
             .build()
         setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_stat_download) }
+            DefaultMediaNotificationProvider.Builder(this)
+                .setNotificationId(PLAYER_NOTIFICATION_ID)     // own number: downloads use 1001 (Media3's default) and replaced it
+                .setChannelId("rainax_player")
+                .setChannelName(R.string.player_channel)
+                .build().apply { setSmallIcon(R.drawable.ic_stat_download) }
         )
     }
 
     companion object {
+        private const val PLAYER_NOTIFICATION_ID = 2001
+
         /** Video page -> sound address, so a track is looked up once (addresses stay valid for hours). */
         private val resolved = java.util.concurrent.ConcurrentHashMap<String, String>()
 
