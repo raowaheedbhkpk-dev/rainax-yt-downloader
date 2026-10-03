@@ -240,6 +240,16 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    override fun onStart() {
+        super.onStart()
+        connectPlayer()               // also hands the sound back to the video when returning to the app
+    }
+
+    override fun onStop() {
+        disconnectPlayer()            // background sound keeps playing in its own service
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         AppUpdater.resumeInstall(this)
@@ -263,6 +273,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupHome() {
         // Floating buttons (native, never injected into the page)
         hm.nbDownload.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, false) } }
+        hm.nbAudio.setOnClickListener { currentVideoUrl()?.let { onAudioClick(it) } }
 
         val ws = hm.webView.settings
         hm.webView.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(hm.webView, R.attr.rxBg))
@@ -445,6 +456,126 @@ class MainActivity : AppCompatActivity() {
         val playlist = url != null && url.contains("/playlist?")
         val label = if (playlist) "Download playlist" else "Download"
         if (hm.nbDownload.text.toString() != label) hm.nbDownload.text = label
+        hm.nbAudio.isVisible = !playlist
+        updateAudioButton()
+    }
+
+    // =====================================================================
+    // Background play (BgPlayService, standard Android media session)
+    // =====================================================================
+
+    private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaController>? = null
+    private var controller: androidx.media3.session.MediaController? = null
+
+    private fun connectPlayer() {
+        if (controllerFuture != null) return
+        val token = androidx.media3.session.SessionToken(this, android.content.ComponentName(this, BgPlayService::class.java))
+        val future = androidx.media3.session.MediaController.Builder(this, token).buildAsync()
+        controllerFuture = future
+        future.addListener({
+            val c = try { future.get() } catch (e: Exception) { null } ?: return@addListener
+            if (controllerFuture !== future) { c.release(); return@addListener }
+            controller = c
+            c.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) = updateAudioButton()
+                override fun onPlaybackStateChanged(state: Int) = updateAudioButton()
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    message("Background play stopped: can't play this sound")
+                }
+            })
+            handBackToVideo()
+            updateAudioButton()
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun disconnectPlayer() {
+        controllerFuture?.let { androidx.media3.session.MediaController.releaseFuture(it) }
+        controllerFuture = null
+        controller = null
+    }
+
+    /** True while background sound for [url] is loaded (playing or paused). */
+    private fun bgActiveFor(url: String?): Boolean {
+        val c = controller ?: return false
+        return url != null && c.mediaItemCount > 0 && c.currentMediaItem?.mediaId == url &&
+            c.playbackState != androidx.media3.common.Player.STATE_IDLE
+    }
+
+    /** Headphones button: the video continues as sound in the background (tap again to go back to the video). */
+    private fun onAudioClick(url: String) {
+        val c = controller
+        if (c == null) {
+            message("Starting the player… tap again in a moment")
+            connectPlayer()
+            return
+        }
+        if (bgActiveFor(url)) {
+            handBackToVideo(force = true)
+            return
+        }
+        // pause the page's video and remember the second it was at
+        hm.webView.evaluateJavascript(HANDOFF_JS) { r ->
+            val sec = r?.replace("\"", "")?.toDoubleOrNull() ?: 0.0
+            lifecycleScope.launch {
+                val info = vm.audioInfo(url)
+                val audio = info?.audioUrl
+                if (audio == null) {
+                    hm.webView.evaluateJavascript(PLAY_JS, null)
+                    message("Couldn't start background play for this video")
+                    return@launch
+                }
+                val meta = androidx.media3.common.MediaMetadata.Builder()
+                    .setTitle(info.title)
+                    .setArtist(info.uploader)
+                    .setArtworkUri(info.thumbUrl?.let { Uri.parse(it) })
+                    .build()
+                val item = androidx.media3.common.MediaItem.Builder()
+                    .setUri(audio)
+                    .setMediaId(url)
+                    .setMediaMetadata(meta)
+                    .build()
+                c.setMediaItem(item, (sec * 1000).toLong())
+                c.prepare()
+                c.play()
+                updateAudioButton()
+                message("Playing in background. Lock the screen or open other apps")
+            }
+        }
+    }
+
+    /**
+     * Back in the app on the same video (or headphones tapped again): the video continues
+     * from where the sound is, and background play stops.
+     */
+    private fun handBackToVideo(force: Boolean = false) {
+        val c = controller ?: return
+        val url = currentVideoUrl()
+        if (!bgActiveFor(url)) return
+        if (!force && tab != 0) return
+        val pos = c.currentPosition / 1000.0
+        val wasPlaying = c.isPlaying || c.playWhenReady
+        c.stop()
+        c.clearMediaItems()
+        val play = if (wasPlaying) "v.play();" else ""
+        hm.webView.evaluateJavascript(
+            "(function(){var v=document.querySelector('video');if(!v)return;try{v.currentTime=$pos;}catch(e){}$play})()", null
+        )
+        updateAudioButton()
+    }
+
+    private fun updateAudioButton() {
+        if (!::b.isInitialized) return
+        val on = bgActiveFor(currentVideoUrl())
+        if (hm.nbAudio.tag != on) {
+            hm.nbAudio.tag = on
+            hm.nbAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                if (on) ContextCompat.getColor(this, R.color.rx_primary)
+                else com.google.android.material.color.MaterialColors.getColor(hm.nbAudio, R.attr.rxCard)
+            )
+            hm.nbAudio.imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this, if (on) R.color.rx_on_primary else R.color.rx_text)
+            )
+        }
     }
 
     private fun isAllowedUrl(url: String): Boolean {
@@ -1205,6 +1336,11 @@ class MainActivity : AppCompatActivity() {
          * Runs inside the YouTube page: hides "Open app" prompts and ads.
          * It adds no buttons: the Download buttons are native and float above the page.
          */
+        /** Pauses the page's video and returns the second it was at. */
+        private const val HANDOFF_JS = "(function(){var v=document.querySelector('video');if(!v)return 0;var t=v.currentTime;try{v.pause();}catch(e){}return t;})()"
+
+        private const val PLAY_JS = "(function(){var v=document.querySelector('video');if(v){try{v.play();}catch(e){}}})()"
+
         private const val INJECT_JS = """
 (function(){
  if(window.__ytdlInit3) return;

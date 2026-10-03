@@ -90,6 +90,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Everything background play needs (audio address, title, picture). Usually already looked up
+     * the moment the video opened, so it starts at once.
+     */
+    suspend fun audioInfo(url: String): PreviewState? {
+        cached(url)?.let { if (it.audioUrl != null) return it }
+        val ahead = aheadJob?.takeIf { aheadKey == cacheKey(url) && it.isActive }
+        val fromAhead = try {
+            ahead?.await()
+        } catch (e: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            null
+        }
+        val r = fromAhead?.takeIf { it.audioUrl != null } ?: doFetch(url, false).also { remember(url, it) }
+        return r.takeIf { it.audioUrl != null }
+    }
+
     /** Reads info with RAINAX's own extractor. Never throws: problems come back as an error state. */
     private suspend fun doFetch(url: String, forcePlaylist: Boolean): PreviewState {
         val playlist = forcePlaylist || isPlaylistUrl(url)

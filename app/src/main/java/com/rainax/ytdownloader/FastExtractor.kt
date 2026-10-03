@@ -108,8 +108,18 @@ object FastExtractor {
             thumb = thumbUrl?.let { InfoFetcher.loadBitmap(it) },
             quick = if (progressive.isEmpty() && videoOnly.isEmpty()) built.quick.filter { it.kind == KIND_AUDIO } else built.quick,
             all = if (progressive.isEmpty() && videoOnly.isEmpty()) built.all.filter { it.kind == KIND_AUDIO } else built.all,
-            subtitles = built.subs
+            subtitles = built.subs,
+            audioUrl = bestAudioUrl(audios),
+            thumbUrl = info.thumbnails.maxByOrNull { it.height }?.url ?: thumbUrl,
+            uploader = info.uploaderName
         )
+    }
+
+    /** Sound for background play: the original track, M4A preferred (plays everywhere). */
+    private fun bestAudioUrl(audios: List<AudioStream>): String? {
+        val original = audios.filter { it.audioTrackType == null || it.audioTrackType?.name == "ORIGINAL" }.ifEmpty { audios }
+        return (original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
+            ?: original.maxByOrNull { audioRate(it) })?.content
     }
 
     /** Blocking. Up to 1000 playlist entries (private/deleted ones skipped). */
