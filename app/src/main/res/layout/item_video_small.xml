@@ -50,8 +50,9 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
+            android:fontFamily="sans-serif-medium"
             android:textColor="@color/rx_text"
-            android:textSize="15sp" />
+            android:textSize="14.5sp" />
 
         <TextView
             android:id="@+id/meta"
@@ -66,11 +67,14 @@
 
     <ImageButton
         android:id="@+id/download"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
         android:layout_gravity="bottom"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_marginStart="6dp"
+        android:background="@drawable/bg_circle_btn"
         android:contentDescription="Download"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_download"
         app:tint="@color/rx_text" />
 </LinearLayout>

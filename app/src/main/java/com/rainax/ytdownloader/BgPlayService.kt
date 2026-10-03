@@ -115,7 +115,7 @@ class BgPlayService : MediaSessionService() {
 
         /** Blocking (player thread). The sound address of a video page; [fresh] skips the saved one. */
         fun audioFor(page: String, fresh: Boolean): String {
-            if (!fresh) resolved[page]?.let { return it }
+            if (!fresh) resolved[page]?.let { return it } else FastExtractor.forget(page)
             return try {
                 FastExtractor.audioUrl(page).also { resolved[page] = it }
             } catch (e: Exception) {

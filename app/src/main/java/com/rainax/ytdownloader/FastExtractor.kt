@@ -42,6 +42,48 @@ object FastExtractor {
         ready = true
     }
 
+    // ---------- one lookup per video ----------
+    // The video page, the download sheet and the download itself all need the same video info.
+    // It is fetched once (even when asked for at the same moment) and kept for 20 minutes.
+
+    private class CachedInfo(val at: Long, val info: StreamInfo)
+    private val infoCache = java.util.concurrent.ConcurrentHashMap<String, CachedInfo>()
+    private val inFlight = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<StreamInfo>>()
+    private const val INFO_MS = 20 * 60 * 1000L
+
+    /** Blocking. The video's info, from memory when possible. */
+    internal fun streamInfo(url: String): StreamInfo {
+        init()
+        val key = videoUrl(url)
+        infoCache[key]?.let { if (System.currentTimeMillis() - it.at < INFO_MS) return it.info }
+        val mine = java.util.concurrent.CompletableFuture<StreamInfo>()
+        val running = inFlight.putIfAbsent(key, mine) ?: mine
+        if (running === mine) {
+            try {
+                val info = StreamInfo.getInfo(key)
+                if (infoCache.size > 40) {
+                    infoCache.entries.minByOrNull { it.value.at }?.let { infoCache.remove(it.key) }
+                }
+                infoCache[key] = CachedInfo(System.currentTimeMillis(), info)
+                mine.complete(info)
+            } catch (e: Throwable) {
+                mine.completeExceptionally(e)
+            } finally {
+                inFlight.remove(key)
+            }
+        }
+        try {
+            return running.get()
+        } catch (e: java.util.concurrent.ExecutionException) {
+            throw (e.cause as? Exception) ?: e
+        }
+    }
+
+    /** Drops the saved info (its stream addresses stopped working). */
+    fun forget(url: String) {
+        infoCache.remove(videoUrl(url))
+    }
+
     /** True for YouTube videos and Shorts (used for look-ahead, cache keys and thumbnails). */
     fun supports(url: String): Boolean {
         val u = url.lowercase()
@@ -79,7 +121,7 @@ object FastExtractor {
     /** Blocking. Title, thumbnail, qualities with sizes and subtitles. Throws a readable error. */
     fun fetch(url: String): PreviewState = guard {
         init()
-        val info = StreamInfo.getInfo(videoUrl(url))
+        val info = streamInfo(url)
         checkPlayable(info)
         val duration = info.duration.toInt()
 
@@ -138,7 +180,7 @@ object FastExtractor {
     /** Blocking. Just the sound address of a video (for the background player's next tracks). */
     fun audioUrl(url: String): String = guard {
         init()
-        val info = StreamInfo.getInfo(videoUrl(url))
+        val info = streamInfo(url)
         checkPlayable(info)
         bestAudioUrl(usable(info.audioStreams)) ?: error("No audio found for this link")
     }
@@ -205,7 +247,7 @@ object FastExtractor {
     /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
     fun plan(url: String, spec: String, subLang: String?): Plan = guard {
         init()
-        val info = StreamInfo.getInfo(videoUrl(url))
+        val info = streamInfo(url)
         checkPlayable(info)
         val duration = info.duration.toInt()
         val thumb = info.thumbnails.maxByOrNull { it.height }?.url

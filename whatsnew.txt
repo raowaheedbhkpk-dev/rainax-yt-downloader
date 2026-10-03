@@ -1,3 +1,5 @@
-Home now has two tabs: YouTube and Music
-YouTube tab shows popular videos and things you searched
-Music charts fixed for Pakistan and other countries
+Fresh new design for Home and the video page
+Choose video quality and playback speed in the player
+Videos open faster and downloads start quicker
+Pull down to refresh the list
+Copy link button on every video

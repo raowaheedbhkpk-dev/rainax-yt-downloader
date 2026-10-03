@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RAINAX mark: white download arrow on a red rounded square (same as the app icon) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="315" android:endColor="@color/ic_launcher_bg_end" android:startColor="@color/ic_launcher_bg_start" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

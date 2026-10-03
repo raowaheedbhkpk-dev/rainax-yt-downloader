@@ -217,7 +217,7 @@ class MainActivity : AppCompatActivity() {
     /** A video from a list: open its page (playlists go straight to the download sheet). */
     private fun openItem(item: VideoItem) {
         if (item.isPlaylist) showDownloadSheet(listOf(item.url), knownTitle = item.title)
-        else video.open(item.url, item.title, item.uploader)
+        else video.open(item.url, item.title, item.uploader, thumb = item.thumb)
     }
 
     // =====================================================================

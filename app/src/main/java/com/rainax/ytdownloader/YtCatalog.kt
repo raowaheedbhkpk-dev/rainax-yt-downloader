@@ -24,15 +24,22 @@ data class VideoItem(
     val views: Long,            // -1 = unknown
     val uploaded: String?,
     val isPlaylist: Boolean = false,
-    val count: Long = -1        // playlist size
+    val count: Long = -1,       // playlist size
+    val avatar: String? = null  // channel picture
 )
 
 class FeedPage(val items: List<VideoItem>, val next: Page?)
 
 class Comment(val author: String, val avatar: String?, val text: String, val html: Boolean, val likes: String?, val date: String?)
 
-/** What the in-app player streams: picture + sound (joined while playing), one file with both, or a live stream. */
-class PlaySource(val video: String?, val audio: String?, val muxed: String?, val hls: String?)
+/** One picture quality the player can switch to (sound is added separately). */
+class VideoOption(val height: Int, val fps: Int, val url: String, val codec: String)
+
+/**
+ * What the in-app player streams: picture + sound (joined while playing), one file with both, or a live stream.
+ * [options] = every picture quality (the app keeps those this phone can play).
+ */
+class PlaySource(val video: String?, val audio: String?, val muxed: String?, val hls: String?, val options: List<VideoOption> = emptyList())
 
 class VideoDetails(
     val url: String,
@@ -166,7 +173,7 @@ object YtCatalog {
     /** Blocking. Everything the video page shows, plus what the player streams. */
     fun video(url: String): VideoDetails = guard {
         FastExtractor.init()
-        val info = StreamInfo.getInfo(FastExtractor.videoUrl(url))
+        val info = FastExtractor.streamInfo(url)
         val related = info.relatedItems.orEmpty().mapNotNull { item(it) }.filter { !it.isPlaylist }
         VideoDetails(
             url = FastExtractor.videoUrl(url),
@@ -215,7 +222,8 @@ object YtCatalog {
                 VideoItem(
                     url = i.url, title = i.name.orEmpty(), uploader = i.uploaderName.orEmpty(),
                     thumb = best(i.thumbnails, 480), seconds = if (live) -1 else i.duration.coerceAtLeast(0),
-                    views = i.viewCount, uploaded = i.textualUploadDate
+                    views = i.viewCount, uploaded = i.textualUploadDate,
+                    avatar = runCatching { best(i.uploaderAvatars, 68) }.getOrNull()
                 )
             }
         }
@@ -253,8 +261,26 @@ object YtCatalog {
             .filter { heightOf(it) in 1..720 }
             .maxWithOrNull(compareBy<VideoStream> { heightOf(it) }.thenBy { it.bitrate })
         val muxed = usable(info.videoStreams).maxByOrNull { heightOf(it) }?.content
-        return if (video != null && audio != null) PlaySource(video.content, audio, muxed, null)
-        else PlaySource(null, null, muxed ?: audio, info.hlsUrl?.takeIf { it.isNotBlank() })
+        // every quality: per height the best stream of each codec (H.264, VP9, AV1)
+        val options = usable(info.videoOnlyStreams)
+            .filter { heightOf(it) > 0 }
+            .groupBy { heightOf(it) to codecFamily(it) }
+            .mapNotNull { (_, list) -> list.maxByOrNull { it.bitrate } }
+            .map { VideoOption(heightOf(it), it.fps, it.content, codecFamily(it)) }
+            .sortedWith(compareByDescending<VideoOption> { it.height }.thenByDescending { it.fps })
+        return if (video != null && audio != null) PlaySource(video.content, audio, muxed, null, options)
+        else PlaySource(null, audio, muxed ?: audio, info.hlsUrl?.takeIf { it.isNotBlank() }, if (audio != null) options else emptyList())
+    }
+
+    /** "avc", "vp9", "av1" or "other". */
+    private fun codecFamily(v: VideoStream): String {
+        val c = v.codec.orEmpty().lowercase()
+        return when {
+            c.startsWith("avc") || (c.isEmpty() && v.format?.suffix == "mp4") -> "avc"
+            c.startsWith("vp9") || c.startsWith("vp09") || (c.isEmpty() && v.format?.suffix == "webm") -> "vp9"
+            c.startsWith("av01") -> "av1"
+            else -> "other"
+        }
     }
 
     private fun bestAudio(info: StreamInfo): String? {

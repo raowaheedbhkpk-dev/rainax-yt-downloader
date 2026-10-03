@@ -24,16 +24,72 @@
             app:show_shuffle_button="false"
             app:show_subtitle_button="false" />
 
-        <ImageButton
-            android:id="@+id/videoClose"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_gravity="top|start"
-            android:layout_margin="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Close"
-            android:src="@drawable/ic_chevron_down"
-            app:tint="@color/rx_white" />
+        <!-- the video's picture until the first frame shows -->
+        <ImageView
+            android:id="@+id/playerThumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/playerLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            app:indicatorColor="@color/rx_white"
+            app:indicatorSize="40dp" />
+
+        <!-- top controls (shown with the player controls) -->
+        <LinearLayout
+            android:id="@+id/playerTop"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_gravity="top"
+            android:background="@drawable/bg_player_top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="4dp">
+
+            <ImageButton
+                android:id="@+id/videoClose"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_white" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/qualityBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/bg_duration"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/rx_white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/videoSettings"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Quality and speed"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_gear"
+                app:tint="@color/rx_white" />
+        </LinearLayout>
     </com.rainax.ytdownloader.RatioFrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView

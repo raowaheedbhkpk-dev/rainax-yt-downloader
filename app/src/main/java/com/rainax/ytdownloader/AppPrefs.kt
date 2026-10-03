@@ -15,6 +15,10 @@ object AppPrefs {
     fun autoClear(c: Context) = p(c).getBoolean("auto_clear", false)
     fun setAutoClear(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_clear", v).apply()
 
+    /** Player picture quality: 0 = Auto (720p on Wi-Fi, 480p on mobile data), else the height (1080 = 1080p). */
+    fun playerQuality(c: Context) = p(c).getInt("player_quality", 0)
+    fun setPlayerQuality(c: Context, v: Int) = p(c).edit().putInt("player_quality", v).apply()
+
     /** Recent searches, newest first (max 20). */
     fun searchHistory(c: Context): List<String> =
         p(c).getString("search_history", "").orEmpty().split('\n').filter { it.isNotBlank() }

@@ -15,7 +15,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.tabs.TabLayout
+import com.google.android.material.chip.Chip
 import com.rainax.ytdownloader.databinding.PageHomeBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -53,27 +53,32 @@ class HomeScreen(
         hm.root.isFocusableInTouchMode = true
         hm.feedList.layoutManager = LinearLayoutManager(act)
         hm.feedList.adapter = bigAdapter
+        hm.feedList.setHasFixedSize(true)
+        hm.feedList.setItemViewCacheSize(8)
         hm.feedList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val lm = rv.layoutManager as LinearLayoutManager
-                if (dy > 0 && lm.findLastVisibleItemPosition() >= lm.itemCount - 4) load(reset = false)
+                if (dy > 0 && lm.findLastVisibleItemPosition() >= lm.itemCount - 5) load(reset = false)
             }
         })
         hm.suggestList.layoutManager = LinearLayoutManager(act)
         hm.suggestList.adapter = suggestAdapter
 
-        hm.homeTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                if (buildingTabs) return
-                if (query != null) playlists = tab.position == 1 else tabIndex = tab.position
-                load(reset = true)
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab) {}
-            override fun onTabReselected(tab: TabLayout.Tab) {
-                hm.feedList.smoothScrollToPosition(0)
-            }
-        })
+        // pull down: fresh list (not the saved one)
+        hm.feedRefresh.setColorSchemeResources(R.color.rx_primary)
+        hm.feedRefresh.setOnRefreshListener {
+            vm.feedCache.remove(cacheKey())
+            load(reset = true, pulled = true)
+        }
 
+        hm.homeChips.setOnCheckedStateChangeListener { group, ids ->
+            if (buildingTabs) return@setOnCheckedStateChangeListener
+            val index = ids.firstOrNull()?.let { id -> (0 until group.childCount).firstOrNull { group.getChildAt(it).id == id } } ?: return@setOnCheckedStateChangeListener
+            if (query != null) playlists = index == 1 else tabIndex = index
+            load(reset = true)
+        }
+
+        hm.searchOpen.setOnClickListener { startTyping() }
         hm.searchInput.setOnFocusChangeListener { _, focused -> if (focused) startTyping() }
         hm.searchInput.setOnClickListener { startTyping() }
         hm.searchInput.setOnEditorActionListener { _, actionId, _ ->
@@ -108,21 +113,13 @@ class HomeScreen(
     fun back(): Boolean {
         if (hm.suggestList.isVisible) {
             stopTyping()
-            if (query == null) {
-                hm.searchInput.setText("")
-                hm.searchBack.isVisible = false
-                hm.searchIcon.isVisible = true
-            } else {
-                hm.searchInput.setText(query)
-            }
+            if (query == null) showSearchBox(false) else hm.searchInput.setText(query)
             return true
         }
         if (query != null) {
             query = null
             playlists = false
-            hm.searchInput.setText("")
-            hm.searchBack.isVisible = false
-            hm.searchIcon.isVisible = true
+            showSearchBox(false)
             hm.feedList.adapter = bigAdapter
             buildTabs()
             load(reset = true)
@@ -136,13 +133,19 @@ class HomeScreen(
 
     // ---------- search box ----------
 
+    /** Brand bar <-> search box. */
+    private fun showSearchBox(on: Boolean) {
+        hm.brandBar.isVisible = !on
+        hm.searchBar.isVisible = on
+        if (!on) hm.searchInput.setText("")
+    }
+
     private fun startTyping() {
+        showSearchBox(true)
         hm.suggestList.isVisible = true
-        hm.searchBack.isVisible = true
-        hm.searchIcon.isVisible = false
         suggest(hm.searchInput.text.toString())
         if (!hm.searchInput.hasFocus()) hm.searchInput.requestFocus()
-        imm().showSoftInput(hm.searchInput, InputMethodManager.SHOW_IMPLICIT)
+        hm.searchInput.post { imm().showSoftInput(hm.searchInput, InputMethodManager.SHOW_IMPLICIT) }
     }
 
     private fun stopTyping() {
@@ -173,9 +176,8 @@ class HomeScreen(
         if (q.isEmpty()) return
         AppPrefs.addSearch(act, q)
         stopTyping()
+        showSearchBox(true)
         hm.searchInput.setText(q)
-        hm.searchBack.isVisible = true
-        hm.searchIcon.isVisible = false
         val wasSearching = query != null
         query = q
         if (!wasSearching) playlists = false
@@ -188,13 +190,19 @@ class HomeScreen(
 
     // ---------- tabs and list ----------
 
+    /** Filter chips: YouTube / Music on Home, Videos / Playlists for search results. */
     private fun buildTabs() {
         buildingTabs = true
-        hm.homeTabs.removeAllTabs()
+        hm.homeChips.removeAllViews()
         val titles = if (query != null) listOf("Videos", "Playlists") else YtCatalog.TABS.map { it.first }
-        titles.forEach { hm.homeTabs.addTab(hm.homeTabs.newTab().setText(it), false) }
         val sel = if (query != null) (if (playlists) 1 else 0) else tabIndex
-        hm.homeTabs.getTabAt(sel)?.select()
+        titles.forEachIndexed { i, t ->
+            val chip = LayoutInflater.from(act).inflate(R.layout.item_chip, hm.homeChips, false) as Chip
+            chip.id = View.generateViewId()
+            chip.text = t
+            hm.homeChips.addView(chip)
+            if (i == sel) chip.isChecked = true
+        }
         buildingTabs = false
     }
 
@@ -203,7 +211,7 @@ class HomeScreen(
     private fun open(item: VideoItem) = openVideo(item)
 
     /** Loads the first page ([reset]) or the next page when the list is scrolled to the end. */
-    private fun load(reset: Boolean) {
+    private fun load(reset: Boolean, pulled: Boolean = false) {
         val a = adapter
         if (reset) {
             loadJob?.cancel()
@@ -211,6 +219,7 @@ class HomeScreen(
             hm.feedError.isVisible = false
             val cached = vm.feedCache[cacheKey()]
             if (cached != null) {
+                hm.feedRefresh.isRefreshing = false
                 a.submit(cached.first)
                 next = cached.second
                 a.loadingMore = next != null
@@ -218,9 +227,11 @@ class HomeScreen(
                 hm.feedList.scrollToPosition(0)
                 return
             }
-            a.submit(emptyList())
+            if (!pulled) {
+                a.submit(emptyList())
+                hm.feedLoading.isVisible = true
+            }
             a.loadingMore = false
-            hm.feedLoading.isVisible = true
         } else if (loadJob?.isActive == true || next == null) {
             return
         }
@@ -240,11 +251,14 @@ class HomeScreen(
                 a.loadingMore = next != null
                 vm.feedCache[key] = a.all() to next
                 hm.feedLoading.isVisible = false
+                hm.feedRefresh.isRefreshing = false
+                if (reset) hm.feedList.scrollToPosition(0)
                 if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else "Nothing here right now")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 hm.feedLoading.isVisible = false
+                hm.feedRefresh.isRefreshing = false
                 a.loadingMore = false
                 if (reset || a.count == 0) showError(e.message ?: "Couldn't load. Check your internet")
             }

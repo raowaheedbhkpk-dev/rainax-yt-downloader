@@ -93,6 +93,7 @@ class VideoAdapter(
         private val title: TextView = v.findViewById(R.id.title)
         private val meta: TextView = v.findViewById(R.id.meta)
         private val download: ImageButton = v.findViewById(R.id.download)
+        private val avatar: ImageView? = v.findViewById(R.id.avatar)      // big rows only
 
         init {
             (thumb.parent as View).clipToOutline = true      // rounded corners from the background shape
@@ -101,6 +102,7 @@ class VideoAdapter(
         fun bind(item: VideoItem) {
             Img.load(thumb, item.thumb, widthPx = if (big) 720 else 360)
             title.text = item.title
+            avatar?.let { Img.load(it, item.avatar, circle = true, widthPx = 96) }
             val parts = mutableListOf<String>()
             if (item.uploader.isNotBlank()) parts += item.uploader
             if (item.isPlaylist) {

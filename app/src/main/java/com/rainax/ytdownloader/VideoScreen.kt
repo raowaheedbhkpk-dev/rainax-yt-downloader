@@ -22,6 +22,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -48,7 +49,7 @@ class VideoScreen(
     private val onChanged: () -> Unit
 ) {
     private val header = ItemVideoHeaderBinding.inflate(act.layoutInflater)
-    private val related = VideoAdapter(true, { open(it.url, it.title, it.uploader) }, { download(it.url, it.title, false) })
+    private val related = VideoAdapter(true, { open(it.url, it.title, it.uploader, thumb = it.thumb) }, { download(it.url, it.title, false) })
 
     /** The video shown (null when the page is closed). */
     var url: String? = null
@@ -70,16 +71,42 @@ class VideoScreen(
         vb.videoClose.setOnClickListener { close() }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
         header.vDownload.setOnClickListener { url?.let { download(it, currentTitle(), false) } }
-        header.vAudio.setOnClickListener { url?.let { download(it, currentTitle(), true) } }
         header.vShare.setOnClickListener { share() }
+        header.vCopy.setOnClickListener { copyLink() }
+        vb.videoSettings.setOnClickListener { showPlayerMenu() }
+        // the top buttons (close, quality) appear and hide together with the player controls
+        vb.playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v -> vb.playerTop.visibility = v })
         header.vDesc.setOnClickListener {
             header.vDesc.maxLines = if (header.vDesc.maxLines == 3) Int.MAX_VALUE else 3
         }
         header.vComments.setOnClickListener { showComments() }
     }
 
+    private var attached: Player? = null
+
+    /** Hides the picture placeholder once the video really plays. */
+    private val playerListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) showPlaceholder(false)
+        }
+
+        override fun onRenderedFirstFrame() = showPlaceholder(false)
+
+        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+            vb.playerLoading.isVisible = false
+        }
+    }
+
     fun attach(p: Player?) {
+        attached?.removeListener(playerListener)
+        attached = p
+        p?.addListener(playerListener)
         vb.playerView.player = p
+    }
+
+    private fun showPlaceholder(on: Boolean) {
+        vb.playerThumb.isVisible = on
+        vb.playerLoading.isVisible = on
     }
 
     private fun currentTitle(): String? = details?.title ?: header.vTitle.text?.toString()?.takeIf { it.isNotBlank() }
@@ -88,7 +115,10 @@ class VideoScreen(
      * Shows a video and starts playing it. [resume]: the player already plays this video (back in the app,
      * or the screen was rebuilt), so keep it going instead of starting again.
      */
-    fun open(url: String, title: String? = null, uploader: String? = null, startMs: Long = 0, resume: Boolean = false) {
+    fun open(
+        url: String, title: String? = null, uploader: String? = null, startMs: Long = 0,
+        resume: Boolean = false, thumb: String? = null
+    ) {
         val clean = FastExtractor.videoUrl(url)
         this.url = clean
         details = null
@@ -114,7 +144,13 @@ class VideoScreen(
         val p = player()
         val keep = resume && p != null && p.mediaItemCount > 0 && p.currentMediaItem?.mediaId == clean &&
             p.currentMediaItem?.mediaMetadata?.extras?.getBoolean(EXTRA_VIDEO) == true
-        if (!keep) p?.pause()
+        if (!keep) {
+            p?.pause()
+            Img.load(vb.playerThumb, thumb ?: youtubeThumb(clean), widthPx = 960)
+            showPlaceholder(true)
+        } else {
+            showPlaceholder(false)
+        }
 
         job?.cancel()
         job = act.lifecycleScope.launch {
@@ -129,6 +165,7 @@ class VideoScreen(
             } catch (e: Exception) {
                 if (this@VideoScreen.url != clean) return@launch
                 header.vLoading.isVisible = false
+                vb.playerLoading.isVisible = false
                 showError((e.message ?: "Couldn't open this video") + "\nYou can still try Download.")
             }
         }
@@ -167,9 +204,13 @@ class VideoScreen(
     private fun play(d: VideoDetails, startMs: Long) {
         val p = player() ?: run { showError("The player is starting. Tap the video again in a moment."); return }
         val src = d.play
+        val chosen = if (src.audio != null) pick(d) else null
+        vb.qualityBadge.text = chosen?.let { qualityLabel(it.height, it.fps, short = true) }.orEmpty()
+        vb.qualityBadge.isVisible = chosen != null
+        val pictureUrl = chosen?.url ?: src.video
         val uri = when {
-            src.video != null && src.audio != null -> Uri.Builder().scheme("rainax").authority("av")
-                .appendQueryParameter("v", src.video).appendQueryParameter("a", src.audio)
+            pictureUrl != null && src.audio != null -> Uri.Builder().scheme("rainax").authority("av")
+                .appendQueryParameter("v", pictureUrl).appendQueryParameter("a", src.audio)
                 .appendQueryParameter("u", d.url).build()
             src.hls != null -> Uri.Builder().scheme("rainax").authority("hls")
                 .appendQueryParameter("h", src.hls).appendQueryParameter("u", d.url).build()
@@ -266,6 +307,169 @@ class VideoScreen(
         dialog.show()
     }
 
+    // ---------- quality and speed (like YouTube's gear menu) ----------
+
+    /** Decoders this phone has (video/avc, video/x-vnd.on2.vp9, video/av01, ...). */
+    private val decoders: List<android.media.MediaCodecInfo> by lazy {
+        runCatching {
+            android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos.filter { !it.isEncoder }
+        }.getOrDefault(emptyList())
+    }
+
+    /** True if this phone can show this picture quality smoothly. */
+    private fun playable(o: VideoOption): Boolean {
+        val mime = when (o.codec) {
+            "avc" -> "video/avc"
+            "vp9" -> "video/x-vnd.on2.vp9"
+            "av1" -> "video/av01"
+            else -> return false
+        }
+        val width = (o.height * 16 / 9).let { it + (it and 1) }
+        return decoders.any { info ->
+            info.supportedTypes.any { it.equals(mime, true) } && runCatching {
+                val caps = info.getCapabilitiesForType(mime).videoCapabilities
+                caps.isSizeSupported(width, o.height) || caps.isSizeSupported(o.height, width)
+            }.getOrDefault(o.height <= 1080)
+        }
+    }
+
+    /** One choice per height: H.264 first (lightest), then VP9, then AV1. */
+    private fun choices(d: VideoDetails): List<VideoOption> {
+        val rank = mapOf("avc" to 3, "vp9" to 2, "av1" to 1)
+        return d.play.options.filter { playable(it) }
+            .groupBy { it.height }
+            .mapNotNull { (_, list) -> list.maxWithOrNull(compareBy<VideoOption> { rank[it.codec] ?: 0 }.thenBy { it.fps }) }
+            .sortedByDescending { it.height }
+    }
+
+    /** Auto: 720p on Wi-Fi, 480p on mobile data (starts fast, saves data). */
+    private fun autoHeight(): Int {
+        val cm = act.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        return if (cm.isActiveNetworkMetered) 480 else 720
+    }
+
+    private fun pick(d: VideoDetails): VideoOption? {
+        val list = choices(d)
+        if (list.isEmpty()) return null
+        val pref = AppPrefs.playerQuality(act)
+        val target = if (pref <= 0) autoHeight() else pref
+        return list.filter { it.height <= target }.maxByOrNull { it.height } ?: list.minByOrNull { it.height }
+    }
+
+    private fun qualityLabel(h: Int, fps: Int, short: Boolean = false): String {
+        val base = "${h}p" + if (fps >= 50) fps.toString() else ""
+        if (short) return when {
+            h >= 4320 -> "8K"
+            h >= 2160 -> "4K"
+            h >= 1440 -> "2K"
+            h >= 720 -> "HD"
+            else -> base
+        }
+        return base + when {
+            h >= 4320 -> "  8K"
+            h >= 2160 -> "  4K"
+            h >= 1440 -> "  2K"
+            h >= 720 -> "  HD"
+            else -> ""
+        }
+    }
+
+    private fun speedLabel(x: Float) = if (x == 1f) "Normal" else (if (x == x.toInt().toFloat()) "${x.toInt()}x" else "${x}x")
+
+    /** Gear menu: Quality and Playback speed. */
+    private fun showPlayerMenu() {
+        val d = details
+        val p = player()
+        val chosen = d?.let { pick(it) }
+        val qValue = when {
+            d == null || chosen == null -> "Auto"
+            AppPrefs.playerQuality(act) <= 0 -> "Auto (" + qualityLabel(chosen.height, chosen.fps).trim() + ")"
+            else -> qualityLabel(chosen.height, chosen.fps).trim()
+        }
+        val speed = p?.playbackParameters?.speed ?: 1f
+        optionsSheet("Settings", listOf(
+            Opt("Quality", qValue, R.drawable.ic_hd) { showQualityMenu() },
+            Opt("Playback speed", speedLabel(speed), R.drawable.ic_speed) { showSpeedMenu() }
+        ))
+    }
+
+    private fun showQualityMenu() {
+        val d = details ?: return
+        val list = choices(d)
+        if (list.isEmpty() || d.play.audio == null) {
+            act.toast("Quality can't be changed for this video")
+            return
+        }
+        val pref = AppPrefs.playerQuality(act)
+        val current = pick(d)
+        val opts = mutableListOf(Opt("Auto", "Recommended", checked = pref <= 0) { setQuality(0) })
+        list.forEach { o ->
+            opts += Opt(qualityLabel(o.height, o.fps), null, checked = pref > 0 && current?.height == o.height) { setQuality(o.height) }
+        }
+        optionsSheet("Quality", opts)
+    }
+
+    private fun setQuality(h: Int) {
+        AppPrefs.setPlayerQuality(act, h)
+        val d = details ?: return
+        val p = player() ?: return
+        val pos = p.currentPosition
+        val wasPlaying = p.playWhenReady
+        play(d, pos)
+        if (!wasPlaying) p.pause()
+    }
+
+    private fun showSpeedMenu() {
+        val p = player() ?: return
+        val now = p.playbackParameters.speed
+        val opts = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f).map { x ->
+            Opt(speedLabel(x), null, checked = x == now) { player()?.setPlaybackSpeed(x) }
+        }
+        optionsSheet("Playback speed", opts)
+    }
+
+    private class Opt(
+        val text: String,
+        val value: String?,
+        val icon: Int = 0,
+        val checked: Boolean = false,
+        val action: () -> Unit
+    )
+
+    private fun optionsSheet(title: String, opts: List<Opt>) {
+        val sb = com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding.inflate(act.layoutInflater)
+        val dialog = BottomSheetDialog(act)
+        dialog.setContentView(sb.root)
+        sb.optTitle.text = title
+        opts.forEach { o ->
+            val row = com.rainax.ytdownloader.databinding.ItemOptionBinding.inflate(act.layoutInflater, sb.optList, false)
+            row.optText.text = o.text
+            row.optValue.text = o.value.orEmpty()
+            row.optValue.isVisible = o.value != null
+            row.optCheck.isVisible = o.checked
+            if (o.icon != 0) {
+                row.optIcon.setImageResource(o.icon)
+                row.optIcon.isVisible = true
+            }
+            row.root.setOnClickListener {
+                dialog.dismiss()
+                o.action()
+            }
+            sb.optList.addView(row.root)
+        }
+        dialog.show()
+    }
+
+    private fun copyLink() {
+        val u = url ?: return
+        val cm = act.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("Video link", u))
+        if (android.os.Build.VERSION.SDK_INT < 33) act.toast("Link copied")
+    }
+
+    private fun youtubeThumb(u: String): String? =
+        Regex("(?:[?&]v=|shorts/)([\\w-]{6,})").find(u)?.groupValues?.get(1)?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+
     private fun share() {
         val u = url ?: return
         val text = listOfNotNull(currentTitle(), u).joinToString("\n")
@@ -327,6 +531,9 @@ class VideoScreen(
             val likes: TextView = v.findViewById(R.id.cLikes)
         }
     }
+
+    private fun AppCompatActivity.toast(text: String) =
+        android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_SHORT).show()
 
     companion object {
         /** Marks queue entries that carry the picture (the "Up next" ones are sound only until opened). */

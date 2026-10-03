@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home / related list: big picture, title, channel, Download button -->
+<!-- Home / Up next: full-width picture, channel picture, title, details and a Download button -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
     android:orientation="vertical"
-    android:paddingBottom="14dp">
+    android:paddingBottom="18dp">
 
     <com.rainax.ytdownloader.RatioFrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="6dp"
-        android:background="@drawable/bg_thumb">
+        android:background="?attr/rxSurfaceAlt">
 
         <ImageView
             android:id="@+id/thumb"
@@ -29,7 +27,7 @@
             android:layout_gravity="bottom|end"
             android:layout_margin="8dp"
             android:background="@drawable/bg_duration"
-            android:paddingHorizontal="6dp"
+            android:paddingHorizontal="5dp"
             android:paddingVertical="2dp"
             android:textColor="@color/rx_white"
             android:textSize="12sp"
@@ -39,15 +37,23 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="top"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingTop="10dp"
-        android:paddingEnd="4dp">
+        android:paddingStart="12dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="8dp">
+
+        <ImageView
+            android:id="@+id/avatar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_avatar"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -56,27 +62,32 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:lineSpacingExtra="2dp"
                 android:maxLines="2"
                 android:textColor="@color/rx_text"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
 
             <TextView
                 android:id="@+id/meta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="3dp"
                 android:ellipsize="end"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textColor="@color/rx_text2"
-                android:textSize="13sp" />
+                android:textSize="12.5sp" />
         </LinearLayout>
 
         <ImageButton
             android:id="@+id/download"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_circle_btn"
             android:contentDescription="Download"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_download"
             app:tint="@color/rx_text" />
     </LinearLayout>

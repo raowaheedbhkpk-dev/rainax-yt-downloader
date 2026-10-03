@@ -7,7 +7,7 @@ plugins {
 // always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.4.1"
+def rxVersionName = isTag ? tagVersion : "8.5.0"
 def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
@@ -76,6 +76,7 @@ dependencies {
     implementation 'androidx.media3:media3-session:1.4.1'
     implementation 'androidx.media3:media3-exoplayer-hls:1.4.1'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.6'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6'
