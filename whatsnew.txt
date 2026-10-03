@@ -1,4 +1,3 @@
+Fixed repeated update message
 Playlist download size shown
-Short and clear update notes
 Download sizes load instantly
-New YouTube-style design

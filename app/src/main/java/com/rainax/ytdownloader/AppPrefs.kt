@@ -30,6 +30,10 @@ object AppPrefs {
     fun autoRetry(c: Context) = p(c).getBoolean("auto_retry", true)
     fun setAutoRetry(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_retry", v).apply()
 
+    /** A release whose APK turned out not to be newer (wrongly tagged): never force it again. */
+    fun badRelease(c: Context) = p(c).getString("bad_release", "").orEmpty()
+    fun setBadRelease(c: Context, v: String) = p(c).edit().putString("bad_release", v).apply()
+
     fun lastClip(c: Context) = p(c).getString("last_clip", "").orEmpty()
     fun setLastClip(c: Context, v: String) = p(c).edit().putString("last_clip", v).apply()
 

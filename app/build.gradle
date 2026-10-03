@@ -3,6 +3,14 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// The version comes from the git tag (v8.1.5 -> versionName 8.1.5, versionCode 80105), so the app
+// always knows exactly which release it is and never asks to update to itself.
+def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
+def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
+def rxVersionName = isTag ? tagVersion : "8.1.5"
+def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
+def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
+
 android {
     namespace 'com.rainax.ytdownloader'
     compileSdk 34
@@ -11,8 +19,8 @@ android {
         applicationId "com.rainax.ytdownloader"
         minSdk 29
         targetSdk 34
-        versionCode 27
-        versionName "8.1.3"
+        versionCode rxVersionCode
+        versionName rxVersionName
     }
 
     // One fixed signing key for every build, so updates always install over the old version.

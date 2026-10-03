@@ -62,7 +62,8 @@ object AppUpdater {
                         .setPositiveButton("OK", null)
                         .show()
                 }
-                !isNewer(rel.version, current) -> if (manual) toast(activity, "You have the latest version (v$current)")
+                !isNewer(rel.version, current) || rel.version == AppPrefs.badRelease(activity) ->
+                    if (manual) toast(activity, "You have the latest version (v$current)")
                 else -> {
                     required = rel
                     offer(activity, rel, current)
@@ -261,7 +262,16 @@ object AppUpdater {
                 }
             }
             try { dialog.dismiss() } catch (e: Exception) { }
-            if (ok) {
+            // Safety: the downloaded APK must really be newer than this app, or we'd ask forever
+            val apkVersion = if (ok) runCatching {
+                activity.packageManager.getPackageArchiveInfo(file.path, 0)?.versionName
+            }.getOrNull() else null
+            if (ok && apkVersion != null && !isNewer(apkVersion, currentVersion(activity))) {
+                AppPrefs.setBadRelease(activity, rel.version)
+                required = null
+                file.delete()
+                toast(activity, "You already have the latest version")
+            } else if (ok) {
                 readyApk = file
                 install(activity, file)
             } else {
