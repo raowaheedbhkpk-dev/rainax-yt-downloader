@@ -147,7 +147,6 @@ class MainActivity : AppCompatActivity() {
         setupPlay()
         setupSettings()
 
-        b.bottomNav.itemIconTintList = null     // icons colour themselves (keeps the profile photo in colour)
         b.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
                 R.id.nav_home -> { showTab(0); true }
@@ -454,7 +453,7 @@ class MainActivity : AppCompatActivity() {
             if (url != lastUrl && Uri.parse(url).getQueryParameter("v") != Uri.parse(lastUrl).getQueryParameter("v")) lastVideoTime = 0.0
             lastUrl = url
         }
-        // Hides "Open app" prompts and ads (the Download button is native, not part of the page)
+        // Hides ads (the Download button is native, not part of the page)
         if (isYoutubePage(url)) {
             hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
             hm.webView.evaluateJavascript(INJECT_JS, null)
@@ -1391,7 +1390,7 @@ class MainActivity : AppCompatActivity() {
         private val AD_PATHS = listOf("/pagead/", "/api/stats/ads", "/ptracking", "/get_midroll_info", "/api/stats/atr")
 
         /**
-         * Runs inside the YouTube page: hides "Open app" prompts and ads.
+         * Runs inside the YouTube page: hides ads only (when "Block ads" is on); everything else stays.
          * It adds no buttons: the Download buttons are native and float above the page.
          */
         /** Pauses the page's video and returns the second it was at. */
@@ -1410,53 +1409,6 @@ class MainActivity : AppCompatActivity() {
 (function(){
  if(window.__ytdlInit3) return;
  window.__ytdlInit3=true;
-
- function norm(s){return (s||'').replace(/\s+/g,' ').trim().toLowerCase();}
- var BAD={'open app':1,'open in app':1,'open the app':1,'get app':1,'use app':1,'try app':1,'open youtube app':1};
- var HIDE_SEL='ytm-mealbar-promo-renderer,ytm-open-app-button,ytm-app-promo-renderer,ytm-upsell-dialog-renderer,.open-app-button,'
-  +'a[href^="intent:"],a[href^="vnd.youtube:"],a[href*="youtube.com/app/"]';
-
- function hideOpenApp(){
-  var l=document.querySelectorAll(HIDE_SEL);
-  for(var i=0;i<l.length;i++) l[i].style.setProperty('display','none','important');
-  var nodes=document.querySelectorAll('a,button,[role="button"],span,yt-formatted-string');
-  for(var j=0;j<nodes.length;j++){
-   var n=nodes[j], tc=n.textContent;
-   if(!tc||tc.length>20) continue;
-   if(BAD[norm(tc)]){
-    var t=n.closest('a,button,ytm-button-renderer,[role="button"]')||n;
-    t.style.setProperty('display','none','important');
-   }
-  }
- }
-
- // "Open in the YouTube app" dialogs: press "Not now" and remove them
- var PROMPT_HINTS=['open in the youtube app','open in app','get the youtube app','try the youtube app'];
- function dismissAppPrompts(){
-  var cands=document.querySelectorAll('tp-yt-paper-dialog,ytm-mealbar-promo-renderer,yt-dialog,[role="dialog"],dialog');
-  var dismissed=false;
-  for(var i=0;i<cands.length;i++){
-   var c=cands[i];
-   var t=norm(c.textContent);
-   if(!t||t.length>500) continue;
-   var hit=false;
-   for(var h=0;h<PROMPT_HINTS.length;h++){ if(t.indexOf(PROMPT_HINTS[h])>=0){hit=true;break;} }
-   if(!hit) continue;
-   var btns=c.querySelectorAll('button,a,[role="button"],yt-button-shape,tp-yt-paper-button');
-   for(var b=0;b<btns.length;b++){
-    var bt=norm(btns[b].textContent);
-    if(bt==='not now'||bt==='no thanks'||bt==='dismiss'||bt==='close'){ try{btns[b].click();}catch(e){} break; }
-   }
-   c.style.setProperty('display','none','important');
-   dismissed=true;
-  }
-  if(dismissed){
-   var bd=document.querySelectorAll('tp-yt-iron-overlay-backdrop');
-   for(var k=0;k<bd.length;k++) bd[k].style.setProperty('display','none','important');
-   document.body.style.removeProperty('overflow');
-   document.documentElement.style.removeProperty('overflow');
-  }
- }
 
  // ----- ads: hide ad blocks and skip video ads -----
  var AD_SEL='ytm-promoted-sparkles-web-renderer,ytm-promoted-video-renderer,ytm-companion-ad-renderer,ytm-display-ad-renderer,'
@@ -1490,11 +1442,9 @@ class MainActivity : AppCompatActivity() {
  }
 
  setInterval(function(){
-  try{ hideOpenApp(); }catch(e){}
-  try{ dismissAppPrompts(); }catch(e){}
   try{ hideAds(); }catch(e){}
  },700);
- setInterval(function(){try{dismissAppPrompts();}catch(e){} try{adTick();}catch(e){}},120);
+ setInterval(function(){try{adTick();}catch(e){}},120);
  ['loadedmetadata','durationchange','playing','timeupdate'].forEach(function(n){
   document.addEventListener(n,function(){try{adTick();}catch(e){}},true);
  });

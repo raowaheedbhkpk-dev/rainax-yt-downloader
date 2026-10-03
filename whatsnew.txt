@@ -1,3 +1,2 @@
-All YouTube buttons are back
-App sign in button removed
-Simpler bottom bar
+Home, Library and Settings icons visible again in light theme
+Nothing on YouTube is hidden anymore
