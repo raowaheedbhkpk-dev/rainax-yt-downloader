@@ -326,8 +326,8 @@ class DownloadService : Service() {
         val onResumed: (Long) -> Unit = { n -> synchronized(uiLock) { done.addAndGet(n); lastBytes += n } }
 
         val output: File
-        if (plan.single != null) {
-            val s = plan.single!!
+        val s = plan.single
+        if (s != null) {
             label = ""
             val f = File(dir, "media.${s.ext}")
             NativeDownloader.download(id, s.url, f, onResumed, onBytes)

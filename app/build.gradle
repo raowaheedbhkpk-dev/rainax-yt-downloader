@@ -11,8 +11,8 @@ android {
         applicationId "com.rainax.ytdownloader"
         minSdk 29
         targetSdk 34
-        versionCode 22
-        versionName "8.0.0"
+        versionCode 23
+        versionName "8.0.1"
     }
 
     // One fixed signing key for every build, so updates always install over the old version.

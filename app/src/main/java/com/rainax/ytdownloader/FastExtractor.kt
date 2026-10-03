@@ -42,12 +42,37 @@ object FastExtractor {
         return yt && !u.contains("music.youtube.com")
     }
 
+    /**
+     * A clean single-video address. YouTube links opened from a mix or playlist carry "&list=...",
+     * and then the extractor treats them as a playlist ("URL not accepted"). Keep only the video id.
+     */
+    fun videoUrl(url: String): String {
+        val u = url.trim()
+        val low = u.lowercase()
+        val isYt = low.contains("youtube.com/") || low.contains("youtu.be/")
+        if (!isYt) return u
+        Regex("[?&]v=([\\w-]{6,})").find(u)?.let { return "https://www.youtube.com/watch?v=" + it.groupValues[1] }
+        Regex("youtube\\.com/shorts/([\\w-]{6,})", RegexOption.IGNORE_CASE).find(u)
+            ?.let { return "https://www.youtube.com/shorts/" + it.groupValues[1] }
+        Regex("youtu\\.be/([\\w-]{6,})", RegexOption.IGNORE_CASE).find(u)
+            ?.let { return "https://www.youtube.com/watch?v=" + it.groupValues[1] }
+        Regex("youtube\\.com/live/([\\w-]{6,})", RegexOption.IGNORE_CASE).find(u)
+            ?.let { return "https://www.youtube.com/watch?v=" + it.groupValues[1] }
+        return u
+    }
+
+    /** A clean playlist address (also from a watch link that has &list=...). */
+    fun playlistUrl(url: String): String {
+        val list = Regex("[?&]list=([\\w-]+)").find(url)?.groupValues?.get(1) ?: return url.trim()
+        return "https://www.youtube.com/playlist?list=$list"
+    }
+
     // ---------- info for the download sheet ----------
 
     /** Blocking. Title, thumbnail, qualities with sizes and subtitles. Throws a readable error. */
     fun fetch(url: String): PreviewState = guard {
         init()
-        val info = StreamInfo.getInfo(url)
+        val info = StreamInfo.getInfo(videoUrl(url))
         checkPlayable(info)
         val duration = info.duration.toInt()
 
@@ -90,11 +115,12 @@ object FastExtractor {
     /** Blocking. Up to 1000 playlist entries (private/deleted ones skipped). */
     fun fetchPlaylist(url: String): PreviewState = guard {
         init()
-        val info = PlaylistInfo.getInfo(url)
+        val clean = playlistUrl(url)
+        val info = PlaylistInfo.getInfo(clean)
         val items = info.relatedItems.toMutableList()
         var page: Page? = if (info.hasNextPage()) info.nextPage else null
         while (page != null && items.size < 1000) {
-            val more = PlaylistInfo.getMoreItems(info.service, url, page)
+            val more = PlaylistInfo.getMoreItems(info.service, clean, page)
             items += more.items
             page = if (more.hasNextPage()) more.nextPage else null
         }
@@ -139,7 +165,7 @@ object FastExtractor {
     /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
     fun plan(url: String, spec: String, subLang: String?): Plan = guard {
         init()
-        val info = StreamInfo.getInfo(url)
+        val info = StreamInfo.getInfo(videoUrl(url))
         checkPlayable(info)
         val duration = info.duration.toInt()
         val thumb = info.thumbnails.maxByOrNull { it.height }?.url
@@ -220,6 +246,7 @@ object FastExtractor {
         }
     }
 
+    @Suppress("DEPRECATION")       // some sites only give the old "720p" text, not a number
     private fun heightOf(v: VideoStream): Int? =
         v.height.takeIf { it > 0 } ?: v.resolution.substringBefore('p').toIntOrNull()
 

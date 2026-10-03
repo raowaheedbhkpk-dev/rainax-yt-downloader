@@ -678,7 +678,7 @@ class MainActivity : AppCompatActivity() {
 
         val single = urls.size == 1
         val firstUrl = urls[0]
-        val cookies = urls.associateWith { null as String? }
+        val cookies = urls.associateWith<String, String?> { null }
         val screenH = resources.displayMetrics.heightPixels
 
         var current: PreviewState? = null
@@ -737,9 +737,7 @@ class MainActivity : AppCompatActivity() {
             if (error != null) {
                 sb.errorText.text = error + "\n\nTap Retry, or pick a format below to try anyway."
             }
-            val hasList = Uri.parse(firstUrl).getQueryParameter("list") != null
-            sb.playlistBtn.isVisible =
-                false
+            sb.playlistBtn.isVisible = false
 
             val rows: List<FormatRow> = when (mode) {
                 MODE_SUBS -> {
