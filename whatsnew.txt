@@ -1,3 +1,3 @@
+Signed with verified developer key
 Fixed repeated update message
 Playlist download size shown
-Download sizes load instantly
