@@ -160,7 +160,8 @@ object FastExtractor {
         val audio: Part?,
         val single: Part?,         // one file that already has picture and sound (or audio only)
         val webm: Boolean,         // join as WebM (VP9 + Opus) instead of MP4
-        val subtitle: SubtitlesStream?
+        val subtitle: SubtitlesStream?,
+        val canFallBack: Boolean = false   // 2K/4K (VP9/AV1): if this phone can't join it, retry as 1080p H.264
     )
 
     /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
@@ -195,27 +196,25 @@ object FastExtractor {
         val muxed = usable(info.videoStreams).filter { (heightOf(it) ?: 0) <= want }
             .maxByOrNull { heightOf(it) ?: 0 }
         val only = usable(info.videoOnlyStreams).filter {
-            muxable(it) && (!mp4Only || it.format?.suffix == "mp4") && (heightOf(it) ?: 0) <= want
+            muxable(it) && (!mp4Only || isAvc(it)) && (heightOf(it) ?: 0) <= want
         }
-        // highest quality first; at the same height prefer MP4 (plays everywhere) over WebM
-        val bestOnly = only.maxWithOrNull(
-            compareBy<VideoStream> { heightOf(it) ?: 0 }.thenBy { if (it.format?.suffix == "mp4") 1 else 0 }
-                .thenBy { it.bitrate }
+        // highest quality first; at the same height prefer H.264 (plays everywhere), then VP9, then AV1
+        val ranked = only.sortedWith(
+            compareByDescending<VideoStream> { heightOf(it) ?: 0 }
+                .thenByDescending { if (isAvc(it)) 3 else if (it.format?.suffix == "webm") 2 else 1 }
+                .thenByDescending { it.bitrate }
         )
         val muxedH = muxed?.let { heightOf(it) } ?: -1
-        val onlyH = bestOnly?.let { heightOf(it) } ?: -1
+        val m4a = original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
+        val webmAudio = original.filter { it.format?.suffix == "webm" }.maxByOrNull { audioRate(it) }
 
-        if (bestOnly != null && onlyH > muxedH) {
-            val webm = bestOnly.format?.suffix == "webm"
-            val a = if (webm) {
-                original.filter { it.format?.suffix == "webm" }.maxByOrNull { audioRate(it) }
-            } else {
-                original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
-            }
-            if (a != null) {
-                val v = part(bestOnly, sizeOf(bestOnly.itagItem?.contentLength, bestOnly.bitrate, duration))
-                return@guard Plan(info.name, thumb, v, part(a, audioSize(a, duration)), null, webm, sub)
-            }
+        // the best picture that has a matching sound track (WebM needs Opus, MP4 needs AAC)
+        for (v in ranked) {
+            if ((heightOf(v) ?: 0) <= muxedH) break
+            val webm = v.format?.suffix == "webm"
+            val a = (if (webm) webmAudio else m4a) ?: continue
+            val vp = part(v, sizeOf(v.itagItem?.contentLength, v.bitrate, duration))
+            return@guard Plan(info.name, thumb, vp, part(a, audioSize(a, duration)), null, webm, sub, canFallBack = !isAvc(v))
         }
         if (muxed != null) {
             val s = part(muxed, sizeOf(muxed.itagItem?.contentLength, muxed.bitrate, duration))
@@ -246,10 +245,20 @@ object FastExtractor {
         list.orEmpty().filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && !it.content.isNullOrBlank() }
 
     /** Video-only streams Android can join with sound: H.264 in MP4, VP9/VP8 in WebM. */
+    private fun isAvc(v: VideoStream): Boolean {
+        val codec = v.codec.orEmpty().lowercase()
+        return v.format?.suffix == "mp4" && (codec.isEmpty() || codec.startsWith("avc"))
+    }
+
+    /**
+     * Video-only streams Android can join with sound without re-encoding:
+     * H.264 in MP4, VP9/VP8 in WebM, and AV1 in MP4 (Android 12+; YouTube gives 2K/4K mostly as AV1 or VP9).
+     */
     private fun muxable(v: VideoStream): Boolean {
         val codec = v.codec.orEmpty().lowercase()
         return when (v.format?.suffix) {
-            "mp4" -> codec.isEmpty() || codec.startsWith("avc")
+            "mp4" -> codec.isEmpty() || codec.startsWith("avc") ||
+                (codec.startsWith("av01") && android.os.Build.VERSION.SDK_INT >= 31)
             "webm" -> codec.isEmpty() || codec.startsWith("vp9") || codec.startsWith("vp09") || codec.startsWith("vp8")
             else -> false
         }

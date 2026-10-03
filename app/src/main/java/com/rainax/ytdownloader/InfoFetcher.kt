@@ -72,7 +72,7 @@ object InfoFetcher {
         h < 720 -> "Normal quality for quick play"
         h == 720 -> "Clear view and quick play"
         h <= 1080 -> "High details for full screen play"
-        else -> "High details for big screen play (WebM)"
+        else -> "High details for big screen play"
     }
 
     fun saveThumb(context: Context, id: String, bitmap: Bitmap): String? = try {

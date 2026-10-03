@@ -349,8 +349,8 @@ class DownloadService : Service() {
             } catch (e: NativeDownloader.Stopped) {
                 throw e
             } catch (e: Exception) {
-                if (!plan.webm) throw e
-                // 2K/4K (WebM) could not be joined on this phone: the next try downloads MP4 only (max 1080p)
+                if (!plan.canFallBack) throw e
+                // 2K/4K (VP9/AV1) could not be joined on this phone: the next try downloads H.264 MP4 (max 1080p)
                 dir.listFiles()?.forEach { it.delete() }
                 val want = task.format.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: 1080
                 TaskRepository.update(id, true) { t -> t.copy(format = "video:${minOf(want, 1080)}:mp4") }
