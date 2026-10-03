@@ -424,6 +424,7 @@ class MainActivity : AppCompatActivity() {
         }
         updateFloatingBar()
         updateBack()
+        lookAhead()                    // a new video page: start reading its info right away
     }
 
     /** The video page that is open right now, or null when the page is not a video. */
@@ -467,8 +468,6 @@ class MainActivity : AppCompatActivity() {
 
     // Look-ahead: when a video page stays open for a moment, fetch its info in the background
     private var aheadUrl: String? = null
-    private var aheadSince = 0L
-    private var aheadDone = false
 
     private fun lookAhead() {
         val url = currentVideoUrl()
@@ -476,13 +475,9 @@ class MainActivity : AppCompatActivity() {
             aheadUrl = null
             return
         }
-        val now = System.currentTimeMillis()
+        // The moment a video opens, read its sizes in the background (no waiting when Download is tapped)
         if (url != aheadUrl) {
             aheadUrl = url
-            aheadSince = now
-            aheadDone = false
-        } else if (!aheadDone && now - aheadSince > 1500) {
-            aheadDone = true
             vm.prefetch(url)
         }
     }

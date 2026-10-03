@@ -76,7 +76,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         aheadJob?.cancel()                       // only one look-ahead at a time
         aheadKey = key
         val job = viewModelScope.async(Dispatchers.IO) {
-            doFetch(url, false).also { remember(url, it) }
+            var r = doFetch(url, false)
+            // network hiccup (e.g. just switched Wi-Fi): one quiet retry
+            if (r.error != null && isNetworkGlitch(r.raw)) {
+                delay(1500)
+                r = doFetch(url, false)
+            }
+            r.also { remember(url, it) }
         }
         aheadJob = job
         job.invokeOnCompletion {
