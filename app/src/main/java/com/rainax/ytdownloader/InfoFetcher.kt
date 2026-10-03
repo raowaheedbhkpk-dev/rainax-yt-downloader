@@ -60,6 +60,8 @@ object InfoFetcher {
     }
 
     private fun videoTitle(h: Int) = when {
+        h >= 4320 -> "High quality (8K)"
+        h >= 2880 -> "High quality (5K)"
         h >= 2160 -> "High quality (4K)"
         h >= 1440 -> "High quality (2K)"
         h >= 720 -> "High quality (${h}p)"
