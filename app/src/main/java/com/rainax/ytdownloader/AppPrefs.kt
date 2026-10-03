@@ -11,8 +11,6 @@ object AppPrefs {
     fun maxParallel(c: Context) = p(c).getInt("max_parallel", 3)
     fun setMaxParallel(c: Context, v: Int) = p(c).edit().putInt("max_parallel", v).apply()
 
-    fun clipDetect(c: Context) = p(c).getBoolean("clip_detect", true)
-    fun setClipDetect(c: Context, v: Boolean) = p(c).edit().putBoolean("clip_detect", v).apply()
 
     fun autoClear(c: Context) = p(c).getBoolean("auto_clear", false)
     fun setAutoClear(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_clear", v).apply()
@@ -35,13 +33,4 @@ object AppPrefs {
     fun lastClip(c: Context) = p(c).getString("last_clip", "").orEmpty()
     fun setLastClip(c: Context, v: String) = p(c).edit().putString("last_clip", v).apply()
 
-    fun recents(c: Context): List<String> =
-        p(c).getString("recents", "").orEmpty().split('\n').filter { it.isNotBlank() }
-
-    fun addRecent(c: Context, q: String) {
-        val list = (listOf(q.trim()) + recents(c).filter { !it.equals(q.trim(), true) }).take(8)
-        p(c).edit().putString("recents", list.joinToString("\n")).apply()
-    }
-
-    fun clearRecents(c: Context) = p(c).edit().putString("recents", "").apply()
 }

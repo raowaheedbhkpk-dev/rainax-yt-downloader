@@ -1,31 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- RAINAX palette (light). values-night/colors.xml holds the dark variants. -->
-    <color name="rx_bg">#F3F4FB</color>
+    <!-- RAINAX palette, YouTube style (light). values-night/colors.xml holds the dark variants. -->
+    <color name="rx_bg">#FFFFFF</color>
     <color name="rx_surface">#FFFFFF</color>
     <color name="rx_card">#FFFFFF</color>
-    <color name="rx_surface_alt">#E9EBF8</color>
-    <color name="rx_text">#12142A</color>
-    <color name="rx_text2">#5A5F82</color>
-    <color name="rx_outline">#D6D9EC</color>
-    <color name="rx_primary">#5B3FF5</color>
+    <color name="rx_surface_alt">#F2F2F2</color>
+    <color name="rx_text">#0F0F0F</color>
+    <color name="rx_text2">#606060</color>
+    <color name="rx_outline">#E5E5E5</color>
+    <color name="rx_primary">#FF0033</color>
     <color name="rx_on_primary">#FFFFFF</color>
-    <color name="rx_primary_container">#E3DEFF</color>
-    <color name="rx_on_primary_container">#1B0A66</color>
-    <color name="rx_accent">#0690C4</color>
-    <color name="rx_error">#D32F4E</color>
-    <color name="rx_error_container">#FFDAE0</color>
+    <color name="rx_primary_container">#F2F2F2</color>
+    <color name="rx_on_primary_container">#0F0F0F</color>
+    <color name="rx_accent">#065FD4</color>
+    <color name="rx_error">#CC0000</color>
+    <color name="rx_error_container">#FFE3E3</color>
 
-    <!-- brand gradient (same in both themes) -->
-    <color name="rx_grad_start">#6A4CFF</color>
-    <color name="rx_grad_end">#1E90F2</color>
+    <!-- selected chip: inverted, like YouTube's filter chips -->
+    <color name="rx_chip_on">#0F0F0F</color>
+    <color name="rx_chip_on_text">#FFFFFF</color>
+
+    <!-- red accents (same in both themes) -->
+    <color name="rx_grad_start">#FF0033</color>
+    <color name="rx_grad_end">#D50000</color>
     <color name="rx_white">#FFFFFF</color>
     <color name="rx_black">#000000</color>
 
-    <color name="ic_launcher_bg_start">#2A1B8F</color>
-    <color name="ic_launcher_bg_end">#0B0F2E</color>
+    <color name="ic_launcher_bg_start">#FF1744</color>
+    <color name="ic_launcher_bg_end">#C4001D</color>
     <color name="rx_amoled_bg">#000000</color>
-    <color name="rx_amoled_card">#0B0B10</color>
-    <color name="rx_amoled_alt">#16161E</color>
-    <color name="rx_amoled_outline">#22222C</color>
+    <color name="rx_amoled_card">#121212</color>
+    <color name="rx_amoled_alt">#1F1F1F</color>
+    <color name="rx_amoled_outline">#2A2A2A</color>
 </resources>

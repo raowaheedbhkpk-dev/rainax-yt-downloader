@@ -91,13 +91,19 @@
     </style>
 
     <style name="ShapeAppearance.Rainax.Large" parent="ShapeAppearance.Material3.LargeComponent">
-        <item name="cornerSize">24dp</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <!-- fully rounded, like YouTube's pill buttons -->
+    <style name="ShapeAppearance.Rainax.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
 
     <style name="ShapeAppearance.Rainax.Sheet" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">28dp</item>
-        <item name="cornerSizeTopRight">28dp</item>
+        <item name="cornerSizeTopLeft">16dp</item>
+        <item name="cornerSizeTopRight">16dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
@@ -107,7 +113,7 @@
         <item name="backgroundTint">@color/rx_primary</item>
         <item name="android:textColor">@color/rx_on_primary</item>
         <item name="iconTint">@color/rx_on_primary</item>
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
@@ -117,7 +123,7 @@
         <item name="backgroundTint">@color/rx_primary_container</item>
         <item name="android:textColor">@color/rx_on_primary_container</item>
         <item name="iconTint">@color/rx_on_primary_container</item>
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -127,7 +133,7 @@
         <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="iconTint">@color/rx_text</item>
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -148,15 +154,15 @@
         <item name="chipBackgroundColor">?attr/rxSurfaceAlt</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="chipStrokeWidth">0dp</item>
-        <item name="chipCornerRadius">14dp</item>
+        <item name="chipCornerRadius">8dp</item>
     </style>
 
     <style name="Widget.Rainax.Chip.Filter" parent="Widget.Material3.Chip.Filter">
         <item name="chipBackgroundColor">@color/rx_chip_bg</item>
         <item name="android:textColor">@color/rx_chip_text</item>
-        <item name="checkedIconTint">@color/rx_on_primary_container</item>
+        <item name="checkedIconTint">@color/rx_chip_on_text</item>
         <item name="chipStrokeWidth">0dp</item>
-        <item name="chipCornerRadius">14dp</item>
+        <item name="chipCornerRadius">8dp</item>
     </style>
 
     <!-- Cards -->
@@ -165,7 +171,7 @@
         <item name="strokeColor">?attr/rxOutline</item>
         <item name="strokeWidth">1dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="cardCornerRadius">20dp</item>
+        <item name="cardCornerRadius">12dp</item>
     </style>
 
     <!-- Bottom navigation -->
@@ -178,7 +184,7 @@
     </style>
 
     <style name="Widget.Rainax.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/rx_primary_container</item>
+        <item name="android:color">@android:color/transparent</item>
     </style>
 
     <!-- Top pill tabs -->

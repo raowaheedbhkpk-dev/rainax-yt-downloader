@@ -1,22 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- RAINAX icon: a white download arrow over a tray on red -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M48,28h12v26h11L54,72 37,54h11z" />
-    <path android:pathData="M34,78h40v6H34z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:endX="74"
-                android:endY="0"
-                android:startX="34"
-                android:startY="0"
-                android:type="linear">
-                <item android:color="#7C6CFF" android:offset="0" />
-                <item android:color="#3CC8F5" android:offset="1" />
-            </gradient>
-        </aapt:attr>
-    </path>
+    <path android:fillColor="#FFFFFF" android:pathData="M48,30h12v24h11L54,72 37,54h11z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M34,77h40v6H34z" />
 </vector>

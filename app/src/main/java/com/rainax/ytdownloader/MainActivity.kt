@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     private val st get() = b.settingsPage
 
     private var tab = 0            // bottom navigation: 0 Download, 1 Play, 2 Settings
-    private var topTab = 0         // Find / YouTube / Sites
+    private val topTab = 1         // the home screen is the YouTube browser
     private var pendingUrl: String? = null
     private var lastUrl = YT_HOME
     private var lastVideoTime = 0.0          // seconds into the open video (kept across theme changes)
@@ -118,8 +118,11 @@ class MainActivity : AppCompatActivity() {
                 customView != null -> exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
                 tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
-                topTab == 1 && hm.webView.canGoBack() -> hm.webView.goBack()
-                else -> hm.topTabs.getTabAt(0)?.select()
+                hm.webView.canGoBack() -> hm.webView.goBack()
+                else -> {                    // nothing to go back to: leave the app normally
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
             }
         }
     }
@@ -171,8 +174,8 @@ class MainActivity : AppCompatActivity() {
                 2 -> R.id.nav_settings
                 else -> R.id.nav_home
             }
-            hm.topTabs.getTabAt(savedInstanceState.getInt("topTab", 0))?.select()
         }
+        showYoutube()
 
         // New RAINAX version? (quiet check, a few seconds after start)
         if (savedInstanceState == null) hm.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
@@ -200,7 +203,6 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt("tab", tab)
-        outState.putInt("topTab", topTab)
         if (pageLoaded) {
             (hm.webView.url ?: lastUrl).let { outState.putString("webUrl", it) }
             outState.putDouble("webTime", lastVideoTime)
@@ -232,11 +234,6 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) checkClipboard()
-    }
-
     override fun onPause() {
         hm.webView.onPause()
         CookieManager.getInstance().flush()      // keep the YouTube session
@@ -264,50 +261,8 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupHome() {
-        hm.topTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) { selectTop(tab?.position ?: 0) }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
-
-        hm.searchBtn.setOnClickListener { onSearchSubmit(hm.urlInput.text?.toString().orEmpty()) }
-        hm.urlInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_GO ||
-                actionId == EditorInfo.IME_ACTION_DONE
-            ) {
-                onSearchSubmit(hm.urlInput.text?.toString().orEmpty()); true
-            } else false
-        }
-        hm.pasteBtn.setOnClickListener { pasteFromClipboard() }
-        hm.morePasteBtn.setOnClickListener { pasteFromClipboard() }
-        renderRecents()
-
-        listOf(
-            "YouTube", "YouTube Shorts", "YouTube playlists", "SoundCloud", "Bandcamp", "PeerTube", "media.ccc.de"
-        ).forEach { name ->
-            val chip = Chip(this)
-            chip.text = name
-            chip.isClickable = false
-            chip.isCheckable = false
-            hm.moreChips.addView(chip)
-        }
-
         // Floating buttons (native, never injected into the page)
         hm.nbDownload.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, false) } }
-
-        // gradient RAINAX wordmark
-        hm.brandWord.post {
-            val w = hm.brandWord.paint.measureText(hm.brandWord.text.toString())
-            hm.brandWord.paint.shader = LinearGradient(
-                0f, 0f, w, 0f,
-                intArrayOf(
-                    ContextCompat.getColor(this, R.color.rx_grad_start),
-                    ContextCompat.getColor(this, R.color.rx_grad_end)
-                ),
-                null, Shader.TileMode.CLAMP
-            )
-            hm.brandWord.invalidate()
-        }
 
         val ws = hm.webView.settings
         hm.webView.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(hm.webView, R.attr.rxBg))
@@ -436,33 +391,24 @@ class MainActivity : AppCompatActivity() {
         ).any { h == it || h.endsWith(".$it") }
     }
 
-    private fun selectTop(index: Int) {
-        topTab = index
-        hm.searchFrame.isVisible = index == 0
-        hm.webFrame.isVisible = index == 1
-        hm.moreFrame.isVisible = index == 2
-        if (index == 1) {
-            val target = pendingUrl ?: lastUrl
-            if (pendingUrl != null || !pageLoaded) {
-                syncYoutubeTheme()
-                hm.webView.stopLoading()
-                hm.webView.loadUrl(target)
-                pageLoaded = true
-            }
-            pendingUrl = null
+    /** Loads YouTube in the home screen (once; afterwards the page keeps its place). */
+    private fun showYoutube() {
+        val target = pendingUrl ?: lastUrl
+        if (pendingUrl != null || !pageLoaded) {
+            syncYoutubeTheme()
+            hm.webView.stopLoading()
+            hm.webView.loadUrl(target)
+            pageLoaded = true
         }
+        pendingUrl = null
         updateFloatingBar()
         updateBack()
     }
 
     private fun openYoutube(url: String) {
-        if (topTab == 1) {
-            syncYoutubeTheme()
-            hm.webView.loadUrl(url)
-        } else {
-            pendingUrl = url
-            hm.topTabs.getTabAt(1)?.select()
-        }
+        syncYoutubeTheme()
+        hm.webView.loadUrl(url)
+        pageLoaded = true
     }
 
     private fun onPageChanged(url: String?) {
@@ -477,6 +423,7 @@ class MainActivity : AppCompatActivity() {
             hm.webView.evaluateJavascript(INJECT_JS, null)
         }
         updateFloatingBar()
+        updateBack()
     }
 
     /** The video page that is open right now, or null when the page is not a video. */
@@ -540,36 +487,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Text becomes a YouTube search; anything that looks like a link opens the format sheet. */
-    private fun onSearchSubmit(raw: String) {
-        val text = raw.trim()
-        if (text.isEmpty()) return
-        hideKeyboard()
-        val urls = extractUrls(text)
-        when {
-            urls.isNotEmpty() -> showDownloadSheet(urls)
-            Patterns.WEB_URL.matcher(text).matches() -> showDownloadSheet(listOf("https://$text"))
-            else -> {
-                AppPrefs.addRecent(this, text)
-                renderRecents()
-                openYoutube("https://m.youtube.com/results?search_query=" + Uri.encode(text))
-            }
-        }
-    }
-
-    private fun renderRecents() {
-        val items = AppPrefs.recents(this)
-        hm.recentTitle.isVisible = items.isNotEmpty()
-        hm.recentGroup.isVisible = items.isNotEmpty()
-        hm.recentGroup.removeAllViews()
-        items.forEach { q ->
-            val chip = Chip(this)
-            chip.text = q
-            chip.setOnClickListener { hm.urlInput.setText(q); onSearchSubmit(q) }
-            hm.recentGroup.addView(chip)
-        }
-    }
-
     private fun showTab(index: Int) {
         if (index != 1 && selecting) exitSelection()
         tab = index
@@ -581,7 +498,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateBack() {
-        backCallback.isEnabled = customView != null || selecting || tab != 0 || topTab != 0
+        backCallback.isEnabled = customView != null || selecting || tab != 0 || hm.webView.canGoBack()
     }
 
     // ----- fullscreen video -----
@@ -631,40 +548,6 @@ class MainActivity : AppCompatActivity() {
             AppPrefs.setLastClip(this, urls[0])
             showDownloadSheet(urls)
         }
-    }
-
-    private fun pasteFromClipboard() {
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
-        val urls = extractUrls(text)
-        if (urls.isEmpty()) {
-            message("No link found in clipboard")
-        } else {
-            AppPrefs.setLastClip(this, urls[0])
-            showDownloadSheet(urls)
-        }
-    }
-
-    /** Offer to download as soon as a link is copied in another app. */
-    private var lastClipTs = 0L
-
-    private fun checkClipboard() {
-        if (!AppPrefs.clipDetect(this) || sheet?.isShowing == true) return
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val desc = cm.primaryClipDescription ?: return
-        if (!desc.hasMimeType("text/*")) return
-        // Only read a clip once: every read shows Android's "pasted from your clipboard" message
-        if (desc.timestamp == lastClipTs) return
-        lastClipTs = desc.timestamp
-        val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
-        val urls = extractUrls(text)
-        val first = urls.firstOrNull() ?: return
-        if (first == AppPrefs.lastClip(this)) return
-        AppPrefs.setLastClip(this, first)
-        Snackbar.make(b.root, "Link copied: ${Uri.parse(first).host ?: first}", Snackbar.LENGTH_LONG)
-            .setAnchorView(b.bottomNav)
-            .setAction("Download") { showDownloadSheet(urls) }
-            .show()
     }
 
     private fun showDownloadSheet(urls: List<String>, preferAudio: Boolean = false, knownTitle: String? = null) {
@@ -845,10 +728,7 @@ class MainActivity : AppCompatActivity() {
         pl.doneList.layoutManager = LinearLayoutManager(this)
         pl.doneList.adapter = doneAdapter
 
-        pl.emptySearchBtn.setOnClickListener {
-            b.bottomNav.selectedItemId = R.id.nav_home
-            hm.topTabs.getTabAt(0)?.select()
-        }
+        pl.emptySearchBtn.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_home }
         pl.selectActiveBtn.setOnClickListener { selectAll(done = false) }
         pl.selectDoneBtn.setOnClickListener { selectAll(done = true) }
         pl.removeAllBtn.setOnClickListener { removeAllDone() }
@@ -1171,8 +1051,6 @@ class MainActivity : AppCompatActivity() {
             AppPrefs.setWifiOnly(this, on)
             nudgeService()
         }
-        st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
-        st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
         st.themeGroup.check(
             when (AppPrefs.themeMode(this)) {
                 1 -> R.id.themeLight
@@ -1247,11 +1125,6 @@ class MainActivity : AppCompatActivity() {
                 message("Can't open the Downloads folder")
             }
         }
-        st.clearRecentBtn.setOnClickListener {
-            AppPrefs.clearRecents(this)
-            renderRecents()
-            message("Search history cleared")
-        }
         val version = try {
             packageManager.getPackageInfo(packageName, 0).versionName
         } catch (e: Exception) {
@@ -1277,11 +1150,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun message(text: String) {
         Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(b.bottomNav).show()
-    }
-
-    private fun hideKeyboard() {
-        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
-            .hideSoftInputFromWindow(b.root.windowToken, 0)
     }
 
     private fun requestNotificationPermission() {
