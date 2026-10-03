@@ -181,7 +181,7 @@ object InfoFetcher {
         val videos = if (heights.isEmpty()) {
             listOf(FormatChoice("video:0", "Best quality", "MP4", "", KIND_VIDEO))
         } else heights.map { h ->
-            val total = progressive[h] ?: ((videoOnly[h] ?: 0L).let { if (it > 0) it + bestAudio else 0L })
+            val total = progressive[h]?.takeIf { it > 0 } ?: ((videoOnly[h] ?: 0L).let { if (it > 0) it + bestAudio else 0L })
             FormatChoice(
                 "video:$h", videoTitle(h), videoDesc(h), formatSize(total), KIND_VIDEO,
                 badge = if (h <= 144) "Low" else null

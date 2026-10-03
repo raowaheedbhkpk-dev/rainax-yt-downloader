@@ -38,6 +38,8 @@ object AppUpdater {
     private var job: Job? = null
     private var required: Release? = null          // newer version found: must be installed
     private var dialog: AlertDialog? = null
+    private var dlJob: Job? = null                  // APK download in progress
+    private var readyApk: File? = null              // downloaded and complete: no need to download again
     private val dialogShowing get() = dialog?.isShowing == true
 
     /** Every time the app opens. */
@@ -86,7 +88,7 @@ object AppUpdater {
             required = null
             return
         }
-        if (!dialogShowing && job?.isActive != true) offer(activity, rel, current)
+        if (!dialogShowing && job?.isActive != true && dlJob?.isActive != true) offer(activity, rel, current)
     }
 
     private fun currentVersion(activity: AppCompatActivity): String = try {
@@ -133,14 +135,17 @@ object AppUpdater {
 
     /** Required update: no "Later". The only ways out are Update or closing the app. */
     private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
-        if (dialogShowing || activity.isFinishing) return
+        if (dialogShowing || activity.isFinishing || dlJob?.isActive == true) return
         val notes = rel.notes.ifBlank { "Improvements and fixes." }.take(1500)
         val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
         dialog = AlertDialog.Builder(activity)
             .setTitle("Update required: v${rel.version}")
             .setMessage("A new version of RAINAX is available. Please update to keep using the app.\n\nYou have v$current.\n\nWhat's new:\n$notes$size")
             .setCancelable(false)
-            .setPositiveButton("Update now") { _, _ -> download(activity, rel) }
+            .setPositiveButton("Update now") { _, _ ->
+                val ready = readyApk?.takeIf { it.exists() && it.name.contains(rel.version) }
+                if (ready != null) install(activity, ready) else download(activity, rel)
+            }
             .setNegativeButton("Close app") { _, _ -> activity.finishAffinity() }
             .show()
         // Screen rebuilt (theme change, rotation): close this dialog cleanly; the new screen asks again
@@ -179,6 +184,12 @@ object AppUpdater {
             }
             .show()
 
+        // screen rebuilt during the download: close the progress window cleanly
+        activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                try { dialog.dismiss() } catch (e: Exception) { }
+            }
+        })
         dl = activity.lifecycleScope.launch {
             val dir = File(activity.cacheDir, "updates").apply { mkdirs() }
             dir.listFiles()?.forEach { it.delete() }
@@ -225,11 +236,16 @@ object AppUpdater {
                 }
             }
             try { dialog.dismiss() } catch (e: Exception) { }
-            if (ok) install(activity, file) else {
+            if (ok) {
+                readyApk = file
+                install(activity, file)
+            } else {
                 toast(activity, "Update download failed. Check your internet and try again.")
+                dlJob = null
                 required?.let { offer(activity, it, currentVersion(activity)) }
             }
         }
+        dlJob = dl
     }
 
     private fun install(activity: AppCompatActivity, file: File) {

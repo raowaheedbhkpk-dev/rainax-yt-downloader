@@ -845,7 +845,9 @@ class PlayerActivity : AppCompatActivity() {
         // Closed the small window or left the app: stop the sound
         player?.pause()
         // The picture-in-picture window was closed: end the player instead of leaving it hidden
-        if (wasInPip || System.currentTimeMillis() - pipExitAt < 1500) finish()
+        // (turning the screen off while in the small window keeps it)
+        val screenOn = (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
+        if (screenOn && (wasInPip || System.currentTimeMillis() - pipExitAt < 1500)) finish()
     }
 
     override fun onDestroy() {

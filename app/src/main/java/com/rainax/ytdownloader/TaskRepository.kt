@@ -89,7 +89,9 @@ object TaskRepository {
 
     private fun cleanup(t: DownloadTask) {
         t.thumbPath?.let { File(it).delete() }
-        File(filesRoot, "downloads/${t.id}").deleteRecursively()
+        // partial downloads can be big: delete them off the main thread
+        val dir = File(filesRoot, "downloads/${t.id}")
+        if (dir.exists()) Thread { dir.deleteRecursively() }.start()
     }
 
     @Synchronized

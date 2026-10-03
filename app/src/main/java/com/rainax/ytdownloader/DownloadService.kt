@@ -99,10 +99,18 @@ class DownloadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (failedStart) return START_NOT_STICKY
-        lastStartId = startId
-        stopping = false
-        promote()
+        // Same lock as pump(): the service can't decide to stop halfway through handling this command
+        synchronized(this) {
+            lastStartId = startId
+            stopping = false
+            promote()
+            handleCommand(intent)
+        }
+        pump()
+        return START_STICKY
+    }
 
+    private fun handleCommand(intent: Intent?) {
         val id = intent?.getStringExtra(EXTRA_ID)
         val ids = intent?.getStringArrayExtra(EXTRA_IDS)
         when (intent?.action) {
@@ -117,11 +125,10 @@ class DownloadService : Service() {
             ACTION_CANCEL_ALL ->
                 cancelMany(TaskRepository.tasks.value.filter { it.status != Status.DONE }.map { it.id })
         }
-        pump()
-        return START_STICKY
     }
 
     override fun onDestroy() {
+        try { nm.cancel(FG_ID) } catch (e: Exception) { }
         if (callbackRegistered) {
             try { cm.unregisterNetworkCallback(netCallback) } catch (e: Exception) { }
         }
@@ -136,11 +143,13 @@ class DownloadService : Service() {
         if (!scope.isActive) return           // service is shutting down
         fillThumbnails()
         // Wi-Fi only and the phone moved to mobile data: pause running downloads until Wi-Fi is back
-        if (!canDownload() && running.isNotEmpty()) {
-            val why = if (!isOnline()) "Waiting for network…" else "Waiting for Wi-Fi…"
+        // (only when online on mobile data; a short network drop is left to yt-dlp's own retries)
+        if (isOnline() && !canDownload() && running.isNotEmpty()) {
             running.keys.toList().forEach { id ->
-                TaskRepository.update(id, true) { it.copy(status = Status.WAITING, message = why) }
-                YoutubeDL.getInstance().destroyProcessById(id)
+                if (TaskRepository.get(id)?.status == Status.RUNNING) {
+                    TaskRepository.update(id, true) { it.copy(status = Status.WAITING, message = "Waiting for Wi-Fi…") }
+                    YoutubeDL.getInstance().destroyProcessById(id)
+                }
             }
         }
         // Network came back (or Wi-Fi-only was switched off): waiting tasks rejoin the queue
@@ -235,7 +244,8 @@ class DownloadService : Service() {
         if (n >= AUTO_DELAYS.size) return false
         val wait = AUTO_DELAYS[n]
         autoTries[id] = n + 1
-        retryAt[id] = System.currentTimeMillis() + wait
+        val at = System.currentTimeMillis() + wait
+        retryAt[id] = at
         val min = wait / 60_000
         TaskRepository.update(id, true) {
             it.copy(
@@ -245,7 +255,7 @@ class DownloadService : Service() {
         }
         scope.launch {
             delay(wait)
-            retryAt.remove(id)
+            retryAt.remove(id, at)              // only our own timer (a newer one may be set)
             pump()
         }
         return true
@@ -264,7 +274,7 @@ class DownloadService : Service() {
         if (task.title.isBlank()) {
             runCatching { InfoFetcher.fetch(this, task.url, null, "info-$id") }.getOrNull()?.let { info ->
                 val thumbPath = info.thumb?.let { InfoFetcher.saveThumb(this, id, it) }
-                TaskRepository.update(id, true) { it.copy(title = info.title.orEmpty(), thumbPath = thumbPath) }
+                TaskRepository.update(id, true) { it.copy(title = info.title.orEmpty(), thumbPath = thumbPath ?: it.thumbPath) }
             }
         }
 
@@ -569,9 +579,9 @@ class DownloadService : Service() {
         return builder.build()
     }
 
-    private fun updateNotification() {
-        if (stopping) return
-        nm.notify(FG_ID, buildNotification())
+    /** Same lock as pump(): a late update can never bring back the notification after the service stopped. */
+    private fun updateNotification() = synchronized(this) {
+        if (!stopping) nm.notify(FG_ID, buildNotification())
     }
 
     /** One notification for all finished downloads (a 100-video playlist must not spam 100 of them). */

@@ -175,7 +175,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // New RAINAX version? (quiet check, a few seconds after start)
-        hm.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
+        if (savedInstanceState == null) hm.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -369,6 +369,12 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) { }
         hm.webView.webChromeClient = object : WebChromeClient() {
+            override fun onReceivedTitle(view: WebView?, title: String?) {
+                // remember which page this title belongs to (YouTube updates it a moment after the address)
+                pageTitle = title
+                pageTitleUrl = view?.url
+            }
+
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 hm.webProgress.isVisible = newProgress < 100
                 hm.webProgress.setProgressCompat(newProgress, true)
@@ -503,9 +509,15 @@ class MainActivity : AppCompatActivity() {
     private fun onDownloadClick(url: String, audio: Boolean) {
         if (!isAllowedUrl(url)) return
         // The page already knows the title: show it at once while the sizes load
-        val title = hm.webView.title.orEmpty().removeSuffix(" - YouTube").trim().takeIf { it.isNotBlank() && it != "YouTube" }
+        // (only when the page really shows this video; YouTube updates the title a moment after the address)
+        val title = if (pageTitleUrl != url) null else pageTitle.orEmpty()
+            .removeSuffix(" - YouTube").replace(Regex("^\\(\\d+\\)\\s*"), "").trim()
+            .takeIf { it.isNotBlank() && it != "YouTube" }
         showDownloadSheet(listOf(url), preferAudio = audio, knownTitle = title)
     }
+
+    private var pageTitle: String? = null
+    private var pageTitleUrl: String? = null
 
     // Look-ahead: when a video page stays open for a moment, fetch its info in the background
     private var aheadUrl: String? = null
@@ -716,7 +728,7 @@ class MainActivity : AppCompatActivity() {
             sb.backBtn.isVisible = mode != MODE_QUICK
             sb.sheetSub.text = when {
                 !single -> "They will download one after another"
-                loading -> (p?.title ?: knownTitle)?.let { "$it  •  getting sizes…" } ?: "Fetching info…"
+                loading -> (knownTitle ?: p?.title)?.let { "$it  •  getting sizes…" } ?: "Fetching info…"
                 error != null -> Uri.parse(firstUrl).host.orEmpty()
                 isPlaylist -> "${p!!.title}  •  ${p.subtitle}"
                 else -> p?.title.orEmpty()
@@ -792,7 +804,10 @@ class MainActivity : AppCompatActivity() {
                 !single -> urls.map { EnqueueItem(it, "", cookies[it]) }
                 p != null && p.playlist.isNotEmpty() ->
                     p.playlist.map { EnqueueItem(it.url, it.title, cookies[firstUrl], it.thumbUrl) }
-                else -> listOf(EnqueueItem(firstUrl, p?.title ?: knownTitle.orEmpty(), cookies[firstUrl], youtubeThumb(firstUrl)))
+                // never save a status text like "Connecting…" as the title (blank = looked up by the service)
+                else -> listOf(
+                    EnqueueItem(firstUrl, p?.takeIf { !it.loading }?.title ?: knownTitle.orEmpty(), cookies[firstUrl], youtubeThumb(firstUrl))
+                )
             }
             vm.enqueue(items, spec, sub)
             dialog.dismiss()
@@ -1100,7 +1115,7 @@ class MainActivity : AppCompatActivity() {
 
     /** YouTube thumbnail address from the video id (no lookup needed). */
     private fun youtubeThumb(url: String): String? =
-        Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1)
+        if (!FastExtractor.supports(url)) null else Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1)
             ?.let { "https://i.ytimg.com/vi/$it/mqdefault.jpg" }
 
     private fun isPlayable(t: DownloadTask): Boolean {
