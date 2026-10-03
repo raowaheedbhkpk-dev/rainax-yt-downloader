@@ -1,4 +1,3 @@
-Shorts button in the bottom bar
-Sign in button with your YouTube photo
-Cleaner video page, no extra menu button
-YouTube bottom bar removed
+Sign in now finishes properly
+Your YouTube photo shows in the bottom bar
+Shorts button removed

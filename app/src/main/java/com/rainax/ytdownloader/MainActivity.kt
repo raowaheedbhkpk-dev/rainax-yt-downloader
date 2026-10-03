@@ -151,16 +151,7 @@ class MainActivity : AppCompatActivity() {
         updateAccountIcon()
         b.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
-                R.id.nav_home -> {
-                    if (tab == 0 && isShortsPage()) openYoutube(YT_HOME)
-                    showTab(0)
-                    b.bottomNav.post { syncNavWithPage(hm.webView.url.orEmpty()) }   // back on a Short: Shorts stays lit
-                    true
-                }
-                R.id.nav_shorts -> {
-                    if (!isShortsPage()) openYoutube(YT_SHORTS)
-                    showTab(0); true
-                }
+                R.id.nav_home -> { showTab(0); true }
                 R.id.nav_account -> { onAccountClick(); false }
                 R.id.nav_downloads -> { showTab(1); true }
                 R.id.nav_settings -> { showTab(2); true }
@@ -321,7 +312,10 @@ class MainActivity : AppCompatActivity() {
                 val uri = request?.url ?: return true
                 val scheme = uri.scheme
                 if (scheme != "http" && scheme != "https") return true
-                return !isAllowedHost(uri.host.orEmpty())      // in-app browsing is YouTube only (no YouTube Music)
+                val host = uri.host.orEmpty()
+                // Sign-in passes through Google's country sites (google.com.pk, google.co.uk...) before YouTube
+                if (isGoogleSignInHost(host)) return false
+                return !isAllowedHost(host)      // in-app browsing is YouTube only (no YouTube Music)
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
@@ -470,7 +464,6 @@ class MainActivity : AppCompatActivity() {
         updateFloatingBar()
         updateBack()
         lookAhead()                    // a new video page: start reading its info right away
-        syncNavWithPage(url)
         readAccount(url)
     }
 
@@ -631,16 +624,14 @@ class MainActivity : AppCompatActivity() {
 
 
     // =====================================================================
-    // Bottom bar: Shorts and the YouTube account (sign in / profile photo)
+    // Bottom bar: the YouTube account (sign in / profile photo)
     // =====================================================================
 
-    private fun isShortsPage(): Boolean = Uri.parse(hm.webView.url.orEmpty()).path.orEmpty().startsWith("/shorts")
-
-    /** Home or Shorts lights up to match the page in the YouTube screen. */
-    private fun syncNavWithPage(url: String) {
-        if (tab != 0 || !isYoutubePage(url)) return
-        val id = if (Uri.parse(url).path.orEmpty().startsWith("/shorts")) R.id.nav_shorts else R.id.nav_home
-        b.bottomNav.menu.findItem(id)?.isChecked = true
+    /** Google's own sites in any country: accounts.google.com, www.google.com.pk, accounts.youtube.com... */
+    private fun isGoogleSignInHost(host: String): Boolean {
+        val h = host.lowercase()
+        return Regex("(^|\\.)google(\\.com|\\.co)?\\.[a-z]{2,3}$").containsMatchIn(h) ||
+            h == "accounts.youtube.com" || h.endsWith(".gstatic.com")
     }
 
     private fun isSignedIn(): Boolean {
@@ -1509,14 +1500,37 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
             "return document.querySelector('.ad-showing')?0:v.currentTime;})()"
 
-        private const val YT_SHORTS = "https://m.youtube.com/shorts"
         private const val SIGN_IN_URL = "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true" +
             "&continue=https%3A%2F%2Fm.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Dm%26next%3Dhttps%253A%252F%252Fm.youtube.com%252F"
 
-        /** The signed-in user's photo in YouTube's top bar ("" if not found). */
-        private const val AVATAR_JS = "(function(){var q=['ytm-topbar-menu-button-renderer img','.topbar-menu-button-avatar-button img'," +
-            "'ytm-mobile-topbar-renderer img'];for(var i=0;i<q.length;i++){var l=document.querySelectorAll(q[i]);" +
-            "for(var k=0;k<l.length;k++){var s=l[k].src||'';if(/yt3\\.(ggpht|googleusercontent)\\.com/.test(s))return s;}}return '';})()"
+        /**
+         * The signed-in user's photo ("" until found). Looks in the top bar first; otherwise asks YouTube
+         * for the account menu (a signed-in request made by the page) and returns the answer on the next call.
+         */
+        private const val AVATAR_JS = """(function(){
+ var RX=/https:\/\/yt3\.(ggpht|googleusercontent)\.com\/[^"'\s\\]+/;
+ var q=['ytm-topbar-menu-button-renderer img','.topbar-menu-button-avatar-button img','ytm-mobile-topbar-renderer img'];
+ for(var i=0;i<q.length;i++){var l=document.querySelectorAll(q[i]);for(var k=0;k<l.length;k++){var s=l[k].src||'';if(RX.test(s))return s;}}
+ if(window.__rxAvatar)return window.__rxAvatar;
+ if(!window.__rxAvatarAsked&&window.crypto&&crypto.subtle&&window.ytcfg){
+  window.__rxAvatarAsked=true;
+  try{
+   var m=document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/);
+   if(m){
+    var ts=Math.floor(Date.now()/1000), origin=location.origin;
+    crypto.subtle.digest('SHA-1',new TextEncoder().encode(ts+' '+m[1]+' '+origin)).then(function(buf){
+     var hex=Array.prototype.map.call(new Uint8Array(buf),function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+     return fetch(origin+'/youtubei/v1/account/account_menu?prettyPrint=false',{method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json','Authorization':'SAPISIDHASH '+ts+'_'+hex,'X-Origin':origin,'X-Goog-AuthUser':'0'},
+      body:JSON.stringify({context:ytcfg.get('INNERTUBE_CONTEXT')})});
+    }).then(function(r){return r.text();}).then(function(t){
+     var i=t.indexOf('accountPhoto'); var f=(i>=0?t.substring(i):t).match(RX); if(f)window.__rxAvatar=f[0];
+    }).catch(function(){window.__rxAvatarAsked=false;});
+   }
+  }catch(e){window.__rxAvatarAsked=false;}
+ }
+ return '';
+})()"""
 
         private const val PAUSE_JS = "(function(){var v=document.querySelector('video');if(v){try{v.pause();}catch(e){}}})()"
 
