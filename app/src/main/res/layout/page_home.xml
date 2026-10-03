@@ -1,49 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home: YouTube itself, full screen. The red Download button floats on video and playlist pages. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Home: RAINAX's own YouTube screen (no website). Search bar, tabs, and a list where every video has a Download button. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/rxBg">
+    android:background="?attr/rxBg"
+    android:orientation="vertical">
 
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:id="@+id/webProgress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:visibility="gone"
-        app:indicatorColor="@color/rx_primary"
-        app:trackColor="@android:color/transparent"
-        app:trackThickness="2dp" />
-
+    <!-- Search bar (tap to type) -->
     <LinearLayout
-        android:id="@+id/floatingBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="20dp"
-        android:gravity="end"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:id="@+id/searchBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_search"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="6dp">
 
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-            android:id="@+id/nbDownload"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="Download"
-            android:textAllCaps="false"
-            android:textColor="@color/rx_on_primary"
-            android:textStyle="bold"
-            app:backgroundTint="@color/rx_primary"
-            app:elevation="6dp"
-            app:icon="@drawable/ic_download"
-            app:iconTint="@color/rx_on_primary"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Rainax.Pill" />
+        <ImageButton
+            android:id="@+id/searchBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back"
+            android:src="@drawable/ic_back"
+            android:visibility="gone"
+            app:tint="@color/rx_text" />
+
+        <ImageView
+            android:id="@+id/searchIcon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_search"
+            app:tint="@color/rx_text2" />
+
+        <EditText
+            android:id="@+id/searchInput"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:hint="Search YouTube"
+            android:imeOptions="actionSearch"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:maxLines="1"
+            android:paddingHorizontal="4dp"
+            android:textColor="@color/rx_text"
+            android:textColorHint="@color/rx_text2"
+            android:textSize="16sp" />
+
+        <ImageButton
+            android:id="@+id/searchClear"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Clear"
+            android:src="@drawable/ic_close"
+            android:visibility="gone"
+            app:tint="@color/rx_text2" />
     </LinearLayout>
-</FrameLayout>
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/homeTabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@android:color/transparent"
+        app:tabGravity="start"
+        app:tabMode="scrollable" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/feedList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/suggestList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="?attr/rxBg"
+            android:visibility="gone" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/feedLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/rx_primary" />
+
+        <LinearLayout
+            android:id="@+id/feedError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/feedErrorText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/rx_text2"
+                android:textSize="15sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/feedRetry"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Try again" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

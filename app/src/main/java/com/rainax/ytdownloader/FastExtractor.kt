@@ -29,9 +29,16 @@ object FastExtractor {
     @Volatile private var ready = false
 
     @Synchronized
-    private fun init() {
+    internal fun init() {
         if (ready) return
-        NewPipe.init(HttpDownloader)
+        // the phone's language and country: Home shows what is popular where the user lives
+        val locale = java.util.Locale.getDefault()
+        val country = locale.country.takeIf { it.length == 2 } ?: "US"
+        NewPipe.init(
+            HttpDownloader,
+            org.schabi.newpipe.extractor.localization.Localization.fromLocale(locale),
+            org.schabi.newpipe.extractor.localization.ContentCountry(country)
+        )
         ready = true
     }
 

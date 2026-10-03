@@ -23,13 +23,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.webkit.CookieManager
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.PopupMenu
 import android.widget.Toast
@@ -57,7 +50,6 @@ import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -65,24 +57,19 @@ class MainActivity : AppCompatActivity() {
     private val vm: MainViewModel by viewModels()
 
     private val hm get() = b.homePage
+    private val vp get() = b.videoPage
     private val pl get() = b.playPage
     private val st get() = b.settingsPage
 
-    private var tab = 0            // bottom navigation: 0 Download, 1 Play, 2 Settings
-    private val topTab = 1         // the home screen is the YouTube browser
-    private var pendingUrl: String? = null
-    private var lastUrl = YT_HOME
-    private var lastVideoTime = 0.0          // seconds into the open video (kept across theme changes)
-    private var pageLoaded = false
+    private var tab = 0            // bottom navigation: 0 Home, 1 Library, 2 Settings
+    private lateinit var home: HomeScreen
+    private lateinit var video: VideoScreen
+    private var pendingVideo: String? = null     // reopen this video page once the player is connected
 
     private var latestTasks: List<DownloadTask> = emptyList()
     private var selecting = false
     private val selected = linkedSetOf<String>()
-    @Volatile private var adBlockOn = true
     private var sheet: BottomSheetDialog? = null
-
-    private var customView: View? = null
-    private var customCallback: WebChromeClient.CustomViewCallback? = null
 
     private val activeAdapter = DownloadAdapter(
         { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openFile(it) },
@@ -112,16 +99,18 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-    private val backCallback = object : OnBackPressedCallback(false) {
+    private val backCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             when {
-                customView != null -> exitFullscreen()
+                video.fullscreen -> video.exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
                 tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
-                hm.webView.canGoBack() -> hm.webView.goBack()
+                video.isOpen -> video.close()
+                home.back() -> {}
                 else -> {                    // nothing to go back to: leave the app normally
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
                 }
             }
         }
@@ -137,13 +126,17 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, backCallback)
 
         TaskRepository.init(applicationContext)
-        adBlockOn = AppPrefs.adBlock(this)
         if (AppPrefs.autoClear(this)) {
             TaskRepository.removeDoneOlderThan(System.currentTimeMillis() - 7L * 24 * 3600 * 1000)
         }
         if (savedInstanceState == null) requestNotificationPermission()
 
-        setupHome()
+        home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title) })
+        home.setup()
+        video = VideoScreen(this, vp, vm, { controller }, { u, t, audio ->
+            showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t)
+        }) { updateChrome() }
+        video.setup()
         setupPlay()
         setupSettings()
 
@@ -165,20 +158,17 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             handleIntent(intent)
         } else {
-            // Theme switch or rotation rebuilds the screen: reopen the same page at the same second
-            savedInstanceState.getString("webUrl")?.takeIf { isAllowedUrl(it) }?.let {
-                lastUrl = withTime(it, savedInstanceState.getDouble("webTime", 0.0))
-            }
+            // Theme switch rebuilds the screen: reopen the video page (the player keeps playing)
+            pendingVideo = savedInstanceState.getString("videoUrl")
             b.bottomNav.selectedItemId = when (savedInstanceState.getInt("tab", 0)) {
                 1 -> R.id.nav_downloads
                 2 -> R.id.nav_settings
                 else -> R.id.nav_home
             }
         }
-        showYoutube()
 
         // New RAINAX version? (quiet check, a few seconds after start)
-        if (savedInstanceState == null) hm.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
+        if (savedInstanceState == null) b.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -188,14 +178,6 @@ class MainActivity : AppCompatActivity() {
                         message(it)
                     }
                 }
-                launch {
-                    while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
-                        updateFloatingBar()
-                        trackVideoTime()
-                        lookAhead()
-                        delay(800)
-                    }
-                }
             }
         }
     }
@@ -203,30 +185,7 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt("tab", tab)
-        if (pageLoaded) {
-            (hm.webView.url ?: lastUrl).let { outState.putString("webUrl", it) }
-            outState.putDouble("webTime", lastVideoTime)
-        }
-    }
-
-    /** Adds the start second to a video link (watch pages only). */
-    private fun withTime(url: String, sec: Double): String {
-        if (sec < 2 || !url.contains("/watch")) return url
-        val uri = Uri.parse(url)
-        val b = uri.buildUpon().clearQuery()
-        uri.queryParameterNames.filter { it != "t" }.forEach { n ->
-            uri.getQueryParameters(n).forEach { v -> b.appendQueryParameter(n, v) }
-        }
-        b.appendQueryParameter("t", "${sec.toInt()}s")
-        return b.build().toString()
-    }
-
-    /** Remembers how far the open video has played. */
-    private fun trackVideoTime() {
-        if (topTab != 1 || currentVideoUrl() == null) return
-        hm.webView.evaluateJavascript(
-            "(function(){var v=document.querySelector('video');return v?v.currentTime:0;})()"
-        ) { r -> r?.replace("\"", "")?.toDoubleOrNull()?.let { if (it > 0) lastVideoTime = it } }
+        video.url?.let { outState.putString("videoUrl", it) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -234,266 +193,40 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        onLeaveApp()                  // Home / recent apps (the screen is still visible, so Android lets the player start)
-    }
-
-    override fun onPause() {
-        snapshotVideo()
-        hm.webView.onPause()
-        CookieManager.getInstance().flush()      // keep the YouTube session
-        super.onPause()
-    }
-
     override fun onStart() {
         super.onStart()
-        leftApp = false
-        if (controller != null) handBackToVideo() else connectPlayer()   // the video continues from the sound
+        if (controller == null) connectPlayer() else backInApp()
     }
 
     override fun onStop() {
-        onLeaveApp()                  // screen off and other ways of leaving
+        if (!isChangingConfigurations) leaveApp()
         super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
         AppUpdater.resumeInstall(this)
-        if (leftApp) {               // back from recent apps without the screen being hidden
-            leftApp = false
-            handBackToVideo()
-        }
-        hm.webView.onResume()
     }
 
     override fun onDestroy() {
-        disconnectPlayer()            // background sound keeps playing in its own service
+        disconnectPlayer()            // the player service keeps playing on its own
         sheet?.dismiss()
-        (hm.webView.parent as? ViewGroup)?.removeView(hm.webView)
-        hm.webView.stopLoading()
-        hm.webView.destroy()
         super.onDestroy()
     }
 
-    // =====================================================================
-    // Download tab: Search / YouTube / Music / More
-    // =====================================================================
-
-    @Suppress("DEPRECATION")
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun setupHome() {
-        // Floating buttons (native, never injected into the page)
-        hm.nbDownload.setOnClickListener { currentVideoUrl()?.let { onDownloadClick(it, false) } }
-
-        val ws = hm.webView.settings
-        hm.webView.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(hm.webView, R.attr.rxBg))
-        ws.forceDark = if (isDarkUi()) WebSettings.FORCE_DARK_AUTO else WebSettings.FORCE_DARK_OFF
-        ws.javaScriptEnabled = true
-        ws.domStorageEnabled = true
-        ws.mediaPlaybackRequiresUserGesture = true
-        ws.allowFileAccess = false
-        ws.allowContentAccess = false
-        // Sign in works like in Chrome: Google refuses sign-in from pages that say they are an app's web view
-        ws.userAgentString = WebSettings.getDefaultUserAgent(this).replace("; wv)", ")")
-        try {
-            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
-                androidx.webkit.WebSettingsCompat.setRequestedWithHeaderOriginAllowList(ws, emptySet())
-            }
-        } catch (e: Exception) { }
-        CookieManager.getInstance().setAcceptCookie(true)
-        CookieManager.getInstance().setAcceptThirdPartyCookies(hm.webView, true)
-
-        hm.webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val uri = request?.url ?: return true
-                val scheme = uri.scheme
-                if (scheme != "http" && scheme != "https") return true
-                val host = uri.host.orEmpty()
-                // Sign-in passes through Google's country sites (google.com.pk, google.co.uk...) before YouTube
-                if (isGoogleSignInHost(host)) return false
-                return !isAllowedHost(host)      // in-app browsing is YouTube only (no YouTube Music)
-            }
-
-            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-                if (adBlockOn && request != null && isAdRequest(request.url)) {
-                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
-                }
-                return super.shouldInterceptRequest(view, request)
-            }
-
-            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                onPageChanged(url)
-            }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                // as early as possible: strip ads from the player data, hide ad frames
-                if (url != null && isYoutubePage(url)) {
-                    hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
-                    hm.webView.evaluateJavascript(AD_STRIP_JS, null)
-                    hm.webView.evaluateJavascript(INJECT_JS, null)
-                }
-            }
-
-            override fun onPageCommitVisible(view: WebView?, url: String?) {
-                if (url != null && isYoutubePage(url)) hm.webView.evaluateJavascript(INJECT_JS, null)
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                onPageChanged(url)
-            }
-        }
-        // Runs before any page script (when the WebView supports it): ads never reach the player
-        try {
-            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                androidx.webkit.WebViewCompat.addDocumentStartJavaScript(
-                    hm.webView, AD_STRIP_JS + "\n" + INJECT_JS,
-                    setOf("https://www.youtube.com", "https://m.youtube.com", "https://youtube.com")
-                )
-            }
-        } catch (e: Exception) { }
-        hm.webView.webChromeClient = object : WebChromeClient() {
-            override fun onReceivedTitle(view: WebView?, title: String?) {
-                // remember which page this title belongs to (YouTube updates it a moment after the address)
-                pageTitle = title
-                pageTitleUrl = view?.url
-            }
-
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                hm.webProgress.isVisible = newProgress < 100
-                hm.webProgress.setProgressCompat(newProgress, true)
-            }
-
-            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                if (view != null) enterFullscreen(view, callback)
-            }
-
-            override fun onHideCustomView() {
-                exitFullscreen()
-            }
-        }
-    }
-
-    /**
-     * YouTube remembers its own light/dark choice in a cookie, so it would keep the old look after the app theme
-     * changes. Before every load we write the app's current theme into that cookie.
-     */
-    private fun syncYoutubeTheme() {
-        try {
-            val cm = CookieManager.getInstance()
-            val site = "https://www.youtube.com"
-            val pref = cm.getCookie(site).orEmpty().split(";").map { it.trim() }
-                .firstOrNull { it.startsWith("PREF=") }?.removePrefix("PREF=").orEmpty()
-            val map = linkedMapOf<String, String>()
-            pref.split("&").filter { it.contains("=") }.forEach { map[it.substringBefore("=")] = it.substringAfter("=") }
-            val old = map["f6"]?.toLongOrNull(16) ?: 0L
-            val themeBits = 0x400L or 0x80000L                       // dark bit / light bit
-            val now = (old and themeBits.inv()) or (if (isDarkUi()) 0x400L else 0x80000L)
-            map["f6"] = java.lang.Long.toHexString(now)
-            val value = map.entries.joinToString("&") { it.key + "=" + it.value }
-            cm.setCookie(site, "PREF=$value; Domain=.youtube.com; Path=/; Secure; Max-Age=31536000")
-            cm.flush()
-        } catch (e: Exception) {
-            // the page then simply follows the device theme
-        }
-    }
-
-    private fun isDarkUi() =
-        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
-    /** Ad servers and YouTube's ad tracking endpoints are answered with an empty response. */
-    private fun isAdRequest(uri: Uri): Boolean {
-        val host = uri.host.orEmpty().lowercase()
-        if (AD_HOSTS.any { host == it || host.endsWith(".$it") }) return true
-        if (host.endsWith("youtube.com")) {
-            val path = uri.path.orEmpty()
-            return AD_PATHS.any { path.startsWith(it) }
-        }
-        return false
-    }
-
-    /** YouTube's own pages (not Google's sign-in pages, which are left untouched). */
-    private fun isYoutubePage(url: String): Boolean {
-        val h = Uri.parse(url).host.orEmpty().lowercase()
-        return h == "youtube.com" || h.endsWith(".youtube.com") && !h.startsWith("accounts.")
-    }
-
-    private fun isAllowedHost(host: String): Boolean {
-        val h = host.lowercase()
-        if (h == "music.youtube.com") return false
-        return listOf(
-            "youtube.com", "youtu.be", "youtube-nocookie.com", "google.com",
-            "googleusercontent.com", "gstatic.com", "ytimg.com"
-        ).any { h == it || h.endsWith(".$it") }
-    }
-
-    /** Loads YouTube in the home screen (once; afterwards the page keeps its place). */
-    private fun showYoutube() {
-        val target = pendingUrl ?: lastUrl
-        if (pendingUrl != null || !pageLoaded) {
-            syncYoutubeTheme()
-            hm.webView.stopLoading()
-            hm.webView.loadUrl(target)
-            pageLoaded = true
-        }
-        pendingUrl = null
-        updateFloatingBar()
-        updateBack()
-    }
-
-    private fun openYoutube(url: String) {
-        syncYoutubeTheme()
-        hm.webView.loadUrl(url)
-        pageLoaded = true
-    }
-
-    private fun onPageChanged(url: String?) {
-        if (url.isNullOrBlank() || url == "about:blank") return
-        if (isAllowedUrl(url)) {
-            if (url != lastUrl && Uri.parse(url).getQueryParameter("v") != Uri.parse(lastUrl).getQueryParameter("v")) lastVideoTime = 0.0
-            lastUrl = url
-        }
-        // Hides ads (the Download button is native, not part of the page)
-        if (isYoutubePage(url)) {
-            hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
-            hm.webView.evaluateJavascript(INJECT_JS, null)
-        }
-        updateFloatingBar()
-        updateBack()
-        lookAhead()                    // a new video page: start reading its info right away
-    }
-
-    /** The video page that is open right now, or null when the page is not a video. */
-    private fun currentVideoUrl(): String? {
-        val url = hm.webView.url.orEmpty()
-        val uri = Uri.parse(url)
-        val host = uri.host.orEmpty().lowercase()
-        val path = uri.path.orEmpty()
-        val yt = host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
-        val video = host == "youtu.be" || path.startsWith("/watch") || path.startsWith("/shorts/") || path == "/playlist"
-        return if (yt && video && host != "music.youtube.com") url else null
-    }
-
-    /** The floating Download buttons appear only on video pages of the YouTube tab. */
-    private fun updateFloatingBar() {
-        val url = currentVideoUrl()
-        hm.floatingBar.isVisible = tab == 0 && topTab == 1 && customView == null && url != null
-        val playlist = url != null && url.contains("/playlist?")
-        val label = if (playlist) "Download playlist" else "Download"
-        if (hm.nbDownload.text.toString() != label) hm.nbDownload.text = label
+    /** A video from a list: open its page (playlists go straight to the download sheet). */
+    private fun openItem(item: VideoItem) {
+        if (item.isPlaylist) showDownloadSheet(listOf(item.url), knownTitle = item.title)
+        else video.open(item.url, item.title, item.uploader)
     }
 
     // =====================================================================
-    // Background play (Settings switch): leaving the app while a video plays
-    // continues its sound in BgPlayService; coming back continues the video.
+    // Player (BgPlayService): the video page plays through it, so leaving the app
+    // can keep the sound going (Settings > Background play)
     // =====================================================================
 
     private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaController>? = null
     private var controller: androidx.media3.session.MediaController? = null
-    private var leftApp = false
-    private var snapUrl: String? = null          // video playing when the screen was last paused
-    private var snapSec = -1.0
-    private var snapAt = 0L
 
     private fun connectPlayer() {
         if (controllerFuture != null) return
@@ -504,164 +237,59 @@ class MainActivity : AppCompatActivity() {
             val c = try { future.get() } catch (e: Exception) { null } ?: return@addListener
             if (controllerFuture !== future) { c.release(); return@addListener }
             controller = c
-            if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) handBackToVideo()
+            video.attach(c)
+            c.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                    // next track (button, notification or end of video): the page shows that video
+                    if (reason != androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
+                        video.isOpen && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                    ) video.follow(c)
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    if (video.isOpen) video.showError("Couldn't play this video here. You can still download it.")
+                }
+            })
+            val reopen = pendingVideo
+            pendingVideo = null
+            if (reopen != null) video.open(reopen, resume = true)
+            else if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) backInApp()
         }, ContextCompat.getMainExecutor(this))
     }
 
     private fun disconnectPlayer() {
+        video.attach(null)
         controllerFuture?.let { androidx.media3.session.MediaController.releaseFuture(it) }
         controllerFuture = null
         controller = null
     }
 
-    /** The video on screen (not a playlist page) in the YouTube tab, if any. */
-    private fun playableVideoUrl(): String? =
-        currentVideoUrl()?.takeIf { tab == 0 && !it.contains("/playlist?") }
-
-    /** The screen is pausing: remember if a video is playing (YouTube may pause it once hidden). */
-    private fun snapshotVideo() {
-        val url = playableVideoUrl() ?: run { snapUrl = null; return }
-        hm.webView.evaluateJavascript(STATE_JS) { r ->
-            snapSec = r?.replace("\"", "")?.toDoubleOrNull() ?: -1.0
-            snapUrl = url
-            snapAt = System.currentTimeMillis()
-        }
-    }
-
-    /** Home, recent apps, screen off...: continue the sound in the background, or stop it (Settings). */
-    private fun onLeaveApp() {
-        if (leftApp || isChangingConfigurations) return
-        leftApp = true
-        val url = playableVideoUrl() ?: return
-        if (!AppPrefs.backgroundPlay(this)) {
-            hm.webView.evaluateJavascript(PAUSE_JS, null)   // background play is off: the video stops
-            return
-        }
-        hm.webView.evaluateJavascript(HANDOFF_JS) { r ->
-            var sec = r?.replace("\"", "")?.toDoubleOrNull() ?: -1.0
-            if (sec < 0 && snapUrl == url && snapSec >= 0 && System.currentTimeMillis() - snapAt < 5000) sec = snapSec
-            if (sec >= 0) startBackground(url, sec)
-        }
-    }
-
-    /** Plays [url]'s sound from [sec] in BgPlayService, with "Up next" as next tracks. */
-    private fun startBackground(url: String, sec: Double) {
-        lifecycleScope.launch {
-            val c = controller ?: return@launch
-            val info = try { vm.audioInfo(url) } catch (e: Exception) { null } ?: return@launch
-            val audio = info.audioUrl ?: return@launch
-            if (!leftApp) return@launch                       // already back in the app
-            BgPlayService.remember(url, audio)
-            val meta = androidx.media3.common.MediaMetadata.Builder()
-                .setTitle(info.title)
-                .setArtist(info.uploader)
-                .setArtworkUri(info.thumbUrl?.let { Uri.parse(it) })
-                .build()
-            val item = androidx.media3.common.MediaItem.Builder()
-                .setUri(BgPlayService.lazyUri(url))
-                .setMediaId(url)
-                .setMediaMetadata(meta)
-                .setRequestMetadata(
-                    androidx.media3.common.MediaItem.RequestMetadata.Builder().setMediaUri(BgPlayService.lazyUri(url)).build()
-                )
-                .build()
-            val next = info.related.map { e ->
-                androidx.media3.common.MediaItem.Builder()
-                    .setUri(BgPlayService.lazyUri(e.url))
-                    .setMediaId(e.url)
-                    .setRequestMetadata(
-                        androidx.media3.common.MediaItem.RequestMetadata.Builder()
-                            .setMediaUri(BgPlayService.lazyUri(e.url)).build()
-                    )
-                    .setMediaMetadata(
-                        androidx.media3.common.MediaMetadata.Builder()
-                            .setTitle(e.title)
-                            .setArtworkUri(e.thumbUrl?.let { Uri.parse(it) })
-                            .build()
-                    )
-                    .build()
-            }
-            try {
-                c.setMediaItems(listOf(item) + next, 0, (sec * 1000).toLong())
-                c.prepare()
-                c.play()
-            } catch (e: Exception) { }
-        }
-    }
-
-    /** Stops background sound (Settings switch turned off). */
-    private fun stopBackground() {
-        controller?.run { stop(); clearMediaItems() }
-    }
-
-    /**
-     * Back in the app: the video continues from where the sound is, and background play stops.
-     * If the player moved on to another track, that video opens at the same second.
-     */
-    private fun handBackToVideo() {
+    /** Leaving the app: keep only the sound (Background play on) or pause. */
+    private fun leaveApp() {
         val c = controller ?: return
-        if (c.mediaItemCount == 0 || c.playbackState == androidx.media3.common.Player.STATE_IDLE) return
-        val url = currentVideoUrl()
-        val pos = c.currentPosition / 1000.0
-        val wasPlaying = c.isPlaying || c.playWhenReady
-        val other = c.currentMediaItem?.mediaId
-        c.stop()
-        c.clearMediaItems()
-        if (other == null || other == url) {
-            val play = if (wasPlaying) "v.play();" else ""
-            hm.webView.evaluateJavascript(
-                "(function(){var v=document.querySelector('video');if(!v)return;try{v.currentTime=$pos;}catch(e){}$play})()", null
-            )
-        } else if (FastExtractor.supports(other)) {
-            if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
-            openYoutube(withTime(other, pos))
-        }
-    }
-
-
-    // =====================================================================
-    // Google sign-in pages (YouTube's own Sign in button)
-    // =====================================================================
-
-    /** Google's own sites in any country: accounts.google.com, www.google.com.pk, accounts.youtube.com... */
-    private fun isGoogleSignInHost(host: String): Boolean {
-        val h = host.lowercase()
-        return Regex("(^|\\.)google(\\.com|\\.co)?\\.[a-z]{2,3}$").containsMatchIn(h) ||
-            h == "accounts.youtube.com" || h.endsWith(".gstatic.com")
-    }
-
-    private fun isAllowedUrl(url: String): Boolean {
-        val uri = Uri.parse(url)
-        return (uri.scheme == "http" || uri.scheme == "https") && isAllowedHost(uri.host.orEmpty())
-    }
-
-    /** Floating Download button (headphones = audio only). */
-    private fun onDownloadClick(url: String, audio: Boolean) {
-        if (!isAllowedUrl(url)) return
-        // The page already knows the title: show it at once while the sizes load
-        // (only when the page really shows this video; YouTube updates the title a moment after the address)
-        val title = if (pageTitleUrl != url) null else pageTitle.orEmpty()
-            .removeSuffix(" - YouTube").replace(Regex("^\\(\\d+\\)\\s*"), "").trim()
-            .takeIf { it.isNotBlank() && it != "YouTube" }
-        showDownloadSheet(listOf(url), preferAudio = audio, knownTitle = title)
-    }
-
-    private var pageTitle: String? = null
-    private var pageTitleUrl: String? = null
-
-    // Look-ahead: when a video page stays open for a moment, fetch its info in the background
-    private var aheadUrl: String? = null
-
-    private fun lookAhead() {
-        val url = currentVideoUrl()
-        if (url == null || url.contains("/playlist") || tab != 0 || topTab != 1) {
-            aheadUrl = null
+        if (c.mediaItemCount == 0) return
+        if (!AppPrefs.backgroundPlay(this)) {
+            c.pause()
             return
         }
-        // The moment a video opens, read its sizes in the background (no waiting when Download is tapped)
-        if (url != aheadUrl) {
-            aheadUrl = url
-            vm.prefetch(url)
+        // no picture while away: saves battery and data, the sound continues
+        c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true).build()
+    }
+
+    /** Back in the app: picture on again, and the page shows what is playing (maybe a later track). */
+    private fun backInApp() {
+        val c = controller ?: return
+        if (c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)) {
+            c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false).build()
+        }
+        val id = c.currentMediaItem?.mediaId
+        if (c.mediaItemCount > 0 && c.playbackState != androidx.media3.common.Player.STATE_IDLE &&
+            id != null && FastExtractor.supports(id) && id != video.url
+        ) {
+            if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+            video.follow(c)
         }
     }
 
@@ -671,44 +299,20 @@ class MainActivity : AppCompatActivity() {
         hm.root.isVisible = index == 0
         pl.root.isVisible = index == 1
         st.root.isVisible = index == 2
-        updateFloatingBar()
+        updateChrome()
+    }
+
+    /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
+    private fun updateChrome() {
+        vp.root.isVisible = video.isOpen && tab == 0
+        val full = video.fullscreen
+        b.bottomNav.isVisible = !full
+        b.navDivider.isVisible = !full
         updateBack()
     }
 
     private fun updateBack() {
-        backCallback.isEnabled = customView != null || selecting || tab != 0 || hm.webView.canGoBack()
-    }
-
-    // ----- fullscreen video -----
-
-    private fun enterFullscreen(view: View, cb: WebChromeClient.CustomViewCallback?) {
-        if (customView != null) { cb?.onCustomViewHidden(); return }
-        customView = view
-        customCallback = cb
-        b.fullscreenContainer.addView(
-            view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        )
-        b.fullscreenContainer.isVisible = true
-        updateFloatingBar()
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            hide(WindowInsetsCompat.Type.systemBars())
-        }
-        updateBack()
-    }
-
-    private fun exitFullscreen() {
-        val v = customView ?: return
-        b.fullscreenContainer.removeView(v)
-        b.fullscreenContainer.isVisible = false
-        customView = null
-        customCallback?.onCustomViewHidden()
-        customCallback = null
-        updateFloatingBar()
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
-        updateBack()
+        backCallback.isEnabled = true          // Back is decided in handleOnBackPressed (video, search, tabs)
     }
 
     // =====================================================================
@@ -1267,19 +871,8 @@ class MainActivity : AppCompatActivity() {
         st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
         st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
         st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
-        st.bgPlaySwitch.setOnCheckedChangeListener { _, on ->
-            AppPrefs.setBackgroundPlay(this, on)
-            if (!on) stopBackground()
-        }
+        st.bgPlaySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setBackgroundPlay(this, on) }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
-
-        st.adSwitch.isChecked = AppPrefs.adBlock(this)
-        st.adSwitch.setOnCheckedChangeListener { _, on ->
-            AppPrefs.setAdBlock(this, on)
-            adBlockOn = on
-            hm.webView.evaluateJavascript("window.__ytdlAdBlock=$on;", null)
-            message(if (on) "Ads are blocked" else "Ads allowed (reload the page)")
-        }
 
         st.autoClearSwitch.isChecked = AppPrefs.autoClear(this)
         st.autoClearSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoClear(this, on) }
@@ -1377,117 +970,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val YT_HOME = "https://m.youtube.com"
-
         private const val MODE_QUICK = 0
         private const val MODE_ALL = 1
         private const val MODE_SUBS = 2
-
-        private val AD_HOSTS = listOf(
-            "doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com",
-            "imasdk.googleapis.com", "2mdn.net", "moatads.com", "adsrvr.org", "taboola.com", "outbrain.com"
-        )
-        private val AD_PATHS = listOf("/pagead/", "/api/stats/ads", "/ptracking", "/get_midroll_info", "/api/stats/atr")
-
-        /**
-         * Runs inside the YouTube page: hides ads only (when "Block ads" is on); everything else stays.
-         * It adds no buttons: the Download buttons are native and float above the page.
-         */
-        /** Pauses the page's video and returns the second it was at. */
-        /** Playing: pauses the video and returns its second (0 during an ad). Not playing: -1. */
-        private const val HANDOFF_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
-            "var t=document.querySelector('.ad-showing')?0:v.currentTime;try{v.pause();}catch(e){}return t;})()"
-
-        /** The second the video is at if it is playing, else -1 (changes nothing). */
-        private const val STATE_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
-            "return document.querySelector('.ad-showing')?0:v.currentTime;})()"
-
-        private const val PAUSE_JS = "(function(){var v=document.querySelector('video');if(v){try{v.pause();}catch(e){}}})()"
-
-
-        private const val INJECT_JS = """
-(function(){
- if(window.__ytdlInit3) return;
- window.__ytdlInit3=true;
-
- // ----- ads: hide ad blocks and skip video ads -----
- var AD_SEL='ytm-promoted-sparkles-web-renderer,ytm-promoted-video-renderer,ytm-companion-ad-renderer,ytm-display-ad-renderer,'
-  +'ytm-ad-slot-renderer,ytm-in-feed-ad-layout-renderer,ytm-statement-banner-renderer,ytm-brand-video-singleton-renderer,'
-  +'ytm-banner-promo-renderer,ytm-search-pyv-renderer,ytm-action-companion-ad-renderer,ytm-promoted-sparkles-text-search-renderer,'
-  +'.ad-container,.video-ads,.ytp-ad-module,.ytp-ad-image-overlay,'
-  +'.ytp-ad-text-overlay,#player-ads,#masthead-ad,ytd-ad-slot-renderer,ytd-display-ad-renderer,ytd-promoted-sparkles-web-renderer,'
-  +'ytd-in-feed-ad-layout-renderer,ytd-banner-promo-renderer,ytd-companion-slot-renderer';
- function hideAds(){
-  if(window.__ytdlAdBlock===false) return;
-  var l=document.querySelectorAll(AD_SEL);
-  for(var i=0;i<l.length;i++) l[i].style.setProperty('display','none','important');
- }
- var rateChanged=false, mutedByUs=false;
- function adTick(){
-  if(window.__ytdlAdBlock===false) return;
-  var player=document.querySelector('.html5-video-player');
-  var adOn=!!(player&&(player.classList.contains('ad-showing')||player.classList.contains('ad-interrupting')))
-   ||!!document.querySelector('.ytp-ad-player-overlay,.ytp-ad-player-overlay-layout');
-  var v=document.querySelector('video.html5-main-video')||document.querySelector('video');
-  if(adOn&&v){
-   if(!v.muted){v.muted=true;mutedByUs=true;}
-   try{v.playbackRate=16;rateChanged=true;}catch(e){}
-   if(isFinite(v.duration)&&v.duration>0&&v.currentTime<v.duration-0.2){try{v.currentTime=v.duration-0.1;}catch(e){}}
-  }else if(v){
-   if(rateChanged){try{v.playbackRate=1;}catch(e){}rateChanged=false;}
-   if(mutedByUs){v.muted=false;mutedByUs=false;}
-  }
-  var skip=document.querySelectorAll('.ytp-ad-skip-button,.ytp-ad-skip-button-modern,.ytp-skip-ad-button,.ytp-ad-skip-button-container button,.ytp-ad-overlay-close-button,.ytp-ad-overlay-close-container');
-  for(var k=0;k<skip.length;k++){try{skip[k].click();}catch(e){}}
- }
-
- setInterval(function(){
-  try{ hideAds(); }catch(e){}
- },700);
- setInterval(function(){try{adTick();}catch(e){}},120);
- ['loadedmetadata','durationchange','playing','timeupdate'].forEach(function(n){
-  document.addEventListener(n,function(){try{adTick();}catch(e){}},true);
- });
- // While an ad is being skipped show a plain "Loading video" cover instead of a frozen ad frame
- try{
-  if(window.__ytdlAdBlock!==false && !document.getElementById('ytdl-adcover')){
-   var st=document.createElement('style'); st.id='ytdl-adcover';
-   st.textContent='.html5-video-player.ad-showing .html5-main-video{opacity:0!important}'
-    +'.html5-video-player.ad-showing::after{content:"Loading video\\2026";position:absolute;left:0;top:0;right:0;bottom:0;'
-    +'background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font:500 14px sans-serif;z-index:60;pointer-events:none}';
-   (document.head||document.documentElement).appendChild(st);
-  }
- }catch(e){}
-})();
-"""
-
-        /** Removes ad data from YouTube's player responses, so no ad is ever scheduled. */
-        private const val AD_STRIP_JS = """
-(function(){
- try{
-  if(window.__ytdlStrip) return; window.__ytdlStrip=true;
-  var KEYS=['adPlacements','playerAds','adSlots'];
-  function clean(o){
-   if(!o||typeof o!=='object'||window.__ytdlAdBlock===false) return o;
-   try{
-    for(var i=0;i<KEYS.length;i++){ if(KEYS[i] in o) delete o[KEYS[i]]; }
-    if(o.playerResponse&&typeof o.playerResponse==='object'){
-     for(var j=0;j<KEYS.length;j++){ if(KEYS[j] in o.playerResponse) delete o.playerResponse[KEYS[j]]; }
-    }
-    if(Array.isArray(o)){ for(var k=0;k<o.length;k++){ var r=o[k]; if(r&&r.playerResponse) clean(r); } }
-   }catch(e){}
-   return o;
-  }
-  var P=JSON.parse;
-  JSON.parse=function(){ return clean(P.apply(this,arguments)); };
-  var RJ=Response.prototype.json;
-  Response.prototype.json=function(){ return RJ.apply(this,arguments).then(clean); };
-  var _ipr;
-  Object.defineProperty(window,'ytInitialPlayerResponse',{configurable:true,
-   get:function(){return _ipr;}, set:function(v){_ipr=clean(v);} });
- }catch(e){}
-})();
-"""
-
     }
 }

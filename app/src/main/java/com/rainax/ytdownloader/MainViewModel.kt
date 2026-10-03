@@ -37,6 +37,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var infoJob: Job? = null
 
+    /** Home tabs and searches already loaded (kept while the app is open, e.g. across theme changes). */
+    val feedCache = HashMap<String, Pair<List<VideoItem>, org.schabi.newpipe.extractor.Page?>>()
+
     init {
         TaskRepository.init(app)
     }

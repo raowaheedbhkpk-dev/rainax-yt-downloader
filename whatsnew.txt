@@ -1,2 +1,5 @@
-Background player now shows in notifications while downloading
-Lock screen player controls fixed
+New Home screen like SnapTube, no YouTube website
+Download button on every video
+Search with suggestions and recent searches
+New video page with player, comments and up next
+Video keeps playing as sound when you leave the app

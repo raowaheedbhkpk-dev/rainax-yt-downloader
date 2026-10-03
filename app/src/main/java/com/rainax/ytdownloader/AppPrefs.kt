@@ -15,8 +15,13 @@ object AppPrefs {
     fun autoClear(c: Context) = p(c).getBoolean("auto_clear", false)
     fun setAutoClear(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_clear", v).apply()
 
-    fun adBlock(c: Context) = p(c).getBoolean("ad_block", true)
-    fun setAdBlock(c: Context, v: Boolean) = p(c).edit().putBoolean("ad_block", v).apply()
+    /** Recent searches, newest first (max 20). */
+    fun searchHistory(c: Context): List<String> =
+        p(c).getString("search_history", "").orEmpty().split('\n').filter { it.isNotBlank() }
+    fun addSearch(c: Context, q: String) {
+        val list = (listOf(q.trim()) + searchHistory(c).filter { !it.equals(q.trim(), true) }).take(20)
+        p(c).edit().putString("search_history", list.joinToString("\n")).apply()
+    }
 
     /** Leaving the app while a video plays keeps its sound playing (on by default). */
     fun backgroundPlay(c: Context) = p(c).getBoolean("bg_play", true)
