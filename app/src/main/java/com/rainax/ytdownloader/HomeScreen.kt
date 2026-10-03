@@ -229,10 +229,11 @@ class HomeScreen(
         val tabId = YtCatalog.TABS[tabIndex].second
         val page = next
         val key = cacheKey()
+        val history = AppPrefs.searchHistory(act)
         loadJob = act.lifecycleScope.launch {
             try {
                 val res = withContext(Dispatchers.IO) {
-                    if (q != null) YtCatalog.search(q, pl, page) else YtCatalog.kiosk(tabId, page)
+                    if (q != null) YtCatalog.search(q, pl, page) else YtCatalog.kiosk(tabId, page, history)
                 }
                 if (reset) a.submit(res.items) else a.append(res.items)
                 next = res.next

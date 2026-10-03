@@ -54,23 +54,91 @@ class VideoDetails(
 /** YouTube lists for the app's own screens (no website): Home tabs, search, video page, comments. */
 object YtCatalog {
 
-    /** Home tabs: title -> YouTube list id. */
+    const val HOME = "home"
+    const val MUSIC = "trending_music"
+
+    /** Home tabs: title -> list id ("home" = popular videos and the user's interests, "trending_music" = music charts). */
     val TABS = listOf(
-        "Music" to "trending_music",
-        "Gaming" to "trending_gaming",
-        "Movies" to "trending_movies_and_shows",
-        "Podcasts" to "trending_podcasts_episodes",
-        "Live" to "live"
+        "YouTube" to HOME,
+        "Music" to MUSIC
     )
+
+    /** Country the music charts work for (YouTube Charts skips some countries, e.g. Pakistan: then India, then US). */
+    @Volatile private var musicCountry: String? = null
 
     private val yt get() = ServiceList.YouTube
 
     /** Blocking. One page of a Home tab. */
-    fun kiosk(id: String, page: Page?): FeedPage = guard {
+    fun kiosk(id: String, page: Page?, history: List<String> = emptyList()): FeedPage = guard {
         FastExtractor.init()
+        when (id) {
+            HOME -> home(history, page)
+            MUSIC -> music(page)
+            else -> kioskPage(id, page, null)
+        }
+    }
+
+    private fun kioskPage(id: String, page: Page?, country: String?): FeedPage {
         val ex = yt.kioskList.getExtractorById(id, page)
+        if (country != null) ex.forceContentCountry(org.schabi.newpipe.extractor.localization.ContentCountry(country))
         val p = if (page == null) { ex.fetchPage(); ex.initialPage } else ex.getPage(page)
-        FeedPage(p.items.mapNotNull { item(it) }, if (p.hasNextPage()) p.nextPage else null)
+        return FeedPage(p.items.mapNotNull { item(it) }, if (p.hasNextPage()) p.nextPage else null)
+    }
+
+    private fun deviceCountry(): String = java.util.Locale.getDefault().country.takeIf { it.length == 2 } ?: "US"
+
+    /** Music charts for the phone's country, or the nearest supported one. */
+    private fun music(page: Page?): FeedPage {
+        musicCountry?.let { return kioskPage(MUSIC, page, it) }
+        var last: Exception? = null
+        for (c in listOf(deviceCountry(), "IN", "US").distinct()) {
+            try {
+                val res = kioskPage(MUSIC, page, c)
+                musicCountry = c
+                return res
+            } catch (e: org.schabi.newpipe.extractor.exceptions.UnsupportedContentInCountryException) {
+                last = e                               // not supported in this country: try the next one
+            }
+        }
+        throw last ?: IllegalStateException("Music charts are not available")
+    }
+
+    /** "Trending videos <country>" search: real popular videos, more pages while scrolling. */
+    private fun trendingQuery(): String {
+        val name = java.util.Locale("", deviceCountry()).getDisplayCountry(java.util.Locale.ENGLISH)
+        return ("trending videos " + name).trim()
+    }
+
+    private fun videoSearch(q: String, page: Page?): FeedPage {
+        val handler = yt.searchQHFactory.fromQuery(q, listOf(YoutubeSearchQueryHandlerFactory.VIDEOS), "")
+        return if (page == null) {
+            val info = SearchInfo.getInfo(yt, handler)
+            FeedPage(info.relatedItems.mapNotNull { item(it) }, if (info.hasNextPage()) info.nextPage else null)
+        } else {
+            val p = SearchInfo.getMoreItems(yt, handler, page)
+            FeedPage(p.items.mapNotNull { item(it) }, if (p.hasNextPage()) p.nextPage else null)
+        }
+    }
+
+    /**
+     * YouTube tab: popular videos in the user's country mixed with videos about their recent searches
+     * (first page), then more popular videos while scrolling.
+     */
+    private fun home(history: List<String>, page: Page?): FeedPage {
+        val trending = videoSearch(trendingQuery(), page)
+        if (page != null) return trending
+        val lists = mutableListOf(trending.items)
+        for (q in history.take(2)) {
+            runCatching { videoSearch(q, null).items.shuffled().take(8) }.getOrNull()?.let { lists += it }
+        }
+        val mixed = mutableListOf<VideoItem>()
+        val seen = HashSet<String>()
+        var i = 0
+        while (lists.any { i < it.size }) {
+            for (l in lists) if (i < l.size && seen.add(l[i].url)) mixed += l[i]
+            i++
+        }
+        return FeedPage(mixed.filter { !it.isPlaylist }, trending.next)
     }
 
     /** Blocking. One page of search results ([playlists] = playlists only, else videos). */

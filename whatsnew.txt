@@ -1,5 +1,3 @@
-New Home screen like SnapTube, no YouTube website
-Download button on every video
-Search with suggestions and recent searches
-New video page with player, comments and up next
-Video keeps playing as sound when you leave the app
+Home now has two tabs: YouTube and Music
+YouTube tab shows popular videos and things you searched
+Music charts fixed for Pakistan and other countries
