@@ -283,7 +283,13 @@ class MainActivity : AppCompatActivity() {
         ws.mediaPlaybackRequiresUserGesture = true
         ws.allowFileAccess = false
         ws.allowContentAccess = false
-        CookieHelper.clearAccount()              // this app has no accounts
+        // Sign in works like in Chrome: Google refuses sign-in from pages that say they are an app's web view
+        ws.userAgentString = WebSettings.getDefaultUserAgent(this).replace("; wv)", ")")
+        try {
+            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
+                androidx.webkit.WebSettingsCompat.setRequestedWithHeaderOriginAllowList(ws, emptySet())
+            }
+        } catch (e: Exception) { }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(hm.webView, true)
 
@@ -292,7 +298,6 @@ class MainActivity : AppCompatActivity() {
                 val uri = request?.url ?: return true
                 val scheme = uri.scheme
                 if (scheme != "http" && scheme != "https") return true
-                if (uri.host.orEmpty().lowercase().startsWith("accounts.") || uri.path.orEmpty().contains("ServiceLogin")) return true   // no sign-in in this app
                 return !isAllowedHost(uri.host.orEmpty())      // in-app browsing is YouTube only (no YouTube Music)
             }
 
@@ -309,7 +314,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 // as early as possible: strip ads from the player data, hide ad frames
-                if (url != null && isAllowedUrl(url)) {
+                if (url != null && isYoutubePage(url)) {
                     hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
                     hm.webView.evaluateJavascript(AD_STRIP_JS, null)
                     hm.webView.evaluateJavascript(INJECT_JS, null)
@@ -317,7 +322,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageCommitVisible(view: WebView?, url: String?) {
-                if (url != null && isAllowedUrl(url)) hm.webView.evaluateJavascript(INJECT_JS, null)
+                if (url != null && isYoutubePage(url)) hm.webView.evaluateJavascript(INJECT_JS, null)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -391,6 +396,12 @@ class MainActivity : AppCompatActivity() {
             return AD_PATHS.any { path.startsWith(it) }
         }
         return false
+    }
+
+    /** YouTube's own pages (not Google's sign-in pages, which are left untouched). */
+    private fun isYoutubePage(url: String): Boolean {
+        val h = Uri.parse(url).host.orEmpty().lowercase()
+        return h == "youtube.com" || h.endsWith(".youtube.com") && !h.startsWith("accounts.")
     }
 
     private fun isAllowedHost(host: String): Boolean {
@@ -1252,6 +1263,11 @@ class MainActivity : AppCompatActivity() {
         st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
         st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
+        st.signOutBtn.setOnClickListener {
+            CookieHelper.signOut()
+            pageLoaded = false
+            message("Signed out of YouTube")
+        }
 
         st.adSwitch.isChecked = AppPrefs.adBlock(this)
         st.adSwitch.setOnCheckedChangeListener { _, on ->
@@ -1384,9 +1400,8 @@ class MainActivity : AppCompatActivity() {
  window.__ytdlInit3=true;
 
  function norm(s){return (s||'').replace(/\s+/g,' ').trim().toLowerCase();}
- var BAD={'open app':1,'open in app':1,'open the app':1,'get app':1,'use app':1,'try app':1,'open youtube app':1,'sign in':1,'sign in to youtube':1};
+ var BAD={'open app':1,'open in app':1,'open the app':1,'get app':1,'use app':1,'try app':1,'open youtube app':1};
  var HIDE_SEL='ytm-mealbar-promo-renderer,ytm-open-app-button,ytm-app-promo-renderer,ytm-upsell-dialog-renderer,.open-app-button,'
-  +'a[href*="ServiceLogin"],a[href*="accounts.google.com"],ytm-topbar-menu-button-renderer a[aria-label*="ign in" i],'
   +'a[href^="intent:"],a[href^="vnd.youtube:"],a[href*="youtube.com/app/"]';
 
  function hideOpenApp(){

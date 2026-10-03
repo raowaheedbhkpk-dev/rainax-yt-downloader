@@ -1,3 +1,4 @@
+Sign in to YouTube is back
+Your likes, subscriptions and history in the app
+Sign out anytime from Settings
 Background play now keeps playing
-Skips a track that cannot play
-Shows a clear message if playback stops

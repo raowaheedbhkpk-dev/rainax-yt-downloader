@@ -2,9 +2,9 @@ package com.rainax.ytdownloader
 
 import android.webkit.CookieManager
 
-/** The app has no accounts: nothing is ever signed in, and any old Google session is wiped. */
+/** Settings > Sign out: removes the Google/YouTube sign-in from the app (other site settings stay). */
 object CookieHelper {
-    fun clearAccount() {
+    fun signOut() {
         try {
             val cm = CookieManager.getInstance()
             val names = setOf("SID", "HSID", "SSID", "APISID", "SAPISID", "LOGIN_INFO", "SIDCC",
