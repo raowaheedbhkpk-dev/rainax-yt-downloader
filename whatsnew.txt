@@ -1,5 +1,3 @@
-Fresh new design for Home and the video page
-Choose video quality and playback speed in the player
-Videos open faster and downloads start quicker
-Pull down to refresh the list
-Copy link button on every video
+New Music tab with Punjabi, Bollywood, Sufi and more playlists
+Open any playlist to see its songs
+Download a whole playlist with one tap

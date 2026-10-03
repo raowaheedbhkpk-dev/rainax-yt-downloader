@@ -43,10 +43,13 @@ class VideoAdapter(
         notifyDataSetChanged()
     }
 
-    fun append(list: List<VideoItem>) {
+    /** Adds the next page (skipping videos already shown). Returns how many were new. */
+    fun append(list: List<VideoItem>): Int {
         val known = items.mapTo(HashSet()) { it.url }
-        items.addAll(list.filter { known.add(it.url) })
+        val fresh = list.filter { known.add(it.url) }
+        items.addAll(fresh)
         notifyDataSetChanged()
+        return fresh.size
     }
 
     fun all(): List<VideoItem> = items.toList()

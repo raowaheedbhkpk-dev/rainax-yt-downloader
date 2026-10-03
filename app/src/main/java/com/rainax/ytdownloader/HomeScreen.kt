@@ -20,6 +20,7 @@ import com.rainax.ytdownloader.databinding.PageHomeBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,9 +45,26 @@ class HomeScreen(
     private var suggestJob: Job? = null
     private var buildingTabs = false
 
+    private var playlistUrl: String? = null    // showing this playlist's videos
+    private var playlistItem: VideoItem? = null
+
     private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) })
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
-    private val adapter get() = if (query != null) smallAdapter else bigAdapter
+    private val playlistAdapter = VideoAdapter(false, { open(it) }, { download(it) })
+    private val musicAdapter = MusicAdapter({ openPlaylist(it) }, { download(it) })
+    private val adapter get() = when {
+        playlistUrl != null -> playlistAdapter
+        query != null -> smallAdapter
+        else -> bigAdapter
+    }
+
+    /** Music tab (rows of playlists) is showing. */
+    private val isMusic get() = query == null && playlistUrl == null && YtCatalog.TABS[tabIndex].second == YtCatalog.MUSIC
+
+    private fun applyListAdapter() {
+        val want: RecyclerView.Adapter<*> = if (isMusic) musicAdapter else adapter
+        if (hm.feedList.adapter !== want) hm.feedList.adapter = want
+    }
     private val suggestAdapter = SuggestAdapter { submit(it) }
 
     fun setup() {
@@ -67,14 +85,17 @@ class HomeScreen(
         // pull down: fresh list (not the saved one)
         hm.feedRefresh.setColorSchemeResources(R.color.rx_primary)
         hm.feedRefresh.setOnRefreshListener {
-            vm.feedCache.remove(cacheKey())
+            if (isMusic) vm.musicCache = null else vm.feedCache.remove(cacheKey())
             load(reset = true, pulled = true)
         }
+        hm.titleBack.setOnClickListener { back() }
+        hm.titleDownload.setOnClickListener { playlistItem?.let { download(it) } }
 
         hm.homeChips.setOnCheckedStateChangeListener { group, ids ->
             if (buildingTabs) return@setOnCheckedStateChangeListener
             val index = ids.firstOrNull()?.let { id -> (0 until group.childCount).firstOrNull { group.getChildAt(it).id == id } } ?: return@setOnCheckedStateChangeListener
             if (query != null) playlists = index == 1 else tabIndex = index
+            applyListAdapter()
             load(reset = true)
         }
 
@@ -107,10 +128,20 @@ class HomeScreen(
     }
 
     /** True while searching or typing (Back returns to Home). */
-    val inSearch get() = query != null || hm.suggestList.isVisible
+    val inSearch get() = query != null || playlistUrl != null || hm.suggestList.isVisible
 
     /** Back: stop typing, or leave the search results. Returns false when there is nothing to undo. */
     fun back(): Boolean {
+        if (playlistUrl != null) {
+            playlistUrl = null
+            playlistItem = null
+            hm.titleBar.isVisible = false
+            hm.chipsScroll.isVisible = true
+            if (query != null) hm.searchBar.isVisible = true else hm.brandBar.isVisible = true
+            applyListAdapter()
+            load(reset = true)                     // the list before is still saved: shows at once
+            return true
+        }
         if (hm.suggestList.isVisible) {
             stopTyping()
             if (query == null) showSearchBox(false) else hm.searchInput.setText(query)
@@ -120,8 +151,8 @@ class HomeScreen(
             query = null
             playlists = false
             showSearchBox(false)
-            hm.feedList.adapter = bigAdapter
             buildTabs()
+            applyListAdapter()
             load(reset = true)
             return true
         }
@@ -181,8 +212,22 @@ class HomeScreen(
         val wasSearching = query != null
         query = q
         if (!wasSearching) playlists = false
-        hm.feedList.adapter = smallAdapter
         buildTabs()
+        applyListAdapter()
+        load(reset = true)
+    }
+
+    /** A playlist: its videos (each with Download) and "Download all" at the top. */
+    fun openPlaylist(item: VideoItem) {
+        if (hm.suggestList.isVisible) stopTyping()
+        playlistUrl = item.url
+        playlistItem = item
+        hm.titleText.text = item.title
+        hm.brandBar.isVisible = false
+        hm.searchBar.isVisible = false
+        hm.titleBar.isVisible = true
+        hm.chipsScroll.isVisible = false
+        applyListAdapter()
         load(reset = true)
     }
 
@@ -206,12 +251,62 @@ class HomeScreen(
         buildingTabs = false
     }
 
-    private fun cacheKey(): String = query?.let { "q:$it:$playlists" } ?: "tab:${YtCatalog.TABS[tabIndex].second}"
+    private fun cacheKey(): String = playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$playlists" }
+        ?: "tab:${YtCatalog.TABS[tabIndex].second}"
 
-    private fun open(item: VideoItem) = openVideo(item)
+    private fun open(item: VideoItem) = if (item.isPlaylist) openPlaylist(item) else openVideo(item)
+
+    /** Music tab: all rows load at the same time and appear as soon as each is ready. */
+    private fun loadMusic(pulled: Boolean) {
+        loadJob?.cancel()
+        hm.feedError.isVisible = false
+        vm.musicCache?.let {
+            musicAdapter.submit(it)
+            hm.feedLoading.isVisible = false
+            hm.feedRefresh.isRefreshing = false
+            return
+        }
+        if (!pulled) {
+            musicAdapter.submit(emptyList())
+            hm.feedLoading.isVisible = true
+        }
+        val rows = YtCatalog.MUSIC_SECTIONS
+        loadJob = act.lifecycleScope.launch {
+            val results = arrayOfNulls<MusicSection>(rows.size)
+            var failed: Exception? = null
+            coroutineScope {
+                rows.forEachIndexed { i, row ->
+                    launch {
+                        try {
+                            val items = withContext(Dispatchers.IO) { YtCatalog.musicSection(row.second) }
+                            if (items.isNotEmpty()) {
+                                results[i] = MusicSection(row.first, items)
+                                musicAdapter.submit(results.filterNotNull())
+                                hm.feedLoading.isVisible = false
+                                hm.feedRefresh.isRefreshing = false
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            failed = e
+                        }
+                    }
+                }
+            }
+            hm.feedLoading.isVisible = false
+            hm.feedRefresh.isRefreshing = false
+            val list = results.filterNotNull()
+            if (list.isEmpty()) showError(failed?.message ?: "Couldn't load music. Check your internet")
+            else vm.musicCache = list
+        }
+    }
 
     /** Loads the first page ([reset]) or the next page when the list is scrolled to the end. */
     private fun load(reset: Boolean, pulled: Boolean = false) {
+        if (isMusic) {
+            if (reset) loadMusic(pulled)
+            return
+        }
         val a = adapter
         if (reset) {
             loadJob?.cancel()
@@ -236,6 +331,7 @@ class HomeScreen(
             return
         }
         val q = query
+        val plUrl = playlistUrl
         val pl = playlists
         val tabId = YtCatalog.TABS[tabIndex].second
         val page = next
@@ -244,10 +340,14 @@ class HomeScreen(
         loadJob = act.lifecycleScope.launch {
             try {
                 val res = withContext(Dispatchers.IO) {
-                    if (q != null) YtCatalog.search(q, pl, page) else YtCatalog.kiosk(tabId, page, history)
+                    when {
+                        plUrl != null -> YtCatalog.playlist(plUrl, page)
+                        q != null -> YtCatalog.search(q, pl, page)
+                        else -> YtCatalog.kiosk(tabId, page, history)
+                    }
                 }
-                if (reset) a.submit(res.items) else a.append(res.items)
-                next = res.next
+                val added = if (reset) { a.submit(res.items); res.items.size } else a.append(res.items)
+                next = if (added == 0 && !reset) null else res.next      // a page with nothing new: stop (mixes repeat)
                 a.loadingMore = next != null
                 vm.feedCache[key] = a.all() to next
                 hm.feedLoading.isVisible = false

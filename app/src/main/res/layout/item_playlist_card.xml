@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Music tab: playlist cover, name, artists, Download button -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="156dp"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="6dp"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical">
+
+    <com.rainax.ytdownloader.SquareFrameLayout
+        android:id="@+id/coverBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_thumb">
+
+        <ImageView
+            android:id="@+id/cover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="8dp"
+            android:background="@drawable/bg_duration"
+            android:importantForAccessibility="no"
+            android:padding="5dp"
+            android:src="@drawable/ic_playlist"
+            app:tint="@color/rx_white" />
+    </com.rainax.ytdownloader.SquareFrameLayout>
+
+    <TextView
+        android:id="@+id/cardTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="2"
+        android:textColor="@color/rx_text"
+        android:textSize="14.5sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/cardSub"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/rx_text2"
+            android:textSize="12.5sp" />
+
+        <ImageButton
+            android:id="@+id/cardDownload"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Download playlist"
+            android:padding="6dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_download"
+            app:tint="@color/rx_text" />
+    </LinearLayout>
+</LinearLayout>

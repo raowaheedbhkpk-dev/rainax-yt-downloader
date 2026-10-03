@@ -48,6 +48,57 @@
                 app:tint="@color/rx_text" />
         </LinearLayout>
 
+        <!-- Playlist page: back, name, Download all -->
+        <LinearLayout
+            android:id="@+id/titleBar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="12dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/titleBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Back"
+                android:src="@drawable/ic_back"
+                app:tint="@color/rx_text" />
+
+            <TextView
+                android:id="@+id/titleText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/titleDownload"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="Download all"
+                android:textAllCaps="false"
+                android:textColor="@color/rx_on_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/rx_primary"
+                app:icon="@drawable/ic_download"
+                app:iconSize="18dp"
+                app:iconTint="@color/rx_on_primary"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Rainax.Pill" />
+        </LinearLayout>
+
         <!-- Search box (replaces the brand bar while searching) -->
         <LinearLayout
             android:id="@+id/searchBar"
@@ -107,6 +158,7 @@
     </FrameLayout>
 
     <HorizontalScrollView
+        android:id="@+id/chipsScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:clipToPadding="false"

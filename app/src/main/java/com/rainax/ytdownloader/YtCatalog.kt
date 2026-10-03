@@ -30,6 +30,9 @@ data class VideoItem(
 
 class FeedPage(val items: List<VideoItem>, val next: Page?)
 
+/** A row on the Music tab: a title and a strip of playlists. */
+class MusicSection(val title: String, val items: List<VideoItem>)
+
 class Comment(val author: String, val avatar: String?, val text: String, val html: Boolean, val likes: String?, val date: String?)
 
 /** One picture quality the player can switch to (sound is added separately). */
@@ -147,6 +150,46 @@ object YtCatalog {
         }
         return FeedPage(mixed.filter { !it.isPlaylist }, trending.next)
     }
+
+    /** Music tab rows: title -> what to look for on YouTube Music. */
+    val MUSIC_SECTIONS = listOf(
+        "Punjabi Hits" to "punjabi hits",
+        "Bollywood" to "bollywood hits",
+        "Ghazal & Sufi" to "sufi qawwali ghazal",
+        "Pakistani Hits" to "coke studio pakistan",
+        "Romantic" to "romantic hindi songs",
+        "Party Music" to "party hits",
+        "Global Top Hits" to "top hits",
+        "Lofi & Chill" to "lofi chill"
+    )
+
+    /** Blocking. Playlists for one Music row (YouTube Music playlists, else normal YouTube playlists). */
+    fun musicSection(query: String): List<VideoItem> = guard {
+        FastExtractor.init()
+        val fromMusic = runCatching {
+            val handler = yt.searchQHFactory.fromQuery(query, listOf(YoutubeSearchQueryHandlerFactory.MUSIC_PLAYLISTS), "")
+            SearchInfo.getInfo(yt, handler).relatedItems.mapNotNull { item(it) }.filter { it.isPlaylist }
+        }.getOrDefault(emptyList())
+        fromMusic.ifEmpty {
+            val handler = yt.searchQHFactory.fromQuery("$query playlist", listOf(YoutubeSearchQueryHandlerFactory.PLAYLISTS), "")
+            SearchInfo.getInfo(yt, handler).relatedItems.mapNotNull { item(it) }.filter { it.isPlaylist }
+        }.take(12)
+    }
+
+    /** Blocking. One page of a playlist's videos. */
+    fun playlist(url: String, page: Page?): FeedPage = guard {
+        FastExtractor.init()
+        val clean = FastExtractor.playlistUrl(url)
+        if (page == null) {
+            val info = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getInfo(clean)
+            FeedPage(info.relatedItems.mapNotNull { item(it) }.filter { !hidden(it) }, if (info.hasNextPage()) info.nextPage else null)
+        } else {
+            val p = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getMoreItems(yt, clean, page)
+            FeedPage(p.items.mapNotNull { item(it) }.filter { !hidden(it) }, if (p.hasNextPage()) p.nextPage else null)
+        }
+    }
+
+    private fun hidden(v: VideoItem): Boolean = v.title.lowercase().let { it == "[private video]" || it == "[deleted video]" }
 
     /** Blocking. One page of search results ([playlists] = playlists only, else videos). */
     fun search(query: String, playlists: Boolean, page: Page?): FeedPage = guard {

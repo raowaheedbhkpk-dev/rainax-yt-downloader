@@ -199,9 +199,12 @@ object FastExtractor {
         val info = PlaylistInfo.getInfo(clean)
         val items = info.relatedItems.toMutableList()
         var page: Page? = if (info.hasNextPage()) info.nextPage else null
+        val seen = items.mapNotNullTo(HashSet()) { it.url }
         while (page != null && items.size < 1000) {
             val more = PlaylistInfo.getMoreItems(info.service, clean, page)
-            items += more.items
+            val fresh = more.items.filter { it.url != null && seen.add(it.url) }
+            if (fresh.isEmpty()) break                     // mixes repeat themselves: stop at the first page with nothing new
+            items += fresh
             page = if (more.hasNextPage()) more.nextPage else null
         }
         var skipped = 0
