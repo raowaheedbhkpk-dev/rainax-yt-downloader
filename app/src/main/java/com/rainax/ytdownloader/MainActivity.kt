@@ -182,7 +182,7 @@ class MainActivity : AppCompatActivity() {
                 launch { TaskRepository.tasks.collect { renderTasks(it) } }
                 launch {
                     vm.events.collect {
-                        if (it == MainViewModel.ENGINE_REFRESHED) renderEngine() else message(it)
+                        message(it)
                     }
                 }
                 launch {
@@ -283,8 +283,7 @@ class MainActivity : AppCompatActivity() {
         renderRecents()
 
         listOf(
-            "TikTok", "Instagram", "Facebook", "X (Twitter)", "Vimeo", "Dailymotion",
-            "Reddit", "Twitch", "SoundCloud", "Pinterest", "Bilibili", "1000+ more"
+            "YouTube", "YouTube Shorts", "YouTube playlists", "SoundCloud", "Bandcamp", "PeerTube", "media.ccc.de"
         ).forEach { name ->
             val chip = Chip(this)
             chip.text = name
@@ -573,7 +572,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTab(index: Int) {
         if (index != 1 && selecting) exitSelection()
-        if (index == 2) renderEngine()
         tab = index
         hm.root.isVisible = index == 0
         pl.root.isVisible = index == 1
@@ -685,7 +683,7 @@ class MainActivity : AppCompatActivity() {
 
         var current: PreviewState? = null
         var mode = MODE_QUICK
-        var selectedSpec: String? = if (preferAudio) "audio:mp3:128" else null
+        var selectedSpec: String? = if (preferAudio) "audio:m4a" else null
         var selectedSub: String? = null
 
         var choiceAction: (FormatChoice) -> Unit = {}
@@ -1256,22 +1254,12 @@ class MainActivity : AppCompatActivity() {
             renderRecents()
             message("Search history cleared")
         }
-        st.updateNowBtn.setOnClickListener { vm.updateNow() }
-        renderEngine()
         val version = try {
             packageManager.getPackageInfo(packageName, 0).versionName
         } catch (e: Exception) {
             ""
         }
         st.versionText.text = "RAINAX YT DOWNLOADER  v$version"
-    }
-
-    private fun renderEngine() {
-        val last = AppPrefs.lastUpdate(this)
-        val auto = "Checks for updates every time you open the app."
-        st.engineStatus.text = if (last == 0L) auto else
-            "Last updated " + DateUtils.getRelativeTimeSpanString(last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS) +
-                ". " + auto
     }
 
     private fun renderFolder() {

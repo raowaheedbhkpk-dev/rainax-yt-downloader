@@ -11,9 +11,8 @@ android {
         applicationId "com.rainax.ytdownloader"
         minSdk 29
         targetSdk 34
-        versionCode 21
-        versionName "7.9.1"
-        ndk { abiFilters "arm64-v8a", "armeabi-v7a" }
+        versionCode 22
+        versionName "8.0.0"
     }
 
     // One fixed signing key for every build, so updates always install over the old version.
@@ -31,7 +30,7 @@ android {
     buildTypes {
         release {
             debuggable false
-            minifyEnabled false      // yt-dlp / FFmpeg use reflection and native code, so no shrinking
+            minifyEnabled false      // the extractor uses reflection (Rhino), so no shrinking
             shrinkResources false
             signingConfig signingConfigs.release
         }
@@ -43,7 +42,6 @@ android {
     buildFeatures { viewBinding true }
 
     packagingOptions {
-        jniLibs { useLegacyPackaging = true }
         resources {
             excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/LICENSE.md',
                          'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/NOTICE.md',
@@ -72,11 +70,9 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.6'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6'
-    implementation 'io.github.junkfood02.youtubedl-android:library:0.17.+'
-    // Fast YouTube info (same extractor and version NewPipe uses); yt-dlp stays the fallback and the downloader
+    // RAINAX's own extractor (the same one and version NewPipe uses). Downloads use NativeDownloader. No yt-dlp.
     implementation 'com.github.TeamNewPipe:NewPipeExtractor:13a655fe53e0c3065f88725fc1fb594c3ede0169'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.0.4'
-    implementation 'io.github.junkfood02.youtubedl-android:ffmpeg:0.17.+'
 }
 
 // Keep androidx.core compatible with AGP 8.5.2 / compileSdk 34

@@ -1,6 +1,6 @@
 # RAINAX YT DOWNLOADER
 
-Premium Android video and music downloader. Powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg
+Premium Android video and music downloader. Small and fast: its own downloader, with [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) for YouTube, SoundCloud, Bandcamp and PeerTube
 through [youtubedl-android](https://github.com/yausername/youtubedl-android).
 
 ## Features
@@ -13,7 +13,7 @@ through [youtubedl-android](https://github.com/yausername/youtubedl-android).
 - YouTube sign-in inside the app for private, members-only and age-restricted videos
 - Light, dark or system theme, optional ad blocking, Wi-Fi only mode
 - Choose your own download folder (default: `Downloads/rainax-yt-downloader`)
-- The download engine (yt-dlp) updates itself every time the app opens (and has an Update now button)
+- Own downloader: several connections at once, resume, HD video + sound joined with Android's MediaMuxer
 
 ## Build
 Push to `main`: the APK is in **Actions > Build RAINAX APK > Artifacts**.

@@ -3,7 +3,6 @@ package com.rainax.ytdownloader
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
@@ -40,63 +39,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         TaskRepository.init(app)
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { Engine.ensureInit(app) }
-            // yt-dlp is checked and updated in the background every time the app opens, then every 6 hours
-            var first = true
-            while (true) {
-                val busy = TaskRepository.tasks.value.any { it.status == Status.RUNNING || it.status == Status.QUEUED }
-                val due = first || System.currentTimeMillis() - AppPrefs.lastUpdate(app) > UPDATE_EVERY_MS
-                if (!busy && due) {         // never swap yt-dlp underneath a running download
-                    updateEngine()
-                    first = false
-                    _events.tryEmit(ENGINE_REFRESHED)
-                }
-                delay(CHECK_EVERY_MS)
-            }
-        }
     }
-
-    /** Silent yt-dlp update. Returns true when it ran without error. */
-    private fun updateEngine(): Boolean = try {
-        Engine.ensureInit(app)
-        YoutubeDL.getInstance().updateYoutubeDL(app, YoutubeDL.UpdateChannel.STABLE)
-        AppPrefs.setLastUpdate(app, System.currentTimeMillis())
-        true
-    } catch (e: Exception) {
-        false
-    }
-
-    private var updating = false
-
-    /** Settings > Update yt-dlp now. */
-    fun updateNow() {
-        if (updating) return
-        updating = true
-        viewModelScope.launch {
-            _events.emit("Updating yt-dlp…")
-            val message = try {
-                val result = withContext(Dispatchers.IO) {
-                    Engine.ensureInit(app)
-                    YoutubeDL.getInstance().updateYoutubeDL(app, YoutubeDL.UpdateChannel.STABLE)
-                }
-                AppPrefs.setLastUpdate(app, System.currentTimeMillis())
-                "yt-dlp: " + (result?.toString()?.replace('_', ' ')?.lowercase() ?: "updated")
-            } catch (e: Exception) {
-                "Update failed: ${e.readable()}"
-            }
-            updating = false
-            _events.emit(message)
-            _events.emit(ENGINE_REFRESHED)
-        }
-    }
-
-    /** Each lookup gets its own process id, so stopping an old one can never touch the new one. */
-    @Volatile private var procId = InfoFetcher.PROCESS_ID
 
     // ---------- instant info: cache + look-ahead ----------
-    // yt-dlp needs a few seconds per lookup on a phone. While a YouTube video is open we look it up quietly in the
-    // background, and keep results for 30 minutes, so the download sheet usually has the sizes at once.
+    // While a YouTube video is open we look it up quietly in the background, and keep results for 30 minutes,
+    // so the download sheet usually has the sizes at once.
     private class Cached(val at: Long, val state: PreviewState)
     private val cache = java.util.concurrent.ConcurrentHashMap<String, Cached>()
     @Volatile private var aheadJob: Deferred<PreviewState>? = null
@@ -121,7 +68,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Called while a YouTube video page stays open: fetch its info before the user taps Download.
-     * Uses only the fast Java extractor (light); yt-dlp never runs in the background just for browsing.
      */
     fun prefetch(url: String) {
         if (!FastExtractor.supports(url)) return
@@ -130,7 +76,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         aheadJob?.cancel()                       // only one look-ahead at a time
         aheadKey = key
         val job = viewModelScope.async(Dispatchers.IO) {
-            (fastInfo(url) ?: PreviewState(error = "fast lookup failed")).also { remember(url, it) }
+            doFetch(url, false).also { remember(url, it) }
         }
         aheadJob = job
         job.invokeOnCompletion {
@@ -138,35 +84,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun doFetch(url: String, forcePlaylist: Boolean, id: String = procId): PreviewState = try {
-        withContext(Dispatchers.IO) {
-            if (forcePlaylist || isPlaylistUrl(url)) InfoFetcher.fetchPlaylist(app, url, null, id)
-            else fastInfo(url) ?: run {
-                ensureActive()                   // cancelled meanwhile: don't start a yt-dlp nobody can stop
-                InfoFetcher.fetch(app, url, null, id)
-            }
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        val raw = e.readable()
-        PreviewState(error = friendlyError(raw), raw = raw)
-    }
-
-    /** YouTube videos: the fast Java extractor first (about a second); null means "use yt-dlp". */
-    private suspend fun fastInfo(url: String): PreviewState? {
-        if (!FastExtractor.supports(url)) return null
+    /** Reads info with RAINAX's own extractor. Never throws: problems come back as an error state. */
+    private suspend fun doFetch(url: String, forcePlaylist: Boolean): PreviewState {
+        val playlist = forcePlaylist || isPlaylistUrl(url)
         // Runs on its own, so a slow network can never hold us past the time limit
-        val work = fastScope.async { runInterruptible { FastExtractor.fetch(url) } }
+        val work = fastScope.async {
+            runInterruptible { if (playlist) FastExtractor.fetchPlaylist(url) else FastExtractor.fetch(url) }
+        }
         return try {
-            withTimeoutOrNull(FAST_TIMEOUT_MS) { work.await() } ?: run { work.cancel(); null }
+            withTimeoutOrNull(if (playlist) PLAYLIST_TIMEOUT_MS else INFO_TIMEOUT_MS) { work.await() } ?: run {
+                work.cancel()
+                PreviewState(error = "This is taking too long. Check your internet, then tap Retry.", raw = "timed out")
+            }
         } catch (e: CancellationException) {
             work.cancel()
             currentCoroutineContext().ensureActive()     // we were cancelled: stop here
-            null
+            PreviewState(error = "Stopped", raw = "stopped")
         } catch (e: Throwable) {
             currentCoroutineContext().ensureActive()
-            null       // YouTube changed something the fast extractor doesn't know yet: yt-dlp handles it
+            val raw = e.message?.takeIf { it.isNotBlank() } ?: FastExtractor.readable(e)
+            PreviewState(error = friendlyError(raw), raw = raw)
         }
     }
 
@@ -175,20 +112,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         fastScope.cancel()
         aheadJob?.cancel()
-        stopInfoProcess()
         super.onCleared()
-    }
-
-    /** Kills a lookup that is still running so old requests don't pile up. */
-    private fun stopInfoProcess() {
-        try { YoutubeDL.getInstance().destroyProcessById(procId) } catch (e: Exception) { }
     }
 
     @Suppress("UNUSED_PARAMETER")
     fun fetchInfo(url: String, cookie: String?, forcePlaylist: Boolean = false) {
         infoJob?.cancel()
-        stopInfoProcess()
-        procId = "info-" + System.nanoTime()
         infoJob = viewModelScope.launch {
             // Already looked up (or being looked up in the background)? Use that instead of starting again.
             if (!forcePlaylist) {
@@ -213,17 +142,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 delay(1500L * tries)
                 result = doFetch(url, forcePlaylist)
             }
-            // A site changed and the engine is out of date? Update it quietly and try once more.
-            if (result.error != null && looksOutdated(result.raw) &&
-                System.currentTimeMillis() - AppPrefs.lastUpdate(app) > AUTO_FIX_GAP_MS
-            ) {
-                _preview.value = PreviewState(loading = true, title = "Updating the download engine…")
-                val updated = withContext(Dispatchers.IO) { updateEngine() }
-                if (updated) {
-                    _preview.value = PreviewState(loading = true)
-                    result = doFetch(url, forcePlaylist)
-                }
-            }
             remember(url, result)
             _preview.value = result
         }
@@ -235,21 +153,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return listOf(
             "errno 7", "no address associated", "name resolution", "temporary failure",
             "network is unreachable", "timed out", "connection reset", "connection refused",
-            "transporterror", "unable to download webpage"
-        ).any { it in m }
-    }
-
-    private fun looksOutdated(raw: String?): Boolean {
-        val m = raw?.lowercase() ?: return false
-        return listOf(
-            "unable to extract", "nsig", "signature", "unsupported url", "http error 403",
-            "no video formats", "extractor error", "player response", "precondition check failed"
+            "unable to resolve host", "failed to connect", "connection abort", "socket", "timeout"
         ).any { it in m }
     }
 
     fun clearPreview() {
         infoJob?.cancel()
-        stopInfoProcess()
         _preview.value = null
     }
 
@@ -263,13 +172,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        /** Not shown to the user: tells the screen to refresh the "last updated" text. */
-        const val ENGINE_REFRESHED = "\u0000engine"
-
-        private const val UPDATE_EVERY_MS = 6 * 3600 * 1000L      // check for a new yt-dlp every 6 hours
-        private const val CHECK_EVERY_MS = 30 * 60 * 1000L        // while the app is open
-        private const val AUTO_FIX_GAP_MS = 30 * 60 * 1000L       // at most one quick fix per 30 minutes
-        private const val FAST_TIMEOUT_MS = 10_000L               // fast extractor gets 10 s, then yt-dlp takes over
+        private const val INFO_TIMEOUT_MS = 25_000L               // one video
+        private const val PLAYLIST_TIMEOUT_MS = 120_000L          // up to 1000 playlist entries
         private const val CACHE_MS = 30 * 60 * 1000L              // looked-up info stays fresh for 30 minutes
     }
 }

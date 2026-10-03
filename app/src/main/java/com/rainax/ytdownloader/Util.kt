@@ -10,8 +10,9 @@ fun String.isFatalError(): Boolean {
     val m = lowercase()
     return listOf(
         "unsupported url", "video unavailable", "private video", "is not available",
-        "has been removed", "members-only", "sign in to confirm", "copyright",
-        "confirm your age", "inappropriate for some users", "join this channel", "not a bot"
+        "has been removed", "members-only", "copyright",
+        "confirm your age", "inappropriate for some users", "join this channel",
+        "live stream", "no downloadable", "no video format", "no audio found", "can't be downloaded"
     ).any { it in m }
 }
 
@@ -28,7 +29,7 @@ fun isPlaylistUrl(url: String): Boolean =
     (url.contains("list=") && !url.contains("v=") && !url.contains("youtu.be/")) ||
         url.contains("/playlist?")
 
-/** Turns yt-dlp's raw error into something a person can act on. */
+/** Turns a raw error into something a person can act on. */
 fun friendlyError(raw: String): String {
     val m = raw.lowercase()
     return when {
@@ -41,8 +42,9 @@ fun friendlyError(raw: String): String {
         "video unavailable" in m || "has been removed" in m || "is not available" in m ->
             "Video removed or unavailable."
         "copyright" in m -> "Blocked for copyright reasons."
+        "unsupported url" in m -> "This site isn't supported. RAINAX downloads from ${FastExtractor.SUPPORTED}."
         "errno 7" in m || "no address associated" in m || "name resolution" in m ||
-            "network is unreachable" in m || "timed out" in m ->
+            "network is unreachable" in m || "timed out" in m || "unable to resolve host" in m ->
             "Can't reach the site right now. Check your internet connection, then tap Retry."
         else -> raw
     }

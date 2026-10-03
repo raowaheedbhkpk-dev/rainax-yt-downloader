@@ -1,23 +1,30 @@
 package com.rainax.ytdownloader
 
 import org.schabi.newpipe.extractor.NewPipe
-import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
 import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
+import org.schabi.newpipe.extractor.playlist.PlaylistInfo
+import org.schabi.newpipe.extractor.stream.AudioStream
+import org.schabi.newpipe.extractor.stream.DeliveryMethod
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
+import org.schabi.newpipe.extractor.stream.SubtitlesStream
+import org.schabi.newpipe.extractor.stream.VideoStream
 import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Fast YouTube info in pure Java/Kotlin (NewPipe Extractor), the way apps like SnapTube read YouTube:
- * no Python start-up, usually well under a second. It only fills the download sheet (title, thumbnail,
- * qualities with sizes, subtitles). The download itself is still done by yt-dlp, and whenever this
- * extractor fails the app quietly falls back to yt-dlp.
+ * RAINAX's own extractor (NewPipe Extractor, pure Java/Kotlin, no Python):
+ * reads video info, playlists and the direct stream addresses that [NativeDownloader] downloads.
+ * Supported: YouTube (videos, Shorts, playlists), SoundCloud, Bandcamp, PeerTube, media.ccc.de.
  */
 object FastExtractor {
+
+    const val UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
+    const val SUPPORTED = "YouTube, SoundCloud, Bandcamp and PeerTube"
 
     @Volatile private var ready = false
 
@@ -28,74 +35,214 @@ object FastExtractor {
         ready = true
     }
 
-    /** Single YouTube videos and Shorts only (playlists, live streams and other sites use yt-dlp). */
+    /** True for YouTube videos and Shorts (used for look-ahead, cache keys and thumbnails). */
     fun supports(url: String): Boolean {
         val u = url.lowercase()
         val yt = u.contains("youtube.com/watch") || u.contains("youtube.com/shorts/") || u.contains("youtu.be/")
         return yt && !u.contains("music.youtube.com")
     }
 
-    /** Blocking. Throws on any problem (the caller then uses yt-dlp). */
-    fun fetch(url: String): PreviewState {
-        init()
-        val info = StreamInfo.getInfo(ServiceList.YouTube, url)
-        if (info.streamType != StreamType.VIDEO_STREAM) error("Not a normal video")
+    // ---------- info for the download sheet ----------
 
+    /** Blocking. Title, thumbnail, qualities with sizes and subtitles. Throws a readable error. */
+    fun fetch(url: String): PreviewState = guard {
+        init()
+        val info = StreamInfo.getInfo(url)
+        checkPlayable(info)
         val duration = info.duration.toInt()
+
         val progressive = mutableMapOf<Int, Long>()
         val videoOnly = mutableMapOf<Int, Long>()
-        var bestAudio = 0L
-        var bestM4a = 0L
-
-        fun bytes(len: Long?, bitrate: Int): Long = when {
-            len != null && len > 0 -> len
-            bitrate > 0 && duration > 0 -> bitrate.toLong() / 8 * duration
-            else -> 0L
+        for (v in usable(info.videoStreams)) {
+            val h = heightOf(v) ?: continue
+            progressive[h] = maxOf(progressive[h] ?: 0L, sizeOf(v.itagItem?.contentLength, v.bitrate, duration))
         }
-
-        for (v in info.videoStreams.orEmpty()) {
-            val h = v.height.takeIf { it > 0 } ?: v.resolution.substringBefore('p').toIntOrNull() ?: continue
-            val size = bytes(v.itagItem?.contentLength, v.bitrate)
-            progressive[h] = maxOf(progressive[h] ?: 0L, size)
+        for (v in usable(info.videoOnlyStreams).filter { muxable(it) }) {
+            val h = heightOf(v) ?: continue
+            videoOnly[h] = maxOf(videoOnly[h] ?: 0L, sizeOf(v.itagItem?.contentLength, v.bitrate, duration))
         }
-        for (v in info.videoOnlyStreams.orEmpty()) {
-            val h = v.height.takeIf { it > 0 } ?: v.resolution.substringBefore('p').toIntOrNull() ?: continue
-            val size = bytes(v.itagItem?.contentLength, v.bitrate)
-            videoOnly[h] = maxOf(videoOnly[h] ?: 0L, size)
+        val audios = usable(info.audioStreams)
+        val bestAudio = audios.maxOfOrNull { audioSize(it, duration) } ?: 0L
+        val bestM4a = audios.filter { it.format?.suffix == "m4a" }.maxOfOrNull { audioSize(it, duration) } ?: 0L
+        if (progressive.isEmpty() && videoOnly.isEmpty() && audios.isEmpty()) {
+            error("No downloadable formats for this link")
         }
-        for (a in info.audioStreams.orEmpty()) {
-            val br = if (a.averageBitrate > 0) a.averageBitrate * 1000 else a.bitrate
-            val size = bytes(a.itagItem?.contentLength, br)
-            bestAudio = maxOf(bestAudio, size)
-            if (a.format?.suffix == "m4a") bestM4a = maxOf(bestM4a, size)
-        }
-        if (progressive.isEmpty() && videoOnly.isEmpty() && bestAudio == 0L) error("No streams")
 
         val subs = info.subtitles.orEmpty()
-            .distinctBy { it.languageTag + it.isAutoGenerated }
+            .distinctBy { it.languageTag }
             .take(30)
-            .map { s ->
-                val name = runCatching { s.locale.getDisplayLanguage(java.util.Locale.ENGLISH) }.getOrNull()
-                    ?.takeIf { it.isNotBlank() } ?: s.displayLanguageName ?: s.languageTag
-                SubtitleOption(s.languageTag, if (s.isAutoGenerated) "$name (auto)" else name)
-            }
-            .distinctBy { it.code }
+            .map { s -> SubtitleOption(s.languageTag, subtitleName(s)) }
 
         val built = InfoFetcher.buildChoices(progressive, videoOnly, bestAudio, bestM4a, duration, subs)
-
         val thumbUrl = info.thumbnails
             .sortedBy { kotlin.math.abs((it.height.takeIf { h -> h > 0 } ?: 360) - 360) }
             .firstOrNull()?.url
-        val thumb = thumbUrl?.let { InfoFetcher.loadBitmap(it) }
-
-        return PreviewState(
+        PreviewState(
             title = info.name,
             subtitle = subtitleLine(info.uploaderName, duration),
-            thumb = thumb,
-            quick = built.quick,
-            all = built.all,
+            thumb = thumbUrl?.let { InfoFetcher.loadBitmap(it) },
+            quick = if (progressive.isEmpty() && videoOnly.isEmpty()) built.quick.filter { it.kind == KIND_AUDIO } else built.quick,
+            all = if (progressive.isEmpty() && videoOnly.isEmpty()) built.all.filter { it.kind == KIND_AUDIO } else built.all,
             subtitles = built.subs
         )
+    }
+
+    /** Blocking. Up to 1000 playlist entries (private/deleted ones skipped). */
+    fun fetchPlaylist(url: String): PreviewState = guard {
+        init()
+        val info = PlaylistInfo.getInfo(url)
+        val items = info.relatedItems.toMutableList()
+        var page: Page? = if (info.hasNextPage()) info.nextPage else null
+        while (page != null && items.size < 1000) {
+            val more = PlaylistInfo.getMoreItems(info.service, url, page)
+            items += more.items
+            page = if (more.hasNextPage()) more.nextPage else null
+        }
+        var skipped = 0
+        val list = items.take(1000).mapNotNull { item ->
+            val name = item.name.orEmpty()
+            val low = name.lowercase()
+            if (low == "[private video]" || low == "[deleted video]" || item.url.isNullOrBlank()) {
+                skipped++
+                null
+            } else {
+                val thumb = item.thumbnails
+                    .sortedBy { kotlin.math.abs((it.height.takeIf { h -> h > 0 } ?: 180) - 180) }
+                    .firstOrNull()?.url
+                PlaylistEntry(item.url, name, thumb)
+            }
+        }
+        check(list.isNotEmpty()) {
+            if (skipped > 0) "All $skipped videos in this playlist are private or deleted." else "Playlist is empty"
+        }
+        PreviewState(
+            title = info.name ?: "Playlist",
+            subtitle = "${list.size} videos" + if (skipped > 0) "  •  $skipped private/deleted skipped" else "",
+            playlist = list
+        )
+    }
+
+    // ---------- what to download ----------
+
+    class Part(val url: String, val size: Long, val ext: String)
+
+    class Plan(
+        val title: String,
+        val thumbUrl: String?,
+        val video: Part?,          // null for audio downloads or when [single] already has sound
+        val audio: Part?,
+        val single: Part?,         // one file that already has picture and sound (or audio only)
+        val webm: Boolean,         // join as WebM (VP9 + Opus) instead of MP4
+        val subtitle: SubtitlesStream?
+    )
+
+    /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
+    fun plan(url: String, spec: String, subLang: String?): Plan = guard {
+        init()
+        val info = StreamInfo.getInfo(url)
+        checkPlayable(info)
+        val duration = info.duration.toInt()
+        val thumb = info.thumbnails.maxByOrNull { it.height }?.url
+        val sub = subLang?.let { lang ->
+            val forLang = info.subtitles.orEmpty().filter { it.languageTag == lang && it.isUrl }
+                .sortedBy { it.isAutoGenerated }          // real subtitles before automatic ones
+            forLang.firstOrNull { it.extension == "srt" } ?: forLang.firstOrNull { it.extension == "vtt" }
+                ?: forLang.firstOrNull { it.extension == "ttml" }
+        }
+        val audios = usable(info.audioStreams)
+        val original = audios.filter { it.audioTrackType == null || it.audioTrackType?.name == "ORIGINAL" }
+            .ifEmpty { audios }
+
+        if (spec.startsWith("audio")) {
+            val a = original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
+                ?: original.maxByOrNull { audioRate(it) }
+            if (a != null) return@guard Plan(info.name, thumb, null, null, part(a, audioSize(a, duration)), false, null)
+            // no separate sound on this site: save the smallest video that has sound
+            val v = usable(info.videoStreams).minByOrNull { heightOf(it) ?: Int.MAX_VALUE }
+                ?: error("No audio found for this link")
+            return@guard Plan(info.name, thumb, null, null, part(v, sizeOf(v.itagItem?.contentLength, v.bitrate, duration)), false, null)
+        }
+
+        val want = spec.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
+        val mp4Only = spec.endsWith(":mp4")          // after a failed WebM join on this phone
+        val muxed = usable(info.videoStreams).filter { (heightOf(it) ?: 0) <= want }
+            .maxByOrNull { heightOf(it) ?: 0 }
+        val only = usable(info.videoOnlyStreams).filter {
+            muxable(it) && (!mp4Only || it.format?.suffix == "mp4") && (heightOf(it) ?: 0) <= want
+        }
+        // highest quality first; at the same height prefer MP4 (plays everywhere) over WebM
+        val bestOnly = only.maxWithOrNull(
+            compareBy<VideoStream> { heightOf(it) ?: 0 }.thenBy { if (it.format?.suffix == "mp4") 1 else 0 }
+                .thenBy { it.bitrate }
+        )
+        val muxedH = muxed?.let { heightOf(it) } ?: -1
+        val onlyH = bestOnly?.let { heightOf(it) } ?: -1
+
+        if (bestOnly != null && onlyH > muxedH) {
+            val webm = bestOnly.format?.suffix == "webm"
+            val a = if (webm) {
+                original.filter { it.format?.suffix == "webm" }.maxByOrNull { audioRate(it) }
+            } else {
+                original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
+            }
+            if (a != null) {
+                val v = part(bestOnly, sizeOf(bestOnly.itagItem?.contentLength, bestOnly.bitrate, duration))
+                return@guard Plan(info.name, thumb, v, part(a, audioSize(a, duration)), null, webm, sub)
+            }
+        }
+        if (muxed != null) {
+            val s = part(muxed, sizeOf(muxed.itagItem?.contentLength, muxed.bitrate, duration))
+            return@guard Plan(info.name, thumb, null, null, s, false, sub)
+        }
+        error("No video format found for this link")
+    }
+
+    // ---------- helpers ----------
+
+    private fun checkPlayable(info: StreamInfo) {
+        when (info.streamType) {
+            StreamType.LIVE_STREAM, StreamType.AUDIO_LIVE_STREAM -> error("Live streams can't be downloaded")
+            StreamType.POST_LIVE_STREAM, StreamType.POST_LIVE_AUDIO_STREAM -> error("This live stream has not been processed yet. Try later")
+            else -> {}
+        }
+    }
+
+    private fun <T : org.schabi.newpipe.extractor.stream.Stream> usable(list: List<T>?): List<T> =
+        list.orEmpty().filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && !it.content.isNullOrBlank() }
+
+    /** Video-only streams Android can join with sound: H.264 in MP4, VP9/VP8 in WebM. */
+    private fun muxable(v: VideoStream): Boolean {
+        val codec = v.codec.orEmpty().lowercase()
+        return when (v.format?.suffix) {
+            "mp4" -> codec.isEmpty() || codec.startsWith("avc")
+            "webm" -> codec.isEmpty() || codec.startsWith("vp9") || codec.startsWith("vp09") || codec.startsWith("vp8")
+            else -> false
+        }
+    }
+
+    private fun heightOf(v: VideoStream): Int? =
+        v.height.takeIf { it > 0 } ?: v.resolution.substringBefore('p').toIntOrNull()
+
+    private fun sizeOf(len: Long?, bitrate: Int, duration: Int): Long = when {
+        len != null && len > 0 -> len
+        bitrate > 0 && duration > 0 -> bitrate.toLong() / 8 * duration
+        else -> 0L
+    }
+
+    /** AudioStream.averageBitrate is in kbit/s; bitrate is in bit/s. */
+    private fun audioRate(a: AudioStream): Int = if (a.averageBitrate > 0) a.averageBitrate * 1000 else a.bitrate
+
+    private fun audioSize(a: AudioStream, duration: Int) = sizeOf(a.itagItem?.contentLength, audioRate(a), duration)
+
+    private fun part(s: org.schabi.newpipe.extractor.stream.Stream, size: Long): Part {
+        val ext = s.format?.suffix ?: "mp4"
+        return Part(s.content, size, ext)
+    }
+
+    private fun subtitleName(s: SubtitlesStream): String {
+        val name = runCatching { s.locale.getDisplayLanguage(java.util.Locale.ENGLISH) }.getOrNull()
+            ?.takeIf { it.isNotBlank() } ?: s.displayLanguageName ?: s.languageTag
+        return if (s.isAutoGenerated) "$name (auto)" else name
     }
 
     private fun subtitleLine(uploader: String?, seconds: Int): String {
@@ -110,10 +257,36 @@ object FastExtractor {
         return parts.joinToString("  •  ")
     }
 
+    /** Turns extractor errors into messages the app understands (private, age limit, unsupported site...). */
+    private inline fun <T> guard(block: () -> T): T = try {
+        block()
+    } catch (e: Exception) {
+        throw IllegalStateException(readable(e), e)
+    }
+
+    fun readable(e: Throwable): String {
+        val name = e.javaClass.simpleName
+        val msg = e.message.orEmpty()
+        return when {
+            name.contains("PrivateContent") -> "Private video"
+            name.contains("AccountTerminated") -> "Video unavailable: the channel was terminated"
+            name.contains("AgeRestricted") -> "Age-restricted video (confirm your age)"
+            name.contains("GeographicRestriction") -> "This video is not available in your country"
+            name.contains("PaidContent") || name.contains("Premium") -> "This video is not available (paid or members-only)"
+            name.contains("ContentNotSupported") -> "Unsupported URL: this kind of content can't be downloaded"
+            name.contains("ContentNotAvailable") -> "Video unavailable: " + msg.take(80)
+            name.contains("ReCaptcha") -> "YouTube is limiting requests right now. Trying again later"
+            msg.contains("No service can handle", true) ->
+                "Unsupported URL: RAINAX downloads from $SUPPORTED"
+            e is java.net.UnknownHostException -> "Unable to resolve host (no internet)"
+            e is java.net.SocketTimeoutException -> "Connection timed out"
+            e is IllegalStateException && msg.isNotBlank() -> msg
+            else -> (msg.ifBlank { name }).take(160)
+        }
+    }
+
     /** Minimal HTTP client for the extractor (no extra library needed). */
     private object HttpDownloader : Downloader() {
-        private const val UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"
-
         override fun execute(request: Request): Response {
             val con = URL(request.url()).openConnection() as HttpURLConnection
             try {

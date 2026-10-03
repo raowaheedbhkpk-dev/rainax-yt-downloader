@@ -405,7 +405,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:lineSpacingExtra="4dp"
-                    android:text="1. Open TikTok, Instagram, Facebook, X or any other app\n2. Tap Share, then choose RAINAX\n3. Pick a format and tap Download\n\nYou can also copy a link and tap the button below."
+                    android:text="1. Open YouTube, SoundCloud or Bandcamp\n2. Tap Share, then choose RAINAX\n3. Pick a format and tap Download\n\nYou can also copy a link and tap the button below."
                     android:textColor="@color/rx_text2"
                     android:textSize="14sp" />
 

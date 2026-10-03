@@ -28,8 +28,6 @@ object AppPrefs {
     fun saveTree(c: Context) = p(c).getString("save_tree", "").orEmpty()
     fun setSaveTree(c: Context, v: String) = p(c).edit().putString("save_tree", v).apply()
 
-    fun lastUpdate(c: Context) = p(c).getLong("last_update", 0L)
-    fun setLastUpdate(c: Context, v: Long) = p(c).edit().putLong("last_update", v).apply()
 
     fun autoRetry(c: Context) = p(c).getBoolean("auto_retry", true)
     fun setAutoRetry(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_retry", v).apply()

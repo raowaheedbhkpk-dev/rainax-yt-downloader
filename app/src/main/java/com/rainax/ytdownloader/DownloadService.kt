@@ -16,8 +16,6 @@ import android.os.IBinder
 import android.webkit.MimeTypeMap
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.yausername.youtubedl_android.YoutubeDL
-import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -34,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Foreground service that owns the download queue, so downloads continue when the app is closed.
  * - runs up to N downloads at once (Settings)
- * - resumes partial files (yt-dlp --continue) after errors, restarts and network loss
+ * - resumes partial files (finished pieces are kept) after errors, restarts and network loss
  * - can wait for Wi-Fi only
  */
 class DownloadService : Service() {
@@ -52,9 +50,6 @@ class DownloadService : Service() {
     private var thumbJob: Job? = null
     private val thumbTried = ConcurrentHashMap.newKeySet<String>()
 
-    private val speedRe = Regex("""at\s+(\S+/s)""")
-    private val formatRe = Regex("""Downloading \d+ format\(s\):\s*(\S+)""")
-    private val sizeParseRe = Regex("""of\s+~?\s*([\d.]+)\s*([KMGT]?i?B)""")
 
     // Auto-retry: how many times each failed download was re-tried, and when the next try is due
     private val autoTries = ConcurrentHashMap<String, Int>()
@@ -128,6 +123,7 @@ class DownloadService : Service() {
     }
 
     override fun onDestroy() {
+        running.keys.forEach { NativeDownloader.stop(it) }
         try { nm.cancel(FG_ID) } catch (e: Exception) { }
         if (callbackRegistered) {
             try { cm.unregisterNetworkCallback(netCallback) } catch (e: Exception) { }
@@ -143,12 +139,12 @@ class DownloadService : Service() {
         if (!scope.isActive) return           // service is shutting down
         fillThumbnails()
         // Wi-Fi only and the phone moved to mobile data: pause running downloads until Wi-Fi is back
-        // (only when online on mobile data; a short network drop is left to yt-dlp's own retries)
+        // (only when online on mobile data; a short network drop is handled by the piece retries)
         if (isOnline() && !canDownload() && running.isNotEmpty()) {
             running.keys.toList().forEach { id ->
                 if (TaskRepository.get(id)?.status == Status.RUNNING) {
                     TaskRepository.update(id, true) { it.copy(status = Status.WAITING, message = "Waiting for Wi-Fi…") }
-                    YoutubeDL.getInstance().destroyProcessById(id)
+                    NativeDownloader.stop(id)
                 }
             }
         }
@@ -261,94 +257,134 @@ class DownloadService : Service() {
         return true
     }
 
-    private fun isYoutube(url: String): Boolean {
-        val h = Uri.parse(url).host.orEmpty().lowercase()
-        return h.endsWith("youtube.com") || h == "youtu.be"
-    }
-
     private fun downloadOnce(id: String) {
         val task = TaskRepository.get(id) ?: return
-        Engine.ensureInit(this)
+        NativeDownloader.begin(id)
+        try {
+            transfer(id, task)
+        } finally {
+            NativeDownloader.end(id)
+        }
+    }
 
-        // Links added in bulk have no title yet: look it up now
+    /** One attempt: find the streams, download them (several connections each), join, save. */
+    private fun transfer(id: String, task: DownloadTask) {
+        // Fresh stream addresses on every attempt (YouTube's links expire after some hours)
+        val plan = FastExtractor.plan(task.url, task.format, task.subLang)
         if (task.title.isBlank()) {
-            runCatching { InfoFetcher.fetch(this, task.url, null, "info-$id") }.getOrNull()?.let { info ->
-                val thumbPath = info.thumb?.let { InfoFetcher.saveThumb(this, id, it) }
-                TaskRepository.update(id, true) { it.copy(title = info.title.orEmpty(), thumbPath = thumbPath ?: it.thumbPath) }
-            }
+            val thumbPath = plan.thumbUrl?.let { InfoFetcher.loadBitmap(it) }?.let { InfoFetcher.saveThumb(this, id, it) }
+            TaskRepository.update(id, true) { it.copy(title = plan.title, thumbPath = thumbPath ?: it.thumbPath) }
         }
-
-        // Same folder on every attempt so yt-dlp can continue the .part files
-        val dir = File(filesDir, "downloads/$id").apply { mkdirs() }
-
-        val request = YoutubeDLRequest(task.url).apply {
-            addOption("--no-playlist")
-            addOption("--no-mtime")
-            addOption("--continue")
-            addOption("--retries", "10")
-            addOption("--fragment-retries", "10")
-            addOption("--socket-timeout", "30")
-            // Speed: several pieces at once (HLS/DASH sites), smaller ranged requests for YouTube so it does not
-            // throttle, and a fresh link if the speed ever drops to a crawl
-            addOption("-N", "8")
-            addOption("--throttled-rate", "100K")
-            addOption("--buffer-size", "64K")
-            if (isYoutube(task.url)) addOption("--http-chunk-size", "10M")
-            // Names are limited in BYTES (emoji take 4 bytes each); Android allows 255, so 90 leaves room for ".f137.mp4.part"
-            addOption("-o", "${dir.absolutePath}/%(title).90B.%(ext)s")
-            Formats.configure(this, task.format, task.subLang)
-        }
-
-        // A video+audio download is two separate transfers; fold them into one live 0-100% bar
-        val spec = task.format
-        var streams = if (spec.startsWith("video") && isYoutube(task.url)) 2 else 1
-        var cur = 0                          // stream being downloaded right now (1-based)
-        var lastP = -1
-        val sizes = DoubleArray(4)           // bytes of each stream, as reported by yt-dlp
-        var best = task.progress.coerceAtMost(98)   // the bar never goes backwards, even after a retry
-        // Paused or cancelled while the title lookup / engine start was running? Don't start the transfer.
+        // Paused or cancelled meanwhile? Don't start the transfer.
         if (TaskRepository.get(id)?.status != Status.RUNNING) return
-        YoutubeDL.getInstance().execute(request, id) { progress, eta, line ->
-            formatRe.find(line)?.let { streams = it.groupValues[1].split('+').size.coerceIn(1, 3) }
 
-            val p = progress.toInt().coerceIn(0, 100)
-            if (cur == 0) cur = 1
-            else if (lastP >= 80 && p < 30 && cur < 3) cur++     // percent restarted: next stream began
-            lastP = p
-            sizeParseRe.find(line)?.let { m ->
-                val bytes = toBytes(m.groupValues[1], m.groupValues[2])
-                if (bytes > 0) sizes[cur] = bytes
+        // Same folder on every attempt, so finished pieces are kept and the download continues
+        val dir = File(filesDir, "downloads/$id").apply { mkdirs() }
+        val title = TaskRepository.get(id)?.title?.ifBlank { plan.title } ?: plan.title
+
+        val parts = listOfNotNull(plan.single, plan.video, plan.audio)
+        val total = parts.sumOf { it.size }.coerceAtLeast(1L)
+        val done = java.util.concurrent.atomic.AtomicLong(0)
+        var best = task.progress.coerceAtMost(98)    // the bar never goes backwards, even after a retry
+        var lastUi = -1L
+        var lastBytes = 0L
+        var lastTime = System.currentTimeMillis()
+        var speed = 0.0
+
+        val uiLock = Any()
+        var label = ""
+
+        fun report() = synchronized(uiLock) {
+            val now = System.currentTimeMillis()
+            if (lastUi < 0) {            // first call: start measuring speed from here
+                lastBytes = done.get(); lastTime = now; lastUi = now
+                return@synchronized
             }
-
-            val processing = line.contains("Merger") || line.contains("ExtractAudio") || line.contains("Fixup")
-            val overall = when {
-                processing -> 99
-                streams <= 1 -> p
-                else -> combined(streams, cur, p, sizes)
-            }
-            if (overall > best) best = overall
-
-            val text = if (processing) {
-                "Processing…"
-            } else {
-                val speed = speedRe.find(line)?.groupValues?.get(1)
-                buildString {
-                    append("Downloading $best%")
-                    if (streams > 1) append("  •  part ${minOf(cur, streams)}/$streams")
-                    if (speed != null) append("  •  $speed")
-                    if (eta >= 0) append("  •  ETA ${formatEta(eta)}")
-                }
+            if (now - lastUi < 500) return@synchronized
+            val bytes = done.get()
+            val dt = (now - lastTime).coerceAtLeast(1)
+            speed = speed * 0.6 + ((bytes - lastBytes) * 1000.0 / dt) * 0.4
+            lastBytes = bytes
+            lastTime = now
+            lastUi = now
+            val pct = (bytes * 100 / total).toInt().coerceIn(0, 99)
+            if (pct > best) best = pct
+            val eta = if (speed > 1) ((total - bytes) / speed).toLong() else -1
+            val text = buildString {
+                append("Downloading $best%")
+                if (label.isNotEmpty()) append("  •  ").append(label)
+                if (speed > 1) append("  •  ").append(formatSize(speed.toLong())).append("/s")
+                if (eta in 0..86_400) append("  •  ETA ").append(formatEta(eta))
             }
             TaskRepository.update(id) {
-                if (it.status != Status.RUNNING || (it.progress == best && it.message == text)) it
-                else it.copy(progress = best, message = text)
+                if (it.status != Status.RUNNING) it else it.copy(progress = best, message = text)
             }
         }
 
-        // Paused or cancelled at the very end: keep the partial files for resume, save nothing
+        val onBytes: (Long) -> Unit = { n -> done.addAndGet(n); report() }
+        // bytes already on disk from an earlier try: count them, but not as speed
+        val onResumed: (Long) -> Unit = { n -> synchronized(uiLock) { done.addAndGet(n); lastBytes += n } }
+
+        val output: File
+        if (plan.single != null) {
+            val s = plan.single!!
+            label = ""
+            val f = File(dir, "media.${s.ext}")
+            NativeDownloader.download(id, s.url, f, onResumed, onBytes)
+            output = f
+        } else {
+            val v = plan.video!!
+            val a = plan.audio!!
+            val vf = File(dir, "video.${v.ext}")
+            val af = File(dir, "audio.${a.ext}")
+            label = "video"
+            NativeDownloader.download(id, v.url, vf, onResumed, onBytes)
+            label = "sound"
+            NativeDownloader.download(id, a.url, af, onResumed, onBytes)
+            if (TaskRepository.get(id)?.status != Status.RUNNING) return
+            TaskRepository.update(id) { it.copy(progress = 99, message = "Joining video and sound…") }
+            val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
+            try {
+                NativeDownloader.mux(id, vf, af, joined, plan.webm)
+            } catch (e: NativeDownloader.Stopped) {
+                throw e
+            } catch (e: Exception) {
+                if (!plan.webm) throw e
+                // 2K/4K (WebM) could not be joined on this phone: the next try downloads MP4 only (max 1080p)
+                dir.listFiles()?.forEach { it.delete() }
+                val want = task.format.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: 1080
+                TaskRepository.update(id, true) { t -> t.copy(format = "video:${minOf(want, 1080)}:mp4") }
+                throw java.io.IOException("Trying 1080p instead of 2K/4K on this phone")
+            }
+            output = joined
+        }
+
+        // Paused or cancelled at the very end: keep the files for resume, save nothing
         if (TaskRepository.get(id)?.status != Status.RUNNING) return
-        val saved = saveToDownloads(dir)
-        saveSubtitles(dir)
+        TaskRepository.update(id) { it.copy(progress = 99, message = "Saving…") }
+
+        val ext = output.extension.lowercase()
+        val named = File(dir, NativeDownloader.safeName(title, ext))
+        if (named.path != output.path) {
+            named.delete()
+            if (!output.renameTo(named)) output.copyTo(named, overwrite = true)
+        }
+        val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+            ?: if (task.format.startsWith("audio")) "audio/mp4" else "video/mp4"
+        val saved = FileStore.save(this, named, mime)
+
+        // Subtitles (.srt) next to the video. Optional: a failure never fails the download.
+        plan.subtitle?.let { sub ->
+            try {
+                val srt = NativeDownloader.subtitleSrt(sub.content, sub.extension)
+                if (srt.isNotBlank()) {
+                    val sf = File(dir, NativeDownloader.safeName(title + "." + (task.subLang ?: "sub"), "srt"))
+                    sf.writeText(srt)
+                    FileStore.saveSubtitle(this, sf)
+                }
+            } catch (e: Exception) { }
+        }
+
         TaskRepository.update(id, true) {
             it.copy(
                 status = Status.DONE, progress = 100, message = "Completed",
@@ -359,38 +395,6 @@ class DownloadService : Service() {
         autoTries.remove(id)
         retryAt.remove(id)
         TaskRepository.get(id)?.let { notifyDone(it, true) }
-    }
-
-    /** Overall percent of a multi-stream download, weighted by the real size of each stream. */
-    private fun combined(streams: Int, cur: Int, p: Int, sizes: DoubleArray): Int {
-        val known = (1..cur).all { sizes[it] > 0 }
-        if (!known) {
-            // sizes not reported: the video part is most of the data
-            return if (cur <= 1) p * 85 / 100 else 85 + p * 15 / 100
-        }
-        var done = 0.0
-        var total = 0.0
-        for (i in 1 until cur) {
-            done += sizes[i]
-            total += sizes[i]
-        }
-        done += sizes[cur] * p / 100.0
-        total += sizes[cur]
-        // streams that have not started yet (audio is usually ~10% of the video)
-        if (cur < streams) total += sizes[1] * 0.12 * (streams - cur)
-        return (done * 100.0 / total).toInt().coerceIn(0, 99)
-    }
-
-    private fun toBytes(number: String, unit: String): Double {
-        val n = number.toDoubleOrNull() ?: return 0.0
-        val mult = when (unit.firstOrNull()?.uppercaseChar()) {
-            'K' -> 1024.0
-            'M' -> 1048576.0
-            'G' -> 1073741824.0
-            'T' -> 1099511627776.0
-            else -> 1.0
-        }
-        return n * mult
     }
 
     /** Loads missing thumbnails (playlist items, shared links) one by one in the background. */
@@ -421,8 +425,7 @@ class DownloadService : Service() {
         val t = TaskRepository.get(id) ?: return
         if (t.status != Status.RUNNING && t.status != Status.QUEUED && t.status != Status.WAITING) return
         TaskRepository.update(id, true) { it.copy(status = Status.PAUSED, message = "Paused") }
-        YoutubeDL.getInstance().destroyProcessById(id)
-        YoutubeDL.getInstance().destroyProcessById("info-$id")
+        NativeDownloader.stop(id)
         running[id]?.cancel()
     }
 
@@ -440,8 +443,7 @@ class DownloadService : Service() {
     private fun cancel(id: String) {
         TaskRepository.get(id) ?: return
         TaskRepository.remove(id)
-        YoutubeDL.getInstance().destroyProcessById(id)
-        YoutubeDL.getInstance().destroyProcessById("info-$id")
+        NativeDownloader.stop(id)
         running[id]?.cancel()
         retryAt.remove(id)
         autoTries.remove(id)
@@ -455,8 +457,7 @@ class DownloadService : Service() {
         if (present.isEmpty()) return
         TaskRepository.removeMany(present)
         for (id in present) {
-            YoutubeDL.getInstance().destroyProcessById(id)
-            YoutubeDL.getInstance().destroyProcessById("info-$id")
+            NativeDownloader.stop(id)
             running[id]?.cancel()
             retryAt.remove(id)
             autoTries.remove(id)
@@ -476,21 +477,6 @@ class DownloadService : Service() {
     }
 
     // ---------- storage ----------
-
-    /** Copies the finished file into the download folder chosen in Settings (default: Downloads/rainax-yt-downloader). */
-    private fun saveToDownloads(dir: File): FileStore.Saved {
-        // The biggest real media file (any format a site may give: mp4, mkv, flv, 3gp, ts, aac, flac, ...)
-        val file = dir.listFiles { f -> f.isFile && f.extension.lowercase() !in SKIP_EXT && f.length() > 0 }
-            ?.maxByOrNull { it.length() } ?: error("No output file was produced")
-        val mime = MimeTypeMap.getSingleton()
-            .getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"
-        return FileStore.save(this, file, mime)
-    }
-
-    /** Subtitle files (.srt) requested in the download sheet go next to the video. */
-    private fun saveSubtitles(dir: File) {
-        dir.listFiles { f -> f.isFile && f.extension.lowercase() == "srt" }?.forEach { FileStore.saveSubtitle(this, it) }
-    }
 
     // ---------- network ----------
 
@@ -649,7 +635,6 @@ class DownloadService : Service() {
         private const val CH_DONE = "done"
         private const val MAX_RETRIES = 5
         private val AUTO_DELAYS = longArrayOf(60_000L, 180_000L, 600_000L)
-        private val SKIP_EXT = setOf("part", "ytdl", "srt", "vtt", "ass", "jpg", "jpeg", "webp", "png", "json", "temp", "tmp", "txt")
 
         fun send(context: Context, action: String, id: String? = null, ids: Array<String>? = null) {
             val intent = Intent(context, DownloadService::class.java).setAction(action)
