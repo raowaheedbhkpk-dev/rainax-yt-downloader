@@ -1,3 +1,3 @@
-Fixed crash on background play
-Background player with next and previous
-Lock screen and headphone controls
+Background play now keeps playing
+Skips a track that cannot play
+Shows a clear message if playback stops

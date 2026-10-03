@@ -6,14 +6,15 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.ResolvingDataSource
+import android.widget.Toast
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper
 
 /**
  * Background play (like YouTube Premium): the video's sound keeps playing with the screen off or in other apps.
@@ -26,30 +27,8 @@ class BgPlayService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        // YouTube links want the User-Agent of the client they were made for (as NewPipe does)
-        val http = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(20_000)
-            .setReadTimeoutMs(30_000)
-        val withUa = ResolvingDataSource.Factory(http) { original ->
-            // Next tracks are queued as "rainax://play?u=<video page>": find their sound only when needed
-            var spec = original
-            if (spec.uri.scheme == "rainax") {
-                val page = spec.uri.getQueryParameter("u").orEmpty()
-                val audio = resolved[page] ?: try {
-                    FastExtractor.audioUrl(page).also { resolved[page] = it }
-                } catch (e: Exception) {
-                    throw java.io.IOException(e.message, e)     // the player skips/report it instead of crashing
-                }
-                spec = spec.withUri(android.net.Uri.parse(audio))
-            }
-            val url = spec.uri.toString()
-            val ua = if (YoutubeParsingHelper.isVisionOsStreamingUrl(url)) YoutubeParsingHelper.getVisionOsUserAgent(null)
-            else FastExtractor.UA
-            spec.withAdditionalHeaders(mapOf("User-Agent" to ua))
-        }
         val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(withUa))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(YtChunkDataSource.Factory()))
             .setAudioAttributes(
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
                 true                                   // pause for calls and other apps' sound
@@ -57,6 +36,38 @@ class BgPlayService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)         // pause when headphones are unplugged
             .setWakeMode(C.WAKE_MODE_NETWORK)          // keep playing with the screen off
             .build()
+        player.addListener(object : Player.Listener {
+            private var retriedFor: String? = null
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                if (mediaItem?.mediaId != retriedFor) retriedFor = null
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                val page = player.currentMediaItem?.mediaId
+                // 1) try once more with a fresh sound address (they can expire)
+                if (page != null && retriedFor != page) {
+                    retriedFor = page
+                    resolved.remove(page)
+                    player.prepare()
+                    player.play()
+                    return
+                }
+                // 2) still failing: move on to the next track
+                if (player.hasNextMediaItem()) {
+                    player.seekToNextMediaItem()
+                    player.prepare()
+                    player.play()
+                    return
+                }
+                // 3) nothing left: say why, so the problem is visible
+                Toast.makeText(
+                    this@BgPlayService,
+                    "Background play stopped (" + error.errorCodeName.removePrefix("ERROR_CODE_").lowercase() + ")",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        })
 
         val open = PendingIntent.getActivity(
             this, 0,
@@ -91,6 +102,21 @@ class BgPlayService : MediaSessionService() {
     companion object {
         /** Video page -> sound address, so a track is looked up once (addresses stay valid for hours). */
         private val resolved = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+        /** The app already found this video's sound: no need to look it up again. */
+        fun remember(page: String, audio: String) {
+            resolved[page] = audio
+        }
+
+        /** Blocking (player thread). The sound address of a video page; [fresh] skips the saved one. */
+        fun audioFor(page: String, fresh: Boolean): String {
+            if (!fresh) resolved[page]?.let { return it }
+            return try {
+                FastExtractor.audioUrl(page).also { resolved[page] = it }
+            } catch (e: Exception) {
+                throw java.io.IOException(e.message ?: "Can't find the sound of this video", e)
+            }
+        }
 
         /** A queue entry whose sound is found when the player reaches it. */
         fun lazyUri(page: String): android.net.Uri =

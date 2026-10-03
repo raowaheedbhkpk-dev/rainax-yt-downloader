@@ -479,9 +479,6 @@ class MainActivity : AppCompatActivity() {
             c.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) = updateAudioButton()
                 override fun onPlaybackStateChanged(state: Int) = updateAudioButton()
-                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    message("Background play stopped: can't play this sound")
-                }
             })
             handBackToVideo()
             updateAudioButton()
@@ -529,12 +526,14 @@ class MainActivity : AppCompatActivity() {
                     .setArtist(info.uploader)
                     .setArtworkUri(info.thumbUrl?.let { Uri.parse(it) })
                     .build()
+                // the player streams it in small pieces (and finds a fresh address if this one expires)
+                BgPlayService.remember(url, audio)
                 val item = androidx.media3.common.MediaItem.Builder()
-                    .setUri(audio)
+                    .setUri(BgPlayService.lazyUri(url))
                     .setMediaId(url)
                     .setMediaMetadata(meta)
                     .setRequestMetadata(
-                        androidx.media3.common.MediaItem.RequestMetadata.Builder().setMediaUri(Uri.parse(audio)).build()
+                        androidx.media3.common.MediaItem.RequestMetadata.Builder().setMediaUri(BgPlayService.lazyUri(url)).build()
                     )
                     .build()
                 // "Up next" videos become the next tracks (next/previous in the notification and lock screen)
