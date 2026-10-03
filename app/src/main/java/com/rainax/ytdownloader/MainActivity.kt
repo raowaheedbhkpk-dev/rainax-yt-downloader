@@ -189,6 +189,7 @@ class MainActivity : AppCompatActivity() {
                     while (true) {          // YouTube changes pages without reloading: keep the buttons in sync
                         updateFloatingBar()
                         trackVideoTime()
+                        lookAhead()
                         delay(800)
                     }
                 }
@@ -500,7 +501,32 @@ class MainActivity : AppCompatActivity() {
 
     /** Floating Download button (headphones = audio only). */
     private fun onDownloadClick(url: String, audio: Boolean) {
-        if (isAllowedUrl(url)) showDownloadSheet(listOf(url), preferAudio = audio)
+        if (!isAllowedUrl(url)) return
+        // The page already knows the title: show it at once while the sizes load
+        val title = hm.webView.title.orEmpty().removeSuffix(" - YouTube").trim().takeIf { it.isNotBlank() && it != "YouTube" }
+        showDownloadSheet(listOf(url), preferAudio = audio, knownTitle = title)
+    }
+
+    // Look-ahead: when a video page stays open for a moment, fetch its info in the background
+    private var aheadUrl: String? = null
+    private var aheadSince = 0L
+    private var aheadDone = false
+
+    private fun lookAhead() {
+        val url = currentVideoUrl()
+        if (url == null || url.contains("/playlist") || tab != 0 || topTab != 1) {
+            aheadUrl = null
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (url != aheadUrl) {
+            aheadUrl = url
+            aheadSince = now
+            aheadDone = false
+        } else if (!aheadDone && now - aheadSince > 1500) {
+            aheadDone = true
+            vm.prefetch(url)
+        }
     }
 
     /** Text becomes a YouTube search; anything that looks like a link opens the format sheet. */
@@ -631,7 +657,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showDownloadSheet(urls: List<String>, preferAudio: Boolean = false) {
+    private fun showDownloadSheet(urls: List<String>, preferAudio: Boolean = false, knownTitle: String? = null) {
         sheet?.dismiss()
         val sb = SheetDownloadBinding.inflate(layoutInflater)
         val dialog = BottomSheetDialog(this)
@@ -676,7 +702,8 @@ class MainActivity : AppCompatActivity() {
             val loading = single && (p == null || p.loading)
             val error = if (single) p?.error else null
             val isPlaylist = p?.playlist?.isNotEmpty() == true
-            val presets = !single || error != null || isPlaylist
+            // While the exact sizes load, the usual choices are already there: pick one and download at once
+            val presets = !single || error != null || isPlaylist || (loading && p?.quick.isNullOrEmpty() && !isPlaylistUrl(firstUrl))
             val quick = if (presets) PRESETS else p?.quick.orEmpty()
             val all = if (presets) emptyList() else p?.all.orEmpty()
             val subs = if (presets) emptyList() else p?.subtitles.orEmpty()
@@ -689,7 +716,7 @@ class MainActivity : AppCompatActivity() {
             sb.backBtn.isVisible = mode != MODE_QUICK
             sb.sheetSub.text = when {
                 !single -> "They will download one after another"
-                loading -> p?.title ?: "Fetching info…"
+                loading -> (p?.title ?: knownTitle)?.let { "$it  •  getting sizes…" } ?: "Fetching info…"
                 error != null -> Uri.parse(firstUrl).host.orEmpty()
                 isPlaylist -> "${p!!.title}  •  ${p.subtitle}"
                 else -> p?.title.orEmpty()
@@ -765,7 +792,7 @@ class MainActivity : AppCompatActivity() {
                 !single -> urls.map { EnqueueItem(it, "", cookies[it]) }
                 p != null && p.playlist.isNotEmpty() ->
                     p.playlist.map { EnqueueItem(it.url, it.title, cookies[firstUrl], it.thumbUrl) }
-                else -> listOf(EnqueueItem(firstUrl, p?.title.orEmpty(), cookies[firstUrl]))
+                else -> listOf(EnqueueItem(firstUrl, p?.title ?: knownTitle.orEmpty(), cookies[firstUrl], youtubeThumb(firstUrl)))
             }
             vm.enqueue(items, spec, sub)
             dialog.dismiss()
@@ -1070,6 +1097,11 @@ class MainActivity : AppCompatActivity() {
         }
         popup.show()
     }
+
+    /** YouTube thumbnail address from the video id (no lookup needed). */
+    private fun youtubeThumb(url: String): String? =
+        Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1)
+            ?.let { "https://i.ytimg.com/vi/$it/mqdefault.jpg" }
 
     private fun isPlayable(t: DownloadTask): Boolean {
         val m = t.mime.orEmpty()

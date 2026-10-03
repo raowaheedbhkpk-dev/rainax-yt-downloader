@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,8 +87,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Each lookup gets its own process id, so stopping an old one can never touch the new one. */
     @Volatile private var procId = InfoFetcher.PROCESS_ID
 
-    private suspend fun doFetch(url: String, forcePlaylist: Boolean): PreviewState = try {
-        val id = procId
+    // ---------- instant info: cache + look-ahead ----------
+    // yt-dlp needs a few seconds per lookup on a phone. While a YouTube video is open we look it up quietly in the
+    // background, and keep results for 30 minutes, so the download sheet usually has the sizes at once.
+    private class Cached(val at: Long, val state: PreviewState)
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Cached>()
+    private var aheadJob: Deferred<PreviewState>? = null
+    @Volatile private var aheadKey: String? = null
+    @Volatile private var aheadProc: String? = null
+
+    private fun cacheKey(url: String): String =
+        Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1) ?: url.trim()
+
+    private fun cached(url: String): PreviewState? {
+        val c = cache[cacheKey(url)] ?: return null
+        if (System.currentTimeMillis() - c.at > CACHE_MS) { cache.remove(cacheKey(url)); return null }
+        return c.state
+    }
+
+    private fun remember(url: String, state: PreviewState) {
+        if (state.error != null || state.loading) return
+        if (cache.size > 30) cache.clear()
+        cache[cacheKey(url)] = Cached(System.currentTimeMillis(), state)
+    }
+
+    /** Called while a YouTube video page stays open: fetch its info before the user taps Download. */
+    fun prefetch(url: String) {
+        val key = cacheKey(url)
+        if (cached(url) != null || aheadKey == key) return
+        // only one look-ahead at a time: drop the previous video's
+        aheadProc?.let { try { YoutubeDL.getInstance().destroyProcessById(it) } catch (e: Exception) { } }
+        aheadJob?.cancel()
+        val proc = "ahead-" + System.nanoTime()
+        aheadKey = key
+        aheadProc = proc
+        val job = viewModelScope.async { doFetch(url, false, proc).also { remember(url, it) } }
+        aheadJob = job
+        job.invokeOnCompletion {
+            if (aheadKey == key) { aheadKey = null; aheadProc = null }
+        }
+    }
+
+    private suspend fun doFetch(url: String, forcePlaylist: Boolean, id: String = procId): PreviewState = try {
         withContext(Dispatchers.IO) {
             if (forcePlaylist || isPlaylistUrl(url)) InfoFetcher.fetchPlaylist(app, url, null, id)
             else InfoFetcher.fetch(app, url, null, id)
@@ -109,8 +151,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         stopInfoProcess()
         procId = "info-" + System.nanoTime()
         infoJob = viewModelScope.launch {
+            // Already looked up (or being looked up in the background)? Use that instead of starting again.
+            if (!forcePlaylist) {
+                cached(url)?.let { _preview.value = it; return@launch }
+            }
             _preview.value = PreviewState(loading = true)
-            var result = doFetch(url, forcePlaylist)
+            val ahead = aheadJob?.takeIf { !forcePlaylist && aheadKey == cacheKey(url) && it.isActive }
+            var result = if (ahead != null) {
+                try { ahead.await() } catch (e: CancellationException) { doFetch(url, forcePlaylist) }
+            } else doFetch(url, forcePlaylist)
             // Just opened from Share and the phone's network is not ready yet? Quietly try again.
             var tries = 0
             while (result.error != null && isNetworkGlitch(result.raw) && tries < 3) {
@@ -130,6 +179,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     result = doFetch(url, forcePlaylist)
                 }
             }
+            remember(url, result)
             _preview.value = result
         }
     }
@@ -174,5 +224,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val UPDATE_EVERY_MS = 6 * 3600 * 1000L      // check for a new yt-dlp every 6 hours
         private const val CHECK_EVERY_MS = 30 * 60 * 1000L        // while the app is open
         private const val AUTO_FIX_GAP_MS = 30 * 60 * 1000L       // at most one quick fix per 30 minutes
+        private const val CACHE_MS = 30 * 60 * 1000L              // looked-up info stays fresh for 30 minutes
     }
 }
