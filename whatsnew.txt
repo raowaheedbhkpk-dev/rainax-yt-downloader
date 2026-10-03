@@ -1,4 +1,4 @@
-Background play turns on by itself when you leave the app
-New Background play switch in Settings
-Headphones button removed
-Sign in to YouTube supported
+Shorts button in the bottom bar
+Sign in button with your YouTube photo
+Cleaner video page, no extra menu button
+YouTube bottom bar removed

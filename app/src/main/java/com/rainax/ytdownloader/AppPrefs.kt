@@ -18,6 +18,10 @@ object AppPrefs {
     fun adBlock(c: Context) = p(c).getBoolean("ad_block", true)
     fun setAdBlock(c: Context, v: Boolean) = p(c).edit().putBoolean("ad_block", v).apply()
 
+    /** The signed-in YouTube user's photo (shown in the bottom bar). */
+    fun avatarUrl(c: Context): String? = p(c).getString("avatar_url", null)
+    fun setAvatarUrl(c: Context, v: String?) = p(c).edit().putString("avatar_url", v).apply()
+
     /** Leaving the app while a video plays keeps its sound playing (on by default). */
     fun backgroundPlay(c: Context) = p(c).getBoolean("bg_play", true)
     fun setBackgroundPlay(c: Context, v: Boolean) = p(c).edit().putBoolean("bg_play", v).apply()

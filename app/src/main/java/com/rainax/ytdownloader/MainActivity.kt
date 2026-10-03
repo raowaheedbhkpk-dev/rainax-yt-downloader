@@ -147,9 +147,21 @@ class MainActivity : AppCompatActivity() {
         setupPlay()
         setupSettings()
 
+        b.bottomNav.itemIconTintList = null     // icons colour themselves (keeps the profile photo in colour)
+        updateAccountIcon()
         b.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
-                R.id.nav_home -> { showTab(0); true }
+                R.id.nav_home -> {
+                    if (tab == 0 && isShortsPage()) openYoutube(YT_HOME)
+                    showTab(0)
+                    b.bottomNav.post { syncNavWithPage(hm.webView.url.orEmpty()) }   // back on a Short: Shorts stays lit
+                    true
+                }
+                R.id.nav_shorts -> {
+                    if (!isShortsPage()) openYoutube(YT_SHORTS)
+                    showTab(0); true
+                }
+                R.id.nav_account -> { onAccountClick(); false }
                 R.id.nav_downloads -> { showTab(1); true }
                 R.id.nav_settings -> { showTab(2); true }
                 else -> false
@@ -451,13 +463,15 @@ class MainActivity : AppCompatActivity() {
             lastUrl = url
         }
         // Hides "Open app" prompts and ads (the Download button is native, not part of the page)
-        if (isAllowedUrl(url)) {
+        if (isYoutubePage(url)) {
             hm.webView.evaluateJavascript("window.__ytdlAdBlock=$adBlockOn;", null)
             hm.webView.evaluateJavascript(INJECT_JS, null)
         }
         updateFloatingBar()
         updateBack()
         lookAhead()                    // a new video page: start reading its info right away
+        syncNavWithPage(url)
+        readAccount(url)
     }
 
     /** The video page that is open right now, or null when the page is not a video. */
@@ -615,6 +629,113 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+    // =====================================================================
+    // Bottom bar: Shorts and the YouTube account (sign in / profile photo)
+    // =====================================================================
+
+    private fun isShortsPage(): Boolean = Uri.parse(hm.webView.url.orEmpty()).path.orEmpty().startsWith("/shorts")
+
+    /** Home or Shorts lights up to match the page in the YouTube screen. */
+    private fun syncNavWithPage(url: String) {
+        if (tab != 0 || !isYoutubePage(url)) return
+        val id = if (Uri.parse(url).path.orEmpty().startsWith("/shorts")) R.id.nav_shorts else R.id.nav_home
+        b.bottomNav.menu.findItem(id)?.isChecked = true
+    }
+
+    private fun isSignedIn(): Boolean {
+        val c = CookieManager.getInstance().getCookie("https://www.youtube.com").orEmpty()
+        return "SAPISID=" in c || "LOGIN_INFO=" in c
+    }
+
+    private fun onAccountClick() {
+        if (!isSignedIn()) {
+            showTab(0)
+            b.bottomNav.menu.findItem(R.id.nav_home)?.isChecked = true
+            openYoutube(SIGN_IN_URL)
+            return
+        }
+        val anchor = b.bottomNav.findViewById<View>(R.id.nav_account) ?: b.bottomNav
+        val menu = androidx.appcompat.widget.PopupMenu(this, anchor)
+        menu.menu.add(0, 1, 0, "Your YouTube")
+        menu.menu.add(0, 2, 1, "Switch account")
+        menu.menu.add(0, 3, 2, "Sign out")
+        menu.setOnMenuItemClickListener { item ->
+            showTab(0)
+            b.bottomNav.menu.findItem(R.id.nav_home)?.isChecked = true
+            when (item.itemId) {
+                1 -> openYoutube("https://m.youtube.com/feed/you")
+                2 -> openYoutube(SIGN_IN_URL)
+                3 -> {
+                    CookieHelper.signOut()
+                    AppPrefs.setAvatarUrl(this, null)
+                    updateAccountIcon()
+                    openYoutube(YT_HOME)
+                    message("Signed out of YouTube")
+                }
+            }
+            true
+        }
+        menu.show()
+    }
+
+    /** Reads the signed-in user's photo from the YouTube page (top bar), once it changes. */
+    private fun readAccount(url: String) {
+        if (!isYoutubePage(url)) return
+        if (!isSignedIn()) {
+            if (AppPrefs.avatarUrl(this) != null) AppPrefs.setAvatarUrl(this, null)
+            updateAccountIcon()
+            return
+        }
+        hm.webView.evaluateJavascript(AVATAR_JS) { r ->
+            val src = r?.trim('"')?.replace("\\u003d", "=")?.replace("\\u0026", "&").orEmpty()
+            if (src.startsWith("https://") && src != AppPrefs.avatarUrl(this)) {
+                AppPrefs.setAvatarUrl(this, src)
+                avatarBitmap = null
+            }
+            updateAccountIcon()
+            // just signed in: the photo appears a moment after the page, look again
+            if (!src.startsWith("https://") && AppPrefs.avatarUrl(this) == null && avatarTries < 4) {
+                avatarTries++
+                hm.webView.postDelayed({ hm.webView.url?.let { readAccount(it) } }, 2500)
+            } else if (src.startsWith("https://")) avatarTries = 0
+        }
+    }
+
+    private var avatarTries = 0
+
+    private var avatarBitmap: android.graphics.Bitmap? = null
+    private var avatarLoading: String? = null
+
+    /** Empty profile icon + "Sign in", or the user's YouTube photo + "You". */
+    private fun updateAccountIcon() {
+        val item = b.bottomNav.menu.findItem(R.id.nav_account) ?: return
+        val signedIn = isSignedIn()
+        item.title = if (signedIn) "You" else "Sign in"
+        val url = if (signedIn) AppPrefs.avatarUrl(this) else null
+        val bmp = avatarBitmap
+        if (url == null) {
+            item.setIcon(R.drawable.ic_nav_account)
+            return
+        }
+        if (bmp != null) {
+            item.icon = androidx.core.graphics.drawable.RoundedBitmapDrawableFactory.create(resources, bmp).apply { isCircular = true }
+            return
+        }
+        item.setIcon(R.drawable.ic_nav_account)
+        if (avatarLoading == url) return
+        avatarLoading = url
+        lifecycleScope.launch {
+            val big = url.replace(Regex("=s\\d+"), "=s96")
+            val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { InfoFetcher.loadBitmap(big) ?: InfoFetcher.loadBitmap(url) }
+            avatarLoading = null
+            if (loaded != null && url == AppPrefs.avatarUrl(this@MainActivity)) {
+                val side = minOf(loaded.width, loaded.height)
+                avatarBitmap = android.graphics.Bitmap.createBitmap(loaded, (loaded.width - side) / 2, (loaded.height - side) / 2, side, side)
+                updateAccountIcon()
+            }
+        }
+    }
 
     private fun isAllowedUrl(url: String): Boolean {
         val uri = Uri.parse(url)
@@ -1258,11 +1379,6 @@ class MainActivity : AppCompatActivity() {
             if (!on) stopBackground()
         }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
-        st.signOutBtn.setOnClickListener {
-            CookieHelper.signOut()
-            pageLoaded = false
-            message("Signed out of YouTube")
-        }
 
         st.adSwitch.isChecked = AppPrefs.adBlock(this)
         st.adSwitch.setOnCheckedChangeListener { _, on ->
@@ -1393,6 +1509,16 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_JS = "(function(){var v=document.querySelector('video');if(!v||v.paused||v.ended)return -1;" +
             "return document.querySelector('.ad-showing')?0:v.currentTime;})()"
 
+        private const val YT_HOME = "https://m.youtube.com/"
+        private const val YT_SHORTS = "https://m.youtube.com/shorts"
+        private const val SIGN_IN_URL = "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true" +
+            "&continue=https%3A%2F%2Fm.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Dm%26next%3Dhttps%253A%252F%252Fm.youtube.com%252F"
+
+        /** The signed-in user's photo in YouTube's top bar ("" if not found). */
+        private const val AVATAR_JS = "(function(){var q=['ytm-topbar-menu-button-renderer img','.topbar-menu-button-avatar-button img'," +
+            "'ytm-mobile-topbar-renderer img'];for(var i=0;i<q.length;i++){var l=document.querySelectorAll(q[i]);" +
+            "for(var k=0;k<l.length;k++){var s=l[k].src||'';if(/yt3\\.(ggpht|googleusercontent)\\.com/.test(s))return s;}}return '';})()"
+
         private const val PAUSE_JS = "(function(){var v=document.querySelector('video');if(v){try{v.pause();}catch(e){}}})()"
 
 
@@ -1479,7 +1605,19 @@ class MainActivity : AppCompatActivity() {
   for(var k=0;k<skip.length;k++){try{skip[k].click();}catch(e){}}
  }
 
+ // ----- layout: the app has its own bottom bar; no menu button over a playing video -----
+ function rxLayout(){
+  if(!document.getElementById('rx-layout')){
+   var ls=document.createElement('style'); ls.id='rx-layout';
+   ls.textContent='ytm-pivot-bar-renderer{display:none!important}'
+    +'html.rx-watch ytm-topbar-menu-button-renderer,html.rx-watch .topbar-menu-button-avatar-button{display:none!important}';
+   (document.head||document.documentElement).appendChild(ls);
+  }
+  document.documentElement.classList.toggle('rx-watch',/^\/(watch|shorts)/.test(location.pathname));
+ }
+ try{ rxLayout(); }catch(e){}
  setInterval(function(){
+  try{ rxLayout(); }catch(e){}
   try{ hideOpenApp(); }catch(e){}
   try{ dismissAppPrompts(); }catch(e){}
   try{ hideAds(); }catch(e){}

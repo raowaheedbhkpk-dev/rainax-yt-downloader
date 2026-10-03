@@ -474,13 +474,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="Check for app update" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/signOutBtn"
-            style="@style/Widget.Rainax.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Sign out of YouTube" />
         <TextView
             android:id="@+id/versionText"
             android:layout_width="wrap_content"
