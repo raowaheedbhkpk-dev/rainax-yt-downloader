@@ -131,13 +131,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun doFetch(url: String, forcePlaylist: Boolean, id: String = procId): PreviewState = try {
         withContext(Dispatchers.IO) {
             if (forcePlaylist || isPlaylistUrl(url)) InfoFetcher.fetchPlaylist(app, url, null, id)
-            else InfoFetcher.fetch(app, url, null, id)
+            else fastInfo(url) ?: InfoFetcher.fetch(app, url, null, id)
         }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         val raw = e.readable()
         PreviewState(error = friendlyError(raw), raw = raw)
+    }
+
+    /** YouTube videos: the fast Java extractor first (about a second); null means "use yt-dlp". */
+    private suspend fun fastInfo(url: String): PreviewState? {
+        if (!FastExtractor.supports(url)) return null
+        return try {
+            kotlinx.coroutines.withTimeout(12_000) {
+                kotlinx.coroutines.runInterruptible { FastExtractor.fetch(url) }
+            }
+        } catch (e: CancellationException) {
+            if (e is kotlinx.coroutines.TimeoutCancellationException) null else throw e
+        } catch (e: Throwable) {
+            null       // YouTube changed something the fast extractor doesn't know yet: yt-dlp handles it
+        }
     }
 
     /** Kills a lookup that is still running so old requests don't pile up. */

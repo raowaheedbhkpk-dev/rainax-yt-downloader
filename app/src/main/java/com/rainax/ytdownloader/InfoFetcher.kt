@@ -118,7 +118,7 @@ object InfoFetcher {
         )
     }
 
-    private class Built(val quick: List<FormatChoice>, val all: List<FormatChoice>, val subs: List<SubtitleOption>)
+    internal class Built(val quick: List<FormatChoice>, val all: List<FormatChoice>, val subs: List<SubtitleOption>)
 
     private fun build(json: JSONObject, duration: Int): Built {
         val progressive = mutableMapOf<Int, Long>()
@@ -146,6 +146,21 @@ object InfoFetcher {
             }
         }
 
+        return buildChoices(progressive, videoOnly, bestAudio, bestM4a, duration, subtitleOptions(json))
+    }
+
+    /**
+     * Turns raw stream data (height -> bytes) into the choices shown in the download sheet.
+     * Shared by yt-dlp and the fast Java extractor, so both look the same.
+     */
+    internal fun buildChoices(
+        progressive: Map<Int, Long>,
+        videoOnly: Map<Int, Long>,
+        bestAudio: Long,
+        bestM4a: Long,
+        duration: Int,
+        subs: List<SubtitleOption>
+    ): Built {
         // ----- Music -----
         val m4aBytes = when {
             bestM4a > 0 -> bestM4a
@@ -181,7 +196,7 @@ object InfoFetcher {
         return Built(
             quick = listOf(fast, mp3Quick) + quickVideo,
             all = listOf(fast, mp3Full, mp3High) + videos,
-            subs = subtitleOptions(json)
+            subs = subs
         )
     }
 
