@@ -83,6 +83,7 @@ class DownloadService : Service() {
         }
         cm.registerDefaultNetworkCallback(netCallback)
         callbackRegistered = true
+        scope.launch { cleanLeftovers() }
         scope.launch {
             // StateFlow already keeps only the latest value; the delay throttles notification updates
             TaskRepository.tasks.collect {
@@ -331,10 +332,11 @@ class DownloadService : Service() {
          * Downloads [main]; if YouTube refuses that stream (HTTP 403/404...), tries the [alts] one by one.
          * Returns the file that was saved.
          */
-        fun fetch(main: FastExtractor.Part, alts: List<FastExtractor.Part>, base: String): File {
+        fun fetch(main: FastExtractor.Part, alts: List<FastExtractor.Part>, base: String, role: String): File {
             val all = listOf(main) + alts
             for ((i, p) in all.withIndex()) {
                 val f = File(dir, (if (i == 0) base else "$base-$i") + "." + p.ext)
+                PartialFiles.setRole(id, role, f)          // the player follows the stream that works
                 val before = done.get()
                 try {
                     NativeDownloader.download(id, p.url, f, onResumed, onBytes)
@@ -354,16 +356,19 @@ class DownloadService : Service() {
         var output: File
         val s = plan.single
         if (s != null) {
+            PartialFiles.setRoles(id, mapOf("media" to File(dir, "media.${s.ext}")))
             label = ""
-            output = fetch(s, plan.audioAlts, "media")
+            output = fetch(s, plan.audioAlts, "media", "media")
         } else {
             val v = plan.video!!
             val a = plan.audio!!
             val vf = File(dir, "video.${v.ext}")
+            PartialFiles.setRoles(id, mapOf("video" to vf, "audio" to File(dir, "audio.${a.ext}")))
+            // sound first (it is small), so you can start watching while the picture comes in
+            label = "sound"
+            val gotAudio = fetch(a, plan.audioAlts, "audio", "audio")
             label = "video"
             NativeDownloader.download(id, v.url, vf, onResumed, onBytes)
-            label = "sound"
-            val gotAudio = fetch(a, plan.audioAlts, "audio")
             if (TaskRepository.get(id)?.status != Status.RUNNING) return
             TaskRepository.update(id) { it.copy(progress = 99, message = "Joining video and sound…") }
             val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
@@ -390,7 +395,10 @@ class DownloadService : Service() {
             AudioConverter.toMp3(output, mp3, 192, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
                 TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
             }
-            output.delete()
+            if (!PartialFiles.isWatched(id)) {
+                PartialFiles.forget(id)
+                output.delete()
+            }                                                     // still playing it? it goes with the folder later
             output = mp3
         }
 
@@ -402,7 +410,10 @@ class DownloadService : Service() {
         val named = File(dir, NativeDownloader.safeName(title, ext))
         if (named.path != output.path) {
             named.delete()
-            if (!output.renameTo(named)) output.copyTo(named, overwrite = true)
+            // being watched: copy, so the player keeps reading the same file
+            val watched = PartialFiles.isWatched(id)
+            if (!watched) PartialFiles.forget(id)
+            if (watched || !output.renameTo(named)) output.copyTo(named, overwrite = true)
         }
         val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
             ?: if (task.format.startsWith("audio")) "audio/mp4" else "video/mp4"
@@ -426,7 +437,7 @@ class DownloadService : Service() {
                 fileUri = saved.uri, mime = saved.mime, title = it.title.ifBlank { saved.name }
             )
         }
-        dir.deleteRecursively()
+        PartialFiles.finished(id, dir)          // deleted now, or when you close the player
         autoTries.remove(id)
         retryAt.remove(id)
         TaskRepository.get(id)?.let { notifyDone(it, true) }
@@ -475,6 +486,17 @@ class DownloadService : Service() {
         }
     }
 
+    /** Working folders of downloads that are finished or gone (e.g. the app closed while one was watched). */
+    private fun cleanLeftovers() {
+        val root = File(filesDir, "downloads")
+        root.listFiles()?.forEach { dir ->
+            val t = TaskRepository.get(dir.name)
+            if ((t == null || t.status == Status.DONE) && !PartialFiles.isWatched(dir.name) && !running.containsKey(dir.name)) {
+                dir.deleteRecursively()
+            }
+        }
+    }
+
     private fun cancel(id: String) {
         TaskRepository.get(id) ?: return
         TaskRepository.remove(id)
@@ -482,6 +504,7 @@ class DownloadService : Service() {
         running[id]?.cancel()
         retryAt.remove(id)
         autoTries.remove(id)
+        PartialFiles.forget(id)
         val dir = File(filesDir, "downloads/$id")
         scope.launch { delay(500); dir.deleteRecursively() }     // big folders: never on the main thread
     }
@@ -492,6 +515,7 @@ class DownloadService : Service() {
         if (present.isEmpty()) return
         TaskRepository.removeMany(present)
         for (id in present) {
+            PartialFiles.forget(id)
             NativeDownloader.stop(id)
             running[id]?.cancel()
             retryAt.remove(id)

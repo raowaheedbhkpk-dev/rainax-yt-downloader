@@ -62,6 +62,28 @@ class PlayerActivity : AppCompatActivity() {
 
     private var uris = arrayListOf<String>()
     private var titles = arrayListOf<String>()
+    private var watching: String? = null           // download being watched while it downloads
+    private var partialRetries = 0
+
+    private fun stopWatching() {
+        watching?.let { PartialFiles.unwatch(it) }
+        watching = null
+    }
+
+    /** The download being watched was saved: keep playing from the saved file. */
+    private fun switchToSaved(id: String) {
+        val t = TaskRepository.get(id)
+        val uri = t?.fileUri
+        val p = player
+        if (uri == null || p == null) { info("The download finished. Open it from Downloads"); return }
+        val pos = p.currentPosition
+        stopWatching()
+        uris = arrayListOf(uri)
+        titles = arrayListOf(t?.title.orEmpty())
+        p.setMediaItem(buildItem(0), pos)
+        p.prepare()
+        p.play()
+    }
     private val extraSubs = mutableMapOf<Int, Uri>()   // item index -> external subtitle file
 
     private var locked = false
@@ -142,13 +164,25 @@ class PlayerActivity : AppCompatActivity() {
 
     /** Reads the list to play: from the app (several files) or from another app (one file). */
     private fun readIntent(i: Intent): Boolean {
+        val partial = i.getStringExtra(EXTRA_PARTIAL)
+        if (partial != null) {
+            PartialFiles.watch(partial)                // its files stay until this player closes
+            watching?.let { PartialFiles.unwatch(it) }
+            watching = partial
+            partialRetries = 0
+            uris = arrayListOf(PartialPlayback.uri(partial))
+            titles = arrayListOf(i.getStringExtra(EXTRA_PARTIAL_TITLE).orEmpty())
+            return true
+        }
         val list = i.getStringArrayListExtra(EXTRA_URIS)
         if (!list.isNullOrEmpty()) {
+            stopWatching()
             uris = list
             titles = i.getStringArrayListExtra(EXTRA_TITLES) ?: arrayListOf()
             return true
         }
         val data = i.data ?: return false
+        stopWatching()
         uris = arrayListOf(data.toString())
         titles = arrayListOf(displayName(data))
         return true
@@ -197,6 +231,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun startPlayer(index: Int, posMs: Long) {
         val p = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(PartialMediaSourceFactory(this))     // also plays downloads in progress
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -231,6 +266,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) partialRetries = 0
             b.playerView.keepScreenOn = isPlaying          // screen may sleep while paused
             b.playBtn.setImageResource(if (isPlaying) R.drawable.ic_p_pause else R.drawable.ic_p_play)
             if (isPlaying) bumpControls() else {
@@ -288,6 +324,26 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            val id = watching
+            if (id != null) {
+                val msgs = generateSequence(error as Throwable) { it.cause }.mapNotNull { it.message }.toList()
+                when {
+                    // saved meanwhile: go on with the saved file from the same spot
+                    PartialDataSource.FINISHED in msgs -> { switchToSaved(id); return }
+                    // paused / stopped / removed: say so (play again after resuming)
+                    msgs.any { it.startsWith("The download") || it.startsWith("This download") } -> {
+                        info(msgs.first { it.startsWith("The download") || it.startsWith("This download") })
+                        return
+                    }
+                    // the download restarted or is still coming in: try again by itself
+                    error.errorCode in 2000..2999 && partialRetries < 10 -> {
+                        partialRetries++
+                        if (PartialDataSource.RESTARTED !in msgs) info("Waiting for more of the download…")
+                        handler.postDelayed({ player?.takeIf { it.playbackState == Player.STATE_IDLE }?.prepare() }, 1500)
+                        return
+                    }
+                }
+            }
             showError(error.errorCodeName)
         }
     }
@@ -305,6 +361,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun openExternally() {
         val p = player ?: return
         val uri = p.currentMediaItem?.mediaId ?: return
+        if (watching != null) { info("Available when the download finishes"); return }
         try {
             internalNav = true
             startActivity(
@@ -399,6 +456,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun togglePlay() {
         val p = player ?: return
         if (p.playbackState == Player.STATE_ENDED) p.seekTo(0)
+        if (p.playbackState == Player.STATE_IDLE) p.prepare()      // after an error (e.g. a paused download resumed)
         if (p.isPlaying) p.pause() else p.play()
         bumpControls()
     }
@@ -523,6 +581,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun share() {
         val uri = player?.currentMediaItem?.mediaId ?: return
+        if (watching != null) { info("You can share it when the download finishes"); return }
         try {
             internalNav = true
             startActivity(
@@ -854,6 +913,7 @@ class PlayerActivity : AppCompatActivity() {
         player?.removeListener(listener)
         player?.release()
         player = null
+        stopWatching()
         super.onDestroy()
     }
 
@@ -869,6 +929,17 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_URIS = "uris"
         const val EXTRA_TITLES = "titles"
         const val EXTRA_INDEX = "index"
+        const val EXTRA_PARTIAL = "partial_task"
+        const val EXTRA_PARTIAL_TITLE = "partial_title"
+
+        /** Watch a download while it is still downloading. */
+        fun openPartial(context: Context, taskId: String, title: String) {
+            context.startActivity(
+                Intent(context, PlayerActivity::class.java)
+                    .putExtra(EXTRA_PARTIAL, taskId)
+                    .putExtra(EXTRA_PARTIAL_TITLE, title)
+            )
+        }
 
         fun open(context: Context, uris: List<String>, titles: List<String>, index: Int) {
             val i = Intent(context, PlayerActivity::class.java)

@@ -251,20 +251,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Finished: open the file. Still downloading: start watching it right away (streamed), like Netflix. */
+    /** Finished: open the file. Still downloading: watch the part already downloaded while the rest comes in. */
     private fun openOrWatch(t: DownloadTask) {
         if (t.status == Status.DONE) {
             openFile(t)
             return
         }
-        if (!FastExtractor.supports(t.url)) {                     // YouTube streams; other sites play once saved
-            message("You can watch this one as soon as it finishes downloading")
-            return
+        when {
+            // plays from the pieces already downloaded; the rest comes in while you watch
+            PartialPlayback.ready(t.id) && t.status != Status.PAUSED && t.status != Status.FAILED -> {
+                controller?.pause()                     // one thing plays at a time
+                PlayerActivity.openPartial(this, t.id, t.title.ifBlank { "Video" })
+            }
+            t.status == Status.PAUSED || t.status == Status.FAILED ->
+                message("Resume the download to watch it while it downloads")
+            t.progress >= 99 -> message("Almost done… it opens from Downloaded in a moment")
+            else -> message("Getting the download ready… tap again in a moment")
         }
-        if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
-        val same = video.url?.let { FastExtractor.videoUrl(it) } == FastExtractor.videoUrl(t.url)
-        if (same) video.expand()                        // already playing it: just show it
-        else video.open(t.url, t.title.ifBlank { null }, thumb = t.thumbUrl)
     }
 
     /** A video from a list: open its page (playlists go straight to the download sheet). */
@@ -1007,6 +1010,7 @@ class MainActivity : AppCompatActivity() {
     private fun openFile(t: DownloadTask) {
         val uri = t.fileUri ?: return
         if (isPlayable(t)) {
+            controller?.pause()                         // one thing plays at a time
             val list = TaskRepository.tasks.value.filter { it.status == Status.DONE && it.fileUri != null && isPlayable(it) }
             val index = list.indexOfFirst { it.id == t.id }.coerceAtLeast(0)
             try {

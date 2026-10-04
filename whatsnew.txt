@@ -1,5 +1,3 @@
-Comment box now stays above the keyboard
-Downloading now always shows on top of the list
-Tap a download in progress to start watching it right away
-New floating mini player: the video keeps playing, drag it anywhere
-New RAINAX Tube header logo
+Watch while downloading: tap a running download to play the part already downloaded
+The player waits for the next part and the download fetches it first
+Sound downloads first, so watching can start sooner

@@ -12,7 +12,6 @@ import java.net.URL
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper
 
@@ -119,22 +118,42 @@ object NativeDownloader {
         val already = done.indices.filter { done[it] }.sumOf { blockLen(it, total) }
         if (already > 0) onResumed(already)        // already on disk: progress, but not speed
 
-        val pending = done.indices.filter { !done[it] }
-        val next = AtomicInteger(0)
+        val pendingCount = done.count { !it }
+        val taken = BooleanArray(blocks) { done[it] }
+        var cursor = 0
         val failure = AtomicReference<Throwable?>(null)
         val lock = Any()
+        // the player can play the pieces that are already here (watch while downloading)
+        val entry = PartialFiles.Entry(out, total, BLOCK, done).also { it.complete = pendingCount == 0 }
+
+        /** Next piece to fetch: in order, but first the one the player is waiting for. */
+        fun pick(): Int = synchronized(lock) {
+            val w = entry.want
+            if (w in 0 until blocks) { cursor = w; entry.want = -1 }
+            for (k in 0 until blocks) {
+                val b = (cursor + k) % blocks
+                if (!taken[b]) {
+                    taken[b] = true
+                    cursor = b + 1
+                    return@synchronized b
+                }
+            }
+            -1
+        }
+
         RandomAccessFile(out, "rw").use { raf ->
             if (raf.length() != total) raf.setLength(total)
-            val workers = (1..minOf(THREADS, pending.size.coerceAtLeast(1))).map {
+            PartialFiles.register(entry)                 // the file exists now: the player may read it
+            val workers = (1..minOf(THREADS, pendingCount.coerceAtLeast(1))).map {
                 Thread {
                     try {
                         while (failure.get() == null) {
-                            val i = next.getAndIncrement()
-                            if (i >= pending.size) break
-                            val b = pending[i]
+                            val b = pick()
+                            if (b < 0) break
                             fetchBlock(id, url, b, total, raf, lock, onBytes)
                             synchronized(lock) {
                                 done[b] = true
+                                entry.touch()
                                 if (b % 8 == 0) saveState(state, total, done)
                             }
                         }
@@ -148,6 +167,7 @@ object NativeDownloader {
         }
         failure.get()?.let { throw it }
         if (done.any { !it }) throw IOException("Download incomplete")
+        entry.complete = true
         // the .state file stays: if a later step fails (sound part, joining, saving) this part isn't fetched again
     }
 
@@ -219,18 +239,22 @@ object NativeDownloader {
         try {
             val code = con.responseCode
             if (code !in 200..299) throw IOException("HTTP error $code")
+            val entry = PartialFiles.Entry(out, con.contentLengthLong, 0, null)
             con.inputStream.use { input ->
                 out.outputStream().use { o ->
+                    PartialFiles.register(entry)
                     val buf = ByteArray(64 * 1024)
                     while (true) {
                         if (stopped(id)) throw Stopped()
                         val n = input.read(buf)
                         if (n < 0) break
                         o.write(buf, 0, n)
+                        entry.prefix += n
                         onBytes(n.toLong())
                     }
                 }
             }
+            entry.complete = true
         } catch (e: IOException) {
             if (stopped(id)) throw Stopped()
             throw e
