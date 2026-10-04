@@ -25,7 +25,19 @@ data class VideoItem(
     val uploaded: String?,
     val isPlaylist: Boolean = false,
     val count: Long = -1,       // playlist size
-    val avatar: String? = null  // channel picture
+    val avatar: String? = null, // channel picture
+    val isChannel: Boolean = false
+)
+
+/** A channel page: header and the id needed to subscribe. */
+class ChannelDetails(
+    val url: String,
+    val id: String?,
+    val name: String,
+    val avatar: String?,
+    val banner: String?,
+    val subscribers: Long,
+    val description: String
 )
 
 class FeedPage(val items: List<VideoItem>, val next: Page?)
@@ -58,8 +70,12 @@ class VideoDetails(
     val seconds: Long,
     val related: List<VideoItem>,
     val play: PlaySource,
-    val audioUrl: String?
-)
+    val audioUrl: String?,
+    val channelUrl: String? = null
+) {
+    /** "UC..." from the channel address (for Subscribe). */
+    val channelId: String? get() = channelUrl?.let { Regex("/channel/([\\w-]+)").find(it)?.groupValues?.get(1) }
+}
 
 /** YouTube lists for the app's own screens (no website): Home tabs, search, video page, comments. */
 object YtCatalog {
@@ -189,12 +205,52 @@ object YtCatalog {
         }
     }
 
+    // ---------- channels ----------
+
+    /** Videos tab of each opened channel (needed for the next pages). */
+    private val channelTabs = java.util.concurrent.ConcurrentHashMap<String, org.schabi.newpipe.extractor.linkhandler.ListLinkHandler>()
+
+    /** Blocking. A channel's header and its first videos. */
+    fun channel(url: String): Pair<ChannelDetails, FeedPage> = guard {
+        FastExtractor.init()
+        val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(yt, url)
+        val details = ChannelDetails(
+            url = url,
+            id = info.id,
+            name = info.name.orEmpty(),
+            avatar = best(info.avatars, 176),
+            banner = best(info.banners, 300),
+            subscribers = info.subscriberCount,
+            description = info.description.orEmpty()
+        )
+        val tab = info.tabs.firstOrNull { it.contentFilters.contains(org.schabi.newpipe.extractor.channel.tabs.ChannelTabs.VIDEOS) }
+            ?: info.tabs.firstOrNull()
+            ?: return@guard details to FeedPage(emptyList(), null)
+        channelTabs[url] = tab
+        val tabInfo = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(yt, tab)
+        details to FeedPage(tabInfo.relatedItems.mapNotNull { item(it) }, if (tabInfo.hasNextPage()) tabInfo.nextPage else null)
+    }
+
+    /** Blocking. More videos of a channel opened with [channel]. */
+    fun channelMore(url: String, page: Page): FeedPage = guard {
+        val tab = channelTabs[url] ?: error("Open the channel again")
+        val p = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getMoreItems(yt, tab, page)
+        FeedPage(p.items.mapNotNull { item(it) }, if (p.hasNextPage()) p.nextPage else null)
+    }
+
     private fun hidden(v: VideoItem): Boolean = v.title.lowercase().let { it == "[private video]" || it == "[deleted video]" }
 
     /** Blocking. One page of search results ([playlists] = playlists only, else videos). */
-    fun search(query: String, playlists: Boolean, page: Page?): FeedPage = guard {
+    /** Search result kinds (the chips): videos, channels, playlists. */
+    val SEARCH_KINDS = listOf(
+        "Videos" to YoutubeSearchQueryHandlerFactory.VIDEOS,
+        "Channels" to YoutubeSearchQueryHandlerFactory.CHANNELS,
+        "Playlists" to YoutubeSearchQueryHandlerFactory.PLAYLISTS
+    )
+
+    fun search(query: String, kind: Int, page: Page?): FeedPage = guard {
         FastExtractor.init()
-        val filter = if (playlists) YoutubeSearchQueryHandlerFactory.PLAYLISTS else YoutubeSearchQueryHandlerFactory.VIDEOS
+        val filter = SEARCH_KINDS.getOrNull(kind)?.second ?: YoutubeSearchQueryHandlerFactory.VIDEOS
         val handler = yt.searchQHFactory.fromQuery(query, listOf(filter), "")
         if (page == null) {
             val info = SearchInfo.getInfo(yt, handler)
@@ -232,7 +288,8 @@ object YtCatalog {
             seconds = info.duration,
             related = related,
             play = playSource(info),
-            audioUrl = bestAudio(info)
+            audioUrl = bestAudio(info),
+            channelUrl = info.uploaderUrl
         )
     }
 
@@ -269,6 +326,14 @@ object YtCatalog {
                     avatar = runCatching { best(i.uploaderAvatars, 68) }.getOrNull()
                 )
             }
+        }
+        is org.schabi.newpipe.extractor.channel.ChannelInfoItem -> {
+            if (i.url.isNullOrBlank()) null
+            else VideoItem(
+                url = i.url, title = i.name.orEmpty(), uploader = "",
+                thumb = best(i.thumbnails, 176), seconds = 0, views = i.subscriberCount, uploaded = null,
+                count = i.streamCount, isChannel = true
+            )
         }
         is PlaylistInfoItem -> {
             if (i.url.isNullOrBlank()) null

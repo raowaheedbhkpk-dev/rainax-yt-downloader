@@ -46,6 +46,8 @@ class VideoScreen(
     private val vm: MainViewModel,
     private val player: () -> Player?,
     private val download: (url: String, title: String?, audio: Boolean) -> Unit,
+    private val openChannel: (url: String, name: String?, avatar: String?) -> Unit,
+    private val signIn: () -> Unit,
     private val onChanged: () -> Unit
 ) {
     private val header = ItemVideoHeaderBinding.inflate(act.layoutInflater)
@@ -80,6 +82,93 @@ class VideoScreen(
             header.vDesc.maxLines = if (header.vDesc.maxLines == 3) Int.MAX_VALUE else 3
         }
         header.vComments.setOnClickListener { showComments() }
+        header.vChannelRow.setOnClickListener {
+            val d = details ?: return@setOnClickListener
+            d.channelUrl?.let { openChannel(it, d.uploader, d.avatar) }
+        }
+        header.vSubscribe.setOnClickListener { toggleSubscribe() }
+        header.vLike.setOnClickListener { rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE") }
+        header.vDislike.setOnClickListener { rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE") }
+        header.vSave.setOnClickListener { saveWatchLater() }
+    }
+
+    // ---------- account actions (subscribe, like, Watch later) ----------
+
+    private var subscribed: Boolean? = null
+    private var likeStatus: String? = null
+    private var stateJob: Job? = null
+
+    private fun videoId(u: String?): String? = u?.let { Regex("(?:[?&]v=|shorts/)([\\w-]{6,})").find(it)?.groupValues?.get(1) }
+
+    /** Shows Subscribe (and Like / Dislike / Save when signed in) and reads their current state. */
+    private fun showAccountActions(d: VideoDetails) {
+        val signedIn = YtAccount.isSignedIn(act)
+        subscribed = null
+        likeStatus = null
+        header.vSubscribe.isVisible = d.channelId != null
+        Ui.subscribeButton(header.vSubscribe, false)
+        header.vLike.text = if (d.likes > 0) YtCatalog.count(d.likes) else "Like"
+        listOf(header.vLike, header.vDislike, header.vSave).forEach {
+            it.isVisible = signedIn
+            Ui.toggleButton(it, false)
+        }
+        if (!signedIn) return
+        val id = videoId(d.url) ?: return
+        stateJob?.cancel()
+        stateJob = act.lifecycleScope.launch {
+            val st = withContext(Dispatchers.IO) { runCatching { YtAccount.videoState(id) }.getOrNull() } ?: return@launch
+            if (videoId(url) != id) return@launch
+            subscribed = st.subscribed
+            likeStatus = st.likeStatus
+            Ui.subscribeButton(header.vSubscribe, st.subscribed == true)
+            Ui.toggleButton(header.vLike, st.likeStatus == "LIKE")
+            Ui.toggleButton(header.vDislike, st.likeStatus == "DISLIKE")
+        }
+    }
+
+    private fun toggleSubscribe() {
+        if (!YtAccount.isSignedIn(act)) { signIn(); return }
+        val channelId = details?.channelId ?: return
+        val now = subscribed == true
+        subscribed = !now
+        Ui.subscribeButton(header.vSubscribe, !now)
+        act.lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.subscribe(channelId, !now) }.isSuccess }
+            if (!ok) {
+                subscribed = now
+                Ui.subscribeButton(header.vSubscribe, now)
+                act.toast("Couldn't change the subscription. Try again")
+            } else {
+                vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
+            }
+        }
+    }
+
+    private fun rate(status: String) {
+        val id = videoId(url) ?: return
+        val before = likeStatus
+        likeStatus = status
+        Ui.toggleButton(header.vLike, status == "LIKE")
+        Ui.toggleButton(header.vDislike, status == "DISLIKE")
+        act.lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.rate(id, status) }.isSuccess }
+            if (!ok) {
+                likeStatus = before
+                Ui.toggleButton(header.vLike, before == "LIKE")
+                Ui.toggleButton(header.vDislike, before == "DISLIKE")
+                act.toast("Couldn't save that. Try again")
+            }
+        }
+    }
+
+    private fun saveWatchLater() {
+        val id = videoId(url) ?: return
+        Ui.toggleButton(header.vSave, true)
+        act.lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.watchLater(id) }.isSuccess }
+            act.toast(if (ok) "Saved to Watch later" else "Couldn't save. Try again")
+            if (!ok) Ui.toggleButton(header.vSave, false)
+        }
     }
 
     private var attached: Player? = null
@@ -140,6 +229,7 @@ class VideoScreen(
         header.vDesc.isVisible = false
         header.vDesc.maxLines = 3
         header.vUpNext.isVisible = false
+        listOf(header.vSubscribe, header.vLike, header.vDislike, header.vSave).forEach { it.isVisible = false }
         related.submit(emptyList())
         vb.videoList.scrollToPosition(0)
         vm.prefetch(clean)                    // the download sheet then has the sizes at once
@@ -304,6 +394,7 @@ class VideoScreen(
 
     private fun fill(d: VideoDetails) {
         if (thumbUrl == null) thumbUrl = d.thumb
+        showAccountActions(d)
         header.vLoading.isVisible = false
         header.vTitle.text = d.title
         val meta = mutableListOf<String>()

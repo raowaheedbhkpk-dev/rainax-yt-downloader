@@ -49,12 +49,13 @@ class HomeScreen(
             "Music" to YtCatalog.MUSIC,
             "History" to "acc:FEhistory",
             "Liked" to "acc:VLLL",
+            "Channels" to "acc:FEchannels",
             "Watch later" to "acc:VLWL"
         ) else YtCatalog.TABS
 
     private var tabIndex = 0
     private var query: String? = null          // showing search results for this
-    private var playlists = false              // search tab: Playlists instead of Videos
+    private var searchKind = 0                 // search chip: 0 videos, 1 channels, 2 playlists
     private var next: Page? = null
     private var loadJob: Job? = null
     private var suggestJob: Job? = null
@@ -62,19 +63,25 @@ class HomeScreen(
 
     private var playlistUrl: String? = null    // showing this playlist's videos
     private var playlistItem: VideoItem? = null
+    private var channelUrl: String? = null     // showing this channel
+    private var channel: ChannelDetails? = null
+    private var channelSubscribed: Boolean? = null
+    private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
+    private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
     private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) })
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     private val playlistAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     private val musicAdapter = MusicAdapter({ openPlaylist(it) }, { download(it) })
     private val adapter get() = when {
+        channelUrl != null -> channelAdapter
         playlistUrl != null -> playlistAdapter
         query != null -> smallAdapter
         else -> bigAdapter
     }
 
     /** Music tab (rows of playlists) is showing. */
-    private val isMusic get() = query == null && playlistUrl == null && tabs[tabIndex].second == YtCatalog.MUSIC
+    private val isMusic get() = query == null && playlistUrl == null && channelUrl == null && tabs[tabIndex].second == YtCatalog.MUSIC
 
     private fun applyListAdapter() {
         val want: RecyclerView.Adapter<*> = if (isMusic) musicAdapter else adapter
@@ -108,11 +115,12 @@ class HomeScreen(
         }
         hm.titleBack.setOnClickListener { back() }
         hm.titleDownload.setOnClickListener { playlistItem?.let { download(it) } }
+        channelHeader.chSubscribe.setOnClickListener { toggleChannelSubscribe() }
 
         hm.homeChips.setOnCheckedStateChangeListener { group, ids ->
             if (buildingTabs) return@setOnCheckedStateChangeListener
             val index = ids.firstOrNull()?.let { id -> (0 until group.childCount).firstOrNull { group.getChildAt(it).id == id } } ?: return@setOnCheckedStateChangeListener
-            if (query != null) playlists = index == 1 else tabIndex = index
+            if (query != null) searchKind = index else tabIndex = index
             applyListAdapter()
             load(reset = true)
         }
@@ -146,13 +154,15 @@ class HomeScreen(
     }
 
     /** True while searching or typing (Back returns to Home). */
-    val inSearch get() = query != null || playlistUrl != null || hm.suggestList.isVisible
+    val inSearch get() = query != null || playlistUrl != null || channelUrl != null || hm.suggestList.isVisible
 
     /** Back: stop typing, or leave the search results. Returns false when there is nothing to undo. */
     fun back(): Boolean {
-        if (playlistUrl != null) {
+        if (playlistUrl != null || channelUrl != null) {
             playlistUrl = null
             playlistItem = null
+            channelUrl = null
+            channel = null
             hm.titleBar.isVisible = false
             hm.chipsScroll.isVisible = true
             if (query != null) hm.searchBar.isVisible = true else hm.brandBar.isVisible = true
@@ -167,7 +177,7 @@ class HomeScreen(
         }
         if (query != null) {
             query = null
-            playlists = false
+            searchKind = 0
             showSearchBox(false)
             buildTabs()
             applyListAdapter()
@@ -229,7 +239,7 @@ class HomeScreen(
         hm.searchInput.setText(q)
         val wasSearching = query != null
         query = q
-        if (!wasSearching) playlists = false
+        if (!wasSearching) searchKind = 0
         buildTabs()
         applyListAdapter()
         load(reset = true)
@@ -238,15 +248,83 @@ class HomeScreen(
     /** A playlist: its videos (each with Download) and "Download all" at the top. */
     fun openPlaylist(item: VideoItem) {
         if (hm.suggestList.isVisible) stopTyping()
+        channelUrl = null
+        channel = null
         playlistUrl = item.url
         playlistItem = item
         hm.titleText.text = item.title
+        hm.titleDownload.isVisible = true
         hm.brandBar.isVisible = false
         hm.searchBar.isVisible = false
         hm.titleBar.isVisible = true
         hm.chipsScroll.isVisible = false
         applyListAdapter()
         load(reset = true)
+    }
+
+    /** A channel: picture, name, Subscribe, and its videos (each with Download). */
+    fun openChannel(url: String, name: String? = null, avatar: String? = null) {
+        if (hm.suggestList.isVisible) stopTyping()
+        playlistUrl = null
+        playlistItem = null
+        channelUrl = url
+        channel = null
+        channelSubscribed = null
+        hm.titleText.text = name.orEmpty()
+        hm.titleDownload.isVisible = false
+        hm.brandBar.isVisible = false
+        hm.searchBar.isVisible = false
+        hm.titleBar.isVisible = true
+        hm.chipsScroll.isVisible = false
+        channelHeader.chHeadName.text = name.orEmpty()
+        channelHeader.chHeadMeta.text = ""
+        channelHeader.chHeadDesc.isVisible = false
+        Img.load(channelHeader.chHeadAvatar, avatar, circle = true, widthPx = 200)
+        Img.load(channelHeader.chBanner, null)
+        Ui.subscribeButton(channelHeader.chSubscribe, false)
+        vm.feedCache.remove("ch:$url")                 // the header comes with the first page
+        applyListAdapter()
+        load(reset = true)
+    }
+
+    private fun fillChannel(d: ChannelDetails) {
+        channel = d
+        hm.titleText.text = d.name
+        channelHeader.chHeadName.text = d.name
+        channelHeader.chHeadMeta.text = if (d.subscribers >= 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
+        channelHeader.chHeadDesc.text = d.description
+        channelHeader.chHeadDesc.isVisible = d.description.isNotBlank()
+        Img.load(channelHeader.chHeadAvatar, d.avatar, circle = true, widthPx = 200)
+        Img.load(channelHeader.chBanner, d.banner, widthPx = 1080)
+        val id = d.id
+        if (id != null && YtAccount.isSignedIn(act)) {
+            act.lifecycleScope.launch {
+                val sub = withContext(Dispatchers.IO) { runCatching { YtAccount.channelSubscribed(id) }.getOrNull() }
+                if (channel?.id != id) return@launch
+                channelSubscribed = sub
+                Ui.subscribeButton(channelHeader.chSubscribe, sub == true)
+            }
+        }
+    }
+
+    private fun toggleChannelSubscribe() {
+        if (!YtAccount.isSignedIn(act)) {
+            onAccount()                                 // sign in first
+            return
+        }
+        val id = channel?.id ?: return
+        val now = channelSubscribed == true
+        channelSubscribed = !now
+        Ui.subscribeButton(channelHeader.chSubscribe, !now)
+        act.lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.subscribe(id, !now) }.isSuccess }
+            if (!ok) {
+                channelSubscribed = now
+                Ui.subscribeButton(channelHeader.chSubscribe, now)
+                android.widget.Toast.makeText(act, "Couldn't change the subscription. Try again", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
+        }
     }
 
     private fun imm() = act.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -257,8 +335,8 @@ class HomeScreen(
     private fun buildTabs() {
         buildingTabs = true
         hm.homeChips.removeAllViews()
-        val titles = if (query != null) listOf("Videos", "Playlists") else tabs.map { it.first }
-        val sel = if (query != null) (if (playlists) 1 else 0) else tabIndex
+        val titles = if (query != null) YtCatalog.SEARCH_KINDS.map { it.first } else tabs.map { it.first }
+        val sel = if (query != null) searchKind else tabIndex
         titles.forEachIndexed { i, t ->
             val chip = LayoutInflater.from(act).inflate(R.layout.item_chip, hm.homeChips, false) as Chip
             chip.id = View.generateViewId()
@@ -269,10 +347,14 @@ class HomeScreen(
         buildingTabs = false
     }
 
-    private fun cacheKey(): String = playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$playlists" }
+    private fun cacheKey(): String = channelUrl?.let { "ch:$it" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
         ?: "tab:${tabs[tabIndex].second}"
 
-    private fun open(item: VideoItem) = if (item.isPlaylist) openPlaylist(item) else openVideo(item)
+    private fun open(item: VideoItem) = when {
+        item.isChannel -> openChannel(item.url, item.title, item.thumb)
+        item.isPlaylist -> openPlaylist(item)
+        else -> openVideo(item)
+    }
 
     /** Music tab: all rows load at the same time and appear as soon as each is ready. */
     private fun loadMusic(pulled: Boolean) {
@@ -352,21 +434,26 @@ class HomeScreen(
         }
         val q = query
         val plUrl = playlistUrl
-        val pl = playlists
+        val chUrl = channelUrl
+        val pl = searchKind
         val tabId = tabs[tabIndex].second
         val page = next
         val key = cacheKey()
         val history = AppPrefs.searchHistory(act)
         loadJob = act.lifecycleScope.launch {
             try {
+                var header: ChannelDetails? = null
                 val res = withContext(Dispatchers.IO) {
                     when {
+                        chUrl != null && page == null -> YtCatalog.channel(chUrl).let { header = it.first; it.second }
+                        chUrl != null -> YtCatalog.channelMore(chUrl, page!!)
                         plUrl != null -> YtCatalog.playlist(plUrl, page)
                         q != null -> YtCatalog.search(q, pl, page)
                         tabId.startsWith("acc:") -> YtAccount.browse(tabId.removePrefix("acc:"), page)
                         else -> YtCatalog.kiosk(tabId, page, history)
                     }
                 }
+                header?.let { if (channelUrl == chUrl) fillChannel(it) }
                 val added = if (reset) { a.submit(res.items); res.items.size } else a.append(res.items)
                 next = if (added == 0 && !reset) null else res.next      // a page with nothing new: stop (mixes repeat)
                 a.loadingMore = next != null
@@ -400,7 +487,7 @@ class HomeScreen(
         tabIndex = 0
         vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
         updateAccountIcon()
-        if (query == null && playlistUrl == null) {
+        if (query == null && playlistUrl == null && channelUrl == null) {
             buildTabs()
             applyListAdapter()
             load(reset = true)

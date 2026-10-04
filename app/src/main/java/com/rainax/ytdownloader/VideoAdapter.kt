@@ -61,6 +61,7 @@ class VideoAdapter(
     override fun getItemViewType(position: Int): Int = when {
         header != null && position == 0 -> HEADER
         position >= headerCount + items.size -> FOOTER
+        items[position - headerCount].isChannel -> CHANNEL
         else -> ITEM
     }
 
@@ -71,6 +72,7 @@ class VideoAdapter(
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             }) {}
             FOOTER -> object : RecyclerView.ViewHolder(inf.inflate(R.layout.item_loading, parent, false)) {}
+            CHANNEL -> ChannelRow(inf.inflate(R.layout.item_channel_row, parent, false))
             else -> Row(inf.inflate(if (big) R.layout.item_video_big else R.layout.item_video_small, parent, false))
         }
     }
@@ -78,6 +80,7 @@ class VideoAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is Row -> holder.bind(items[position - headerCount])
+            is ChannelRow -> holder.bind(items[position - headerCount])
             else -> if (getItemViewType(position) == HEADER) {
                 val box = holder.itemView as FrameLayout
                 val h = header ?: return
@@ -127,7 +130,25 @@ class VideoAdapter(
         }
     }
 
+    /** A channel (search results, subscriptions): picture, name, subscribers. */
+    inner class ChannelRow(v: View) : RecyclerView.ViewHolder(v) {
+        private val avatar: ImageView = v.findViewById(R.id.chAvatar)
+        private val name: TextView = v.findViewById(R.id.chName)
+        private val meta: TextView = v.findViewById(R.id.chMeta)
+
+        fun bind(item: VideoItem) {
+            Img.load(avatar, item.thumb, circle = true, widthPx = 160)
+            name.text = item.title
+            meta.text = item.uploaded ?: listOfNotNull(
+                item.views.takeIf { it >= 0 }?.let { YtCatalog.count(it) + " subscribers" },
+                item.count.takeIf { it > 0 }?.let { "$it videos" }
+            ).joinToString(" • ")
+            itemView.setOnClickListener { onOpen(item) }
+        }
+    }
+
     companion object {
+        private const val CHANNEL = 3
         private const val HEADER = 0
         private const val ITEM = 1
         private const val FOOTER = 2

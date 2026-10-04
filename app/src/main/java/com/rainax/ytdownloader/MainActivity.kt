@@ -141,9 +141,16 @@ class MainActivity : AppCompatActivity() {
 
         home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title) }) { onAccountClick() }
         home.setup()
-        video = VideoScreen(this, vp, vm, { controller }, { u, t, audio ->
-            showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t)
-        }) { updateChrome() }
+        video = VideoScreen(
+            this, vp, vm, { controller },
+            download = { u, t, audio -> showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t) },
+            openChannel = { url, name, avatar ->
+                video.minimize()                     // keeps playing in the mini player
+                if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+                home.openChannel(url, name, avatar)
+            },
+            signIn = { onAccountClick() }
+        ) { updateChrome() }
         video.setup()
         setupMiniPlayer()
         setupPlay()

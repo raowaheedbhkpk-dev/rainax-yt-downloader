@@ -139,6 +139,53 @@ object YtAccount {
         return FeedPage(items.filter { seen.add(it.url) }, next[0]?.let { Page(browseId, it) })
     }
 
+    // ---------- actions (like YouTube) ----------
+
+    /** What the signed-in user did on a video: subscribed to its channel? liked / disliked? */
+    class VideoState(val subscribed: Boolean?, val likeStatus: String?, val channelId: String?)
+
+    /** Blocking. Subscription and like state for a video. */
+    fun videoState(videoId: String): VideoState {
+        val json = post("next", JSONObject().put("context", context()).put("videoId", videoId))
+        val sub = find(json, "subscribeButtonRenderer")
+        val subscribed = sub?.let { if (it.has("subscribed")) it.optBoolean("subscribed") else null }
+            ?: findValue(json, "subscriptionStateEntity")?.let { (it as? JSONObject)?.optBoolean("subscribed") }
+        val like = (findValue(json, "likeStatus") as? String)
+        val channelId = sub?.optString("channelId")?.takeIf { it.isNotBlank() }
+        return VideoState(subscribed, like, channelId)
+    }
+
+    /** Blocking. Is the user subscribed to this channel? (null = unknown) */
+    fun channelSubscribed(channelId: String): Boolean? {
+        val json = post("browse", JSONObject().put("context", context()).put("browseId", channelId))
+        find(json, "subscribeButtonRenderer")?.let { if (it.has("subscribed")) return it.optBoolean("subscribed") }
+        return (findValue(json, "subscriptionStateEntity") as? JSONObject)?.optBoolean("subscribed")
+    }
+
+    /** Blocking. Subscribe to / unsubscribe from a channel ("UC..."). */
+    fun subscribe(channelId: String, on: Boolean) {
+        val body = JSONObject().put("context", context()).put("channelIds", JSONArray().put(channelId))
+        post(if (on) "subscription/subscribe" else "subscription/unsubscribe", body)
+    }
+
+    /** Blocking. "LIKE", "DISLIKE" or "INDIFFERENT" (remove). */
+    fun rate(videoId: String, status: String) {
+        val endpoint = when (status) {
+            "LIKE" -> "like/like"
+            "DISLIKE" -> "like/dislike"
+            else -> "like/removelike"
+        }
+        post(endpoint, JSONObject().put("context", context()).put("target", JSONObject().put("videoId", videoId)))
+    }
+
+    /** Blocking. Adds a video to Watch later. */
+    fun watchLater(videoId: String) {
+        val body = JSONObject().put("context", context()).put("playlistId", "WL").put(
+            "actions", JSONArray().put(JSONObject().put("action", "ACTION_ADD_VIDEO").put("addedVideoId", videoId))
+        )
+        post("browse/edit_playlist", body)
+    }
+
     // ---------- reading YouTube's answers ----------
 
     private val VIDEO_KEYS = listOf("videoRenderer", "gridVideoRenderer", "compactVideoRenderer", "videoWithContextRenderer", "playlistVideoRenderer")
@@ -148,6 +195,7 @@ object YtAccount {
             is JSONObject -> {
                 for (k in VIDEO_KEYS) node.optJSONObject(k)?.let { r -> video(r)?.let { out += it }; return }
                 node.optJSONObject("lockupViewModel")?.let { r -> lockup(r)?.let { out += it }; return }
+                for (k in CHANNEL_KEYS) node.optJSONObject(k)?.let { r -> channel(r)?.let { out += it }; return }
                 node.optJSONObject("continuationCommand")?.optString("token")?.takeIf { it.isNotBlank() }?.let { next[0] = it }
                 node.optJSONObject("nextContinuationData")?.optString("continuation")?.takeIf { it.isNotBlank() }?.let { next[0] = it }
                 val keys = node.keys()
@@ -155,6 +203,21 @@ object YtAccount {
             }
             is JSONArray -> for (i in 0 until node.length()) collect(node.opt(i), out, next)
         }
+    }
+
+    private val CHANNEL_KEYS = listOf("channelRenderer", "gridChannelRenderer", "channelListItemRenderer")
+
+    private fun channel(r: JSONObject): VideoItem? {
+        val id = r.optString("channelId").takeIf { it.isNotBlank() } ?: return null
+        val name = text(r.optJSONObject("title")) ?: return null
+        val details = listOfNotNull(
+            text(r.optJSONObject("subscriberCountText")), text(r.optJSONObject("videoCountText"))
+        ).joinToString(" • ")
+        return VideoItem(
+            url = "https://www.youtube.com/channel/$id", title = name, uploader = "",
+            thumb = lastThumb(r.optJSONObject("thumbnail")), seconds = 0, views = -1,
+            uploaded = details.ifBlank { null }, isChannel = true
+        )
     }
 
     private fun video(r: JSONObject): VideoItem? {
@@ -236,6 +299,19 @@ object YtAccount {
         val list = o?.optJSONArray("thumbnails") ?: return null
         if (list.length() == 0) return null
         return list.optJSONObject(list.length() - 1)?.optString("url")?.let { if (it.startsWith("//")) "https:$it" else it }
+    }
+
+    /** First value stored under [key] anywhere in [node]. */
+    private fun findValue(node: Any?, key: String): Any? {
+        when (node) {
+            is JSONObject -> {
+                if (node.has(key)) return node.opt(key)
+                val keys = node.keys()
+                while (keys.hasNext()) findValue(node.opt(keys.next()), key)?.let { return it }
+            }
+            is JSONArray -> for (i in 0 until node.length()) findValue(node.opt(i), key)?.let { return it }
+        }
+        return null
     }
 
     /** First object stored under [key] anywhere in [node]. */
