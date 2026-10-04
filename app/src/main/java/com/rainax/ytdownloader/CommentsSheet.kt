@@ -278,7 +278,7 @@ class CommentsSheet(
         } else {
             if (before == "DISLIKE") c.undislikeAction else c.dislikeAction
         } ?: run {
-            Toast.makeText(act, "Open the comments again to rate this comment", Toast.LENGTH_SHORT).show()
+            Toast.makeText(act, "YouTube doesn't allow rating this comment", Toast.LENGTH_SHORT).show()
             return
         }
         val now = if (like) (if (before == "LIKE") "NONE" else "LIKE") else (if (before == "DISLIKE") "NONE" else "DISLIKE")

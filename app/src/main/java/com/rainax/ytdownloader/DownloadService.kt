@@ -325,7 +325,7 @@ class DownloadService : Service() {
         // bytes already on disk from an earlier try: count them, but not as speed
         val onResumed: (Long) -> Unit = { n -> synchronized(uiLock) { done.addAndGet(n); lastBytes += n } }
 
-        val output: File
+        var output: File
         val s = plan.single
         if (s != null) {
             label = ""
@@ -357,6 +357,18 @@ class DownloadService : Service() {
                 throw java.io.IOException("Trying 1080p instead of 2K/4K on this phone")
             }
             output = joined
+        }
+
+        // MP3 chosen: convert the downloaded sound on the phone
+        if (task.format == "audio:mp3" && output.extension.lowercase() != "mp3") {
+            if (TaskRepository.get(id)?.status != Status.RUNNING) return
+            TaskRepository.update(id) { it.copy(progress = 99, message = "Converting to MP3…") }
+            val mp3 = File(dir, "converted.mp3")
+            AudioConverter.toMp3(output, mp3, 192, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
+                TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
+            }
+            output.delete()
+            output = mp3
         }
 
         // Paused or cancelled at the very end: keep the files for resume, save nothing

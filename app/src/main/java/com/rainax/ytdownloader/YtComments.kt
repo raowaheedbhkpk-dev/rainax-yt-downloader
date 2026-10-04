@@ -74,8 +74,9 @@ object YtComments {
     private fun parse(json: JSONObject, replies: Boolean): Result {
         // details of each comment live in "mutations", keyed by entityKey
         val entities = HashMap<String, JSONObject>()
-        val mutations = (YtAccount.findValue(json, "mutations") as? JSONArray)
-        if (mutations != null) for (i in 0 until mutations.length()) {
+        val lists = mutableListOf<JSONArray>()
+        allArrays(json, "mutations", lists)
+        for (mutations in lists) for (i in 0 until mutations.length()) {
             val m = mutations.optJSONObject(i) ?: continue
             val key = m.optString("entityKey").takeIf { it.isNotBlank() } ?: continue
             m.optJSONObject("payload")?.let { entities[key] = it }
@@ -133,9 +134,12 @@ object YtComments {
         val toolbar = entity.optJSONObject("toolbar")
         val surface = entities[vm.optString("toolbarSurfaceKey")]?.optJSONObject("engagementToolbarSurfaceEntityPayload")
         val state = entities[vm.optString("toolbarStateKey")]?.optJSONObject("engagementToolbarStateEntityPayload")
-        fun action(cmd: String): String? = surface?.optJSONObject(cmd)?.let {
-            (YtAccount.findValue(it, "performCommentActionEndpoint") as? JSONObject)?.optString("action")?.takeIf { a -> a.isNotBlank() }
-        }
+        // YouTube keeps the like/dislike keys in a few places that move between versions, so look everywhere
+        val acts = HashMap<String, String>()
+        surface?.let { collectActions(it, "", acts) }
+        collectActions(vm, "", acts)
+        collectActions(entity, "", acts)
+        vm.keys().forEach { k -> vm.optString(k).takeIf { it.isNotBlank() }?.let { entities[it] }?.let { collectActions(it, "", acts) } }
         val like = when (state?.optString("likeState")) {
             "TOOLBAR_LIKE_STATE_LIKED" -> "LIKE"
             "TOOLBAR_LIKE_STATE_DISLIKED" -> "DISLIKE"
@@ -154,11 +158,13 @@ object YtComments {
             likeState = like,
             replyCount = toolbar?.optString("replyCount")?.filter { it.isDigit() }?.toIntOrNull() ?: 0,
             repliesToken = repliesToken,
-            likeAction = action("likeCommand"),
-            unlikeAction = action("unlikeCommand"),
-            dislikeAction = action("dislikeCommand"),
-            undislikeAction = action("undislikeCommand"),
-            replyParams = surface?.optJSONObject("replyCommand")?.let { YtAccount.findValue(it, "createReplyParams") as? String },
+            likeAction = acts["like"],
+            unlikeAction = acts["unlike"],
+            dislikeAction = acts["dislike"],
+            undislikeAction = acts["undislike"],
+            replyParams = (surface?.optJSONObject("replyCommand")?.let { YtAccount.findValue(it, "createReplyParams") as? String })
+                ?: (surface?.let { YtAccount.findValue(it, "createReplyParams") as? String })
+                ?: (YtAccount.findValue(vm, "createReplyParams") as? String),
             isReply = reply || props.optInt("replyLevel", 0) > 0,
             byCreator = author?.optBoolean("isCreator") == true
         )
@@ -167,6 +173,8 @@ object YtComments {
     /** Older answer format (fewer actions). */
     private fun fromRenderer(r: JSONObject, repliesToken: String?, reply: Boolean): Item? {
         val id = r.optString("commentId").takeIf { it.isNotBlank() } ?: return null
+        val acts = HashMap<String, String>()
+        collectActions(r.optJSONObject("actionButtons"), "", acts)
         return Item(
             id = id,
             author = YtAccount.text(r.optJSONObject("authorText")).orEmpty(),
@@ -177,10 +185,63 @@ object YtComments {
             likeState = if (r.optBoolean("isLiked")) "LIKE" else "NONE",
             replyCount = r.optInt("replyCount", 0),
             repliesToken = repliesToken,
-            likeAction = null, unlikeAction = null, dislikeAction = null, undislikeAction = null,
-            replyParams = null,
+            likeAction = acts["like"], unlikeAction = acts["unlike"],
+            dislikeAction = acts["dislike"], undislikeAction = acts["undislike"],
+            replyParams = YtAccount.findValue(r.optJSONObject("actionButtons"), "createReplyParams") as? String,
             isReply = reply,
             byCreator = false
         )
+    }
+
+    /**
+     * Finds every comment action key under [node] and files it as like / unlike / dislike / undislike
+     * by the nearest name above it ("likeCommand", "dislikeButton", a toggled state, ...).
+     */
+    private fun collectActions(node: Any?, path: String, out: MutableMap<String, String>) {
+        when (node) {
+            is JSONObject -> {
+                node.optJSONObject("performCommentActionEndpoint")?.optString("action")?.takeIf { it.isNotBlank() }
+                    ?.let { a -> classify(path)?.let { k -> out.putIfAbsent(k, a) } }
+                val keys = node.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    val lk = k.lowercase()
+                    val p = when {
+                        lk.startsWith("toggled") || lk.startsWith("ondeselect") -> (if (lk.contains("like")) lk else path) + "|un"
+                        lk.contains("like") -> lk
+                        else -> path
+                    }
+                    collectActions(node.opt(k), p, out)
+                }
+            }
+            is JSONArray -> for (i in 0 until node.length()) collectActions(node.opt(i), path, out)
+        }
+    }
+
+    private fun classify(path: String): String? {
+        val toggled = path.endsWith("|un")
+        val p = path.removeSuffix("|un")
+        return when {
+            p.contains("undislike") || p.contains("removedislike") -> "undislike"
+            p.contains("dislike") -> if (toggled) "undislike" else "dislike"
+            p.contains("unlike") || p.contains("removelike") -> "unlike"
+            p.contains("like") -> if (toggled) "unlike" else "like"
+            else -> null
+        }
+    }
+
+    /** Every array stored under [key] anywhere in [node]. */
+    private fun allArrays(node: Any?, key: String, out: MutableList<JSONArray>) {
+        when (node) {
+            is JSONObject -> {
+                val keys = node.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    val v = node.opt(k)
+                    if (k == key && v is JSONArray) out += v else allArrays(v, key, out)
+                }
+            }
+            is JSONArray -> for (i in 0 until node.length()) allArrays(node.opt(i), key, out)
+        }
     }
 }

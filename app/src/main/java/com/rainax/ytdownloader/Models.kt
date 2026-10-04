@@ -91,6 +91,7 @@ data class PreviewState(
 /** Used when we have no format info (several links at once, playlists, or a failed lookup). */
 val PRESETS = listOf(
     FormatChoice("audio:m4a", "Audio (M4A)", "Original quality, plays on all phones", "", KIND_AUDIO),
+    FormatChoice("audio:mp3", "Audio (MP3)", "192 kbps, plays everywhere", "", KIND_AUDIO),
     FormatChoice("video:360", "Fast (360p)", "", "", KIND_VIDEO),
     FormatChoice("video:720", "High quality (720p)", "", "", KIND_VIDEO),
     FormatChoice("video:1080", "High quality (1080p)", "", "", KIND_VIDEO),

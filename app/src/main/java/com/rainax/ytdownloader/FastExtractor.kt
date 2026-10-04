@@ -34,6 +34,7 @@ object FastExtractor {
         // the phone's language and country: Home shows what is popular where the user lives
         val locale = java.util.Locale.getDefault()
         val country = locale.country.takeIf { it.length == 2 } ?: "US"
+        addMissingItags()
         NewPipe.init(
             HttpDownloader,
             org.schabi.newpipe.extractor.localization.Localization.fromLocale(locale),
@@ -82,6 +83,34 @@ object FastExtractor {
     /** Drops the saved info (its stream addresses stopped working). */
     fun forget(url: String) {
         infoCache.remove(videoUrl(url))
+    }
+
+    /**
+     * The extractor ignores picture formats it doesn't know, and its list has no 8K (AV1 402 / 571) and no
+     * AV1 60fps (699-702). Teach it these by reusing the places of old formats YouTube no longer sends
+     * (3GP 17/36, WebM 43-46). Downloads can then offer 8K when a video has it.
+     */
+    internal fun addMissingItags() = runCatching {
+        val cls = org.schabi.newpipe.extractor.services.youtube.ItagItem::class.java
+        val field = cls.getDeclaredField("ITAG_LIST").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        val list = field.get(null) as Array<org.schabi.newpipe.extractor.services.youtube.ItagItem>
+        val only = org.schabi.newpipe.extractor.services.youtube.ItagItem.ItagType.VIDEO_ONLY
+        val mp4 = org.schabi.newpipe.extractor.MediaFormat.MPEG_4
+        val extra = listOf(
+            org.schabi.newpipe.extractor.services.youtube.ItagItem(571, only, mp4, "4320p"),
+            org.schabi.newpipe.extractor.services.youtube.ItagItem(402, only, mp4, "4320p"),
+            org.schabi.newpipe.extractor.services.youtube.ItagItem(702, only, mp4, "4320p60", 60),
+            org.schabi.newpipe.extractor.services.youtube.ItagItem(701, only, mp4, "2160p60", 60),
+            org.schabi.newpipe.extractor.services.youtube.ItagItem(700, only, mp4, "1440p60", 60),
+            org.schabi.newpipe.extractor.services.youtube.ItagItem(699, only, mp4, "1080p60", 60)
+        ).filter { !org.schabi.newpipe.extractor.services.youtube.ItagItem.isSupported(it.id) }
+        val oldIds = setOf(17, 36, 43, 44, 45, 46)
+        var next = 0
+        for (i in list.indices) {
+            if (next >= extra.size) break
+            if (list[i].id in oldIds) list[i] = extra[next++]
+        }
     }
 
     /** True for YouTube videos and Shorts (used for look-ahead, cache keys and thumbnails). */
