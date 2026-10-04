@@ -233,6 +233,15 @@ class HomeScreen(
     private fun submit(text: String) {
         val q = text.trim()
         if (q.isEmpty()) return
+        // a pasted link (YouTube, TikTok, Facebook, Instagram...): straight to the download sheet
+        val link = Regex("https?://\\S+").find(q)?.value
+        if (link != null) {
+            stopTyping()
+            hm.searchInput.setText("")
+            if (query == null) showSearchBox(false)
+            download(VideoItem(link, "", "", null, 0, -1, null))
+            return
+        }
         AppPrefs.addSearch(act, q)
         stopTyping()
         showSearchBox(true)

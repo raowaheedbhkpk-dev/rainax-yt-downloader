@@ -33,7 +33,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
+            android:autoLink="web"
             android:textColor="@color/rx_text"
+            android:textColorLink="@color/rx_accent"
             android:textSize="14sp" />
 
         <TextView
@@ -43,5 +45,17 @@
             android:layout_marginTop="4dp"
             android:textColor="@color/rx_text2"
             android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/cReplies"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="4dp"
+            android:textColor="@color/rx_accent"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

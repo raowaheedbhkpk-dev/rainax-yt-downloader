@@ -18,6 +18,7 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 /**
  * How the player opens each queue entry:
  * - rainax://av?v=<picture>&a=<sound>  YouTube keeps picture and sound apart: both are streamed and played together
+ * - rainax://dash?u=<video page>       Auto quality: the player moves between qualities with the network
  * - rainax://hls?h=<playlist>          live streams
  * - rainax://play?u=<video page>       sound only, looked up when reached ("Up next" in the background)
  * - anything else                      a normal stream address
@@ -37,8 +38,11 @@ class RxMediaSourceFactory : MediaSource.Factory {
             .setReadTimeoutMs(30_000)
     )
 
+    private val dash = androidx.media3.exoplayer.dash.DashMediaSource.Factory(chunked)
+
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
         default.setDrmSessionManagerProvider(drmSessionManagerProvider)
+        dash.setDrmSessionManagerProvider(drmSessionManagerProvider)
         progressive.setDrmSessionManagerProvider(drmSessionManagerProvider)
         hls.setDrmSessionManagerProvider(drmSessionManagerProvider)
         return this
@@ -46,12 +50,23 @@ class RxMediaSourceFactory : MediaSource.Factory {
 
     override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory {
         default.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        dash.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         progressive.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         hls.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         return this
     }
 
-    override fun getSupportedTypes(): IntArray = intArrayOf(C.CONTENT_TYPE_OTHER, C.CONTENT_TYPE_HLS)
+    override fun getSupportedTypes(): IntArray = intArrayOf(C.CONTENT_TYPE_OTHER, C.CONTENT_TYPE_HLS, C.CONTENT_TYPE_DASH)
+
+    companion object {
+        /** Auto-quality manifests by video page (rainax://dash?u=<page>). */
+        private val manifests = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+        fun putManifest(page: String, mpd: String) {
+            if (manifests.size > 30) manifests.clear()
+            manifests[page] = mpd
+        }
+    }
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
         val uri = mediaItem.localConfiguration?.uri ?: return default.createMediaSource(mediaItem)
@@ -65,6 +80,18 @@ class RxMediaSourceFactory : MediaSource.Factory {
                         val sound = progressive.createMediaSource(MediaItem.fromUri(Uri.parse(a)))
                         return MergingMediaSource(picture, sound)
                     }
+                }
+                "dash" -> {
+                    val page = uri.getQueryParameter("u")
+                    val mpd = page?.let { manifests[it] }
+                    val manifest = mpd?.let {
+                        runCatching {
+                            androidx.media3.exoplayer.dash.manifest.DashManifestParser().parse(Uri.parse(page), it.byteInputStream())
+                        }.getOrNull()
+                    }
+                    if (manifest != null) return dash.createMediaSource(manifest, mediaItem)
+                    // manifest gone (app restarted): play the sound of this video
+                    if (page != null) return default.createMediaSource(mediaItem.buildUpon().setUri(BgPlayService.lazyUri(page)).build())
                 }
                 "hls" -> uri.getQueryParameter("h")?.let { h ->
                     return hls.createMediaSource(

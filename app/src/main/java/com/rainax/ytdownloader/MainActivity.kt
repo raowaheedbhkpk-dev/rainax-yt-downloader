@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         }
         if (savedInstanceState == null) requestNotificationPermission()
 
-        home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title) }) { onAccountClick() }
+        home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) }) { onAccountClick() }
         home.setup()
         video = VideoScreen(
             this, vp, vm, { controller },

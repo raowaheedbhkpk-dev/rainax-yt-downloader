@@ -78,9 +78,8 @@ class VideoScreen(
         vb.videoSettings.setOnClickListener { showPlayerMenu() }
         // the top buttons (close, quality) appear and hide together with the player controls
         vb.playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v -> vb.playerTop.visibility = v })
-        header.vDesc.setOnClickListener {
-            header.vDesc.maxLines = if (header.vDesc.maxLines == 3) Int.MAX_VALUE else 3
-        }
+        header.vDesc.setOnClickListener { showDescription() }
+        header.vMeta.setOnClickListener { showDescription() }
         header.vComments.setOnClickListener { showComments() }
         header.vChannelRow.setOnClickListener {
             val d = details ?: return@setOnClickListener
@@ -172,6 +171,7 @@ class VideoScreen(
     }
 
     private var attached: Player? = null
+    private var autoMode = false
 
     /** Hides the picture placeholder once the video really plays. */
     private val playerListener = object : Player.Listener {
@@ -180,6 +180,13 @@ class VideoScreen(
         }
 
         override fun onRenderedFirstFrame() = showPlaceholder(false)
+
+        /** Auto quality: show the quality the player chose right now (it changes with the network). */
+        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+            if (autoMode && videoSize.height > 0) {
+                vb.qualityBadge.text = "AUTO " + qualityLabel(videoSize.height, 0, short = false).trim().substringBefore(' ')
+            }
+        }
 
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
             vb.playerLoading.isVisible = false
@@ -335,11 +342,16 @@ class VideoScreen(
     private fun play(d: VideoDetails, startMs: Long) {
         val p = player() ?: run { showError("The player is starting. Tap the video again in a moment."); return }
         val src = d.play
-        val chosen = if (src.audio != null) pick(d) else null
-        vb.qualityBadge.text = chosen?.let { qualityLabel(it.height, it.fps, short = true) }.orEmpty()
-        vb.qualityBadge.isVisible = chosen != null
+        // Auto: one manifest with every quality, the player picks and changes it with the network speed
+        val adaptive = AppPrefs.playerQuality(act) <= 0 && src.dash != null
+        val chosen = if (src.audio != null && !adaptive) pick(d) else null
+        autoMode = adaptive
+        vb.qualityBadge.text = if (adaptive) "AUTO" else chosen?.let { qualityLabel(it.height, it.fps, short = true) }.orEmpty()
+        vb.qualityBadge.isVisible = adaptive || chosen != null
+        if (adaptive) RxMediaSourceFactory.putManifest(d.url, src.dash!!)
         val pictureUrl = chosen?.url ?: src.video
         val uri = when {
+            adaptive -> Uri.Builder().scheme("rainax").authority("dash").appendQueryParameter("u", d.url).build()
             pictureUrl != null && src.audio != null -> Uri.Builder().scheme("rainax").authority("av")
                 .appendQueryParameter("v", pictureUrl).appendQueryParameter("a", src.audio)
                 .appendQueryParameter("u", d.url).build()
@@ -401,7 +413,7 @@ class VideoScreen(
         if (d.views >= 0) meta += YtCatalog.count(d.views) + if (d.seconds < 0) " watching" else " views"
         d.uploaded?.takeIf { it.isNotBlank() }?.let { meta += it }
         if (d.likes > 0) meta += YtCatalog.count(d.likes) + " likes"
-        header.vMeta.text = meta.joinToString(" • ")
+        header.vMeta.text = meta.joinToString(" • ") + "  ...more"
         header.vUploader.text = d.uploader
         header.vSubs.text = if (d.subscribers > 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
         Img.load(header.vAvatar, d.avatar, circle = true, widthPx = 120)
@@ -432,12 +444,29 @@ class VideoScreen(
         if (c.html) HtmlCompat.fromHtml(c.text, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim() else c.text
 
     private fun showComments() {
-        if (comments.isEmpty()) return
-        val sb = SheetCommentsBinding.inflate(act.layoutInflater)
+        val u = url ?: return
+        CommentsSheet(act, u, signIn).show()
+    }
+
+    /** Full description with likes, views, upload date and clickable links. */
+    private fun showDescription() {
+        val d = details ?: return
+        val sb = com.rainax.ytdownloader.databinding.SheetDescriptionBinding.inflate(act.layoutInflater)
         val dialog = BottomSheetDialog(act)
         dialog.setContentView(sb.root)
-        sb.commentList.layoutManager = LinearLayoutManager(act)
-        sb.commentList.adapter = CommentAdapter(comments) { plain(it) }
+        sb.descTitle.text = d.title
+        sb.descLikes.text = if (d.likes > 0) YtCatalog.count(d.likes) else "–"
+        sb.descViews.text = if (d.views >= 0) java.text.NumberFormat.getIntegerInstance().format(d.views) else "–"
+        sb.descDate.text = d.uploaded ?: "–"
+        val desc = d.description.trim()
+        sb.descText.text = when {
+            desc.isEmpty() -> "No description"
+            desc.contains('<') -> HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT)
+            else -> desc
+        }
+        sb.descText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
+        if (!desc.contains('<')) android.text.util.Linkify.addLinks(sb.descText, android.text.util.Linkify.WEB_URLS)
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         dialog.show()
     }
 
@@ -515,7 +544,9 @@ class VideoScreen(
         val d = details
         val p = player()
         val chosen = d?.let { pick(it) }
+        val nowHeight = p?.videoSize?.height ?: 0
         val qValue = when {
+            autoMode -> if (nowHeight > 0) "Auto (${nowHeight}p)" else "Auto"
             d == null || chosen == null -> "Auto"
             AppPrefs.playerQuality(act) <= 0 -> "Auto (" + qualityLabel(chosen.height, chosen.fps).trim() + ")"
             else -> qualityLabel(chosen.height, chosen.fps).trim()
@@ -536,7 +567,7 @@ class VideoScreen(
         }
         val pref = AppPrefs.playerQuality(act)
         val current = pick(d)
-        val opts = mutableListOf(Opt("Auto", "Recommended", checked = pref <= 0) { setQuality(0) })
+        val opts = mutableListOf(Opt("Auto", "Adjusts to your network", checked = pref <= 0) { setQuality(0) })
         list.forEach { o ->
             opts += Opt(qualityLabel(o.height, o.fps), null, checked = pref > 0 && current?.height == o.height) { setQuality(o.height) }
         }

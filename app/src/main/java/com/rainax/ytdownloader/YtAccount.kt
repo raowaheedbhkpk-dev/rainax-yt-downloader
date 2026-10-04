@@ -186,6 +186,35 @@ object YtAccount {
         post("browse/edit_playlist", body)
     }
 
+    /** Blocking. Posts a comment on a video as the signed-in user. */
+    fun postComment(videoId: String, text: String) {
+        // 1) the video's comment section (its first page carries the "add a comment" key)
+        val page = post("next", JSONObject().put("context", context()).put("videoId", videoId))
+        val section = findSection(page, "comment-item-section") ?: page
+        val token = (findValue(section, "continuationCommand") as? JSONObject)?.optString("token")?.takeIf { it.isNotBlank() }
+            ?: error("Comments are turned off for this video")
+        val comments = post("next", JSONObject().put("context", context()).put("continuation", token))
+        val params = findValue(comments, "createCommentParams") as? String ?: error("You can't comment on this video")
+        // 2) the comment itself
+        post(
+            "comment/create_comment",
+            JSONObject().put("context", context()).put("createCommentParams", params).put("commentText", text)
+        )
+    }
+
+    /** The object whose "sectionIdentifier" is [id] (YouTube's comment section). */
+    private fun findSection(node: Any?, id: String): JSONObject? {
+        when (node) {
+            is JSONObject -> {
+                if (node.optString("sectionIdentifier") == id) return node
+                val keys = node.keys()
+                while (keys.hasNext()) findSection(node.opt(keys.next()), id)?.let { return it }
+            }
+            is JSONArray -> for (i in 0 until node.length()) findSection(node.opt(i), id)?.let { return it }
+        }
+        return null
+    }
+
     // ---------- reading YouTube's answers ----------
 
     private val VIDEO_KEYS = listOf("videoRenderer", "gridVideoRenderer", "compactVideoRenderer", "videoWithContextRenderer", "playlistVideoRenderer")

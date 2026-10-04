@@ -34,6 +34,12 @@ class BgPlayService : MediaSessionService() {
             )
             .setHandleAudioBecomingNoisy(true)         // pause when headphones are unplugged
             .setWakeMode(C.WAKE_MODE_NETWORK)          // keep playing with the screen off
+            // start after 1 second of video is ready (instead of 2.5): videos begin almost at once
+            .setLoadControl(
+                androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(15_000, 50_000, 1_000, 2_000)
+                    .build()
+            )
             .build()
         player.addListener(object : Player.Listener {
             private var retriedFor: String? = null

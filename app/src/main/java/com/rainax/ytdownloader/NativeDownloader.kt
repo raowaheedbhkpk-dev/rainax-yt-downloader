@@ -71,6 +71,7 @@ object NativeDownloader {
         con.setRequestProperty("User-Agent", ua)
         con.setRequestProperty("Accept", "*/*")
         con.setRequestProperty("Accept-Encoding", "identity")
+        SocialExtractor.headersFor(url).forEach { (k, v) -> con.setRequestProperty(k, v) }   // TikTok cookies, Referer...
         if (to != null) con.setRequestProperty("Range", "bytes=$from-$to")
         return con
     }

@@ -24,7 +24,7 @@ import java.net.URL
 object FastExtractor {
 
     const val UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
-    const val SUPPORTED = "YouTube, SoundCloud, Bandcamp and PeerTube"
+    const val SUPPORTED = "YouTube, TikTok, Facebook, Instagram, SoundCloud and many more sites"
 
     @Volatile private var ready = false
 
@@ -121,6 +121,7 @@ object FastExtractor {
     /** Blocking. Title, thumbnail, qualities with sizes and subtitles. Throws a readable error. */
     fun fetch(url: String): PreviewState = guard {
         init()
+        if (SocialExtractor.handles(url)) return@guard SocialExtractor.fetch(url)     // TikTok, Facebook, Instagram...
         val info = streamInfo(url)
         checkPlayable(info)
         val duration = info.duration.toInt()
@@ -250,6 +251,7 @@ object FastExtractor {
     /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
     fun plan(url: String, spec: String, subLang: String?): Plan = guard {
         init()
+        if (SocialExtractor.handles(url)) return@guard SocialExtractor.plan(url, spec)
         val info = streamInfo(url)
         checkPlayable(info)
         val duration = info.duration.toInt()

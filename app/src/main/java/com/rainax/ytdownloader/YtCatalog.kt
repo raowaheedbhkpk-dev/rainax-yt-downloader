@@ -45,7 +45,20 @@ class FeedPage(val items: List<VideoItem>, val next: Page?)
 /** A row on the Music tab: a title and a strip of playlists. */
 class MusicSection(val title: String, val items: List<VideoItem>)
 
-class Comment(val author: String, val avatar: String?, val text: String, val html: Boolean, val likes: String?, val date: String?)
+class Comment(
+    val author: String,
+    val avatar: String?,
+    val text: String,
+    val html: Boolean,
+    val likes: String?,
+    val date: String?,
+    val replyCount: Int = 0,
+    val replies: Page? = null,      // load with YtCatalog.comments(url, replies)
+    val isReply: Boolean = false
+)
+
+/** One page of comments (or of replies to a comment). */
+class CommentsPage(val items: List<Comment>, val next: Page?, val total: Int = -1, val disabled: Boolean = false)
 
 /** One picture quality the player can switch to (sound is added separately). */
 class VideoOption(val height: Int, val fps: Int, val url: String, val codec: String)
@@ -54,7 +67,11 @@ class VideoOption(val height: Int, val fps: Int, val url: String, val codec: Str
  * What the in-app player streams: picture + sound (joined while playing), one file with both, or a live stream.
  * [options] = every picture quality (the app keeps those this phone can play).
  */
-class PlaySource(val video: String?, val audio: String?, val muxed: String?, val hls: String?, val options: List<VideoOption> = emptyList())
+class PlaySource(
+    val video: String?, val audio: String?, val muxed: String?, val hls: String?,
+    val options: List<VideoOption> = emptyList(),
+    val dash: String? = null        // Auto quality: every H.264 quality in one manifest, the player switches by network speed
+)
 
 class VideoDetails(
     val url: String,
@@ -295,21 +312,42 @@ object YtCatalog {
 
     /** Blocking. The first comments of a video (empty if turned off). */
     fun comments(url: String): List<Comment> = try {
-        FastExtractor.init()
-        val info = CommentsInfo.getInfo(yt, FastExtractor.videoUrl(url))
-        info.relatedItems.take(20).map { c ->
-            val text = c.commentText
-            Comment(
-                author = c.uploaderName.orEmpty(),
-                avatar = best(c.uploaderAvatars, 48),
-                text = text?.content().orEmpty(),
-                html = text?.type() == org.schabi.newpipe.extractor.stream.Description.Type.HTML,
-                likes = c.textualLikeCount?.takeIf { it.isNotBlank() && it != "0" },
-                date = c.textualUploadDate
-            )
-        }
+        comments(url, null).items.take(20)
     } catch (e: Exception) {
         emptyList()
+    }
+
+    /** Blocking. A page of comments: the first ([page] null), the next one, or a comment's replies. */
+    fun comments(url: String, page: Page?, replies: Boolean = false): CommentsPage = guard {
+        FastExtractor.init()
+        val clean = FastExtractor.videoUrl(url)
+        if (page == null) {
+            val info = CommentsInfo.getInfo(yt, clean)
+            CommentsPage(
+                info.relatedItems.map { comment(it, false) },
+                if (info.hasNextPage()) info.nextPage else null,
+                runCatching { info.commentsCount }.getOrDefault(-1),
+                runCatching { info.isCommentsDisabled }.getOrDefault(false)
+            )
+        } else {
+            val p = CommentsInfo.getMoreItems(yt, clean, page)
+            CommentsPage(p.items.map { comment(it, replies) }, if (p.hasNextPage()) p.nextPage else null)
+        }
+    }
+
+    private fun comment(c: org.schabi.newpipe.extractor.comments.CommentsInfoItem, reply: Boolean): Comment {
+        val text = c.commentText
+        return Comment(
+            author = c.uploaderName.orEmpty(),
+            avatar = best(c.uploaderAvatars, 48),
+            text = text?.content().orEmpty(),
+            html = text?.type() == org.schabi.newpipe.extractor.stream.Description.Type.HTML,
+            likes = c.textualLikeCount?.takeIf { it.isNotBlank() && it != "0" },
+            date = c.textualUploadDate,
+            replyCount = runCatching { c.replyCount }.getOrDefault(0).coerceAtLeast(0),
+            replies = runCatching { c.replies }.getOrNull(),
+            isReply = reply
+        )
     }
 
     // ---------- helpers ----------
@@ -376,8 +414,61 @@ object YtCatalog {
             .mapNotNull { (_, list) -> list.maxByOrNull { it.bitrate } }
             .map { VideoOption(heightOf(it), it.fps, it.content, codecFamily(it)) }
             .sortedWith(compareByDescending<VideoOption> { it.height }.thenByDescending { it.fps })
-        return if (video != null && audio != null) PlaySource(video.content, audio, muxed, null, options)
+        val dash = runCatching { dashManifest(info) }.getOrNull()
+        return if (video != null && audio != null) PlaySource(video.content, audio, muxed, null, options, dash)
         else PlaySource(null, audio, muxed ?: audio, info.hlsUrl?.takeIf { it.isNotBlank() }, if (audio != null) options else emptyList())
+    }
+
+    /**
+     * A DASH manifest with every H.264 picture quality (144p-1080p) and the M4A sound, built from YouTube's own
+     * byte ranges. The player starts small and moves up or down with the network: smooth on slow and fast links.
+     */
+    private fun dashManifest(info: StreamInfo): String? {
+        fun ok(s: org.schabi.newpipe.extractor.stream.Stream): Boolean {
+            val i = s.itagItem ?: return false
+            return i.initStart >= 0 && i.initEnd > i.initStart && i.indexStart > i.initEnd && i.indexEnd > i.indexStart
+        }
+        val videos = usable(info.videoOnlyStreams)
+            .filter { codecFamily(it) == "avc" && heightOf(it) in 1..1080 && ok(it) }
+            .groupBy { heightOf(it) }.mapNotNull { (_, l) -> l.maxByOrNull { it.bitrate } }
+            .sortedBy { heightOf(it) }
+        val audios = usable(info.audioStreams).filter { it.format?.suffix == "m4a" && ok(it) }
+        val original = audios.filter { it.audioTrackType == null || it.audioTrackType?.name == "ORIGINAL" }.ifEmpty { audios }
+        val audio = original.maxByOrNull { if (it.averageBitrate > 0) it.averageBitrate * 1000 else it.bitrate }
+        if (videos.size < 2 || audio == null) return null
+        val durMs = videos.first().itagItem?.approxDurationMs?.takeIf { it > 0 } ?: (info.duration * 1000)
+        if (durMs <= 0) return null
+        fun esc(u: String) = u.replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;")
+        val sb = StringBuilder()
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+        sb.append("<MPD xmlns=\"urn:mpeg:dash:schema:mpd:2011\" profiles=\"urn:mpeg:dash:profile:isoff-on-demand:2011\" type=\"static\" ")
+        sb.append("mediaPresentationDuration=\"PT").append(durMs / 1000.0).append("S\" minBufferTime=\"PT1.5S\">")
+        sb.append("<Period>")
+        sb.append("<AdaptationSet id=\"0\" contentType=\"video\" mimeType=\"video/mp4\" subsegmentAlignment=\"true\">")
+        videos.forEachIndexed { n, v ->
+            val i = v.itagItem!!
+            val h = heightOf(v)
+            val w = i.width.takeIf { it > 0 } ?: (h * 16 / 9)
+            sb.append("<Representation id=\"v").append(n).append("\" codecs=\"").append(v.codec ?: "avc1.4d401f")
+                .append("\" bandwidth=\"").append(i.bitrate.coerceAtLeast(1)).append("\" width=\"").append(w)
+                .append("\" height=\"").append(h).append("\" frameRate=\"").append(v.fps.coerceAtLeast(1)).append("\">")
+            sb.append("<BaseURL>").append(esc(v.content)).append("</BaseURL>")
+            sb.append("<SegmentBase indexRange=\"").append(i.indexStart).append('-').append(i.indexEnd).append("\">")
+            sb.append("<Initialization range=\"").append(i.initStart).append('-').append(i.initEnd).append("\"/></SegmentBase>")
+            sb.append("</Representation>")
+        }
+        sb.append("</AdaptationSet>")
+        val ai = audio.itagItem!!
+        sb.append("<AdaptationSet id=\"1\" contentType=\"audio\" mimeType=\"audio/mp4\" subsegmentAlignment=\"true\">")
+        sb.append("<Representation id=\"a0\" codecs=\"").append(audio.codec ?: "mp4a.40.2").append("\" bandwidth=\"")
+            .append(ai.bitrate.coerceAtLeast(1)).append("\" audioSamplingRate=\"").append(ai.sampleRate.takeIf { it > 0 } ?: 44100).append("\">")
+        sb.append("<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" value=\"")
+            .append(ai.audioChannels.takeIf { it > 0 } ?: 2).append("\"/>")
+        sb.append("<BaseURL>").append(esc(audio.content)).append("</BaseURL>")
+        sb.append("<SegmentBase indexRange=\"").append(ai.indexStart).append('-').append(ai.indexEnd).append("\">")
+        sb.append("<Initialization range=\"").append(ai.initStart).append('-').append(ai.initEnd).append("\"/></SegmentBase>")
+        sb.append("</Representation></AdaptationSet></Period></MPD>")
+        return sb.toString()
     }
 
     /** "avc", "vp9", "av1" or "other". */
