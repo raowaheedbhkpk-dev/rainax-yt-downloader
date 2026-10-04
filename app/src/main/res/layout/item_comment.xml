@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -44,7 +45,65 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textColor="@color/rx_text2"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <!-- like / dislike / reply -->
+        <LinearLayout
+            android:id="@+id/cActions"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="-10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/cLike"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <ImageView
+                    android:id="@+id/cLikeIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_thumb_up"
+                    app:tint="@color/rx_text" />
+
+                <TextView
+                    android:id="@+id/cLikeCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/cDislike"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Dislike"
+                android:padding="10dp"
+                android:src="@drawable/ic_thumb_down"
+                app:tint="@color/rx_text" />
+
+            <ImageView
+                android:id="@+id/cReply"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Reply"
+                android:padding="9dp"
+                android:src="@drawable/ic_reply"
+                app:tint="@color/rx_text" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/cReplies"

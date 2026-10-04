@@ -32,6 +32,18 @@
             android:textSize="15sp" />
     </LinearLayout>
 
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/commentSort"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        app:chipSpacingHorizontal="8dp"
+        app:selectionRequired="true"
+        app:singleLine="true"
+        app:singleSelection="true" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
@@ -67,6 +79,40 @@
             android:textSize="15sp"
             android:visibility="gone" />
     </FrameLayout>
+
+    <!-- replying to someone -->
+    <LinearLayout
+        android:id="@+id/replyBar"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:background="?attr/rxSurfaceAlt"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="4dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/replyText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/rx_text2"
+            android:textSize="13sp" />
+
+        <ImageButton
+            android:id="@+id/replyCancel"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Cancel reply"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close"
+            app:tint="@color/rx_text2" />
+    </LinearLayout>
 
     <!-- write a comment (signed in) -->
     <LinearLayout

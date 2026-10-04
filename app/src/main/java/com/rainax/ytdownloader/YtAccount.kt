@@ -70,7 +70,7 @@ object YtAccount {
         "2.20260805.01.00"
     }
 
-    private fun context(): JSONObject {
+    internal fun context(): JSONObject {
         val locale = java.util.Locale.getDefault()
         return JSONObject().put(
             "client", JSONObject()
@@ -82,11 +82,16 @@ object YtAccount {
     }
 
     /** Blocking. A signed-in YouTube request; throws a readable error. */
-    private fun post(endpoint: String, body: JSONObject): JSONObject {
-        val cookie = cookies ?: error("Sign in to YouTube first")
-        val sid = sapisid(cookie) ?: error("Your YouTube sign-in has ended. Sign in again")
+    private fun post(endpoint: String, body: JSONObject): JSONObject = request(endpoint, body, true)
+
+    /** Blocking. A YouTube request, signed in when the user is (required when [needAuth]). */
+    internal fun request(endpoint: String, body: JSONObject, needAuth: Boolean): JSONObject {
+        val cookie = cookies
+        if (cookie == null && needAuth) error("Sign in to YouTube first")
+        val sid = cookie?.let { sapisid(it) }
+        if (sid == null && needAuth) error("Your YouTube sign-in has ended. Sign in again")
         val ts = System.currentTimeMillis() / 1000
-        val auth = "SAPISIDHASH ${ts}_" + sha1("$ts $sid $ORIGIN")
+        val auth = sid?.let { "SAPISIDHASH ${ts}_" + sha1("$ts $it $ORIGIN") }
         val con = URL("$ORIGIN/youtubei/v1/$endpoint?prettyPrint=false").openConnection() as HttpURLConnection
         try {
             con.requestMethod = "POST"
@@ -95,15 +100,17 @@ object YtAccount {
             con.doOutput = true
             con.setRequestProperty("Content-Type", "application/json")
             con.setRequestProperty("User-Agent", UA)
-            con.setRequestProperty("Cookie", cookie)
-            con.setRequestProperty("Authorization", auth)
+            if (cookie != null && auth != null) {
+                con.setRequestProperty("Cookie", cookie)
+                con.setRequestProperty("Authorization", auth)
+            }
             con.setRequestProperty("Origin", ORIGIN)
             con.setRequestProperty("X-Origin", ORIGIN)
             con.setRequestProperty("X-Goog-AuthUser", "0")
             con.setRequestProperty("X-Youtube-Client-Name", "1")
             con.outputStream.use { it.write(body.toString().toByteArray()) }
             val code = con.responseCode
-            if (code == 401 || code == 403) error("Your YouTube sign-in has ended. Sign in again")
+            if ((code == 401 || code == 403) && auth != null) error("Your YouTube sign-in has ended. Sign in again")
             if (code !in 200..299) error("YouTube didn't answer (error $code). Try again")
             val text = con.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
             return JSONObject(text)
@@ -203,7 +210,7 @@ object YtAccount {
     }
 
     /** The object whose "sectionIdentifier" is [id] (YouTube's comment section). */
-    private fun findSection(node: Any?, id: String): JSONObject? {
+    internal fun findSection(node: Any?, id: String): JSONObject? {
         when (node) {
             is JSONObject -> {
                 if (node.optString("sectionIdentifier") == id) return node
@@ -316,7 +323,7 @@ object YtAccount {
         return parts.fold(0L) { acc, v -> acc * 60 + v }
     }
 
-    private fun text(o: JSONObject?): String? {
+    internal fun text(o: JSONObject?): String? {
         if (o == null) return null
         o.optString("simpleText").takeIf { it.isNotBlank() }?.let { return it }
         o.optString("content").takeIf { it.isNotBlank() }?.let { return it }
@@ -331,7 +338,7 @@ object YtAccount {
     }
 
     /** First value stored under [key] anywhere in [node]. */
-    private fun findValue(node: Any?, key: String): Any? {
+    internal fun findValue(node: Any?, key: String): Any? {
         when (node) {
             is JSONObject -> {
                 if (node.has(key)) return node.opt(key)
@@ -344,7 +351,7 @@ object YtAccount {
     }
 
     /** First object stored under [key] anywhere in [node]. */
-    private fun find(node: Any?, key: String): JSONObject? {
+    internal fun find(node: Any?, key: String): JSONObject? {
         when (node) {
             is JSONObject -> {
                 node.optJSONObject(key)?.let { return it }

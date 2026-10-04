@@ -1,13 +1,16 @@
 package com.rainax.ytdownloader
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.chip.Chip
 import com.rainax.ytdownloader.databinding.SheetCommentsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,8 +27,8 @@ import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.Page
 
 /**
- * All comments of a video: more load while scrolling, "View replies" opens a comment's replies,
- * and signed-in users can write a comment.
+ * All comments of a video, like YouTube: Top / Newest, like and dislike, replies and replying,
+ * more comments while scrolling, and writing a comment (signed in). Your own comments come first.
  */
 class CommentsSheet(
     private val act: AppCompatActivity,
@@ -33,15 +37,19 @@ class CommentsSheet(
 ) {
     private val sb = SheetCommentsBinding.inflate(act.layoutInflater)
     private val dialog = BottomSheetDialog(act)
-    private val rows = mutableListOf<Comment>()
-    private val openReplies = HashSet<Comment>()
-    private var next: Page? = null
+    private val rows = mutableListOf<YtComments.Item>()
+    private val openReplies = HashSet<String>()                     // comment ids with replies shown
+    private val fallbackReplies = HashMap<String, Page>()          // simple reader: replies page by comment id
+    private var full = true                                        // YouTube's own comment reader works for this video
+    private var nextToken: String? = null
+    private var nextPage: Page? = null
     private var loading: Job? = null
+    private var replyTo: YtComments.Item? = null
+    private var buildingSort = false
     private val adapter = Adapter()
 
     fun show() {
         dialog.setContentView(sb.root)
-        // nearly full screen, like YouTube
         sb.root.layoutParams?.let {
             it.height = (act.resources.displayMetrics.heightPixels * 0.85).toInt()
             sb.root.layoutParams = it
@@ -63,39 +71,91 @@ class CommentsSheet(
         sb.commentInput.isFocusable = signedIn
         sb.commentInput.isFocusableInTouchMode = signedIn
         sb.commentInput.hint = if (signedIn) "Add a comment…" else "Sign in to comment"
-        sb.commentInput.setOnClickListener { if (!YtAccount.isSignedIn(act)) { dialog.dismiss(); onSignIn() } }
+        sb.commentInput.setOnClickListener { if (!YtAccount.isSignedIn(act)) needSignIn() }
         sb.commentSend.setOnClickListener { post() }
+        sb.replyCancel.setOnClickListener { setReplyTo(null) }
 
         dialog.show()
         loadFirst()
     }
 
+    private fun needSignIn() {
+        dialog.dismiss()
+        onSignIn()
+    }
+
+    private fun videoId(): String? = Regex("(?:[?&]v=|shorts/)([\\w-]{6,})").find(videoUrl)?.groupValues?.get(1)
+
+    // ---------- loading ----------
+
     private fun loadFirst() {
         sb.commentLoading.isVisible = true
+        val id = videoId()
         loading = act.lifecycleScope.launch {
-            val page = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(videoUrl, null) }.getOrNull() }
-            sb.commentLoading.isVisible = false
-            // your own comments first, like YouTube shows them to you
-            val mine = videoId()?.let { MyComments.forVideo(act, it) }.orEmpty()
-            if (mine.isNotEmpty()) {
-                rows.addAll(mine)
-                adapter.notifyDataSetChanged()
+            // YouTube's own reader first (sorting, likes, replies); the simple reader if it can't read this video
+            val rich = withContext(Dispatchers.IO) { runCatching { id?.let { YtComments.first(it) } }.getOrNull() }
+            if (rich != null && (rich.items.isNotEmpty() || rich.next != null)) {
+                full = true
+                show(rich, replace = true)
+                buildSort(rich.sorts)
+                return@launch
             }
+            full = false
+            val simple = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(videoUrl, null) }.getOrNull() }
+            sb.commentLoading.isVisible = false
+            addMine()
             when {
-                page == null && mine.isNotEmpty() -> {}
-                page != null && page.items.isEmpty() && mine.isNotEmpty() -> {}
-                page == null -> empty("Couldn't load comments. Check your internet")
-                page.disabled -> empty("Comments are turned off")
-                page.items.isEmpty() -> empty("No comments yet")
+                simple == null -> if (rows.isEmpty()) empty("Couldn't load comments. Check your internet")
+                simple.disabled -> empty("Comments are turned off")
+                simple.items.isEmpty() -> if (rows.isEmpty()) empty("No comments yet")
                 else -> {
-                    if (page.total > 0) sb.commentCount.text = YtCatalog.count(page.total.toLong())
-                    val myTexts = mine.map { it.text.trim() }.toSet()
-                    rows.addAll(page.items.filter { it.text.trim() !in myTexts })
-                    next = page.next
-                    adapter.notifyDataSetChanged()
+                    if (simple.total > 0) sb.commentCount.text = YtCatalog.count(simple.total.toLong())
+                    val mine = rows.map { it.text.trim() }.toSet()
+                    simple.items.filter { plain(it).toString().trim() !in mine }.forEach { rows += fromSimple(it) }
+                    nextPage = simple.next
                 }
             }
+            adapter.notifyDataSetChanged()
         }
+    }
+
+    /** Shows a page from YouTube's reader ([replace] = new list, e.g. another sort order). */
+    private fun show(r: YtComments.Result, replace: Boolean) {
+        sb.commentLoading.isVisible = false
+        if (replace) {
+            rows.clear()
+            openReplies.clear()
+            addMine(r.items)
+        }
+        r.count?.let { sb.commentCount.text = it }
+        val known = rows.mapTo(HashSet()) { it.id }
+        val myTexts = rows.filter { it.mine }.map { it.text.trim() }.toSet()
+        r.items.filter { it.id !in known && it.text.trim() !in myTexts }.forEach { rows += it }
+        nextToken = r.next
+        adapter.notifyDataSetChanged()
+        sb.commentEmpty.isVisible = rows.isEmpty()
+        if (rows.isEmpty()) sb.commentEmpty.text = "No comments yet"
+    }
+
+    /** Comments you wrote from RAINAX (YouTube shows yours first to you). */
+    private fun addMine(fromYouTube: List<YtComments.Item> = emptyList()) {
+        val id = videoId() ?: return
+        val seen = fromYouTube.map { it.text.trim() }.toSet()
+        MyComments.forVideo(act, id).filter { it.text.trim() !in seen }.forEach { c ->
+            rows += YtComments.Item(
+                "mine-" + c.text.hashCode(), c.author, c.avatar, c.text, c.date, null, "NONE", 0, null,
+                null, null, null, null, null, isReply = false, byCreator = false, mine = true
+            )
+        }
+    }
+
+    private fun fromSimple(c: Comment): YtComments.Item {
+        val id = "s-" + System.identityHashCode(c)
+        c.replies?.let { fallbackReplies[id] = it }
+        return YtComments.Item(
+            id, c.author, c.avatar, plain(c).toString(), c.date, c.likes, "NONE", c.replyCount, null,
+            null, null, null, null, null, isReply = c.isReply, byCreator = false
+        )
     }
 
     private fun empty(text: String) {
@@ -104,23 +164,63 @@ class CommentsSheet(
     }
 
     private fun loadMore() {
-        val page = next ?: return
         if (loading?.isActive == true) return
-        loading = act.lifecycleScope.launch {
-            val more = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(videoUrl, page) }.getOrNull() } ?: return@launch
-            next = more.next
-            val start = rows.size
-            rows.addAll(more.items)
-            adapter.notifyItemRangeInserted(start, more.items.size)
+        if (full) {
+            val token = nextToken ?: return
+            loading = act.lifecycleScope.launch {
+                val r = withContext(Dispatchers.IO) { runCatching { YtComments.more(token, false) }.getOrNull() } ?: return@launch
+                show(r, replace = false)
+            }
+        } else {
+            val page = nextPage ?: return
+            loading = act.lifecycleScope.launch {
+                val more = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(videoUrl, page) }.getOrNull() } ?: return@launch
+                nextPage = more.next
+                val start = rows.size
+                more.items.forEach { rows += fromSimple(it) }
+                adapter.notifyItemRangeInserted(start, rows.size - start)
+            }
         }
     }
 
-    /** "View N replies": loads the replies under the comment (tap again to hide them). */
-    private fun toggleReplies(c: Comment) {
+    /** Top / Newest chips. */
+    private fun buildSort(sorts: List<Pair<String, String>>) {
+        if (sorts.size < 2) return
+        buildingSort = true
+        sb.commentSort.removeAllViews()
+        sorts.forEachIndexed { i, (title, token) ->
+            val chip = LayoutInflater.from(act).inflate(R.layout.item_chip, sb.commentSort, false) as Chip
+            chip.id = View.generateViewId()
+            chip.text = title
+            chip.tag = token
+            sb.commentSort.addView(chip)
+            if (i == 0) chip.isChecked = true
+        }
+        sb.commentSort.setOnCheckedStateChangeListener { group, ids ->
+            if (buildingSort) return@setOnCheckedStateChangeListener
+            val token = ids.firstOrNull()?.let { group.findViewById<Chip>(it)?.tag as? String } ?: return@setOnCheckedStateChangeListener
+            loading?.cancel()
+            sb.commentLoading.isVisible = true
+            loading = act.lifecycleScope.launch {
+                val r = withContext(Dispatchers.IO) { runCatching { YtComments.more(token, false) }.getOrNull() }
+                sb.commentLoading.isVisible = false
+                if (r != null) {
+                    show(r, replace = true)
+                    sb.commentList.scrollToPosition(0)
+                }
+            }
+        }
+        sb.commentSort.isVisible = true
+        buildingSort = false
+    }
+
+    // ---------- replies ----------
+
+    private fun toggleReplies(c: YtComments.Item) {
         val index = rows.indexOf(c)
         if (index < 0) return
-        if (c in openReplies) {
-            openReplies.remove(c)
+        if (c.id in openReplies) {
+            openReplies.remove(c.id)
             var end = index + 1
             while (end < rows.size && rows[end].isReply) end++
             val count = end - index - 1
@@ -129,56 +229,140 @@ class CommentsSheet(
             adapter.notifyItemChanged(index)
             return
         }
-        val page = c.replies ?: return
-        openReplies.add(c)
+        openReplies.add(c.id)
         adapter.notifyItemChanged(index)
         act.lifecycleScope.launch {
             val replies = withContext(Dispatchers.IO) {
-                runCatching { YtCatalog.comments(videoUrl, page, replies = true) }.getOrNull()
-            }?.items.orEmpty()
+                runCatching {
+                    val token = c.repliesToken
+                    val page = fallbackReplies[c.id]
+                    when {
+                        token != null -> YtComments.more(token, true).items.map { copyAsReply(it) }
+                        page != null -> YtCatalog.comments(videoUrl, page, replies = true).items.map { fromSimple(it) }
+                        else -> emptyList()
+                    }
+                }.getOrNull()
+            }.orEmpty()
             val at = rows.indexOf(c)
-            if (at < 0 || c !in openReplies) return@launch
+            if (at < 0 || c.id !in openReplies) return@launch
             rows.addAll(at + 1, replies)
             adapter.notifyItemRangeInserted(at + 1, replies.size)
         }
     }
 
-    private fun post() {
-        if (!YtAccount.isSignedIn(act)) {
-            dialog.dismiss()
-            onSignIn()
+    private fun copyAsReply(i: YtComments.Item) = if (i.isReply) i else YtComments.Item(
+        i.id, i.author, i.avatar, i.text, i.date, i.likeCount, i.likeState, 0, null,
+        i.likeAction, i.unlikeAction, i.dislikeAction, i.undislikeAction, i.replyParams, isReply = true, byCreator = i.byCreator
+    )
+
+    private fun setReplyTo(c: YtComments.Item?) {
+        replyTo = c
+        sb.replyBar.isVisible = c != null
+        sb.replyText.text = c?.let { "Replying to ${it.author}" }.orEmpty()
+        sb.commentInput.hint = if (c != null) "Add a reply…" else "Add a comment…"
+        if (c != null) {
+            sb.commentInput.requestFocus()
+            (act.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                .showSoftInput(sb.commentInput, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
+    // ---------- like / dislike ----------
+
+    private fun rate(c: YtComments.Item, like: Boolean) {
+        if (!YtAccount.isSignedIn(act)) { needSignIn(); return }
+        val before = c.likeState
+        val beforeCount = c.likeCount
+        val action = if (like) {
+            if (before == "LIKE") c.unlikeAction else c.likeAction
+        } else {
+            if (before == "DISLIKE") c.undislikeAction else c.dislikeAction
+        } ?: run {
+            Toast.makeText(act, "Open the comments again to rate this comment", Toast.LENGTH_SHORT).show()
             return
         }
+        val now = if (like) (if (before == "LIKE") "NONE" else "LIKE") else (if (before == "DISLIKE") "NONE" else "DISLIKE")
+        c.likeState = now
+        c.likeCount = bump(beforeCount, (if (now == "LIKE") 1 else 0) - (if (before == "LIKE") 1 else 0))
+        rows.indexOf(c).takeIf { it >= 0 }?.let { adapter.notifyItemChanged(it) }
+        act.lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { YtComments.act(action) }.isSuccess }
+            if (!ok) {
+                c.likeState = before
+                c.likeCount = beforeCount
+                rows.indexOf(c).takeIf { it >= 0 }?.let { adapter.notifyItemChanged(it) }
+                Toast.makeText(act, "Couldn't save that. Try again", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /** "12" + 1 = "13"; "1.2K" stays as it is. */
+    private fun bump(count: String?, by: Int): String? {
+        if (by == 0) return count
+        val n = count?.trim()?.toIntOrNull() ?: if (count.isNullOrBlank()) 0 else return count
+        val v = n + by
+        return if (v > 0) v.toString() else null
+    }
+
+    // ---------- writing ----------
+
+    private fun post() {
+        if (!YtAccount.isSignedIn(act)) { needSignIn(); return }
         val text = sb.commentInput.text.toString().trim()
         if (text.isEmpty()) return
         val id = videoId() ?: return
+        val target = replyTo
+        val params = target?.replyParams
+        if (target != null && params == null) {
+            Toast.makeText(act, "Replies can't be sent to this comment", Toast.LENGTH_SHORT).show()
+            return
+        }
         sb.commentSend.isEnabled = false
         act.lifecycleScope.launch {
             val error = withContext(Dispatchers.IO) {
-                runCatching { YtAccount.postComment(id, text) }.exceptionOrNull()
+                runCatching { if (params != null) YtComments.reply(params, text) else YtAccount.postComment(id, text) }.exceptionOrNull()
             }
             sb.commentSend.isEnabled = true
             if (error != null) {
-                Toast.makeText(act, error.message ?: "Couldn't post your comment", Toast.LENGTH_SHORT).show()
+                Toast.makeText(act, error.message ?: "Couldn't post", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             sb.commentInput.setText("")
             (act.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                 .hideSoftInputFromWindow(sb.commentInput.windowToken, 0)
-            MyComments.add(act, id, text)
             val me = YtAccount.profile(act)
-            rows.add(0, Comment(me?.handle ?: me?.name ?: "You", me?.avatar, text, false, null, "Just now"))
-            adapter.notifyItemInserted(0)
-            sb.commentEmpty.isVisible = false
-            sb.commentList.scrollToPosition(0)
-            Toast.makeText(act, "Comment posted", Toast.LENGTH_SHORT).show()
+            val author = me?.handle ?: me?.name ?: "You"
+            if (target != null) {
+                // the reply shows under the comment
+                val at = rows.indexOf(target)
+                val item = YtComments.Item(
+                    "reply-" + System.currentTimeMillis(), author, me?.avatar, text, "Just now", null, "NONE", 0, null,
+                    null, null, null, null, null, isReply = true, byCreator = false, mine = true
+                )
+                if (at >= 0) {
+                    rows.add(at + 1, item)
+                    adapter.notifyItemInserted(at + 1)
+                }
+                setReplyTo(null)
+                Toast.makeText(act, "Reply posted", Toast.LENGTH_SHORT).show()
+            } else {
+                MyComments.add(act, id, text)
+                rows.add(0, YtComments.Item(
+                    "mine-" + text.hashCode(), author, me?.avatar, text, "Just now", null, "NONE", 0, null,
+                    null, null, null, null, null, isReply = false, byCreator = false, mine = true
+                ))
+                adapter.notifyItemInserted(0)
+                sb.commentEmpty.isVisible = false
+                sb.commentList.scrollToPosition(0)
+                Toast.makeText(act, "Comment posted", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    private fun videoId(): String? = Regex("(?:[?&]v=|shorts/)([\\w-]{6,})").find(videoUrl)?.groupValues?.get(1)
-
     private fun plain(c: Comment): CharSequence =
         if (c.html) HtmlCompat.fromHtml(c.text, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim() else c.text
+
+    // ---------- list ----------
 
     private inner class Adapter : RecyclerView.Adapter<VH>() {
         override fun getItemCount() = rows.size
@@ -194,24 +378,58 @@ class CommentsSheet(
             )
             Img.load(holder.avatar, c.avatar, circle = true, widthPx = 96)
             holder.author.text = listOfNotNull(c.author.takeIf { it.isNotBlank() }, c.date).joinToString(" • ")
-            holder.text.text = plain(c)
-            holder.likes.text = c.likes?.let { "👍 $it" }.orEmpty()
-            holder.likes.isVisible = c.likes != null
-            val canReply = !c.isReply && c.replyCount > 0 && c.replies != null
-            holder.replies.isVisible = canReply
-            if (canReply) {
-                holder.replies.text = if (c in openReplies) "Hide replies"
-                else if (c.replyCount == 1) "View 1 reply" else "View ${c.replyCount} replies"
+            holder.text.text = c.text
+
+            // like / dislike / reply
+            val red = ContextCompat.getColor(act, R.color.rx_primary)
+            val normal = ContextCompat.getColor(act, R.color.rx_text)
+            holder.likeIcon.imageTintList = ColorStateList.valueOf(if (c.likeState == "LIKE") red else normal)
+            holder.dislike.imageTintList = ColorStateList.valueOf(if (c.likeState == "DISLIKE") red else normal)
+            holder.likeCount.text = c.likeCount.orEmpty()
+            holder.likeCount.isVisible = !c.likeCount.isNullOrBlank()
+            val rateable = !c.mine && full
+            holder.like.isEnabled = rateable
+            holder.like.alpha = if (rateable) 1f else 0.6f
+            holder.dislike.isVisible = rateable
+            holder.like.setOnClickListener { rate(c, true) }
+            holder.dislike.setOnClickListener { rate(c, false) }
+            holder.reply.isVisible = full && !c.mine && (c.replyParams != null || !YtAccount.isSignedIn(act))
+            holder.reply.setOnClickListener {
+                if (!YtAccount.isSignedIn(act)) needSignIn() else setReplyTo(if (c.isReply) parentOf(c) ?: c else c)
+            }
+
+            val hasReplies = !c.isReply && c.replyCount > 0 && (c.repliesToken != null || fallbackReplies.containsKey(c.id))
+            holder.replies.isVisible = hasReplies
+            if (hasReplies) {
+                holder.replies.text = when {
+                    c.id in openReplies -> "Hide replies"
+                    c.replyCount == 1 -> "1 reply"
+                    else -> "${c.replyCount} replies"
+                }
                 holder.replies.setOnClickListener { toggleReplies(c) }
             }
         }
+    }
+
+    /** The comment a reply belongs to (replies to a reply go to the same thread). */
+    private fun parentOf(reply: YtComments.Item): YtComments.Item? {
+        var i = rows.indexOf(reply)
+        while (i > 0) {
+            i--
+            if (!rows[i].isReply) return rows[i]
+        }
+        return null
     }
 
     private class VH(v: View) : RecyclerView.ViewHolder(v) {
         val avatar: ImageView = v.findViewById(R.id.cAvatar)
         val author: TextView = v.findViewById(R.id.cAuthor)
         val text: TextView = v.findViewById(R.id.cText)
-        val likes: TextView = v.findViewById(R.id.cLikes)
+        val like: LinearLayout = v.findViewById(R.id.cLike)
+        val likeIcon: ImageView = v.findViewById(R.id.cLikeIcon)
+        val likeCount: TextView = v.findViewById(R.id.cLikeCount)
+        val dislike: ImageView = v.findViewById(R.id.cDislike)
+        val reply: ImageView = v.findViewById(R.id.cReply)
         val replies: TextView = v.findViewById(R.id.cReplies)
     }
 }
