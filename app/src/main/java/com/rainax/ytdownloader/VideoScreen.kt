@@ -430,7 +430,9 @@ class VideoScreen(
     private fun loadComments(clean: String) {
         commentsJob?.cancel()
         commentsJob = act.lifecycleScope.launch {
-            val list = withContext(Dispatchers.IO) { YtCatalog.comments(clean) }
+            val fetched = withContext(Dispatchers.IO) { YtCatalog.comments(clean) }
+            // your own comment first (YouTube shows it on top to you)
+            val list = videoId(clean)?.let { MyComments.forVideo(act, it) }.orEmpty() + fetched
             if (url != clean || list.isEmpty()) return@launch
             comments = list
             val first = list.first()

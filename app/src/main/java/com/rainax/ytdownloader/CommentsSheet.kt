@@ -75,13 +75,22 @@ class CommentsSheet(
         loading = act.lifecycleScope.launch {
             val page = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(videoUrl, null) }.getOrNull() }
             sb.commentLoading.isVisible = false
+            // your own comments first, like YouTube shows them to you
+            val mine = videoId()?.let { MyComments.forVideo(act, it) }.orEmpty()
+            if (mine.isNotEmpty()) {
+                rows.addAll(mine)
+                adapter.notifyDataSetChanged()
+            }
             when {
+                page == null && mine.isNotEmpty() -> {}
+                page != null && page.items.isEmpty() && mine.isNotEmpty() -> {}
                 page == null -> empty("Couldn't load comments. Check your internet")
                 page.disabled -> empty("Comments are turned off")
                 page.items.isEmpty() -> empty("No comments yet")
                 else -> {
                     if (page.total > 0) sb.commentCount.text = YtCatalog.count(page.total.toLong())
-                    rows.addAll(page.items)
+                    val myTexts = mine.map { it.text.trim() }.toSet()
+                    rows.addAll(page.items.filter { it.text.trim() !in myTexts })
                     next = page.next
                     adapter.notifyDataSetChanged()
                 }
@@ -142,7 +151,7 @@ class CommentsSheet(
         }
         val text = sb.commentInput.text.toString().trim()
         if (text.isEmpty()) return
-        val id = Regex("(?:[?&]v=|shorts/)([\\w-]{6,})").find(videoUrl)?.groupValues?.get(1) ?: return
+        val id = videoId() ?: return
         sb.commentSend.isEnabled = false
         act.lifecycleScope.launch {
             val error = withContext(Dispatchers.IO) {
@@ -156,14 +165,17 @@ class CommentsSheet(
             sb.commentInput.setText("")
             (act.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                 .hideSoftInputFromWindow(sb.commentInput.windowToken, 0)
+            MyComments.add(act, id, text)
             val me = YtAccount.profile(act)
-            rows.add(0, Comment(me?.handle ?: me?.name ?: "You", me?.avatar, text, false, null, "just now"))
+            rows.add(0, Comment(me?.handle ?: me?.name ?: "You", me?.avatar, text, false, null, "Just now"))
             adapter.notifyItemInserted(0)
             sb.commentEmpty.isVisible = false
             sb.commentList.scrollToPosition(0)
             Toast.makeText(act, "Comment posted", Toast.LENGTH_SHORT).show()
         }
     }
+
+    private fun videoId(): String? = Regex("(?:[?&]v=|shorts/)([\\w-]{6,})").find(videoUrl)?.groupValues?.get(1)
 
     private fun plain(c: Comment): CharSequence =
         if (c.html) HtmlCompat.fromHtml(c.text, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim() else c.text
