@@ -40,11 +40,13 @@ class HomeScreen(
 ) {
     /** Home chips: personal lists when signed in to YouTube. */
     private var tabs: List<Pair<String, String>> = YtCatalog.TABS
+    /** List keys where For you is showing popular videos (more pages come from the popular list). */
+    private val popularFallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val skeleton = SkeletonAdapter()
 
     private fun computeTabs(): List<Pair<String, String>> =
         if (YtAccount.isSignedIn(act)) listOf(
-            "For you" to "acc:FEwhat_to_watch",
+            "For you" to FOR_YOU,
             "Subscriptions" to "acc:FEsubscriptions",
             "Music" to YtCatalog.MUSIC,
             "History" to "acc:FEhistory",
@@ -458,6 +460,19 @@ class HomeScreen(
                         chUrl != null -> YtCatalog.channelMore(chUrl, page!!)
                         plUrl != null -> YtCatalog.playlist(plUrl, page)
                         q != null -> YtCatalog.search(q, pl, page)
+                        // For you on a new account (no history yet) is empty on YouTube too: show popular videos instead
+                        tabId == FOR_YOU && (page == null || key in popularFallback) -> {
+                            if (page != null) YtCatalog.kiosk(YtCatalog.HOME, page, history)
+                            else {
+                                val mine = runCatching { YtAccount.browse(tabId.removePrefix("acc:"), null) }.getOrNull()
+                                if (mine != null && mine.items.size >= 6) { popularFallback.remove(key); mine }
+                                else {
+                                    popularFallback.add(key)
+                                    val popular = YtCatalog.kiosk(YtCatalog.HOME, null, history)
+                                    FeedPage((mine?.items.orEmpty() + popular.items).distinctBy { it.url }, popular.next)
+                                }
+                            }
+                        }
                         tabId.startsWith("acc:") -> YtAccount.browse(tabId.removePrefix("acc:"), page)
                         else -> YtCatalog.kiosk(tabId, page, history)
                     }
@@ -471,7 +486,7 @@ class HomeScreen(
                 applyListAdapter()
                 hm.feedRefresh.isRefreshing = false
                 if (reset) hm.feedList.scrollToPosition(0)
-                if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else "Nothing here right now")
+                if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else emptyText(tabId))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -518,6 +533,16 @@ class HomeScreen(
         }
     }
 
+    /** Friendly words for an empty personal list (new accounts). */
+    private fun emptyText(tabId: String): String = when (tabId) {
+        "acc:FEsubscriptions" -> "No videos from subscriptions yet.\nSubscribe to channels and their new videos show here."
+        "acc:FEchannels" -> "You haven't subscribed to any channels yet.\nOpen a channel and tap Subscribe."
+        "acc:FEhistory" -> "No watch history yet.\nVideos you watch on YouTube show here."
+        "acc:VLLL" -> "No liked videos yet.\nTap Like on a video to save it here."
+        "acc:VLWL" -> "Watch later is empty.\nTap Save on a video to add it."
+        else -> "Nothing here right now"
+    }
+
     private fun showError(text: String) {
         hm.feedErrorText.text = text
         hm.feedError.isVisible = true
@@ -535,6 +560,10 @@ class HomeScreen(
                 repeatCount = android.view.animation.Animation.INFINITE
             })
         }
+    }
+
+    private companion object {
+        const val FOR_YOU = "acc:FEwhat_to_watch"
     }
 
     /** Search suggestions: recent searches (clock icon) first, then YouTube's suggestions. */
