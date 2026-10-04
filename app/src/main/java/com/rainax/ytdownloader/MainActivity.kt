@@ -1,29 +1,18 @@
 package com.rainax.ytdownloader
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ActivityInfo
-import android.content.res.Configuration
-import android.graphics.LinearGradient
-import android.graphics.Shader
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.text.format.DateUtils
-import android.util.Patterns
 import android.view.View
-import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
-import android.widget.FrameLayout
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -32,9 +21,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -44,11 +30,8 @@ import com.rainax.ytdownloader.databinding.ActivityMainBinding
 import com.rainax.ytdownloader.databinding.SheetDownloadBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -422,7 +405,6 @@ class MainActivity : AppCompatActivity() {
         if (intent?.action != Intent.ACTION_SEND) return
         val urls = extractUrls(intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty())
         if (urls.isNotEmpty()) {
-            AppPrefs.setLastClip(this, urls[0])
             showDownloadSheet(urls)
         }
     }
@@ -862,7 +844,6 @@ class MainActivity : AppCompatActivity() {
                 3 -> {
                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("link", t.url))
-                    AppPrefs.setLastClip(this, t.url)
                     message("Link copied")
                 }
                 4 -> TaskRepository.remove(t.id)

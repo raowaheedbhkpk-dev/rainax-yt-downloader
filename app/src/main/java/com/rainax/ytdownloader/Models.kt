@@ -81,7 +81,7 @@ data class PreviewState(
     val all: List<FormatChoice> = emptyList(),
     val subtitles: List<SubtitleOption> = emptyList(),
     val playlist: List<PlaylistEntry> = emptyList(),
-    // for background play (no extra lookup when the headphones button is tapped)
+    // for background play (no extra lookup when it starts)
     val audioUrl: String? = null,
     val thumbUrl: String? = null,
     val uploader: String? = null,

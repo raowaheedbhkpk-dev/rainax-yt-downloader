@@ -4,12 +4,9 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.text.HtmlCompat
@@ -24,11 +21,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.rainax.ytdownloader.databinding.ItemVideoHeaderBinding
 import com.rainax.ytdownloader.databinding.PageVideoBinding
-import com.rainax.ytdownloader.databinding.SheetCommentsBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,7 +52,6 @@ class VideoScreen(
     var url: String? = null
         private set
     private var details: VideoDetails? = null
-    private var comments: List<Comment> = emptyList()
     private var job: Job? = null
     private var commentsJob: Job? = null
 
@@ -222,7 +216,6 @@ class VideoScreen(
         titleText = title
         uploaderText = uploader
         details = null
-        comments = emptyList()
         onChanged()
 
         header.vTitle.text = title.orEmpty()
@@ -434,7 +427,6 @@ class VideoScreen(
             // your own comment first (YouTube shows it on top to you)
             val list = videoId(clean)?.let { MyComments.forVideo(act, it) }.orEmpty() + fetched
             if (url != clean || list.isEmpty()) return@launch
-            comments = list
             val first = list.first()
             Img.load(header.vCommentAvatar, first.avatar, circle = true, widthPx = 80)
             header.vCommentText.text = plain(first)
@@ -674,29 +666,6 @@ class VideoScreen(
             ctl.show(WindowInsetsCompat.Type.systemBars())
         }
         onChanged()
-    }
-
-    private class CommentAdapter(
-        private val items: List<Comment>,
-        private val text: (Comment) -> CharSequence
-    ) : RecyclerView.Adapter<CommentAdapter.VH>() {
-        override fun getItemCount() = items.size
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_comment, parent, false))
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            val c = items[position]
-            Img.load(holder.avatar, c.avatar, circle = true, widthPx = 96)
-            holder.author.text = listOfNotNull(c.author.takeIf { it.isNotBlank() }, c.date).joinToString(" • ")
-            holder.text.text = text(c)
-            holder.likes.text = c.likes?.let { "👍 $it" }.orEmpty()
-            holder.likes.isVisible = c.likes != null
-        }
-        class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val avatar: ImageView = v.findViewById(R.id.cAvatar)
-            val author: TextView = v.findViewById(R.id.cAuthor)
-            val text: TextView = v.findViewById(R.id.cText)
-            val likes: TextView = v.findViewById(R.id.cLikes)
-        }
     }
 
     private fun AppCompatActivity.toast(text: String) =

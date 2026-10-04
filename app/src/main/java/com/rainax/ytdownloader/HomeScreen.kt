@@ -156,7 +156,6 @@ class HomeScreen(
     }
 
     /** True while searching or typing (Back returns to Home). */
-    val inSearch get() = query != null || playlistUrl != null || channelUrl != null || hm.suggestList.isVisible
 
     /** Back: stop typing, or leave the search results. Returns false when there is nothing to undo. */
     fun back(): Boolean {

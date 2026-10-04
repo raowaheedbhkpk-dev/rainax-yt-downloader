@@ -8,7 +8,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteOrder
 
-/** Turns a downloaded sound file (M4A/AAC, WebM/Opus) into MP3 on the phone: decode with Android, encode with LAME. */
+/** Turns a downloaded sound file (M4A/AAC, WebM/Opus) into MP3 on the phone: decode with Android, encode with native LAME. */
 object AudioConverter {
 
     /** Blocking. [stop] ends early (pause/cancel); [progress] gets 0-100. */
@@ -41,7 +41,7 @@ object AudioConverter {
             while (!outputDone) {
                 if (stop()) throw NativeDownloader.Stopped()
                 if (!inputDone) {
-                    val i = codec.dequeueInputBuffer(10_000)
+                    val i = codec.dequeueInputBuffer(0)          // never wait here: the decoder is busy, so output is coming
                     if (i >= 0) {
                         val buf = codec.getInputBuffer(i)!!
                         val n = ex.readSampleData(buf, 0)
@@ -54,7 +54,7 @@ object AudioConverter {
                         }
                     }
                 }
-                val o = codec.dequeueOutputBuffer(info, 10_000)
+                val o = codec.dequeueOutputBuffer(info, if (inputDone) 10_000 else 2_000)
                 if (o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     val f = codec.outputFormat
                     sampleRate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
@@ -102,6 +102,7 @@ object AudioConverter {
             out.flush()
         } finally {
             runCatching { out.close() }
+            runCatching { encoder?.close() }
             runCatching { codec.stop() }
             runCatching { codec.release() }
             runCatching { ex.release() }

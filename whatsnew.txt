@@ -1,2 +1,3 @@
-Fixed MP3 downloads playing only hiss/noise
-MP3 now sounds the same as the original song
+MP3 conversion is now many times faster
+Removed unused code and cleaned up the app
+Safer release signing

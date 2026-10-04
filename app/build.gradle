@@ -7,13 +7,15 @@ plugins {
 // always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.9.0"
+def rxVersionName = isTag ? tagVersion : "8.9.3"
 def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
 android {
     namespace 'com.rainax.ytdownloader'
     compileSdk 34
+    // NDK and CMake already installed on GitHub's build machines (no download needed)
+    ndkVersion "27.3.13750724"
 
     defaultConfig {
         applicationId "com.rainax.ytdownloader"
@@ -21,17 +23,28 @@ android {
         targetSdk 34
         versionCode rxVersionCode
         versionName rxVersionName
+        // the MP3 encoder is native code: build it for real phones (64/32-bit ARM) and x86_64 emulators
+        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.31.5"
+        }
     }
 
     // One fixed signing key for every build, so updates always install over the old version.
-    // Your own key (GitHub Secrets) wins when present; otherwise the key bundled in the repo is used.
+    // The key lives only in GitHub Secrets (scripts/make-private-key.sh); it is never stored in the repository.
+    def rxStoreFile = System.getenv("RAINAX_STORE_FILE")
     signingConfigs {
         release {
-            def envFile = System.getenv("RAINAX_STORE_FILE")
-            storeFile envFile ? file(envFile) : file("rainax-release.keystore")
-            storePassword System.getenv("RAINAX_STORE_PASSWORD") ?: "GCfbYGDaATxSWCBcPWEk"
-            keyAlias System.getenv("RAINAX_KEY_ALIAS") ?: "rainax"
-            keyPassword System.getenv("RAINAX_KEY_PASSWORD") ?: "GCfbYGDaATxSWCBcPWEk"
+            if (rxStoreFile) {
+                storeFile file(rxStoreFile)
+                storePassword System.getenv("RAINAX_STORE_PASSWORD")
+                keyAlias System.getenv("RAINAX_KEY_ALIAS") ?: "rainax"
+                keyPassword System.getenv("RAINAX_KEY_PASSWORD")
+            }
         }
     }
 
@@ -40,10 +53,8 @@ android {
             debuggable false
             minifyEnabled false      // the extractor uses reflection (Rhino), so no shrinking
             shrinkResources false
-            signingConfig signingConfigs.release
-        }
-        debug {
-            signingConfig signingConfigs.release
+            // without the secrets (e.g. a fork or a local build) the APK is left unsigned
+            signingConfig rxStoreFile ? signingConfigs.release : null
         }
     }
 

@@ -29,19 +29,17 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      # Optional: sign with your own private key stored in GitHub Secrets.
-      # Without these secrets the key bundled in the repo is used.
-      - name: Prepare private signing key (if provided)
+      # Signs with your private key stored in GitHub Secrets (create it once with scripts/make-private-key.sh).
+      - name: Prepare signing key
         env:
           KS_B64: ${{ secrets.RAINAX_KEYSTORE_BASE64 }}
         run: |
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/rainax.keystore"
-            echo "RAINAX_STORE_FILE=$RUNNER_TEMP/rainax.keystore" >> "$GITHUB_ENV"
-            echo "Using private signing key from secrets"
-          else
-            echo "Using bundled signing key"
+          if [ -z "$KS_B64" ]; then
+            echo "::error::No signing key. Run scripts/make-private-key.sh once to create it in GitHub Secrets."
+            exit 1
           fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/rainax.keystore"
+          echo "RAINAX_STORE_FILE=$RUNNER_TEMP/rainax.keystore" >> "$GITHUB_ENV"
 
       - name: Build release APK
         env:
