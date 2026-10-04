@@ -24,6 +24,7 @@ object AudioConverter {
         val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
         var sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
         var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+        var isFloat = false
 
         val codec = MediaCodec.createDecoderByType(mime)
         codec.configure(format, null, null, 0)
@@ -58,15 +59,26 @@ object AudioConverter {
                     val f = codec.outputFormat
                     sampleRate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
                     channels = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                    isFloat = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
+                        f.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
                 } else if (o >= 0) {
                     if (info.size > 0) {
                         val buf = codec.getOutputBuffer(o)!!
                         buf.position(info.offset)
                         buf.limit(info.offset + info.size)
-                        val shorts = buf.order(ByteOrder.nativeOrder()).asShortBuffer()
-                        val count = shorts.remaining()
-                        if (pcm.size < count) pcm = ShortArray(count)
-                        shorts.get(pcm, 0, count)
+                        buf.order(ByteOrder.nativeOrder())
+                        val count: Int
+                        if (isFloat) {
+                            val floats = buf.asFloatBuffer()
+                            count = floats.remaining()
+                            if (pcm.size < count) pcm = ShortArray(count)
+                            for (k in 0 until count) pcm[k] = (floats.get(k).coerceIn(-1f, 1f) * 32767f).toInt().toShort()
+                        } else {
+                            val shorts = buf.asShortBuffer()
+                            count = shorts.remaining()
+                            if (pcm.size < count) pcm = ShortArray(count)
+                            shorts.get(pcm, 0, count)
+                        }
                         val enc = encoder ?: Mp3Encoder(channels.coerceAtMost(2), sampleRate, bitrate).also { encoder = it }
                         val frames = count / channels.coerceAtLeast(1)
                         val need = enc.outSize(frames)

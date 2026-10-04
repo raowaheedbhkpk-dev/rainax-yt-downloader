@@ -1,3 +1,2 @@
-Download audio as MP3
-8K downloads when the video has 8K
-Fixed liking and disliking comments
+Fixed MP3 downloads playing only hiss/noise
+MP3 now sounds the same as the original song

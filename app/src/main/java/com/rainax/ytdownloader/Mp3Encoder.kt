@@ -86,8 +86,9 @@ class Mp3Encoder(channels: Int, sampleRate: Int, bitrate: Int = 192) {
         for (i in 0 until frames) {
             val l = pcm[i * inChannels].toInt()
             val r = if (inChannels > 1) pcm[i * inChannels + 1].toInt() else l
-            left[i] = l shl 16
-            right[i] = r shl 16
+            // this LAME port takes samples in the plain 16-bit range (+/-32768), not scaled up
+            left[i] = l
+            right[i] = r
         }
         val n = lame.lame_encode_buffer_int(gfp, left, right, frames, out, 0, out.size)
         check(n >= 0) { "MP3 encoding failed ($n)" }
