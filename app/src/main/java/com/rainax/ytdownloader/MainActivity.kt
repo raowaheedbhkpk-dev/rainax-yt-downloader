@@ -80,6 +80,14 @@ class MainActivity : AppCompatActivity() {
         { toggleSelect(it) }, { startSelect(it) }
     )
 
+    private val signIn =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+            if (r.resultCode != RESULT_OK) return@registerForActivityResult
+            home.onAccountChanged()
+            message("Signed in to YouTube")
+            refreshAccount()
+        }
+
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -105,7 +113,7 @@ class MainActivity : AppCompatActivity() {
                 video.fullscreen -> video.exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
                 tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
-                video.isOpen -> video.close()
+                video.isOpen && !video.minimized -> video.minimize()
                 home.back() -> {}
                 else -> {                    // nothing to go back to: leave the app normally
                     isEnabled = false
@@ -131,12 +139,13 @@ class MainActivity : AppCompatActivity() {
         }
         if (savedInstanceState == null) requestNotificationPermission()
 
-        home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title) })
+        home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title) }) { onAccountClick() }
         home.setup()
         video = VideoScreen(this, vp, vm, { controller }, { u, t, audio ->
             showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t)
         }) { updateChrome() }
         video.setup()
+        setupMiniPlayer()
         setupPlay()
         setupSettings()
 
@@ -166,6 +175,8 @@ class MainActivity : AppCompatActivity() {
                 else -> R.id.nav_home
             }
         }
+
+        if (savedInstanceState == null) refreshAccount()
 
         // New RAINAX version? (quiet check, a few seconds after start)
         if (savedInstanceState == null) b.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
@@ -214,6 +225,42 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // ----- YouTube account -----
+
+    private fun onAccountClick() {
+        if (!YtAccount.isSignedIn(this)) {
+            signIn.launch(Intent(this, SignInActivity::class.java))
+            return
+        }
+        val sb = com.rainax.ytdownloader.databinding.SheetAccountBinding.inflate(layoutInflater)
+        val dialog = BottomSheetDialog(this)
+        dialog.setContentView(sb.root)
+        val p = YtAccount.profile(this)
+        sb.accName.text = p?.name ?: "Signed in"
+        sb.accHandle.text = p?.handle.orEmpty()
+        sb.accHandle.isVisible = !p?.handle.isNullOrBlank()
+        Img.load(sb.accAvatar, p?.avatar, circle = true, widthPx = 200)
+        sb.accSignOut.setOnClickListener {
+            dialog.dismiss()
+            YtAccount.signOut(this)
+            android.webkit.CookieManager.getInstance().removeAllCookies(null)
+            home.onAccountChanged()
+            message("Signed out of YouTube")
+        }
+        dialog.show()
+    }
+
+    /** Name and picture of the signed-in account (top bar). */
+    private fun refreshAccount() {
+        if (!YtAccount.isSignedIn(this)) return
+        lifecycleScope.launch {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { YtAccount.refreshProfile(this@MainActivity) }.getOrNull()
+            }
+            if (ok != null) home.updateAccountIcon()
+        }
+    }
+
     /** A video from a list: open its page (playlists go straight to the download sheet). */
     private fun openItem(item: VideoItem) {
         if (item.isPlaylist) home.openPlaylist(item)
@@ -249,6 +296,10 @@ class MainActivity : AppCompatActivity() {
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     if (video.isOpen) video.showError("Couldn't play this video here. You can still download it.")
                 }
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (b.miniPlayer.root.isVisible) updateMiniPlayer()
+                }
             })
             val reopen = pendingVideo
             pendingVideo = null
@@ -280,7 +331,9 @@ class MainActivity : AppCompatActivity() {
     /** Back in the app: picture on again, and the page shows what is playing (maybe a later track). */
     private fun backInApp() {
         val c = controller ?: return
-        if (c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)) {
+        if (!video.minimized &&
+            c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)
+        ) {
             c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false).build()
         }
@@ -304,11 +357,46 @@ class MainActivity : AppCompatActivity() {
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
     private fun updateChrome() {
-        vp.root.isVisible = video.isOpen && tab == 0
+        vp.root.isVisible = video.isOpen && !video.minimized && tab == 0
         val full = video.fullscreen
         b.bottomNav.isVisible = !full
         b.navDivider.isVisible = !full
+        val mini = video.isOpen && !full && (video.minimized || tab != 0)
+        b.miniPlayer.root.isVisible = mini
+        if (mini) updateMiniPlayer()
         updateBack()
+    }
+
+    // ----- mini player -----
+
+    private fun setupMiniPlayer() {
+        val m = b.miniPlayer
+        m.root.setOnClickListener {
+            if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+            video.expand()
+        }
+        m.miniPlay.setOnClickListener {
+            val c = controller ?: return@setOnClickListener
+            if (c.isPlaying) c.pause() else {
+                if (c.playbackState == androidx.media3.common.Player.STATE_ENDED) c.seekTo(0)
+                c.play()
+            }
+        }
+        m.miniClose.setOnClickListener { video.close() }
+    }
+
+    private var miniThumbShown: String? = null
+
+    private fun updateMiniPlayer() {
+        val m = b.miniPlayer
+        m.miniTitle.text = video.miniTitle()
+        m.miniSub.text = video.miniSub()
+        val thumb = video.thumbUrl
+        if (thumb != miniThumbShown) {
+            miniThumbShown = thumb
+            Img.load(m.miniThumb, thumb, widthPx = 320)
+        }
+        m.miniPlay.setImageResource(if (controller?.isPlaying == true) R.drawable.ic_pause else R.drawable.ic_play)
     }
 
     private fun updateBack() {

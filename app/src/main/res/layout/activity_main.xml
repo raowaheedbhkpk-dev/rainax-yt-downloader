@@ -37,6 +37,10 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <include
+            android:id="@+id/miniPlayer"
+            layout="@layout/layout_mini_player" />
+
         <View
             android:id="@+id/navDivider"
             android:layout_width="match_parent"

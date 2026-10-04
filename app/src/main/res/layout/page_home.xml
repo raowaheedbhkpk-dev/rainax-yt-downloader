@@ -46,6 +46,24 @@
                 android:contentDescription="Search"
                 android:src="@drawable/ic_search"
                 app:tint="@color/rx_text" />
+
+            <FrameLayout
+                android:id="@+id/accountBtn"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="YouTube account">
+
+                <ImageView
+                    android:id="@+id/accountIcon"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_person"
+                    app:tint="@color/rx_text" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Playlist page: back, name, Download all -->

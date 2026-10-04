@@ -35,8 +35,23 @@ class HomeScreen(
     private val hm: PageHomeBinding,
     private val vm: MainViewModel,
     private val openVideo: (VideoItem) -> Unit,
-    private val download: (VideoItem) -> Unit
+    private val download: (VideoItem) -> Unit,
+    private val onAccount: () -> Unit
 ) {
+    /** Home chips: personal lists when signed in to YouTube. */
+    private var tabs: List<Pair<String, String>> = YtCatalog.TABS
+    private val skeleton = SkeletonAdapter()
+
+    private fun computeTabs(): List<Pair<String, String>> =
+        if (YtAccount.isSignedIn(act)) listOf(
+            "For you" to "acc:FEwhat_to_watch",
+            "Subscriptions" to "acc:FEsubscriptions",
+            "Music" to YtCatalog.MUSIC,
+            "History" to "acc:FEhistory",
+            "Liked" to "acc:VLLL",
+            "Watch later" to "acc:VLWL"
+        ) else YtCatalog.TABS
+
     private var tabIndex = 0
     private var query: String? = null          // showing search results for this
     private var playlists = false              // search tab: Playlists instead of Videos
@@ -59,7 +74,7 @@ class HomeScreen(
     }
 
     /** Music tab (rows of playlists) is showing. */
-    private val isMusic get() = query == null && playlistUrl == null && YtCatalog.TABS[tabIndex].second == YtCatalog.MUSIC
+    private val isMusic get() = query == null && playlistUrl == null && tabs[tabIndex].second == YtCatalog.MUSIC
 
     private fun applyListAdapter() {
         val want: RecyclerView.Adapter<*> = if (isMusic) musicAdapter else adapter
@@ -68,6 +83,9 @@ class HomeScreen(
     private val suggestAdapter = SuggestAdapter { submit(it) }
 
     fun setup() {
+        tabs = computeTabs()
+        hm.accountBtn.setOnClickListener { onAccount() }
+        updateAccountIcon()
         hm.root.isFocusableInTouchMode = true
         hm.feedList.layoutManager = LinearLayoutManager(act)
         hm.feedList.adapter = bigAdapter
@@ -239,7 +257,7 @@ class HomeScreen(
     private fun buildTabs() {
         buildingTabs = true
         hm.homeChips.removeAllViews()
-        val titles = if (query != null) listOf("Videos", "Playlists") else YtCatalog.TABS.map { it.first }
+        val titles = if (query != null) listOf("Videos", "Playlists") else tabs.map { it.first }
         val sel = if (query != null) (if (playlists) 1 else 0) else tabIndex
         titles.forEachIndexed { i, t ->
             val chip = LayoutInflater.from(act).inflate(R.layout.item_chip, hm.homeChips, false) as Chip
@@ -252,7 +270,7 @@ class HomeScreen(
     }
 
     private fun cacheKey(): String = playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$playlists" }
-        ?: "tab:${YtCatalog.TABS[tabIndex].second}"
+        ?: "tab:${tabs[tabIndex].second}"
 
     private fun open(item: VideoItem) = if (item.isPlaylist) openPlaylist(item) else openVideo(item)
 
@@ -268,7 +286,7 @@ class HomeScreen(
         }
         if (!pulled) {
             musicAdapter.submit(emptyList())
-            hm.feedLoading.isVisible = true
+            showSkeleton()
         }
         val rows = YtCatalog.MUSIC_SECTIONS
         loadJob = act.lifecycleScope.launch {
@@ -282,6 +300,7 @@ class HomeScreen(
                             if (items.isNotEmpty()) {
                                 results[i] = MusicSection(row.first, items)
                                 musicAdapter.submit(results.filterNotNull())
+                                applyListAdapter()
                                 hm.feedLoading.isVisible = false
                                 hm.feedRefresh.isRefreshing = false
                             }
@@ -295,6 +314,7 @@ class HomeScreen(
             }
             hm.feedLoading.isVisible = false
             hm.feedRefresh.isRefreshing = false
+            applyListAdapter()
             val list = results.filterNotNull()
             if (list.isEmpty()) showError(failed?.message ?: "Couldn't load music. Check your internet")
             else vm.musicCache = list
@@ -324,7 +344,7 @@ class HomeScreen(
             }
             if (!pulled) {
                 a.submit(emptyList())
-                hm.feedLoading.isVisible = true
+                showSkeleton()
             }
             a.loadingMore = false
         } else if (loadJob?.isActive == true || next == null) {
@@ -333,7 +353,7 @@ class HomeScreen(
         val q = query
         val plUrl = playlistUrl
         val pl = playlists
-        val tabId = YtCatalog.TABS[tabIndex].second
+        val tabId = tabs[tabIndex].second
         val page = next
         val key = cacheKey()
         val history = AppPrefs.searchHistory(act)
@@ -343,6 +363,7 @@ class HomeScreen(
                     when {
                         plUrl != null -> YtCatalog.playlist(plUrl, page)
                         q != null -> YtCatalog.search(q, pl, page)
+                        tabId.startsWith("acc:") -> YtAccount.browse(tabId.removePrefix("acc:"), page)
                         else -> YtCatalog.kiosk(tabId, page, history)
                     }
                 }
@@ -351,6 +372,7 @@ class HomeScreen(
                 a.loadingMore = next != null
                 vm.feedCache[key] = a.all() to next
                 hm.feedLoading.isVisible = false
+                applyListAdapter()
                 hm.feedRefresh.isRefreshing = false
                 if (reset) hm.feedList.scrollToPosition(0)
                 if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else "Nothing here right now")
@@ -359,15 +381,64 @@ class HomeScreen(
             } catch (e: Exception) {
                 hm.feedLoading.isVisible = false
                 hm.feedRefresh.isRefreshing = false
+                applyListAdapter()
                 a.loadingMore = false
                 if (reset || a.count == 0) showError(e.message ?: "Couldn't load. Check your internet")
             }
         }
     }
 
+    /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
+    private fun showSkeleton() {
+        hm.feedLoading.isVisible = false
+        if (hm.feedList.adapter !== skeleton) hm.feedList.adapter = skeleton
+    }
+
+    /** Signed in or out: new chips and lists. */
+    fun onAccountChanged() {
+        tabs = computeTabs()
+        tabIndex = 0
+        vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
+        updateAccountIcon()
+        if (query == null && playlistUrl == null) {
+            buildTabs()
+            applyListAdapter()
+            load(reset = true)
+        }
+    }
+
+    /** Top bar: the account's picture, or an empty profile icon. */
+    fun updateAccountIcon() {
+        val avatar = if (YtAccount.isSignedIn(act)) YtAccount.profile(act)?.avatar else null
+        if (avatar != null) {
+            hm.accountIcon.imageTintList = null
+            Img.load(hm.accountIcon, avatar, circle = true, widthPx = 96)
+        } else {
+            Img.load(hm.accountIcon, null)
+            hm.accountIcon.setImageResource(R.drawable.ic_person)
+            hm.accountIcon.imageTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(act, R.color.rx_text)
+            )
+        }
+    }
+
     private fun showError(text: String) {
         hm.feedErrorText.text = text
         hm.feedError.isVisible = true
+    }
+
+    /** Five grey rows that gently pulse. */
+    private class SkeletonAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        override fun getItemCount() = 5
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
+            object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_skeleton, parent, false)) {}
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            holder.itemView.startAnimation(android.view.animation.AlphaAnimation(1f, 0.45f).apply {
+                duration = 750
+                repeatMode = android.view.animation.Animation.REVERSE
+                repeatCount = android.view.animation.Animation.INFINITE
+            })
+        }
     }
 
     /** Search suggestions: recent searches (clock icon) first, then YouTube's suggestions. */

@@ -68,7 +68,7 @@ class VideoScreen(
         vb.videoList.layoutManager = LinearLayoutManager(act)
         related.header = header.root
         vb.videoList.adapter = related
-        vb.videoClose.setOnClickListener { close() }
+        vb.videoClose.setOnClickListener { minimize() }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
         header.vDownload.setOnClickListener { url?.let { download(it, currentTitle(), false) } }
         header.vShare.setOnClickListener { share() }
@@ -117,13 +117,16 @@ class VideoScreen(
      */
     fun open(
         url: String, title: String? = null, uploader: String? = null, startMs: Long = 0,
-        resume: Boolean = false, thumb: String? = null
+        resume: Boolean = false, thumb: String? = null, keepMinimized: Boolean = false
     ) {
         val clean = FastExtractor.videoUrl(url)
         this.url = clean
+        if (!keepMinimized && minimized) setMinimized(false)
+        thumbUrl = thumb ?: youtubeThumb(clean)
+        titleText = title
+        uploaderText = uploader
         details = null
         comments = emptyList()
-        vb.root.isVisible = true
         onChanged()
 
         header.vTitle.text = title.orEmpty()
@@ -177,12 +180,50 @@ class VideoScreen(
         val item = p.currentMediaItem ?: return
         val id = item.mediaId
         if (id.isBlank() || id == url) return
-        open(id, item.mediaMetadata.title?.toString(), item.mediaMetadata.artist?.toString(), p.currentPosition.coerceAtLeast(0), resume = true)
+        open(
+            id, item.mediaMetadata.title?.toString(), item.mediaMetadata.artist?.toString(),
+            p.currentPosition.coerceAtLeast(0), resume = true,
+            thumb = item.mediaMetadata.artworkUri?.toString(), keepMinimized = minimized
+        )
+    }
+
+    // ---------- mini player ----------
+
+    /** The page is folded into the mini player above the bottom bar (the video keeps playing). */
+    var minimized = false
+        private set
+    var thumbUrl: String? = null
+        private set
+    private var titleText: String? = null
+    private var uploaderText: String? = null
+
+    fun miniTitle(): String = details?.title ?: titleText.orEmpty()
+    fun miniSub(): String = details?.uploader ?: uploaderText.orEmpty()
+
+    fun minimize() {
+        if (url == null) return
+        if (fullscreen) exitFullscreen()
+        setMinimized(true)
+    }
+
+    fun expand() {
+        if (url == null) return
+        setMinimized(false)
+    }
+
+    private fun setMinimized(on: Boolean) {
+        minimized = on
+        // no picture while folded: saves battery and data, the sound goes on
+        player()?.let { p ->
+            p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, on).build()
+        }
+        onChanged()
     }
 
     fun close() {
         if (fullscreen) exitFullscreen()
-        vb.root.isVisible = false
+        if (minimized) setMinimized(false)
         job?.cancel()
         commentsJob?.cancel()
         url = null
@@ -262,6 +303,7 @@ class VideoScreen(
     // ---------- details ----------
 
     private fun fill(d: VideoDetails) {
+        if (thumbUrl == null) thumbUrl = d.thumb
         header.vLoading.isVisible = false
         header.vTitle.text = d.title
         val meta = mutableListOf<String>()
@@ -279,6 +321,7 @@ class VideoScreen(
         }
         related.submit(d.related)
         header.vUpNext.isVisible = d.related.isNotEmpty()
+        onChanged()                            // the mini player shows the real title
     }
 
     private fun loadComments(clean: String) {

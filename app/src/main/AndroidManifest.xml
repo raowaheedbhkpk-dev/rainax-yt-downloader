@@ -38,6 +38,13 @@
             </intent-filter>
         </activity>
 
+        <!-- YouTube sign-in (Google's own page) -->
+        <activity
+            android:name=".SignInActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Built-in player for finished downloads; also offered for any video/audio file ("Open with") -->
         <activity
             android:name=".PlayerActivity"
