@@ -202,6 +202,8 @@ class DownloadService : Service() {
                 val cur = TaskRepository.get(id) ?: return          // cancelled
                 if (cur.status != Status.RUNNING) return            // paused
                 val msg = e.readable()
+                // the next try asks YouTube for fresh stream addresses instead of reusing remembered ones
+                FastExtractor.forget(cur.url)
 
                 if (msg.lowercase().let { "private video" in it || "members-only" in it || "join this channel" in it }) {
                     TaskRepository.remove(id)                       // private videos are skipped, never listed
@@ -325,27 +327,48 @@ class DownloadService : Service() {
         // bytes already on disk from an earlier try: count them, but not as speed
         val onResumed: (Long) -> Unit = { n -> synchronized(uiLock) { done.addAndGet(n); lastBytes += n } }
 
+        /**
+         * Downloads [main]; if YouTube refuses that stream (HTTP 403/404...), tries the [alts] one by one.
+         * Returns the file that was saved.
+         */
+        fun fetch(main: FastExtractor.Part, alts: List<FastExtractor.Part>, base: String): File {
+            val all = listOf(main) + alts
+            for ((i, p) in all.withIndex()) {
+                val f = File(dir, (if (i == 0) base else "$base-$i") + "." + p.ext)
+                val before = done.get()
+                try {
+                    NativeDownloader.download(id, p.url, f, onResumed, onBytes)
+                    return f
+                } catch (e: java.io.IOException) {
+                    if (e is NativeDownloader.Stopped || TaskRepository.get(id)?.status != Status.RUNNING) throw e
+                    val refused = e.message.orEmpty().contains("HTTP error 4")
+                    if (!refused || i == all.lastIndex) throw e
+                    done.set(before)                        // this stream's bytes don't count
+                    f.delete()
+                    File(f.path + ".state").delete()
+                }
+            }
+            error("No stream could be downloaded")
+        }
+
         var output: File
         val s = plan.single
         if (s != null) {
             label = ""
-            val f = File(dir, "media.${s.ext}")
-            NativeDownloader.download(id, s.url, f, onResumed, onBytes)
-            output = f
+            output = fetch(s, plan.audioAlts, "media")
         } else {
             val v = plan.video!!
             val a = plan.audio!!
             val vf = File(dir, "video.${v.ext}")
-            val af = File(dir, "audio.${a.ext}")
             label = "video"
             NativeDownloader.download(id, v.url, vf, onResumed, onBytes)
             label = "sound"
-            NativeDownloader.download(id, a.url, af, onResumed, onBytes)
+            val gotAudio = fetch(a, plan.audioAlts, "audio")
             if (TaskRepository.get(id)?.status != Status.RUNNING) return
             TaskRepository.update(id) { it.copy(progress = 99, message = "Joining video and sound…") }
             val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
             try {
-                NativeDownloader.mux(id, vf, af, joined, plan.webm)
+                NativeDownloader.mux(id, vf, gotAudio, joined, plan.webm)
             } catch (e: NativeDownloader.Stopped) {
                 throw e
             } catch (e: Exception) {

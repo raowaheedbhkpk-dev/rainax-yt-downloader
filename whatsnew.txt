@@ -1,3 +1,5 @@
-MP3 conversion is now many times faster
-Removed unused code and cleaned up the app
-Safer release signing
+Comment box now stays above the keyboard
+Downloading now always shows on top of the list
+Tap a download in progress to start watching it right away
+New floating mini player: the video keeps playing, drag it anywhere
+New RAINAX Tube header logo

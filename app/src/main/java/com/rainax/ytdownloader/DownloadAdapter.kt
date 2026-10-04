@@ -89,7 +89,7 @@ class DownloadAdapter(
         b.actionBtn.isVisible = !selecting
         b.closeBtn.isVisible = !selecting
         b.root.setOnClickListener {
-            if (selecting) onToggle(t) else if (t.status == Status.DONE) onOpen(t)
+            if (selecting) onToggle(t) else onOpen(t)          // done: open the file; still downloading: watch it now
         }
         b.root.setOnLongClickListener {
             onLongPress(t)

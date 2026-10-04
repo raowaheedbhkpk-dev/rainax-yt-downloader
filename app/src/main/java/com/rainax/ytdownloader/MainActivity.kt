@@ -55,11 +55,11 @@ class MainActivity : AppCompatActivity() {
     private var sheet: BottomSheetDialog? = null
 
     private val activeAdapter = DownloadAdapter(
-        { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openFile(it) },
+        { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openOrWatch(it) },
         { toggleSelect(it) }, { startSelect(it) }
     )
     private val doneAdapter = DownloadAdapter(
-        { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openFile(it) },
+        { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openOrWatch(it) },
         { toggleSelect(it) }, { startSelect(it) }
     )
 
@@ -251,6 +251,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Finished: open the file. Still downloading: start watching it right away (streamed), like Netflix. */
+    private fun openOrWatch(t: DownloadTask) {
+        if (t.status == Status.DONE) {
+            openFile(t)
+            return
+        }
+        if (!FastExtractor.supports(t.url)) {                     // YouTube streams; other sites play once saved
+            message("You can watch this one as soon as it finishes downloading")
+            return
+        }
+        if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+        val same = video.url?.let { FastExtractor.videoUrl(it) } == FastExtractor.videoUrl(t.url)
+        if (same) video.expand()                        // already playing it: just show it
+        else video.open(t.url, t.title.ifBlank { null }, thumb = t.thumbUrl)
+    }
+
     /** A video from a list: open its page (playlists go straight to the download sheet). */
     private fun openItem(item: VideoItem) {
         if (item.isPlaylist) home.openPlaylist(item)
@@ -275,6 +291,7 @@ class MainActivity : AppCompatActivity() {
             if (controllerFuture !== future) { c.release(); return@addListener }
             controller = c
             video.attach(c)
+            syncVideoSurface()
             c.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                     // next track (button, notification or end of video): the page shows that video
@@ -300,6 +317,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun disconnectPlayer() {
         video.attach(null)
+        b.miniPlayer.miniVideo.player = null
         controllerFuture?.let { androidx.media3.session.MediaController.releaseFuture(it) }
         controllerFuture = null
         controller = null
@@ -321,9 +339,7 @@ class MainActivity : AppCompatActivity() {
     /** Back in the app: picture on again, and the page shows what is playing (maybe a later track). */
     private fun backInApp() {
         val c = controller ?: return
-        if (!video.minimized &&
-            c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)
-        ) {
+        if (c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)) {
             c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false).build()
         }
@@ -352,13 +368,23 @@ class MainActivity : AppCompatActivity() {
         b.bottomNav.isVisible = !full
         b.navDivider.isVisible = !full
         val mini = video.isOpen && !full && (video.minimized || tab != 0)
+        val wasMini = b.miniPlayer.root.isVisible
         b.miniPlayer.root.isVisible = mini
-        if (mini) updateMiniPlayer()
+        if (mini) {
+            updateMiniPlayer()
+            if (!wasMini) placeMiniPlayer()
+        }
+        syncVideoSurface()
         updateBack()
     }
 
-    // ----- mini player -----
+    // ----- floating mini player -----
 
+    private var miniPlaced = false
+    private var miniLeftSide = false
+    private var miniDragging = false
+
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
     private fun setupMiniPlayer() {
         val m = b.miniPlayer
         m.root.setOnClickListener {
@@ -373,20 +399,113 @@ class MainActivity : AppCompatActivity() {
             }
         }
         m.miniClose.setOnClickListener { video.close() }
+
+        // drag it anywhere; when let go it moves to the nearest side, like YouTube's
+        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+        var downX = 0f; var downY = 0f; var startX = 0f; var startY = 0f
+        m.root.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    downX = e.rawX; downY = e.rawY; startX = v.x; startY = v.y; miniDragging = false
+                    v.animate().cancel()
+                    false                                  // let a plain tap still open the video
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val dx = e.rawX - downX
+                    val dy = e.rawY - downY
+                    if (!miniDragging && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) {
+                        miniDragging = true
+                        // the card stops treating this as a tap
+                        android.view.MotionEvent.obtain(e).let { c ->
+                            c.action = android.view.MotionEvent.ACTION_CANCEL
+                            v.onTouchEvent(c)
+                            c.recycle()
+                        }
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    if (miniDragging) {
+                        val (minX, maxX, minY, maxY) = miniBounds()
+                        v.x = (startX + dx).coerceIn(minX, maxX)
+                        v.y = (startY + dy).coerceIn(minY, maxY)
+                    }
+                    miniDragging
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    if (miniDragging) {
+                        val (minX, maxX, _, _) = miniBounds()
+                        miniLeftSide = v.x + v.width / 2f < (minX + maxX + v.width) / 2f
+                        v.animate().x(if (miniLeftSide) minX else maxX).setDuration(180).start()
+                        miniDragging = false
+                        true
+                    } else false
+                }
+                else -> false
+            }
+        }
+        // keep it on screen when the screen turns or the bottom bar hides
+        b.root.addOnLayoutChangeListener { _, l, t, r, bt, ol, ot, oR, ob ->
+            val resized = r - l != oR - ol || bt - t != ob - ot
+            if (resized && m.root.isVisible && miniPlaced && !miniDragging) {
+                m.root.animate().cancel()
+                val (minX, maxX, minY, maxY) = miniBounds()
+                m.root.x = if (miniLeftSide) minX else maxX
+                m.root.y = m.root.y.coerceIn(minY, maxY)
+            }
+        }
     }
 
-    private var miniThumbShown: String? = null
+    /** Where the floating player may go: inside the screen, below the status bar, above the bottom bar. */
+    private fun miniBounds(): List<Float> {
+        val m = b.miniPlayer.root
+        val margin = 12 * resources.displayMetrics.density
+        val root = b.root
+        val insets = androidx.core.view.ViewCompat.getRootWindowInsets(root)
+            ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        val top = (insets?.top ?: 0) + margin
+        val navTop = if (b.bottomNav.isVisible && b.bottomNav.height > 0) {
+            val loc = IntArray(2); val rootLoc = IntArray(2)
+            b.bottomNav.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
+            (loc[1] - rootLoc[1]).toFloat()
+        } else root.height - (insets?.bottom ?: 0).toFloat()
+        val maxX = (root.width - m.width - margin).coerceAtLeast(margin)
+        val maxY = (navTop - m.height - margin).coerceAtLeast(top)
+        return listOf(margin, maxX, top, maxY)
+    }
+
+    private fun placeMiniPlayer() {
+        val m = b.miniPlayer.root
+        m.alpha = 0f                                   // hidden until it is in place (no flash at the corner)
+        m.post {
+            m.alpha = 1f
+            if (m.width == 0) return@post
+            val (minX, maxX, minY, maxY) = miniBounds()
+            if (!miniPlaced) {                         // first time: bottom right, above the bottom bar
+                miniPlaced = true
+                miniLeftSide = false
+                m.x = maxX
+                m.y = maxY
+            } else {
+                m.x = if (miniLeftSide) minX else maxX
+                m.y = m.y.coerceIn(minY, maxY)
+            }
+        }
+    }
 
     private fun updateMiniPlayer() {
-        val m = b.miniPlayer
-        m.miniTitle.text = video.miniTitle()
-        m.miniSub.text = video.miniSub()
-        val thumb = video.thumbUrl
-        if (thumb != miniThumbShown) {
-            miniThumbShown = thumb
-            Img.load(m.miniThumb, thumb, widthPx = 320)
-        }
-        m.miniPlay.setImageResource(if (controller?.isPlaying == true) R.drawable.ic_pause else R.drawable.ic_play)
+        b.miniPlayer.miniPlay.setImageResource(if (controller?.isPlaying == true) R.drawable.ic_pause else R.drawable.ic_play)
+    }
+
+    /** The picture follows the player that is on screen: the floating window or the video page. */
+    private fun syncVideoSurface() {
+        val c = controller ?: return
+        val mini = b.miniPlayer.miniVideo
+        val page = video.playerView
+        val (show, hide) = if (b.miniPlayer.root.isVisible) mini to page else page to mini
+        if (show.player === c && hide.player == null) return
+        // only one view may draw the picture: detach both, then attach the visible one
+        hide.player = null
+        show.player = null
+        show.player = c
     }
 
     private fun updateBack() {
@@ -647,14 +766,28 @@ class MainActivity : AppCompatActivity() {
         pl.activeSection.isVisible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
         pl.activeTitle.text = "Downloading (${active.size})"
-        // Newest always on top, in both lists
-        val newActive = active.sortedByDescending { it.createdAt }
-        val grew = newActive.size > activeAdapter.itemCount && newActive.firstOrNull()?.id != activeAdapter.currentList.firstOrNull()?.id
-        activeAdapter.submitList(newActive) { if (grew) pl.playScroll.smoothScrollTo(0, 0) }
+        // Downloading now always on top, then the queue in the order it will download
+        // (oldest first, like the service), then paused and failed ones
+        val order = HashMap<String, Int>(all.size).apply { all.forEachIndexed { i, t -> put(t.id, all.size - i) } }
+        val newActive = active.sortedWith(
+            compareBy<DownloadTask> {
+                when (it.status) {
+                    Status.RUNNING -> 0
+                    Status.WAITING -> 1
+                    Status.QUEUED -> 2
+                    Status.PAUSED -> 3
+                    else -> 4
+                }
+            }.thenBy { order[it.id] ?: 0 }
+        )
+        val topChanged = newActive.firstOrNull()?.id != activeAdapter.currentList.firstOrNull()?.id
+        // show the new top download, unless you scrolled far down to look at something else
+        val nearTop = pl.playScroll.scrollY < resources.displayMetrics.heightPixels / 2
+        activeAdapter.submitList(newActive) { if (topChanged && nearTop) pl.playScroll.smoothScrollTo(0, 0) }
 
         pl.doneSection.isVisible = done.isNotEmpty()
         pl.doneTitle.text = "Downloaded (${done.size})"
-        doneAdapter.submitList(done.sortedByDescending { it.createdAt })
+        doneAdapter.submitList(done.sortedByDescending { it.createdAt })      // newest download first
 
         val badge = b.bottomNav.getOrCreateBadge(R.id.nav_downloads)
         badge.isVisible = active.isNotEmpty()

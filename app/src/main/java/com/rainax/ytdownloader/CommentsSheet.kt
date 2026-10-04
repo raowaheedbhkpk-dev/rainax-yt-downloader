@@ -50,12 +50,35 @@ class CommentsSheet(
 
     fun show() {
         dialog.setContentView(sb.root)
+        val tall = (act.resources.displayMetrics.heightPixels * 0.85).toInt()
         sb.root.layoutParams?.let {
-            it.height = (act.resources.displayMetrics.heightPixels * 0.85).toInt()
+            it.height = tall
             sb.root.layoutParams = it
         }
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = true
+        // typing: the window shrinks above the keyboard and the sheet shrinks with it,
+        // so the text box always sits right on top of the keyboard and you see what you type
+        @Suppress("DEPRECATION")
+        dialog.window?.setSoftInputMode(
+            android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
+        dialog.findViewById<View>(com.google.android.material.R.id.coordinator)
+            ?.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+                val want = minOf(tall, v.height).takeIf { it > 0 } ?: return@addOnLayoutChangeListener
+                val lp = sb.root.layoutParams ?: return@addOnLayoutChangeListener
+                if (lp.height != want) {
+                    lp.height = want
+                    sb.root.post {
+                        sb.root.layoutParams = lp
+                        val st = dialog.behavior.state
+                        if (st != BottomSheetBehavior.STATE_HIDDEN && st != BottomSheetBehavior.STATE_DRAGGING &&
+                            st != BottomSheetBehavior.STATE_SETTLING
+                        ) dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                    }
+                }
+            }
 
         sb.commentList.layoutManager = LinearLayoutManager(act)
         sb.commentList.adapter = adapter

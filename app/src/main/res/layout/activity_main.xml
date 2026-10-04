@@ -37,10 +37,6 @@
                 android:visibility="gone" />
         </FrameLayout>
 
-        <include
-            android:id="@+id/miniPlayer"
-            layout="@layout/layout_mini_player" />
-
         <View
             android:id="@+id/navDivider"
             android:layout_width="match_parent"
@@ -55,10 +51,12 @@
             app:menu="@menu/bottom_nav" />
     </LinearLayout>
 
-    <FrameLayout
-        android:id="@+id/fullscreenContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/rx_black"
-        android:visibility="gone" />
+    <!-- floating mini player (placed and dragged in code) -->
+    <include
+        android:id="@+id/miniPlayer"
+        layout="@layout/layout_mini_player"
+        android:layout_width="208dp"
+        android:layout_height="117dp"
+        android:layout_gravity="top|start" />
+
 </FrameLayout>

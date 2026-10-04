@@ -212,9 +212,6 @@ class VideoScreen(
         val clean = FastExtractor.videoUrl(url)
         this.url = clean
         if (!keepMinimized && minimized) setMinimized(false)
-        thumbUrl = thumb ?: youtubeThumb(clean)
-        titleText = title
-        uploaderText = uploader
         details = null
         onChanged()
 
@@ -279,16 +276,9 @@ class VideoScreen(
 
     // ---------- mini player ----------
 
-    /** The page is folded into the mini player above the bottom bar (the video keeps playing). */
+    /** The page is folded into the floating mini player (the video keeps playing in it). */
     var minimized = false
         private set
-    var thumbUrl: String? = null
-        private set
-    private var titleText: String? = null
-    private var uploaderText: String? = null
-
-    fun miniTitle(): String = details?.title ?: titleText.orEmpty()
-    fun miniSub(): String = details?.uploader ?: uploaderText.orEmpty()
 
     fun minimize() {
         if (url == null) return
@@ -303,13 +293,11 @@ class VideoScreen(
 
     private fun setMinimized(on: Boolean) {
         minimized = on
-        // no picture while folded: saves battery and data, the sound goes on
-        player()?.let { p ->
-            p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, on).build()
-        }
-        onChanged()
+        onChanged()                            // the picture moves to the floating player and keeps playing
     }
+
+    /** The page's player view (the main screen moves the picture between it and the floating player). */
+    val playerView: PlayerView get() = vb.playerView
 
     fun close() {
         if (fullscreen) exitFullscreen()
@@ -398,7 +386,6 @@ class VideoScreen(
     // ---------- details ----------
 
     private fun fill(d: VideoDetails) {
-        if (thumbUrl == null) thumbUrl = d.thumb
         showAccountActions(d)
         header.vLoading.isVisible = false
         header.vTitle.text = d.title

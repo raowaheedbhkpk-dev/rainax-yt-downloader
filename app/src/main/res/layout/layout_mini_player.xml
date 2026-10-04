@@ -1,68 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mini player: the video keeps playing while you browse (tap to open it again) -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Floating mini player: the video keeps playing in a small window you can drag anywhere (tap to open it again) -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:background="?attr/rxCard"
+    android:layout_width="208dp"
+    android:layout_height="117dp"
     android:clickable="true"
+    android:contentDescription="Video playing. Tap to open, drag to move"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:visibility="gone">
+    android:visibility="gone"
+    app:cardBackgroundColor="@color/rx_black"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="10dp"
+    app:strokeWidth="0dp">
 
-    <ImageView
-        android:id="@+id/miniThumb"
-        android:layout_width="112dp"
-        android:layout_height="64dp"
-        android:background="@color/rx_black"
-        android:importantForAccessibility="no"
-        android:scaleType="centerCrop" />
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/miniVideo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        app:resize_mode="fit"
+        app:shutter_background_color="@color/rx_black"
+        app:show_buffering="when_playing"
+        app:surface_type="texture_view"
+        app:use_controller="false" />
 
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/miniTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="1"
-            android:textColor="@color/rx_text"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/miniSub"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/rx_text2"
-            android:textSize="12sp" />
-    </LinearLayout>
 
     <ImageButton
         android:id="@+id/miniPlay"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="6dp"
+        android:background="@drawable/bg_mini_button"
         android:contentDescription="Play or pause"
+        android:padding="7dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_pause"
-        app:tint="@color/rx_text" />
+        app:tint="@color/rx_white" />
 
     <ImageButton
         android:id="@+id/miniClose"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="6dp"
+        android:background="@drawable/bg_mini_button"
         android:contentDescription="Close"
+        android:padding="7dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_close"
-        app:tint="@color/rx_text" />
-</LinearLayout>
+        app:tint="@color/rx_white" />
+</com.google.android.material.card.MaterialCardView>

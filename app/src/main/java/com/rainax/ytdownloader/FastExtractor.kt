@@ -218,8 +218,7 @@ object FastExtractor {
     /** Sound for background play: the original track, M4A preferred (plays everywhere). */
     private fun bestAudioUrl(audios: List<AudioStream>): String? {
         val original = audios.filter { it.audioTrackType == null || it.audioTrackType?.name == "ORIGINAL" }.ifEmpty { audios }
-        return (original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
-            ?: original.maxByOrNull { audioRate(it) })?.content
+        return rankAudio(original, preferM4a = true).firstOrNull()?.content
     }
 
     /** Blocking. Up to 1000 playlist entries (private/deleted ones skipped). */
@@ -274,7 +273,8 @@ object FastExtractor {
         val single: Part?,         // one file that already has picture and sound (or audio only)
         val webm: Boolean,         // join as WebM (VP9 + Opus) instead of MP4
         val subtitle: SubtitlesStream?,
-        val canFallBack: Boolean = false   // 2K/4K (VP9/AV1): if this phone can't join it, retry as 1080p H.264
+        val canFallBack: Boolean = false,  // 2K/4K (VP9/AV1): if this phone can't join it, retry as 1080p H.264
+        val audioAlts: List<Part> = emptyList()   // other sound streams to try if YouTube refuses the first one
     )
 
     /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
@@ -296,9 +296,15 @@ object FastExtractor {
             .ifEmpty { audios }
 
         if (spec.startsWith("audio")) {
-            val a = original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
-                ?: original.maxByOrNull { audioRate(it) }
-            if (a != null) return@guard Plan(info.name, thumb, null, null, part(a, audioSize(a, duration)), false, null)
+            val ranked = rankAudio(original, preferM4a = true)
+            val a = ranked.firstOrNull()
+            if (a != null) {
+                // backups: the same kind first (M4A), then any other sound stream (other formats and languages)
+                val alts = (ranked.drop(1) + rankAudio(audios, preferM4a = true))
+                    .distinctBy { it.content }.filter { it.content != a.content }.take(4)
+                    .map { part(it, audioSize(it, duration)) }
+                return@guard Plan(info.name, thumb, null, null, part(a, audioSize(a, duration)), false, null, audioAlts = alts)
+            }
             // no separate sound on this site: save the smallest video that has sound
             val v = usable(info.videoStreams).minByOrNull { heightOf(it) ?: Int.MAX_VALUE }
                 ?: error("No audio found for this link")
@@ -319,8 +325,10 @@ object FastExtractor {
                 .thenByDescending { it.bitrate }
         )
         val muxedH = muxed?.let { heightOf(it) } ?: -1
-        val m4a = original.filter { it.format?.suffix == "m4a" }.maxByOrNull { audioRate(it) }
-        val webmAudio = original.filter { it.format?.suffix == "webm" }.maxByOrNull { audioRate(it) }
+        val m4aList = rankAudio(original.filter { it.format?.suffix == "m4a" }, preferM4a = true)
+        val webmList = rankAudio(original.filter { it.format?.suffix == "webm" }, preferM4a = false)
+        val m4a = m4aList.firstOrNull()
+        val webmAudio = webmList.firstOrNull()
 
         // the best picture that has a matching sound track (WebM needs Opus, MP4 needs AAC)
         for (v in ranked) {
@@ -328,7 +336,11 @@ object FastExtractor {
             val webm = v.format?.suffix == "webm"
             val a = (if (webm) webmAudio else m4a) ?: continue
             val vp = part(v, sizeOf(v.itagItem?.contentLength, v.bitrate, duration))
-            return@guard Plan(info.name, thumb, vp, part(a, audioSize(a, duration)), null, webm, sub, canFallBack = !isAvc(v))
+            // backups must be the same kind (MP4 needs AAC, WebM needs Opus) to join with the picture
+            val alts = (if (webm) webmList else m4aList).filter { it.content != a.content }.take(3)
+                .map { part(it, audioSize(it, duration)) }
+            return@guard Plan(info.name, thumb, vp, part(a, audioSize(a, duration)), null, webm, sub,
+                canFallBack = !isAvc(v), audioAlts = alts)
         }
         if (muxed != null) {
             val s = part(muxed, sizeOf(muxed.itagItem?.contentLength, muxed.bitrate, duration))
@@ -387,6 +399,16 @@ object FastExtractor {
         bitrate > 0 && duration > 0 -> bitrate.toLong() / 8 * duration
         else -> 0L
     }
+
+    /**
+     * Sound streams best first: normal sound before YouTube's "stable volume" (DRC) copies, M4A before WebM
+     * when [preferM4a], then the highest bitrate.
+     */
+    private fun rankAudio(list: List<AudioStream>, preferM4a: Boolean): List<AudioStream> = list.sortedWith(
+        compareBy<AudioStream> { if (it.itagItem?.isDrc() == true) 1 else 0 }
+            .thenBy { if (preferM4a && it.format?.suffix != "m4a") 1 else 0 }
+            .thenByDescending { audioRate(it) }
+    )
 
     /** AudioStream.averageBitrate is in kbit/s; bitrate is in bit/s. */
     private fun audioRate(a: AudioStream): Int = if (a.averageBitrate > 0) a.averageBitrate * 1000 else a.bitrate
