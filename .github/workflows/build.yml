@@ -54,6 +54,8 @@ jobs:
           NAME="${NAME//\//-}"
           cp app/build/outputs/apk/release/app-release.apk "$NAME.apk"
           sha256sum "$NAME.apk" > "$NAME.apk.sha256"
+          # same file with a fixed name: .../releases/latest/download/RAINAX.apk always gives the newest version
+          cp "$NAME.apk" RAINAX.apk
 
       - uses: actions/upload-artifact@v6
         with:
@@ -67,5 +69,6 @@ jobs:
           files: |
             RAINAX-YT-DOWNLOADER-*.apk
             RAINAX-YT-DOWNLOADER-*.sha256
+            RAINAX.apk
           # "What's new" shown inside the app's update window: one short line per change
           body_path: whatsnew.txt
