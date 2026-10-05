@@ -262,6 +262,37 @@ class VideoScreen(
         loadComments(clean)
     }
 
+    private var refreshedAt = 0L
+
+    /**
+     * The video's stream addresses expired (e.g. paused for hours) or only its sound is playing:
+     * ask YouTube again and continue from the same spot. At most once a minute.
+     */
+    fun refreshStreams(): Boolean {
+        val u = url ?: return false
+        val now = System.currentTimeMillis()
+        if (now - refreshedAt < 60_000) return false
+        refreshedAt = now
+        val pos = player()?.currentPosition?.coerceAtLeast(0) ?: 0
+        FastExtractor.forget(u)
+        job?.cancel()
+        job = act.lifecycleScope.launch {
+            try {
+                val d = withContext(Dispatchers.IO) { YtCatalog.video(u) }
+                if (this@VideoScreen.url != u) return@launch
+                val filled = details != null
+                details = d
+                if (!filled) fill(d)                 // the page was still loading: show it too
+                play(d, pos)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (this@VideoScreen.url == u) showError("Couldn't load this video again. Check your internet.")
+            }
+        }
+        return true
+    }
+
     /** The player moved on (next track, or a new video started elsewhere): show that video. */
     fun follow(p: Player) {
         val item = p.currentMediaItem ?: return
@@ -424,9 +455,12 @@ class VideoScreen(
     private fun plain(c: Comment): CharSequence =
         if (c.html) HtmlCompat.fromHtml(c.text, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim() else c.text
 
+    private var commentsSheet: CommentsSheet? = null
+
     private fun showComments() {
         val u = url ?: return
-        CommentsSheet(act, u, signIn).show()
+        if (commentsSheet?.isShowing == true) return          // a quick double tap opens it once
+        commentsSheet = CommentsSheet(act, u, signIn).also { it.show() }
     }
 
     /** Full description with likes, views, upload date and clickable links. */
@@ -626,6 +660,13 @@ class VideoScreen(
     }
 
     // ---------- fullscreen ----------
+
+    /** Phone turned sideways while watching: full screen, like YouTube (through the player's button, so its icon stays right). */
+    fun enterFullscreen() {
+        if (!isOpen || minimized || fullscreen) return
+        val btn = vb.playerView.findViewById<View>(androidx.media3.ui.R.id.exo_fullscreen)
+        if (btn != null && btn.visibility == View.VISIBLE) btn.performClick() else setFullscreen(true)
+    }
 
     /** Back while fullscreen: press the player's own fullscreen button so its icon stays right. */
     fun exitFullscreen() {

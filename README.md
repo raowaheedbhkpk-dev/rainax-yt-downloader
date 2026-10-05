@@ -37,6 +37,14 @@ Android warns about every app installed from outside the Play Store that Google 
 This is not a virus warning. To install, tap **More details > Install anyway**.
 YouTube downloaders are not allowed on the Play Store.
 
+## Official app and name
+- The only official RAINAX is published at **https://github.com/raowaheedbhkpk-dev/rainax-yt-downloader/releases**,
+  signed with the owner's private key. The app checks its own signature at start: a copy that someone changed and
+  signed again shows "Not the official RAINAX" and points to the download page.
+- The code is open source (GPL-3.0), but the **name "RAINAX", "RAINAX Tube" and the RAINAX logo are not part of that
+  licence**. Forks and modified versions must use a different name and logo, a different app ID
+  (not `com.rainax.ytdownloader`), and must not present themselves as RAINAX or as made by its author.
+
 ## Legal
 Only download content you have the right to download, and respect each site's terms of service.
 Not affiliated with YouTube, Google, TikTok or any other site.

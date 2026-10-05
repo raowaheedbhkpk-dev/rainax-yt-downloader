@@ -23,7 +23,11 @@ class DownloadAdapter(
     private val onLongPress: (DownloadTask) -> Unit
 ) : ListAdapter<DownloadTask, DownloadAdapter.VH>(Diff) {
 
-    private val cache = LruCache<String, Bitmap>(24)
+    private val cache = LruCache<String, Bitmap>(80)
+
+    private companion object {
+        val decoder: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(2)
+    }
 
     private var selecting = false
     private var selectedIds: Set<String> = emptySet()
@@ -97,18 +101,30 @@ class DownloadAdapter(
         }
     }
 
+    /** Thumbnails are read from disk in the background, so long lists scroll smoothly. */
     private fun bindThumb(view: ImageView, t: DownloadTask) {
-        val bmp = t.thumbPath?.let { path ->
-            cache.get(path) ?: BitmapFactory.decodeFile(
-                path, BitmapFactory.Options().apply { inSampleSize = 2 }
-            )?.also { cache.put(path, it) }
-        }
-        if (bmp != null) {
+        val path = t.thumbPath
+        view.tag = path
+        val cached = path?.let { cache.get(it) }
+        if (cached != null) {
             view.scaleType = ImageView.ScaleType.CENTER_CROP
-            view.setImageBitmap(bmp)
-        } else {
-            view.scaleType = ImageView.ScaleType.CENTER
-            view.setImageResource(if (t.isAudio) R.drawable.ic_audio else R.drawable.ic_video)
+            view.setImageBitmap(cached)
+            return
+        }
+        view.scaleType = ImageView.ScaleType.CENTER
+        view.setImageResource(if (t.isAudio) R.drawable.ic_audio else R.drawable.ic_video)
+        if (path == null) return
+        decoder.execute {
+            val bmp = try {
+                BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = 2 })
+            } catch (e: Throwable) { null } ?: return@execute
+            view.post {
+                cache.put(path, bmp)
+                if (view.tag == path) {                     // the row still shows this download
+                    view.scaleType = ImageView.ScaleType.CENTER_CROP
+                    view.setImageBitmap(bmp)
+                }
+            }
         }
     }
 

@@ -31,6 +31,8 @@ class SignInActivity : AppCompatActivity() {
         b.signInClose.setOnClickListener { finish() }
 
         val ws = b.signInWeb.settings
+        ws.allowFileAccess = false              // the sign-in page never needs the phone's files
+        ws.allowContentAccess = false
         ws.javaScriptEnabled = true
         ws.domStorageEnabled = true
         ws.cacheMode = WebSettings.LOAD_DEFAULT
@@ -65,7 +67,8 @@ class SignInActivity : AppCompatActivity() {
             }
         })
 
-        if (savedInstanceState == null) b.signInWeb.loadUrl(SIGN_IN_URL)
+        // always (also after the screen was rebuilt), or the page would stay blank
+        b.signInWeb.loadUrl(SIGN_IN_URL)
     }
 
     /** Signed in? Keep YouTube's cookies and close. */

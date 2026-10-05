@@ -5,13 +5,19 @@
     android:layout_height="match_parent"
     android:background="?attr/rxBg">
 
+    <!-- fits its 72dp row at any font size (the list starts below it) -->
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="20dp"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:autoSizeMaxTextSize="26sp"
+        android:autoSizeMinTextSize="16sp"
+        android:autoSizeTextType="uniform"
+        android:gravity="center_vertical"
+        android:maxLines="1"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="12dp"
         android:text="Library"
         android:textColor="@color/rx_text"
-        android:textSize="26sp"
         android:textStyle="bold" />
 
     <androidx.core.widget.NestedScrollView

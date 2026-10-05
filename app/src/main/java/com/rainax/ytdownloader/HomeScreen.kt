@@ -155,8 +155,6 @@ class HomeScreen(
         load(reset = true)
     }
 
-    /** True while searching or typing (Back returns to Home). */
-
     /** Back: stop typing, or leave the search results. Returns false when there is nothing to undo. */
     fun back(): Boolean {
         if (playlistUrl != null || channelUrl != null) {
@@ -244,6 +242,7 @@ class HomeScreen(
             return
         }
         AppPrefs.addSearch(act, q)
+        rememberScroll()
         stopTyping()
         showSearchBox(true)
         hm.searchInput.setText(q)
@@ -258,6 +257,7 @@ class HomeScreen(
     /** A playlist: its videos (each with Download) and "Download all" at the top. */
     fun openPlaylist(item: VideoItem) {
         if (hm.suggestList.isVisible) stopTyping()
+        rememberScroll()
         channelUrl = null
         channel = null
         playlistUrl = item.url
@@ -275,6 +275,7 @@ class HomeScreen(
     /** A channel: picture, name, Subscribe, and its videos (each with Download). */
     fun openChannel(url: String, name: String? = null, avatar: String? = null) {
         if (hm.suggestList.isVisible) stopTyping()
+        rememberScroll()
         playlistUrl = null
         playlistItem = null
         channelUrl = url
@@ -357,6 +358,14 @@ class HomeScreen(
         buildingTabs = false
     }
 
+    /** Where each list was scrolled to, so Back returns to the same place. */
+    private val scrollMemory = HashMap<String, android.os.Parcelable?>()
+
+    private fun rememberScroll() {
+        if (isMusic) return
+        scrollMemory[cacheKey()] = hm.feedList.layoutManager?.onSaveInstanceState()
+    }
+
     private fun cacheKey(): String = channelUrl?.let { "ch:$it" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
         ?: "tab:${tabs[tabIndex].second}"
 
@@ -431,7 +440,10 @@ class HomeScreen(
                 next = cached.second
                 a.loadingMore = next != null
                 hm.feedLoading.isVisible = false
-                hm.feedList.scrollToPosition(0)
+                // back to a list seen before: the same place in it, not the top
+                val saved = scrollMemory.remove(cacheKey())
+                if (saved != null) hm.feedList.layoutManager?.onRestoreInstanceState(saved)
+                else hm.feedList.scrollToPosition(0)
                 return
             }
             if (!pulled) {
@@ -486,6 +498,10 @@ class HomeScreen(
                 hm.feedRefresh.isRefreshing = false
                 if (reset) hm.feedList.scrollToPosition(0)
                 if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else emptyText(tabId))
+                // a short page that doesn't fill the screen can't be scrolled: load the next one by itself
+                if (added > 0 && next != null) hm.feedList.post {
+                    if (loadJob?.isActive != true && !hm.feedList.canScrollVertically(1)) load(reset = false)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

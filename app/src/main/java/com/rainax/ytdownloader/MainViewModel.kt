@@ -178,7 +178,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val info = _preview.value?.takeIf { items.size == 1 && !it.loading && it.error == null }
         viewModelScope.launch(Dispatchers.IO) {
             Downloader.enqueue(app, items, spec, subLang, info)
-            _events.emit(if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads")
+            // (the download sheet shows its own "Added to downloads  View" message)
         }
     }
 

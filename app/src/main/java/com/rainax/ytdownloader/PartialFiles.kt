@@ -99,7 +99,7 @@ object PartialFiles {
     @Synchronized
     fun restore(id: String, dir: File): Boolean {
         if (layout(id) != null) return true
-        val files = dir.listFiles()?.filter { it.isFile && !it.name.endsWith(".state") && it.length() > 0 } ?: return false
+        val files = dir.listFiles()?.filter { it.isFile && !it.name.contains(".state") && it.length() > 0 } ?: return false
         fun find(base: String) = files.firstOrNull { it.name.startsWith("$base.") }
             ?: files.filter { it.name.startsWith("$base-") }.maxByOrNull { it.lastModified() }
         val media = find("media")

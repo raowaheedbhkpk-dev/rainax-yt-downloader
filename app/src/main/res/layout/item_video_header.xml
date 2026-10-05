@@ -164,6 +164,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/vDislike"
+                android:contentDescription="Dislike"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
                 android:layout_marginStart="8dp"

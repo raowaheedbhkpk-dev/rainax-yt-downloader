@@ -19,7 +19,11 @@ class RatioFrameLayout @JvmOverloads constructor(context: Context, attrs: Attrib
             return
         }
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = width * 9 / 16
+        var height = width * 9 / 16
+        // never taller than the room the screen gives (a phone held sideways)
+        if (MeasureSpec.getMode(heightMeasureSpec) != MeasureSpec.UNSPECIFIED) {
+            height = minOf(height, MeasureSpec.getSize(heightMeasureSpec))
+        }
         super.onMeasure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)

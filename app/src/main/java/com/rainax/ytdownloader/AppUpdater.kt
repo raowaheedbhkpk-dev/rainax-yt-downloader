@@ -262,15 +262,31 @@ object AppUpdater {
                 }
             }
             try { dialog.dismiss() } catch (e: Exception) { }
-            // Safety: the downloaded APK must really be newer than this app, or we'd ask forever
-            val apkVersion = if (ok) runCatching {
-                activity.packageManager.getPackageArchiveInfo(file.path, 0)?.versionName
-            }.getOrNull() else null
-            if (ok && apkVersion != null && !isNewer(apkVersion, currentVersion(activity))) {
+            // Safety: the downloaded APK must be RAINAX, signed with the same key, and really newer,
+            // or Android refuses it and we'd ask forever
+            val check = if (ok) verify(activity, file) else null
+            if (ok && check != ApkCheck.OK) {
                 AppPrefs.setBadRelease(activity, rel.version)
                 required = null
                 file.delete()
-                toast(activity, "You already have the latest version")
+                when (check) {
+                    ApkCheck.OLDER -> toast(activity, "You already have the latest version")
+                    ApkCheck.OTHER_KEY -> AlertDialog.Builder(activity)
+                        .setTitle("New version needs a fresh install")
+                        .setMessage(
+                            "This update is signed with a new key, so it can't install over this version. " +
+                                "Uninstall RAINAX, then install the new version from its download page. " +
+                                "(Your downloaded files stay in your Downloads folder.)"
+                        )
+                        .setPositiveButton("Open download page") { _, _ ->
+                            runCatching {
+                                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$REPO/releases/latest")))
+                            }
+                        }
+                        .setNegativeButton("Later", null)
+                        .show()
+                    else -> toast(activity, "The update file is damaged. Try again later.")
+                }
             } else if (ok) {
                 readyApk = file
                 install(activity, file)
@@ -281,6 +297,26 @@ object AppUpdater {
             }
         }
         dlJob = dl
+    }
+
+    private enum class ApkCheck { OK, OLDER, OTHER_KEY, BROKEN }
+
+    /** Same app (package), same signing key, newer version. */
+    @Suppress("DEPRECATION")
+    private fun verify(activity: AppCompatActivity, file: File): ApkCheck = try {
+        val pm = activity.packageManager
+        val info = pm.getPackageArchiveInfo(file.path, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+        val signers = info?.signingInfo?.let { if (it.hasMultipleSigners()) it.apkContentsSigners else it.signingCertificateHistory }
+        when {
+            info == null || info.packageName != activity.packageName -> ApkCheck.BROKEN
+            // (some phones can't read an APK file's key: then Android's installer still checks it)
+            !signers.isNullOrEmpty() && !signers.any { pm.hasSigningCertificate(activity.packageName, it.toByteArray(), android.content.pm.PackageManager.CERT_INPUT_RAW_X509) } ->
+                ApkCheck.OTHER_KEY
+            !isNewer(info.versionName ?: "0", currentVersion(activity)) -> ApkCheck.OLDER
+            else -> ApkCheck.OK
+        }
+    } catch (e: Exception) {
+        ApkCheck.BROKEN
     }
 
     private fun install(activity: AppCompatActivity, file: File) {

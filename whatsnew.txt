@@ -1,2 +1,1 @@
-Paused or offline downloads play from the start up to the part already downloaded
-No internet needed to watch what is already downloaded
+Official-copy check: modified copies of RAINAX are detected

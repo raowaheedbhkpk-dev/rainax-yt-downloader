@@ -107,8 +107,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** A modified copy signed by someone else: nothing runs, only the "not official" message shows. */
+    private var blocked = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)   // pure black
+        if (!Integrity.isOfficial(this)) {
+            blocked = true
+            super.onCreate(null)
+            Integrity.showNotOfficial(this)
+            return
+        }
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
@@ -185,33 +194,48 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        if (blocked) return
         outState.putInt("tab", tab)
         video.url?.let { outState.putString("videoUrl", it) }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (blocked) return
         handleIntent(intent)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (blocked) return
+        // turning the phone sideways on the video page opens the video full screen
+        if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && tab == 0) {
+            video.enterFullscreen()
+        }
     }
 
     override fun onStart() {
         super.onStart()
+        if (blocked) return
         if (controller == null) connectPlayer() else backInApp()
     }
 
     override fun onStop() {
-        if (!isChangingConfigurations) leaveApp()
+        if (!blocked && !isChangingConfigurations) leaveApp()
         super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
+        if (blocked) return
         AppUpdater.resumeInstall(this)
     }
 
     override fun onDestroy() {
-        disconnectPlayer()            // the player service keeps playing on its own
-        sheet?.dismiss()
+        if (!blocked) {
+            disconnectPlayer()            // the player service keeps playing on its own
+            sheet?.dismiss()
+        }
         super.onDestroy()
     }
 
@@ -298,14 +322,25 @@ class MainActivity : AppCompatActivity() {
             syncVideoSurface()
             c.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                    val onScreen = video.isOpen && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
                     // next track (button, notification or end of video): the page shows that video
-                    if (reason != androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
-                        video.isOpen && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-                    ) video.follow(c)
+                    if (reason != androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED && onScreen) {
+                        video.follow(c)
+                    } else if (onScreen && mediaItem?.mediaId == video.url &&
+                        mediaItem?.mediaMetadata?.extras?.getBoolean(VideoScreen.EXTRA_VIDEO) != true
+                    ) {
+                        // the player renewed expired addresses as sound only: put the picture back
+                        video.refreshStreams()
+                    }
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    if (video.isOpen) video.showError("Couldn't play this video here. You can still download it.")
+                    if (!video.isOpen) return
+                    // expired addresses (paused for hours): fetch fresh ones and continue where it was
+                    if (error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS &&
+                        c.currentMediaItem?.mediaId == video.url && video.refreshStreams()
+                    ) return
+                    video.showError("Couldn't play this video here. You can still download it.")
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -348,6 +383,10 @@ class MainActivity : AppCompatActivity() {
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false).build()
         }
         val id = c.currentMediaItem?.mediaId
+        // the open video is playing as sound only (its addresses were renewed in the background): picture back
+        if (video.isOpen && id == video.url &&
+            c.currentMediaItem?.mediaMetadata?.extras?.getBoolean(VideoScreen.EXTRA_VIDEO) != true
+        ) video.refreshStreams()
         if (c.mediaItemCount > 0 && c.playbackState != androidx.media3.common.Player.STATE_IDLE &&
             id != null && FastExtractor.supports(id) && id != video.url
         ) {
@@ -471,8 +510,14 @@ class MainActivity : AppCompatActivity() {
             b.bottomNav.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
             (loc[1] - rootLoc[1]).toFloat()
         } else root.height - (insets?.bottom ?: 0).toFloat()
+        // stay above the Library's selection buttons (Delete / Remove) while selecting
+        val bottomLimit = if (tab == 1 && pl.selectionActions.isVisible && pl.selectionActions.height > 0) {
+            val loc = IntArray(2); val rootLoc = IntArray(2)
+            pl.selectionActions.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
+            minOf(navTop, (loc[1] - rootLoc[1]).toFloat())
+        } else navTop
         val maxX = (root.width - m.width - margin).coerceAtLeast(margin)
-        val maxY = (navTop - m.height - margin).coerceAtLeast(top)
+        val maxY = (bottomLimit - m.height - margin).coerceAtLeast(top)
         return listOf(margin, maxX, top, maxY)
     }
 
@@ -594,6 +639,20 @@ class MainActivity : AppCompatActivity() {
             val all = if (presets) emptyList() else p?.all.orEmpty()
             val subs = if (presets) emptyList() else p?.subtitles.orEmpty()
 
+            // picked while sizes were loading, but this video has no such row: select the closest real one,
+            // so what downloads is always what is shown as selected
+            val sel = selectedSpec
+            if (!presets && sel != null && quick.isNotEmpty() && (quick + all).none { it.spec == sel }) {
+                selectedSpec = if (sel.startsWith("audio")) {
+                    quick.firstOrNull { it.kind == KIND_AUDIO }?.spec
+                } else {
+                    val want = sel.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
+                    val videos = quick.filter { it.kind == KIND_VIDEO }
+                    fun h(c: FormatChoice) = c.spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
+                    (videos.filter { h(it) <= want }.maxByOrNull { h(it) } ?: videos.firstOrNull())?.spec
+                }
+            }
+
             sb.sheetHeading.text = when (mode) {
                 MODE_ALL -> "More formats"
                 MODE_SUBS -> "Subtitles/CC"
@@ -684,7 +743,8 @@ class MainActivity : AppCompatActivity() {
             vm.enqueue(items, spec, sub)
             dialog.dismiss()
             if (!askBatteryOptimization()) {
-                Snackbar.make(b.root, "Added to downloads", Snackbar.LENGTH_LONG)
+                val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
+                Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
                     .setAnchorView(b.bottomNav)
                     .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
                     .show()
@@ -841,8 +901,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSelectionBar() {
+        val wasSelecting = pl.selectionActions.isVisible
         pl.selectionBar.isVisible = selecting
         pl.selectionActions.isVisible = selecting
+        if (wasSelecting != selecting && b.miniPlayer.root.isVisible) pl.selectionActions.post { placeMiniPlayer() }    // move above / back
         pl.selectionCount.text = "${selected.size} selected"
         if (!selecting) return
 
@@ -963,7 +1025,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun onTaskClose(t: DownloadTask, anchor: View) {
         if (t.status != Status.DONE) {
-            DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
+            // with some progress, ask first: cancelling deletes what was downloaded
+            if (t.progress > 0) {
+                confirm("Cancel download?", "\"${t.title.ifBlank { "This download" }}\" stops and its downloaded part is deleted.") {
+                    DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
+                }
+            } else DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
             return
         }
         val popup = PopupMenu(this, anchor)
@@ -984,7 +1051,7 @@ class MainActivity : AppCompatActivity() {
                     message("Link copied")
                 }
                 4 -> TaskRepository.remove(t.id)
-                5 -> {
+                5 -> confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") {
                     t.fileUri?.let { FileStore.delete(this, it) }
                     TaskRepository.remove(t.id)
                     message("File deleted")
@@ -1170,15 +1237,16 @@ class MainActivity : AppCompatActivity() {
             return false
         }
         prefs.edit().putBoolean("battery_asked", true).apply()
-        Snackbar.make(b.root, "Allow background activity so downloads keep going", Snackbar.LENGTH_INDEFINITE)
-            .setAnchorView(b.bottomNav)
-            .setAction("Allow") {
+        // a dialog (not a snackbar), so no other message can hide it
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Added to downloads")
+            .setMessage("Allow RAINAX to run in the background so downloads keep going when the screen is off.")
+            .setPositiveButton("Allow") { _, _ ->
                 try {
-                    startActivity(
-                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    )
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 } catch (e: Exception) { /* not available on this device */ }
             }
+            .setNegativeButton("Not now", null)
             .show()
         return true
     }

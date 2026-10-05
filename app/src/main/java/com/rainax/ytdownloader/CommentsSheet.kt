@@ -39,6 +39,9 @@ class CommentsSheet(
     private val dialog = BottomSheetDialog(act)
     private val rows = mutableListOf<YtComments.Item>()
     private val openReplies = HashSet<String>()                     // comment ids with replies shown
+    private val replyJobs = HashMap<String, Job>()                  // replies being loaded, by comment id
+    // loading stops when the sheet closes (posting and liking still finish)
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate)
     private val fallbackReplies = HashMap<String, Page>()          // simple reader: replies page by comment id
     private var full = true                                        // YouTube's own comment reader works for this video
     private var nextToken: String? = null
@@ -47,6 +50,8 @@ class CommentsSheet(
     private var replyTo: YtComments.Item? = null
     private var buildingSort = false
     private val adapter = Adapter()
+
+    val isShowing get() = dialog.isShowing
 
     fun show() {
         dialog.setContentView(sb.root)
@@ -57,6 +62,7 @@ class CommentsSheet(
         }
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = true
+        dialog.setOnDismissListener { scope.coroutineContext[Job]?.cancel() }
         // typing: the window shrinks above the keyboard and the sheet shrinks with it,
         // so the text box always sits right on top of the keyboard and you see what you type
         @Suppress("DEPRECATION")
@@ -114,7 +120,7 @@ class CommentsSheet(
     private fun loadFirst() {
         sb.commentLoading.isVisible = true
         val id = videoId()
-        loading = act.lifecycleScope.launch {
+        loading = scope.launch {
             // YouTube's own reader first (sorting, likes, replies); the simple reader if it can't read this video
             val rich = withContext(Dispatchers.IO) { runCatching { id?.let { YtComments.first(it) } }.getOrNull() }
             if (rich != null && (rich.items.isNotEmpty() || rich.next != null)) {
@@ -190,13 +196,13 @@ class CommentsSheet(
         if (loading?.isActive == true) return
         if (full) {
             val token = nextToken ?: return
-            loading = act.lifecycleScope.launch {
+            loading = scope.launch {
                 val r = withContext(Dispatchers.IO) { runCatching { YtComments.more(token, false) }.getOrNull() } ?: return@launch
                 show(r, replace = false)
             }
         } else {
             val page = nextPage ?: return
-            loading = act.lifecycleScope.launch {
+            loading = scope.launch {
                 val more = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(videoUrl, page) }.getOrNull() } ?: return@launch
                 nextPage = more.next
                 val start = rows.size
@@ -224,7 +230,7 @@ class CommentsSheet(
             val token = ids.firstOrNull()?.let { group.findViewById<Chip>(it)?.tag as? String } ?: return@setOnCheckedStateChangeListener
             loading?.cancel()
             sb.commentLoading.isVisible = true
-            loading = act.lifecycleScope.launch {
+            loading = scope.launch {
                 val r = withContext(Dispatchers.IO) { runCatching { YtComments.more(token, false) }.getOrNull() }
                 sb.commentLoading.isVisible = false
                 if (r != null) {
@@ -244,6 +250,7 @@ class CommentsSheet(
         if (index < 0) return
         if (c.id in openReplies) {
             openReplies.remove(c.id)
+            replyJobs.remove(c.id)?.cancel()            // still loading: never insert them twice
             var end = index + 1
             while (end < rows.size && rows[end].isReply) end++
             val count = end - index - 1
@@ -254,7 +261,8 @@ class CommentsSheet(
         }
         openReplies.add(c.id)
         adapter.notifyItemChanged(index)
-        act.lifecycleScope.launch {
+        replyJobs.remove(c.id)?.cancel()
+        replyJobs[c.id] = scope.launch {
             val replies = withContext(Dispatchers.IO) {
                 runCatching {
                     val token = c.repliesToken

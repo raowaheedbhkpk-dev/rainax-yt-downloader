@@ -7,9 +7,28 @@ plugins {
 // always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.9.7"
+def rxVersionName = isTag ? tagVersion : "8.9.9"
 def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
+
+// Fingerprint (SHA-256) of the signing key, read from the private key in GitHub Secrets at build time.
+// The app checks it at start: a copy re-signed by someone else shows "not the official RAINAX".
+// Without the key (forks, local builds) it is empty and the check is off.
+def rxKeyFingerprint = {
+    def path = System.getenv("RAINAX_STORE_FILE")
+    def pass = System.getenv("RAINAX_STORE_PASSWORD")
+    if (!path || !pass) return ""
+    try {
+        def ks = java.security.KeyStore.getInstance("PKCS12")
+        new File(path).withInputStream { ks.load(it, pass.toCharArray()) }
+        def alias = System.getenv("RAINAX_KEY_ALIAS") ?: "rainax"
+        def cert = ks.getCertificate(alias) ?: ks.getCertificate(ks.aliases().nextElement())
+        return java.security.MessageDigest.getInstance("SHA-256").digest(cert.encoded).encodeHex().toString()
+    } catch (Exception e) {
+        println("RAINAX: couldn't read the signing key fingerprint: " + e.message)
+        return ""
+    }
+}()
 
 android {
     namespace 'com.rainax.ytdownloader'
@@ -23,6 +42,7 @@ android {
         targetSdk 34
         versionCode rxVersionCode
         versionName rxVersionName
+        buildConfigField "String", "KEY_SHA256", "\"${rxKeyFingerprint}\""
         // the MP3 encoder is native code: build it for real phones (64/32-bit ARM) and x86_64 emulators
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
     }
@@ -58,7 +78,10 @@ android {
         }
     }
 
-    buildFeatures { viewBinding true }
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+    }
 
     packagingOptions {
         resources {

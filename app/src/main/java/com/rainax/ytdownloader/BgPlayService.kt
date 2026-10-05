@@ -43,23 +43,51 @@ class BgPlayService : MediaSessionService() {
             .build()
         player.addListener(object : Player.Listener {
             private var retriedFor: String? = null
+            private var skips = 0                         // tracks skipped in a row because they failed
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 if (mediaItem?.mediaId != retriedFor) retriedFor = null
             }
 
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_READY) { retriedFor = null; skips = 0 }   // playing fine again
+            }
+
             override fun onPlayerError(error: PlaybackException) {
-                val page = player.currentMediaItem?.mediaId
-                // 1) try once more with a fresh sound address (they can expire)
-                if (page != null && retriedFor != page) {
+                val item = player.currentMediaItem
+                val page = item?.mediaId
+                // no internet: wait (pause) instead of skipping through the whole queue
+                if (error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                    error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+                ) {
+                    player.pause()
+                    Toast.makeText(this@BgPlayService, "No internet. Press play when you're back online", Toast.LENGTH_LONG).show()
+                    return
+                }
+                // 1) try once more with fresh addresses (YouTube's links expire after some hours)
+                if (item != null && page != null && retriedFor != page) {
                     retriedFor = page
                     resolved.remove(page)
+                    FastExtractor.forget(page)
+                    val uri = item.localConfiguration?.uri
+                    val lazy = uri?.scheme == "rainax" && uri.authority == "play"
+                    if (!lazy && FastExtractor.supports(page)) {
+                        // picture + sound addresses expired: keep going with fresh sound right away
+                        // (the app puts the picture back when it is open)
+                        val pos = player.currentPosition
+                        val fresh = item.buildUpon().setUri(lazyUri(page))
+                            .setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(android.os.Bundle()).build())
+                            .build()
+                        player.replaceMediaItem(player.currentMediaItemIndex, fresh)
+                        player.seekTo(pos)
+                    }
                     player.prepare()
                     player.play()
                     return
                 }
-                // 2) still failing: move on to the next track
-                if (player.hasNextMediaItem()) {
+                // 2) still failing: move on to the next track (a few times at most)
+                if (player.hasNextMediaItem() && skips < 3) {
+                    skips++
                     player.seekToNextMediaItem()
                     player.prepare()
                     player.play()
@@ -82,6 +110,7 @@ class BgPlayService : MediaSessionService() {
         session = MediaSession.Builder(this, player)
             .setSessionActivity(open)
             .setCallback(object : MediaSession.Callback {
+
                 // Tracks arrive from the app's screen: make sure each keeps its sound address
                 override fun onAddMediaItems(
                     mediaSession: MediaSession,
@@ -91,7 +120,9 @@ class BgPlayService : MediaSessionService() {
                     val fixed = mediaItems.map { item ->
                         if (item.localConfiguration != null) item
                         else {
-                            val uri = item.requestMetadata.mediaUri ?: lazyUri(item.mediaId)
+                            // only addresses the app makes itself (https streams or rainax://)
+                            val uri = item.requestMetadata.mediaUri?.takeIf { it.scheme == "https" || it.scheme == "http" || it.scheme == "rainax" }
+                                ?: lazyUri(item.mediaId)
                             item.buildUpon().setUri(uri).build()
                         }
                     }.toMutableList()
@@ -112,18 +143,22 @@ class BgPlayService : MediaSessionService() {
         private const val PLAYER_NOTIFICATION_ID = 2001
 
         /** Video page -> sound address, so a track is looked up once (addresses stay valid for hours). */
-        private val resolved = java.util.concurrent.ConcurrentHashMap<String, String>()
+        private val resolved = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
+        private const val VALID_MS = 4 * 60 * 60 * 1000L           // YouTube's addresses last about 6 hours
 
         /** The app already found this video's sound: no need to look it up again. */
         fun remember(page: String, audio: String) {
-            resolved[page] = audio
+            if (resolved.size > 200) resolved.clear()
+            resolved[page] = audio to System.currentTimeMillis()
         }
 
         /** Blocking (player thread). The sound address of a video page; [fresh] skips the saved one. */
         fun audioFor(page: String, fresh: Boolean): String {
-            if (!fresh) resolved[page]?.let { return it } else FastExtractor.forget(page)
+            if (!fresh) {
+                resolved[page]?.let { (url, at) -> if (System.currentTimeMillis() - at < VALID_MS) return url }
+            } else FastExtractor.forget(page)
             return try {
-                FastExtractor.audioUrl(page).also { resolved[page] = it }
+                FastExtractor.audioUrl(page).also { remember(page, it) }
             } catch (e: Exception) {
                 throw java.io.IOException(e.message ?: "Can't find the sound of this video", e)
             }

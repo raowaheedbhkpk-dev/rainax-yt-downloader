@@ -184,9 +184,12 @@ class YtChunkDataSource : BaseDataSource(true) {
     }
 
     private fun closeConnection() {
+        val fullyRead = chunkLeft == 0L
         try { input?.close() } catch (_: Exception) { }
         input = null
-        conn?.disconnect()
+        // a piece read to its end: closing the stream lets Android reuse the connection for the next piece
+        // (no new handshake per MB = faster start and seeking); cut it only when stopping halfway
+        if (!fullyRead) conn?.disconnect()
         conn = null
         chunkLeft = 0L
     }

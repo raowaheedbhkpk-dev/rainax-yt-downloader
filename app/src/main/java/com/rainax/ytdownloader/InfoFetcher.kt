@@ -97,8 +97,14 @@ object InfoFetcher {
                 readTimeout = 8000
                 setRequestProperty("User-Agent", FastExtractor.UA)
             }
-            conn.inputStream.use { BitmapFactory.decodeStream(it) }
-        } catch (e: Exception) {
+            // read the bytes once, then decode at most ~640 px wide (a huge picture can't run the phone out of memory)
+            val bytes = conn.inputStream.use { it.readBytes() }
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= 640) sample *= 2
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+        } catch (e: Throwable) {
             null
         } finally {
             conn?.disconnect()

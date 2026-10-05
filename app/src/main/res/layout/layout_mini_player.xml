@@ -28,26 +28,26 @@
 
     <ImageButton
         android:id="@+id/miniPlay"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_gravity="bottom|start"
-        android:layout_margin="6dp"
+        android:layout_margin="4dp"
         android:background="@drawable/bg_mini_button"
         android:contentDescription="Play or pause"
-        android:padding="7dp"
+        android:padding="9dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_pause"
         app:tint="@color/rx_white" />
 
     <ImageButton
         android:id="@+id/miniClose"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_gravity="top|end"
-        android:layout_margin="6dp"
+        android:layout_margin="4dp"
         android:background="@drawable/bg_mini_button"
         android:contentDescription="Close"
-        android:padding="7dp"
+        android:padding="11dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_close"
         app:tint="@color/rx_white" />

@@ -14,10 +14,15 @@ object AudioConverter {
     /** Blocking. [stop] ends early (pause/cancel); [progress] gets 0-100. */
     fun toMp3(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int) -> Unit) {
         val ex = MediaExtractor()
+        var codecRef: MediaCodec? = null
+        var outRef: BufferedOutputStream? = null
+        var encoder: Mp3Encoder? = null
+        // everything is released at the end, also when setting up fails (bad file, no decoder...)
+        try {
         ex.setDataSource(input.path)
         val track = (0 until ex.trackCount).firstOrNull {
             ex.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
-        } ?: run { ex.release(); error("No sound in this file") }
+        } ?: error("No sound in this file")
         ex.selectTrack(track)
         val format = ex.getTrackFormat(track)
         val mime = format.getString(MediaFormat.KEY_MIME)!!
@@ -26,18 +31,16 @@ object AudioConverter {
         var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
         var isFloat = false
 
-        val codec = MediaCodec.createDecoderByType(mime)
+        val codec = MediaCodec.createDecoderByType(mime).also { codecRef = it }
         codec.configure(format, null, null, 0)
         codec.start()
-        val out = BufferedOutputStream(FileOutputStream(output), 1 shl 16)
-        var encoder: Mp3Encoder? = null
+        val out = BufferedOutputStream(FileOutputStream(output), 1 shl 16).also { outRef = it }
         var pcm = ShortArray(0)
         var mp3 = ByteArray(16 * 1024)
         val info = MediaCodec.BufferInfo()
         var inputDone = false
         var outputDone = false
         var lastPct = -1
-        try {
             while (!outputDone) {
                 if (stop()) throw NativeDownloader.Stopped()
                 if (!inputDone) {
@@ -101,10 +104,10 @@ object AudioConverter {
             }
             out.flush()
         } finally {
-            runCatching { out.close() }
+            runCatching { outRef?.close() }
             runCatching { encoder?.close() }
-            runCatching { codec.stop() }
-            runCatching { codec.release() }
+            runCatching { codecRef?.stop() }
+            runCatching { codecRef?.release() }
             runCatching { ex.release() }
         }
         check(output.length() > 0) { "MP3 conversion failed" }

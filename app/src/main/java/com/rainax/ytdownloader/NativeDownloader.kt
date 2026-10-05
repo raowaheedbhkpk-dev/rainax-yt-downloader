@@ -30,6 +30,9 @@ object NativeDownloader {
 
     class Stopped : IOException("stopped")
 
+    /** This phone can't put this picture format and sound into one file (some phones can't with VP9/AV1). */
+    class Unsupported(cause: Throwable) : IOException("Can't join this format on this phone", cause)
+
     private val stops = ConcurrentHashMap<String, AtomicBoolean>()
     private val conns = ConcurrentHashMap<String, MutableSet<HttpURLConnection>>()
 
@@ -95,9 +98,18 @@ object NativeDownloader {
      * Downloads [url] into [out]. [onBytes] receives every newly written amount (also the part already done
      * when resuming), so the caller can show progress and speed. Throws [Stopped] on pause/cancel.
      */
-    fun download(id: String, url: String, out: File, onResumed: (Long) -> Unit, onBytes: (Long) -> Unit) {
+    fun download(
+        id: String, url: String, out: File, onResumed: (Long) -> Unit, onBytes: (Long) -> Unit,
+        onTotal: (Long) -> Unit = {}
+    ) {
         if (stopped(id)) throw Stopped()
         val (total, ranged) = probe(url)
+        if (total > 0) onTotal(total)                    // the real size (the list may only have an estimate)
+        // not enough room for the rest of this file: stop now with a clear message instead of failing later
+        if (total > 0 && !out.exists()) {
+            val free = out.absoluteFile.parentFile?.usableSpace ?: Long.MAX_VALUE
+            if (free < total + 20L * 1024 * 1024) throw IOException("Not enough storage")
+        }
         if (!ranged || total <= 0) {
             single(id, url, out, onBytes)
             return
@@ -220,7 +232,11 @@ object NativeDownloader {
                 attempt++
                 // 403/404: the address expired; the caller asks for a fresh one
                 if (attempt >= ATTEMPTS || e.message?.contains("HTTP error 4") == true) throw e
-                Thread.sleep(800L * attempt)
+                // wait a little before trying this piece again, but stop at once on pause/cancel
+                repeat(8 * attempt) {
+                    if (stopped(id)) throw Stopped()
+                    Thread.sleep(100)
+                }
             }
         }
     }
@@ -228,7 +244,10 @@ object NativeDownloader {
     private fun saveState(state: File, total: Long, done: BooleanArray) {
         try {
             val list = done.indices.filter { done[it] }.joinToString(",")
-            state.writeText("$total\n$list")
+            // write a new file and swap it in: a crash mid-write can never leave a broken list
+            val tmp = File(state.path + ".tmp")
+            tmp.writeText("$total\n$list")
+            if (!tmp.renameTo(state)) { state.delete(); tmp.renameTo(state) }
         } catch (e: Exception) { }
     }
 
@@ -274,23 +293,33 @@ object NativeDownloader {
         var muxer: MediaMuxer? = null
         var started = false
         try {
-            vEx.setDataSource(video.path)
-            aEx.setDataSource(audio.path)
-            val vt = track(vEx, "video/")
-            val at = track(aEx, "audio/")
-            vEx.selectTrack(vt)
-            aEx.selectTrack(at)
-            val vf = vEx.getTrackFormat(vt)
-            val af = aEx.getTrackFormat(at)
-            val m = MediaMuxer(
-                out.path,
-                if (webm) MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM else MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
-            )
-            muxer = m
-            if (vf.containsKey(MediaFormat.KEY_ROTATION)) m.setOrientationHint(vf.getInteger(MediaFormat.KEY_ROTATION))
-            val vOut = m.addTrack(vf)
-            val aOut = m.addTrack(af)
-            m.start()
+            val vf: MediaFormat
+            val af: MediaFormat
+            val m: MediaMuxer
+            val vOut: Int
+            val aOut: Int
+            // the phone can't read or join this format: the only case where a lower quality can help
+            try {
+                vEx.setDataSource(video.path)
+                aEx.setDataSource(audio.path)
+                val vt = track(vEx, "video/")
+                val at = track(aEx, "audio/")
+                vEx.selectTrack(vt)
+                aEx.selectTrack(at)
+                vf = vEx.getTrackFormat(vt)
+                af = aEx.getTrackFormat(at)
+                m = MediaMuxer(
+                    out.path,
+                    if (webm) MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM else MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+                )
+                muxer = m
+                if (vf.containsKey(MediaFormat.KEY_ROTATION)) m.setOrientationHint(vf.getInteger(MediaFormat.KEY_ROTATION))
+                vOut = m.addTrack(vf)
+                aOut = m.addTrack(af)
+                m.start()
+            } catch (e: Exception) {
+                throw Unsupported(e)
+            }
             started = true
 
             val size = maxOf(maxInput(vf), maxInput(af), 4 * 1024 * 1024)
@@ -311,7 +340,13 @@ object NativeDownloader {
                 }
                 val key = ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0
                 info.set(0, n, ex.sampleTime.coerceAtLeast(0), if (key) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
-                m.writeSampleData(if (useVideo) vOut else aOut, buf, info)
+                try {
+                    m.writeSampleData(if (useVideo) vOut else aOut, buf, info)
+                } catch (e: IllegalStateException) {
+                    throw Unsupported(e)
+                } catch (e: IllegalArgumentException) {
+                    throw Unsupported(e)
+                }
                 ex.advance()
             }
             m.stop()

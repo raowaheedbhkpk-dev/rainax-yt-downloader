@@ -41,7 +41,7 @@
         <!-- YouTube sign-in (Google's own page) -->
         <activity
             android:name=".SignInActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 

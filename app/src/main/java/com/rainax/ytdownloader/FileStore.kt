@@ -52,7 +52,7 @@ object FileStore {
         val doc = DocumentsContract.createDocument(resolver, parent, mime, file.name)
             ?: error("Could not create file in the chosen folder")
         try {
-            resolver.openOutputStream(doc)!!.use { out -> file.inputStream().use { it.copyTo(out) } }
+            resolver.openOutputStream(doc)!!.use { out -> file.inputStream().use { it.copyTo(out, 1 shl 20) } }
         } catch (e: Exception) {
             try { DocumentsContract.deleteDocument(resolver, doc) } catch (ignored: Exception) { }
             throw e
@@ -71,7 +71,7 @@ object FileStore {
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             ?: error("Could not create file in Downloads")
         try {
-            resolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out) } }
+            resolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out, 1 shl 20) } }
         } catch (e: Exception) {
             // never leave a hidden half-written entry behind
             try { resolver.delete(uri, null, null) } catch (ignored: Exception) { }

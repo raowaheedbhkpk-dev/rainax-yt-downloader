@@ -199,18 +199,25 @@
         </LinearLayout>
     </FrameLayout>
 
+    <!-- filter chips: their own row with space above and below, so the list never touches them -->
     <HorizontalScrollView
         android:id="@+id/chipsScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="?attr/rxBg"
         android:clipToPadding="false"
         android:paddingHorizontal="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="12dp"
         android:scrollbars="none">
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/homeChips"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
             app:singleLine="true"
@@ -232,7 +239,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingTop="4dp"
+                android:paddingTop="0dp"
                 android:paddingBottom="16dp" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 

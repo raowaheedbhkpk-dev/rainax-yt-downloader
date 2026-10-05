@@ -37,7 +37,11 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class DownloadService : Service() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // an unexpected error in one download (e.g. out of memory on a huge picture) never closes the app
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            kotlinx.coroutines.CoroutineExceptionHandler { _, t -> android.util.Log.e("RAINAX", "download job failed", t) }
+    )
     private val running = ConcurrentHashMap<String, Job>()
     private lateinit var nm: NotificationManager
     private lateinit var cm: ConnectivityManager
@@ -156,6 +160,10 @@ class DownloadService : Service() {
                 TaskRepository.update(t.id, true) { it.copy(status = Status.QUEUED, message = "Queued") }
             }
         }
+        // "running" with no job behind it (the service was stopped and started again): queue it again
+        TaskRepository.tasks.value.filter { it.status == Status.RUNNING && !running.containsKey(it.id) }.forEach { t ->
+            TaskRepository.update(t.id, true) { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED, message = "Queued") else it }
+        }
         var slots = AppPrefs.maxParallel(this) - running.size
         for (t in TaskRepository.tasks.value.asReversed()) { // oldest first
             if (slots <= 0) break
@@ -183,7 +191,13 @@ class DownloadService : Service() {
         TaskRepository.update(task.id, true) { it.copy(status = Status.RUNNING, message = "Starting…") }
         val job = scope.launch(start = CoroutineStart.LAZY) { runTask(task.id) }
         running[task.id] = job
-        job.invokeOnCompletion {
+        job.invokeOnCompletion { cause ->
+            // crashed with something unexpected (not a normal error): fail it, never retry it in a loop
+            if (cause != null && cause !is CancellationException) {
+                TaskRepository.update(task.id, true) {
+                    if (it.status == Status.RUNNING) it.copy(status = Status.FAILED, message = "Something went wrong. Tap Retry") else it
+                }
+            }
             running.remove(task.id)
             pump()
         }
@@ -210,26 +224,27 @@ class DownloadService : Service() {
                     TaskRepository.remove(id)                       // private videos are skipped, never listed
                     return
                 }
+                // only while still running: a pause tapped meanwhile wins
+                fun set(block: (DownloadTask) -> DownloadTask) =
+                    TaskRepository.update(id, true) { if (it.status == Status.RUNNING) block(it) else it }
                 if (msg.isFatalError()) {
-                    TaskRepository.update(id, true) { it.copy(status = Status.FAILED, message = friendlyError(msg)) }
+                    set { it.copy(status = Status.FAILED, message = friendlyError(msg)) }
                     notifyDone(cur, false)
                     return
                 }
                 if (!canDownload()) {
                     val why = if (!isOnline()) "Waiting for network…" else "Waiting for Wi-Fi…"
-                    TaskRepository.update(id, true) { it.copy(status = Status.WAITING, message = why) }
+                    set { it.copy(status = Status.WAITING, message = why) }
                     return
                 }
                 if (attempt >= MAX_RETRIES) {
                     if (scheduleAutoRetry(id)) return
-                    TaskRepository.update(id, true) { it.copy(status = Status.FAILED, message = friendlyError(msg)) }
+                    set { it.copy(status = Status.FAILED, message = friendlyError(msg)) }
                     notifyDone(cur, false)
                     return
                 }
                 attempt++
-                TaskRepository.update(id, true) {
-                    it.copy(retries = attempt, message = "Connection problem. Retrying $attempt/$MAX_RETRIES…")
-                }
+                set { it.copy(retries = attempt, message = "Connection problem. Retrying $attempt/$MAX_RETRIES…") }
                 delay(3_000L * attempt)
                 if (TaskRepository.get(id)?.status != Status.RUNNING) return
             }
@@ -247,7 +262,7 @@ class DownloadService : Service() {
         retryAt[id] = at
         val min = wait / 60_000
         TaskRepository.update(id, true) {
-            it.copy(
+            if (it.status != Status.RUNNING) it else it.copy(
                 status = Status.WAITING, retries = 0,
                 message = "Failed. Trying again by itself in $min min (${n + 1}/${AUTO_DELAYS.size})"
             )
@@ -285,8 +300,12 @@ class DownloadService : Service() {
         val dir = File(filesDir, "downloads/$id").apply { mkdirs() }
         val title = TaskRepository.get(id)?.title?.ifBlank { plan.title } ?: plan.title
 
-        val parts = listOfNotNull(plan.single, plan.video, plan.audio)
-        val total = parts.sumOf { it.size }.coerceAtLeast(1L)
+        // each part's size: the list's estimate first, the real size as soon as the download learns it
+        val sizes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+        plan.single?.let { sizes["media"] = it.size.coerceAtLeast(0) }
+        plan.video?.let { sizes["video"] = it.size.coerceAtLeast(0) }
+        plan.audio?.let { sizes["audio"] = it.size.coerceAtLeast(0) }
+        fun learned(role: String): (Long) -> Unit = { real -> sizes[role] = real }
         val done = java.util.concurrent.atomic.AtomicLong(0)
         var best = task.progress.coerceAtMost(98)    // the bar never goes backwards, even after a retry
         var lastUi = -1L
@@ -310,11 +329,16 @@ class DownloadService : Service() {
             lastBytes = bytes
             lastTime = now
             lastUi = now
-            val pct = (bytes * 100 / total).toInt().coerceIn(0, 99)
-            if (pct > best) best = pct
-            val eta = if (speed > 1) ((total - bytes) / speed).toLong() else -1
+            val total = sizes.values.sum()
+            val known = sizes.isNotEmpty() && sizes.values.all { it > 0 }
+            if (known) {
+                val pct = (bytes * 100 / total).toInt().coerceIn(0, 99)
+                if (pct > best) best = pct
+            }
+            val eta = if (known && speed > 1) ((total - bytes) / speed).toLong() else -1
             val text = buildString {
-                append("Downloading $best%")
+                // size unknown (some sites): show how much has arrived instead of a wrong percentage
+                if (known) append("Downloading $best%") else append("Downloading ").append(formatSize(bytes))
                 if (label.isNotEmpty()) append("  •  ").append(label)
                 if (speed > 1) append("  •  ").append(formatSize(speed.toLong())).append("/s")
                 if (eta in 0..86_400) append("  •  ETA ").append(formatEta(eta))
@@ -339,7 +363,7 @@ class DownloadService : Service() {
                 PartialFiles.setRole(id, role, f)          // the player follows the stream that works
                 val before = done.get()
                 try {
-                    NativeDownloader.download(id, p.url, f, onResumed, onBytes)
+                    NativeDownloader.download(id, p.url, f, onResumed, onBytes, learned(role))
                     return f
                 } catch (e: java.io.IOException) {
                     if (e is NativeDownloader.Stopped || TaskRepository.get(id)?.status != Status.RUNNING) throw e
@@ -368,15 +392,15 @@ class DownloadService : Service() {
             label = "sound"
             val gotAudio = fetch(a, plan.audioAlts, "audio", "audio")
             label = "video"
-            NativeDownloader.download(id, v.url, vf, onResumed, onBytes)
+            NativeDownloader.download(id, v.url, vf, onResumed, onBytes, learned("video"))
             if (TaskRepository.get(id)?.status != Status.RUNNING) return
             TaskRepository.update(id) { it.copy(progress = 99, message = "Joining video and sound…") }
             val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
+            // joining writes a second copy: make sure it fits first (never lose the downloaded parts)
+            if (dir.usableSpace < vf.length() + gotAudio.length() + 20L * 1024 * 1024) throw java.io.IOException("Not enough storage")
             try {
                 NativeDownloader.mux(id, vf, gotAudio, joined, plan.webm)
-            } catch (e: NativeDownloader.Stopped) {
-                throw e
-            } catch (e: Exception) {
+            } catch (e: NativeDownloader.Unsupported) {
                 if (!plan.canFallBack) throw e
                 // 2K/4K (VP9/AV1) could not be joined on this phone: the next try downloads H.264 MP4 (max 1080p)
                 dir.listFiles()?.forEach { it.delete() }
@@ -418,6 +442,11 @@ class DownloadService : Service() {
         val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
             ?: if (task.format.startsWith("audio")) "audio/mp4" else "video/mp4"
         val saved = FileStore.save(this, named, mime)
+        // cancelled while saving: don't leave a file the app no longer knows about
+        if (TaskRepository.get(id) == null) {
+            FileStore.delete(this, saved.uri)
+            return
+        }
 
         // Subtitles (.srt) next to the video. Optional: a failure never fails the download.
         plan.subtitle?.let { sub ->
