@@ -57,7 +57,7 @@ jobs:
           # same file with a fixed name: .../releases/latest/download/RAINAX.apk always gives the newest version
           cp "$NAME.apk" RAINAX.apk
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: RAINAX-YT-DOWNLOADER
           path: RAINAX-YT-DOWNLOADER-*
