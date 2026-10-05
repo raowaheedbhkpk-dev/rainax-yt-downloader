@@ -62,9 +62,13 @@ class PartialDataSource : BaseDataSource(false) {
         // (picture + sound: the picture starts after the sound, so this can take a while)
         var found: Pair<File, PartialFiles.Entry>? = null
         while (found == null) {
-            checkStillDownloading()
+            checkNotRemoved()
             found = PartialFiles.roleFile(taskId, role)?.let { f -> PartialFiles.entry(f)?.let { f to it } }
-            if (found == null) pause()
+            if (found == null) {
+                // not downloading right now (paused, no internet): nothing more will come for this part
+                if (!isDownloading()) throw IOException(NOTHING_MORE)
+                pause()
+            }
         }
         val (f, e) = found ?: throw IOException("No download")
         if (!f.exists()) throw IOException(RESTARTED)
@@ -89,7 +93,9 @@ class PartialDataSource : BaseDataSource(false) {
         var avail = e.available(pos)
         while (avail <= 0) {
             if (e.complete) return C.RESULT_END_OF_INPUT          // one-connection download reached its end
-            checkStillDownloading()
+            checkNotRemoved()
+            // paused or offline: everything downloaded so far has played
+            if (!isDownloading()) throw IOException(NOTHING_MORE)
             // the download restarted or switched streams: open again to follow the new pieces
             val now = PartialFiles.roleFile(taskId, role)
             if (now?.path != file?.path || now?.let { PartialFiles.entry(it) } !== e) throw IOException(RESTARTED)
@@ -122,17 +128,15 @@ class PartialDataSource : BaseDataSource(false) {
         }
     }
 
-    /** Paused, failed or cancelled downloads can't feed the player any more. */
-    private fun checkStillDownloading() {
+    /** Removed downloads can't be played; saved ones continue from the saved file. */
+    private fun checkNotRemoved() {
         val t = TaskRepository.get(taskId) ?: throw IOException("This download was removed")
-        when (t.status) {
-            Status.PAUSED -> throw IOException("The download is paused. Resume it to keep watching")
-            Status.FAILED -> throw IOException("The download stopped. Retry it to keep watching")
-            // saved: its working files may be gone, the player switches to the saved file
-            Status.DONE -> if (PartialFiles.layout(taskId) == null) throw IOException(FINISHED)
-            else -> {}
-        }
+        // saved: its working files may be gone, the player switches to the saved file
+        if (t.status == Status.DONE && PartialFiles.layout(taskId) == null) throw IOException(FINISHED)
     }
+
+    /** True while more pieces can still arrive (downloading now, not paused, failed or waiting for internet). */
+    private fun isDownloading(): Boolean = TaskRepository.get(taskId)?.status == Status.RUNNING
 
     private fun pause() {
         try {
@@ -147,6 +151,7 @@ class PartialDataSource : BaseDataSource(false) {
         /** Error texts the player reacts to. */
         const val RESTARTED = "rx:restarted"
         const val FINISHED = "rx:finished"
+        const val NOTHING_MORE = "That's all that is downloaded so far. Resume the download to watch more"
     }
 }
 
@@ -178,7 +183,10 @@ class PartialMediaSourceFactory(context: Context) : MediaSource.Factory {
         fun part(role: String) = partial.createMediaSource(
             mediaItem.buildUpon().setUri("${PartialPlayback.SCHEME}://$id/$role").build()
         )
-        return if (PartialFiles.layout(id) == "av") MergingMediaSource(part("video"), part("audio"))
-        else part("media")
+        return when (PartialFiles.layout(id)) {
+            "av" -> MergingMediaSource(part("video"), part("audio"))
+            "video" -> part("video")
+            else -> part("media")
+        }
     }
 }

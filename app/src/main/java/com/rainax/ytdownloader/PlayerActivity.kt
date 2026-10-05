@@ -330,9 +330,9 @@ class PlayerActivity : AppCompatActivity() {
                 when {
                     // saved meanwhile: go on with the saved file from the same spot
                     PartialDataSource.FINISHED in msgs -> { switchToSaved(id); return }
-                    // paused / stopped / removed: say so (play again after resuming)
-                    msgs.any { it.startsWith("The download") || it.startsWith("This download") } -> {
-                        info(msgs.first { it.startsWith("The download") || it.startsWith("This download") })
+                    // reached the end of what is downloaded (paused / offline), or removed: say so
+                    msgs.any { it == PartialDataSource.NOTHING_MORE || it.startsWith("This download") } -> {
+                        info(msgs.first { it == PartialDataSource.NOTHING_MORE || it.startsWith("This download") })
                         return
                     }
                     // the download restarted or is still coming in: try again by itself

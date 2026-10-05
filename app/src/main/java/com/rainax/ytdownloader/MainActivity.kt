@@ -257,16 +257,17 @@ class MainActivity : AppCompatActivity() {
             openFile(t)
             return
         }
+        val dir = java.io.File(filesDir, "downloads/${t.id}")
         when {
-            // plays from the pieces already downloaded; the rest comes in while you watch
-            PartialPlayback.ready(t.id) && t.status != Status.PAUSED && t.status != Status.FAILED -> {
+            // plays from the pieces already downloaded; while downloading, the rest comes in as you watch.
+            // Paused, failed or offline: plays what is already on the phone (no internet needed)
+            PartialPlayback.ready(t.id) || PartialFiles.restore(t.id, dir) -> {
                 controller?.pause()                     // one thing plays at a time
                 PlayerActivity.openPartial(this, t.id, t.title.ifBlank { "Video" })
             }
-            t.status == Status.PAUSED || t.status == Status.FAILED ->
-                message("Resume the download to watch it while it downloads")
             t.progress >= 99 -> message("Almost done… it opens from Downloaded in a moment")
-            else -> message("Getting the download ready… tap again in a moment")
+            t.status == Status.RUNNING -> message("Getting the download ready… tap again in a moment")
+            else -> message("Nothing downloaded yet. Start the download to watch it")
         }
     }
 

@@ -56,10 +56,14 @@ object PartialFiles {
     fun setRole(id: String, role: String, file: File) { roles["$id/$role"] = file }
     fun roleFile(id: String, role: String): File? = roles["$id/$role"]
 
-    /** "av" (picture + separate sound), "media" (one file), or null while the download is still starting. */
+    /**
+     * "av" (picture + separate sound), "media" (one file), "video" (picture only: a paused download from
+     * an older version that fetched the sound last), or null while the download is still starting.
+     */
     fun layout(id: String): String? = when {
         roles.containsKey("$id/media") -> "media"
         roles.containsKey("$id/video") && roles.containsKey("$id/audio") -> "av"
+        roles.containsKey("$id/video") -> "video"
         else -> null
     }
 
@@ -85,6 +89,45 @@ object PartialFiles {
             dir.deleteRecursively()
             forget(id)
         }
+    }
+
+    /**
+     * A download that isn't running (paused, failed, waiting for internet, or after the app restarted):
+     * finds its parts in its working folder [dir] and which pieces are already there (the ".state" files),
+     * so what was downloaded can be played offline. True when there is something to play.
+     */
+    @Synchronized
+    fun restore(id: String, dir: File): Boolean {
+        if (layout(id) != null) return true
+        val files = dir.listFiles()?.filter { it.isFile && !it.name.endsWith(".state") && it.length() > 0 } ?: return false
+        fun find(base: String) = files.firstOrNull { it.name.startsWith("$base.") }
+            ?: files.filter { it.name.startsWith("$base-") }.maxByOrNull { it.lastModified() }
+        val media = find("media")
+        val video = find("video")
+        val audio = find("audio")
+        val parts = when {
+            media != null -> mapOf("media" to media)
+            video != null && audio != null -> mapOf("video" to video, "audio" to audio)
+            video != null -> mapOf("video" to video)              // sound not downloaded yet: picture only
+            else -> return false
+        }
+        for (f in parts.values) if (entry(f) == null) register(fromDisk(f))
+        setRoles(id, parts)
+        return true
+    }
+
+    /** Rebuilds a part's piece list from the downloader's ".state" file ("size" then the finished pieces). */
+    private fun fromDisk(f: File): Entry {
+        val lines = runCatching { File(f.path + ".state").readLines() }.getOrDefault(emptyList())
+        val total = lines.firstOrNull()?.trim()?.toLongOrNull()
+        if (total == null || total <= 0) {
+            // one-connection download: everything written so far, from the start
+            return Entry(f, -1, 0, null).also { it.prefix = f.length() }
+        }
+        val block = NativeDownloader.BLOCK
+        val done = BooleanArray(((total + block - 1) / block).toInt())
+        lines.getOrNull(1)?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.forEach { if (it in done.indices) done[it] = true }
+        return Entry(f, total, block, done).also { it.complete = done.all { d -> d } }
     }
 
     /** Cancelled or cleaned up: nothing of it can be played any more. */

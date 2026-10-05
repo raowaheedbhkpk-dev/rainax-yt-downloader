@@ -24,7 +24,7 @@ import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper
  */
 object NativeDownloader {
 
-    private const val BLOCK = 1024 * 1024L
+    internal const val BLOCK = 1024 * 1024L      // piece size (also read by PartialFiles for paused downloads)
     private const val THREADS = 4
     private const val ATTEMPTS = 4
 

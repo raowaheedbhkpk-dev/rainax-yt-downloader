@@ -1,3 +1,2 @@
-Watch while downloading: tap a running download to play the part already downloaded
-The player waits for the next part and the download fetches it first
-Sound downloads first, so watching can start sooner
+Paused or offline downloads play from the start up to the part already downloaded
+No internet needed to watch what is already downloaded
