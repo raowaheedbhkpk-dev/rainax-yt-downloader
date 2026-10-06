@@ -177,6 +177,16 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) refreshAccount()
 
+        // Ads: consent form where the law needs it, then the banner above the bottom bar
+        Ads.start(this) {
+            if (isFinishing || isDestroyed) return@start
+            Ads.showBanner(this, b.adBanner) {
+                updateChrome()
+                if (b.miniPlayer.root.isVisible) b.adBanner.post { placeMiniPlayer() }   // move off the banner
+            }
+            st.adPrivacyBtn.isVisible = Ads.privacyOptionsNeeded(this)
+        }
+
         // New RAINAX version? (quiet check, a few seconds after start)
         if (savedInstanceState == null) b.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
 
@@ -229,12 +239,19 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (blocked) return
         AppUpdater.resumeInstall(this)
+        Ads.resumeBanner(b.adBanner)
+    }
+
+    override fun onPause() {
+        if (!blocked) Ads.pauseBanner(b.adBanner)
+        super.onPause()
     }
 
     override fun onDestroy() {
         if (!blocked) {
             disconnectPlayer()            // the player service keeps playing on its own
             sheet?.dismiss()
+            Ads.destroyBanner(b.adBanner)
         }
         super.onDestroy()
     }
@@ -410,6 +427,8 @@ class MainActivity : AppCompatActivity() {
         val full = video.fullscreen
         b.bottomNav.isVisible = !full
         b.navDivider.isVisible = !full
+        // the banner hides in full screen and comes back after (only once an ad has loaded)
+        b.adBanner.isVisible = !full && Ads.bannerLoaded
         val mini = video.isOpen && !full && (video.minimized || tab != 0)
         val wasMini = b.miniPlayer.root.isVisible
         b.miniPlayer.root.isVisible = mini
@@ -505,9 +524,11 @@ class MainActivity : AppCompatActivity() {
         val insets = androidx.core.view.ViewCompat.getRootWindowInsets(root)
             ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         val top = (insets?.top ?: 0) + margin
-        val navTop = if (b.bottomNav.isVisible && b.bottomNav.height > 0) {
+        // never over the ad banner (ad rules) or the bottom bar
+        val bottomView = if (b.adBanner.isVisible && b.adBanner.height > 0) b.adBanner else b.bottomNav
+        val navTop = if (bottomView.isVisible && bottomView.height > 0) {
             val loc = IntArray(2); val rootLoc = IntArray(2)
-            b.bottomNav.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
+            bottomView.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
             (loc[1] - rootLoc[1]).toFloat()
         } else root.height - (insets?.bottom ?: 0).toFloat()
         // stay above the Library's selection buttons (Delete / Remove) while selecting
@@ -742,10 +763,11 @@ class MainActivity : AppCompatActivity() {
             }
             vm.enqueue(items, spec, sub)
             dialog.dismiss()
+            Ads.onDownloadAdded(this)                  // sometimes a full-screen ad (limited, see Ads)
             if (!askBatteryOptimization()) {
                 val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
                 Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
-                    .setAnchorView(b.bottomNav)
+                    .setAnchorView(snackAnchor())
                     .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
                     .show()
             }
@@ -1154,6 +1176,7 @@ class MainActivity : AppCompatActivity() {
         st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
         st.bgPlaySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setBackgroundPlay(this, on) }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
+        st.adPrivacyBtn.setOnClickListener { Ads.showPrivacyOptions(this) }
 
         st.autoClearSwitch.isChecked = AppPrefs.autoClear(this)
         st.autoClearSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoClear(this, on) }
@@ -1216,8 +1239,11 @@ class MainActivity : AppCompatActivity() {
     // Helpers
     // =====================================================================
 
+    /** Messages sit above the ad banner (never over it) or above the bottom bar. */
+    private fun snackAnchor(): View = if (b.adBanner.isVisible) b.adBanner else b.bottomNav
+
     private fun message(text: String) {
-        Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(b.bottomNav).show()
+        Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(snackAnchor()).show()
     }
 
     private fun requestNotificationPermission() {

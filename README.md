@@ -37,6 +37,12 @@ Android warns about every app installed from outside the Play Store that Google 
 This is not a virus warning. To install, tap **More details > Install anyway**.
 YouTube downloaders are not allowed on the Play Store.
 
+## Ads (AdMob)
+- A banner above the bottom bar, and a full-screen ad at most every 3rd download added (and never within 3 minutes).
+- Google's consent form appears first where the law needs it (EU/UK); Settings has "Privacy settings for ads" there.
+- The IDs live in `app/build.gradle` (`admobAppId`, `ADMOB_BANNER`, `ADMOB_INTERSTITIAL`). They are Google's **test IDs**;
+  replace them with your own from admob.google.com for real ads. `ADS_ENABLED = false` turns ads off.
+
 ## Official app and name
 - The only official RAINAX is published at **https://github.com/raowaheedbhkpk-dev/rainax-yt-downloader/releases**,
   signed with the owner's private key. The app checks its own signature at start: a copy that someone changed and

@@ -7,7 +7,7 @@ plugins {
 // always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.9.10"
+def rxVersionName = isTag ? tagVersion : "8.9.11"
 def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
@@ -43,6 +43,14 @@ android {
         versionCode rxVersionCode
         versionName rxVersionName
         buildConfigField "String", "KEY_SHA256", "\"${rxKeyFingerprint}\""
+
+        // ----- AdMob -----
+        // These are Google's TEST IDs (test ads, safe to tap). For real ads put YOUR IDs from admob.google.com here:
+        // the App ID (has a "~") and the two ad unit IDs (have a "/"). ADS_ENABLED false turns all ads off.
+        manifestPlaceholders = [admobAppId: "ca-app-pub-3940256099942544~3347511713"]
+        buildConfigField "boolean", "ADS_ENABLED", "true"
+        buildConfigField "String", "ADMOB_BANNER", "\"ca-app-pub-3940256099942544/9214589741\""
+        buildConfigField "String", "ADMOB_INTERSTITIAL", "\"ca-app-pub-3940256099942544/1033173712\""
         // the MP3 encoder is native code: build it for real phones (64/32-bit ARM) and x86_64 emulators
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
     }
@@ -113,6 +121,9 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'com.google.android.material:material:1.12.0'
+    // AdMob ads + Google's consent form (EU/UK privacy rules)
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    implementation 'com.google.android.ump:user-messaging-platform:3.1.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.6'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6'
     // RAINAX's own extractor (the same one and version NewPipe uses). Downloads use NativeDownloader. No yt-dlp.

@@ -438,6 +438,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="Check for app update" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/adPrivacyBtn"
+            style="@style/Widget.Rainax.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Privacy settings for ads"
+            android:visibility="gone" />
         <TextView
             android:id="@+id/versionText"
             android:layout_width="wrap_content"

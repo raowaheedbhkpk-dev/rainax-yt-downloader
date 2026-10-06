@@ -37,6 +37,14 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <!-- AdMob banner (shown once an ad has loaded) -->
+        <FrameLayout
+            android:id="@+id/adBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/rxBg"
+            android:visibility="gone" />
+
         <View
             android:id="@+id/navDivider"
             android:layout_width="match_parent"

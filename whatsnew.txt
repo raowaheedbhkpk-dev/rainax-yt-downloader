@@ -1,1 +1,2 @@
-Official download page with one-tap APK download
+Ads added (AdMob test ads for now)
+Privacy settings for ads in Settings where required
