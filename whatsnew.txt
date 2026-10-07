@@ -1,2 +1,1 @@
-Ads added (AdMob test ads for now)
-Privacy settings for ads in Settings where required
+Real banner and full-screen ads

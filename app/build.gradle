@@ -7,7 +7,7 @@ plugins {
 // always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.9.11"
+def rxVersionName = isTag ? tagVersion : "8.9.13"
 def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
@@ -45,12 +45,12 @@ android {
         buildConfigField "String", "KEY_SHA256", "\"${rxKeyFingerprint}\""
 
         // ----- AdMob -----
-        // These are Google's TEST IDs (test ads, safe to tap). For real ads put YOUR IDs from admob.google.com here:
-        // the App ID (has a "~") and the two ad unit IDs (have a "/"). ADS_ENABLED false turns all ads off.
-        manifestPlaceholders = [admobAppId: "ca-app-pub-3940256099942544~3347511713"]
+        // Your own AdMob App ID and ad units (real ads: never tap them on your own phone).
+        // ADS_ENABLED false turns all ads off.
+        manifestPlaceholders = [admobAppId: "ca-app-pub-9149573632995634~4575829314"]      // your AdMob App ID
         buildConfigField "boolean", "ADS_ENABLED", "true"
-        buildConfigField "String", "ADMOB_BANNER", "\"ca-app-pub-3940256099942544/9214589741\""
-        buildConfigField "String", "ADMOB_INTERSTITIAL", "\"ca-app-pub-3940256099942544/1033173712\""
+        buildConfigField "String", "ADMOB_BANNER", "\"ca-app-pub-9149573632995634/1734043559\""          // your banner unit
+        buildConfigField "String", "ADMOB_INTERSTITIAL", "\"ca-app-pub-9149573632995634/4168635205\""    // your interstitial unit
         // the MP3 encoder is native code: build it for real phones (64/32-bit ARM) and x86_64 emulators
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
     }
