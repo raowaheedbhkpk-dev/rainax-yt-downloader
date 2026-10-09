@@ -378,7 +378,8 @@ class DownloadService : Service() {
             error("No stream could be downloaded")
         }
 
-        var output: File
+        var output: File? = null
+        var saved: FileStore.Saved? = null
         val s = plan.single
         if (s != null) {
             PartialFiles.setRoles(id, mapOf("media" to File(dir, "media.${s.ext}")))
@@ -396,56 +397,67 @@ class DownloadService : Service() {
             NativeDownloader.download(id, v.url, vf, onResumed, onBytes, learned("video"))
             if (TaskRepository.get(id)?.status != Status.RUNNING) return
             TaskRepository.update(id) { it.copy(progress = 99, message = "Joining video and sound…") }
-            val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
-            // joining writes a second copy: make sure it fits first (never lose the downloaded parts)
-            if (dir.usableSpace < vf.length() + gotAudio.length() + 20L * 1024 * 1024) throw java.io.IOException("Not enough storage")
-            try {
-                NativeDownloader.mux(id, vf, gotAudio, joined, plan.webm)
-            } catch (e: NativeDownloader.Unsupported) {
-                if (!plan.canFallBack) throw e
-                // 2K/4K (VP9/AV1) could not be joined on this phone: the next try downloads H.264 MP4 (max 1080p)
-                dir.listFiles()?.forEach { it.delete() }
-                val want = task.format.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: 1080
-                TaskRepository.update(id, true) { t -> t.copy(format = "video:${minOf(want, 1080)}:mp4") }
-                throw java.io.IOException("Trying 1080p instead of 2K/4K on this phone")
+            val joining: (Int) -> Unit = { pct ->
+                TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Joining video and sound $pct%") }
             }
-            output = joined
+            // fast way (MP4): joined straight into the saved file, no second copy
+            saved = if (plan.webm) null else fastJoin(id, vf, gotAudio, title, joining)
+            if (saved == null) {
+                val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
+                // joining writes a second copy: make sure it fits first (never lose the downloaded parts)
+                if (dir.usableSpace < vf.length() + gotAudio.length() + 20L * 1024 * 1024) throw java.io.IOException("Not enough storage")
+                try {
+                    NativeDownloader.mux(id, vf, gotAudio, joined, plan.webm, joining)
+                } catch (e: NativeDownloader.Unsupported) {
+                    if (!plan.canFallBack) throw e
+                    // 2K/4K (VP9/AV1) could not be joined on this phone: the next try downloads H.264 MP4 (max 1080p)
+                    dir.listFiles()?.forEach { it.delete() }
+                    val want = task.format.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: 1080
+                    TaskRepository.update(id, true) { t -> t.copy(format = "video:${minOf(want, 1080)}:mp4") }
+                    throw java.io.IOException("Trying 1080p instead of 2K/4K on this phone")
+                }
+                output = joined
+            }
         }
 
-        // MP3 chosen: convert the downloaded sound on the phone
-        if (task.format == "audio:mp3" && output.extension.lowercase() != "mp3") {
+        if (saved == null) {
+            var out = output ?: error("Nothing was downloaded")
+            // MP3 chosen: convert the downloaded sound on the phone
+            if (task.format == "audio:mp3" && out.extension.lowercase() != "mp3") {
+                if (TaskRepository.get(id)?.status != Status.RUNNING) return
+                TaskRepository.update(id) { it.copy(progress = 99, message = "Converting to MP3…") }
+                val mp3 = File(dir, "converted.mp3")
+                AudioConverter.toMp3(out, mp3, 192, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
+                    TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
+                }
+                if (!PartialFiles.isWatched(id)) {
+                    PartialFiles.forget(id)
+                    out.delete()
+                }                                                     // still playing it? it goes with the folder later
+                out = mp3
+            }
+
+            // Paused or cancelled at the very end: keep the files for resume, save nothing
             if (TaskRepository.get(id)?.status != Status.RUNNING) return
-            TaskRepository.update(id) { it.copy(progress = 99, message = "Converting to MP3…") }
-            val mp3 = File(dir, "converted.mp3")
-            AudioConverter.toMp3(output, mp3, 192, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
-                TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
+            TaskRepository.update(id) { it.copy(progress = 99, message = "Saving…") }
+
+            val ext = out.extension.lowercase()
+            val named = File(dir, NativeDownloader.safeName(title, ext))
+            if (named.path != out.path) {
+                named.delete()
+                // being watched: copy, so the player keeps reading the same file
+                val watched = PartialFiles.isWatched(id)
+                if (!watched) PartialFiles.forget(id)
+                if (watched || !out.renameTo(named)) out.copyTo(named, overwrite = true)
             }
-            if (!PartialFiles.isWatched(id)) {
-                PartialFiles.forget(id)
-                output.delete()
-            }                                                     // still playing it? it goes with the folder later
-            output = mp3
+            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+                ?: if (task.format.startsWith("audio")) "audio/mp4" else "video/mp4"
+            saved = FileStore.save(this, named, mime)
         }
-
-        // Paused or cancelled at the very end: keep the files for resume, save nothing
-        if (TaskRepository.get(id)?.status != Status.RUNNING) return
-        TaskRepository.update(id) { it.copy(progress = 99, message = "Saving…") }
-
-        val ext = output.extension.lowercase()
-        val named = File(dir, NativeDownloader.safeName(title, ext))
-        if (named.path != output.path) {
-            named.delete()
-            // being watched: copy, so the player keeps reading the same file
-            val watched = PartialFiles.isWatched(id)
-            if (!watched) PartialFiles.forget(id)
-            if (watched || !output.renameTo(named)) output.copyTo(named, overwrite = true)
-        }
-        val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
-            ?: if (task.format.startsWith("audio")) "audio/mp4" else "video/mp4"
-        val saved = FileStore.save(this, named, mime)
+        val result = saved ?: return
         // cancelled while saving: don't leave a file the app no longer knows about
         if (TaskRepository.get(id) == null) {
-            FileStore.delete(this, saved.uri)
+            FileStore.delete(this, result.uri)
             return
         }
 
@@ -464,13 +476,33 @@ class DownloadService : Service() {
         TaskRepository.update(id, true) {
             it.copy(
                 status = Status.DONE, progress = 100, message = "Completed",
-                fileUri = saved.uri, mime = saved.mime, title = it.title.ifBlank { saved.name }
+                fileUri = result.uri, mime = result.mime, title = it.title.ifBlank { result.name }
             )
         }
         PartialFiles.finished(id, dir)          // deleted now, or when you close the player
         autoTries.remove(id)
         retryAt.remove(id)
         TaskRepository.get(id)?.let { notifyDone(it, true) }
+    }
+
+    /**
+     * Joins an MP4 picture and sound by copying their data in big pieces straight into the saved file
+     * (seconds to a minute for a 2-hour video). Null when these files need the slower MediaMuxer way.
+     */
+    private fun fastJoin(id: String, video: File, audio: File, title: String, progress: (Int) -> Unit): FileStore.Saved? {
+        val job = try {
+            Mp4Joiner.prepare(video, audio)
+        } catch (e: Exception) {                    // not an MP4 this joiner knows (or a damaged one)
+            android.util.Log.w("RAINAX", "fast join not possible: ${e.message}")
+            return null
+        }
+        // the phone's storage holds both the parts and Downloads (a picked SD card folder is checked by writing)
+        if (FileStore.customTree(this) == null && filesDir.usableSpace < job.size + 20L * 1024 * 1024) {
+            throw java.io.IOException("Not enough storage")
+        }
+        return FileStore.saveWith(this, NativeDownloader.safeName(title, "mp4"), "video/mp4") { out ->
+            job.write(out, { TaskRepository.get(id)?.status != Status.RUNNING }, progress)
+        }
     }
 
     /** Loads missing thumbnails (playlist items, shared links) one by one in the background. */

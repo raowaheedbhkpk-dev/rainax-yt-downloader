@@ -295,7 +295,7 @@ object NativeDownloader {
     // ---------- joining video + sound ----------
 
     /** Puts the picture of [video] and the sound of [audio] into one file. No re-encoding. */
-    fun mux(id: String, video: File, audio: File, out: File, webm: Boolean) {
+    fun mux(id: String, video: File, audio: File, out: File, webm: Boolean, progress: (Int) -> Unit = {}) {
         out.delete()
         val vEx = MediaExtractor()
         val aEx = MediaExtractor()
@@ -332,14 +332,21 @@ object NativeDownloader {
             started = true
 
             val size = maxOf(maxInput(vf), maxInput(af), 4 * 1024 * 1024)
-            val buf = ByteBuffer.allocate(size)
+            // direct memory: the frames go from the file to the muxer without being copied through Java
+            val buf = ByteBuffer.allocateDirect(size)
             val info = MediaCodec.BufferInfo()
             var vDone = false
             var aDone = false
+            var vTime = vEx.sampleTime
+            var aTime = aEx.sampleTime
+            val total = (video.length() + audio.length()).coerceAtLeast(1)
+            var bytes = 0L
+            var lastPct = -1
+            var count = 0
             while (!vDone || !aDone) {
-                if (stopped(id)) throw Stopped()
+                if (++count and 63 == 0 && stopped(id)) throw Stopped()
                 // keep picture and sound interleaved by time
-                val useVideo = !vDone && (aDone || vEx.sampleTime <= aEx.sampleTime)
+                val useVideo = !vDone && (aDone || vTime <= aTime)
                 val ex = if (useVideo) vEx else aEx
                 buf.clear()
                 val n = ex.readSampleData(buf, 0)
@@ -347,8 +354,12 @@ object NativeDownloader {
                     if (useVideo) vDone = true else aDone = true
                     continue
                 }
+                val time = if (useVideo) vTime else aTime
                 val key = ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0
-                info.set(0, n, ex.sampleTime.coerceAtLeast(0), if (key) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
+                info.set(0, n, time.coerceAtLeast(0), if (key) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0)
+                bytes += n
+                val pct = (bytes * 100 / total).toInt().coerceAtMost(99)
+                if (pct != lastPct) { lastPct = pct; progress(pct) }
                 try {
                     m.writeSampleData(if (useVideo) vOut else aOut, buf, info)
                 } catch (e: IllegalStateException) {
@@ -357,6 +368,7 @@ object NativeDownloader {
                     throw Unsupported(e)
                 }
                 ex.advance()
+                if (useVideo) vTime = vEx.sampleTime else aTime = aEx.sampleTime
             }
             m.stop()
             started = false

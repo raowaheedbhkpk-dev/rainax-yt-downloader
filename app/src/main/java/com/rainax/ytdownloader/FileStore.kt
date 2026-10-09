@@ -7,6 +7,8 @@ import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import java.io.File
+import java.io.OutputStream
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Where finished files go: the default Downloads/rainax-yt-downloader folder, or a folder the user picked. */
 object FileStore {
@@ -34,36 +36,47 @@ object FileStore {
     }
 
     /** Copies [file] into the chosen folder. Falls back to the default folder if that is not possible. */
-    fun save(context: Context, file: File, mime: String): Saved {
+    fun save(context: Context, file: File, mime: String): Saved =
+        saveWith(context, file.name, mime) { out -> file.inputStream().use { it.copyTo(out, 1 shl 20) } }
+
+    /**
+     * Creates [name] in the chosen folder and lets [write] fill it (e.g. joining video and sound straight
+     * into the final file, with no extra copy). If the chosen folder can't be used, the default folder is.
+     * A file that fails half-way is removed.
+     */
+    fun saveWith(context: Context, name: String, mime: String, write: (OutputStream) -> Unit): Saved {
         val tree = customTree(context)
         if (tree != null) {
+            val started = AtomicBoolean(false)
             try {
-                return saveToTree(context, tree, file, mime)
+                return saveToTree(context, tree, name, mime) { out -> started.set(true); write(out) }
             } catch (e: Exception) {
                 // the folder was removed or the permission was revoked: use the default folder
+                // (a failure while writing is a real error: don't do it all again)
+                if (started.get()) throw e
             }
         }
-        return saveToDownloads(context, file, mime)
+        return saveToDownloads(context, name, mime, write)
     }
 
-    private fun saveToTree(context: Context, tree: Uri, file: File, mime: String): Saved {
+    private fun saveToTree(context: Context, tree: Uri, name: String, mime: String, write: (OutputStream) -> Unit): Saved {
         val resolver = context.contentResolver
         val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-        val doc = DocumentsContract.createDocument(resolver, parent, mime, file.name)
+        val doc = DocumentsContract.createDocument(resolver, parent, mime, name)
             ?: error("Could not create file in the chosen folder")
         try {
-            resolver.openOutputStream(doc)!!.use { out -> file.inputStream().use { it.copyTo(out, 1 shl 20) } }
+            resolver.openOutputStream(doc)!!.use { write(it) }
         } catch (e: Exception) {
             try { DocumentsContract.deleteDocument(resolver, doc) } catch (ignored: Exception) { }
             throw e
         }
-        return Saved(doc.toString(), mime, file.nameWithoutExtension)
+        return Saved(doc.toString(), mime, name.substringBeforeLast('.'))
     }
 
-    private fun saveToDownloads(context: Context, file: File, mime: String): Saved {
+    private fun saveToDownloads(context: Context, name: String, mime: String, write: (OutputStream) -> Unit): Saved {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, file.name)
+            put(MediaStore.Downloads.DISPLAY_NAME, name)
             put(MediaStore.Downloads.MIME_TYPE, mime)
             put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$DEFAULT_FOLDER")
             put(MediaStore.Downloads.IS_PENDING, 1)
@@ -71,7 +84,7 @@ object FileStore {
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             ?: error("Could not create file in Downloads")
         try {
-            resolver.openOutputStream(uri)!!.use { out -> file.inputStream().use { it.copyTo(out, 1 shl 20) } }
+            resolver.openOutputStream(uri)!!.use { write(it) }
         } catch (e: Exception) {
             // never leave a hidden half-written entry behind
             try { resolver.delete(uri, null, null) } catch (ignored: Exception) { }
@@ -80,7 +93,7 @@ object FileStore {
         values.clear()
         values.put(MediaStore.Downloads.IS_PENDING, 0)
         resolver.update(uri, values, null, null)
-        return Saved(uri.toString(), mime, file.nameWithoutExtension)
+        return Saved(uri.toString(), mime, name.substringBeforeLast('.'))
     }
 
     /** Subtitles go next to the video. Best effort. */
