@@ -30,6 +30,7 @@ object SocialExtractor {
 
     private class Cached(val at: Long, val media: Media)
     private val cache = ConcurrentHashMap<String, Cached>()
+    private val planned = ConcurrentHashMap<String, Long>()
 
     /** Request headers a file needs (TikTok wants its cookies and Referer). Keyed by file address. */
     private val fileHeaders = ConcurrentHashMap<String, Map<String, String>>()
@@ -87,7 +88,11 @@ object SocialExtractor {
     /** Blocking. The file for a choice from [fetch] ("video:720:0", "audio:mp3"). */
     fun plan(url: String, spec: String): FastExtractor.Plan {
         cache.remove(key(url))                     // fresh addresses (they expire) and fresh cookies
-        val m = media(url)
+        // a TikTok asked again within minutes = its file was refused: this time use the second reader first
+        val now = System.currentTimeMillis()
+        val retry = isTikTok(url) && (planned[key(url)]?.let { now - it < 15 * 60_000 } == true)
+        planned[key(url)] = now
+        val m = (if (retry) tikwm(url) else null) ?: media(url)
         val pick = if (spec.startsWith("audio")) {
             m.variants.firstOrNull { it.audioOnly } ?: m.variants.firstOrNull() ?: error("No audio found")
         } else {
@@ -139,14 +144,58 @@ object SocialExtractor {
 
     // ---------- TikTok ----------
 
+    /**
+     * TikTok. Its page often has no video data on the first visit (it first hands out cookies and checks
+     * the visitor), so the page is asked up to 3 times with the cookies it gave. If the page still has no
+     * video (some videos whose owner turned off downloads, region or bot checks), a second reader is used.
+     */
     private fun tiktok(url: String): Media {
-        val page = load(url, mapOf("Referer" to "https://www.tiktok.com/"))
-        val item = tiktokItem(page.html) ?: error("Couldn't read this TikTok. It may be private or removed")
-        val video = item.optJSONObject("video") ?: error("This TikTok has no video")
+        var cookies = ""
+        var target = url
+        var status = 0
+        for (attempt in 0 until 3) {
+            val page = runCatching {
+                load(target, mapOf("Referer" to "https://www.tiktok.com/") +
+                    (if (cookies.isNotEmpty()) mapOf("Cookie" to cookies) else emptyMap()))
+            }.getOrNull()
+            if (page != null) {
+                cookies = mergeCookies(cookies, page.cookies)
+                // a short link (vt.tiktok.com, vm.tiktok.com): continue with the full video address
+                if (page.finalUrl.contains("/video/") || page.finalUrl.contains("/photo/")) target = page.finalUrl.substringBefore('?')
+                val item = tiktokItem(page.html)
+                status = tiktokStatus(page.html)
+                if (item != null) fromItem(item, cookies)?.let { return it }
+            }
+            if (attempt < 2) Thread.sleep(500L * (attempt + 1))
+        }
+        tikwm(target.ifBlank { url })?.let { return it }
+        error(
+            if (status == 10216 || status == 10222) "This TikTok is private"
+            else if (!Net.online()) NO_INTERNET
+            else "Couldn't read this TikTok. It may be removed or private. Check the link and try again"
+        )
+    }
+
+    private fun mergeCookies(old: String, new: String): String {
+        val map = LinkedHashMap<String, String>()
+        (old.split(';') + new.split(';')).map { it.trim() }.filter { it.contains('=') }.forEach {
+            map[it.substringBefore('=')] = it.substringAfter('=')
+        }
+        return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
+    }
+
+    /** TikTok's own answer code for the video (0 = fine, 10204 = removed, 10216/10222 = private). */
+    private fun tiktokStatus(html: String): Int =
+        scriptJson(html, "__UNIVERSAL_DATA_FOR_REHYDRATION__")?.optJSONObject("__DEFAULT_SCOPE__")
+            ?.optJSONObject("webapp.video-detail")?.optInt("statusCode", 0) ?: 0
+
+    /** The video's files from TikTok's page data; null when the page gave none. */
+    private fun fromItem(item: JSONObject, cookies: String): Media? {
+        val video = item.optJSONObject("video") ?: return null
         val author = item.optJSONObject("author")
         val headers = mapOf(
             "Referer" to "https://www.tiktok.com/",
-            "Cookie" to page.cookies,
+            "Cookie" to cookies,
             "User-Agent" to UA
         )
         val variants = mutableListOf<Variant>()
@@ -162,16 +211,17 @@ object SocialExtractor {
             variants += Variant(u, minOf(h, if (w > 0) w else h).takeIf { it > 0 } ?: h, play.optLong("DataSize", 0), "mp4")
         }
         if (variants.isEmpty()) {
+            // (downloadAddr is empty when the owner turned off downloads: playAddr is what the app plays)
             listOf(video.optString("playAddr"), video.optString("downloadAddr")).firstOrNull { it.startsWith("http") }?.let {
                 variants += Variant(it, video.optInt("height", 0).coerceAtMost(video.optInt("width", 0).takeIf { w -> w > 0 } ?: Int.MAX_VALUE), 0, "mp4")
             }
         }
+        if (variants.isEmpty()) return null
         // one file per quality, the biggest (best) of each
         val best = variants.groupBy { it.height }.mapNotNull { (_, l) -> l.maxByOrNull { it.size } }.toMutableList()
         item.optJSONObject("music")?.optString("playUrl")?.takeIf { it.startsWith("http") }?.let {
             best += Variant(it, 0, 0, "mp3", audioOnly = true)
         }
-        if (best.none { !it.audioOnly }) error("TikTok didn't give a video for this link. Try again")
         best.forEach { fileHeaders[it.url] = headers }
         val desc = item.optString("desc").ifBlank { "TikTok video" }
         return Media(
@@ -183,6 +233,50 @@ object SocialExtractor {
             variants = best
         )
     }
+
+    /**
+     * Second reader (tikwm.com, a free public TikTok service): gives the no-watermark file even for videos
+     * whose page has no video data, e.g. when the owner turned off downloads.
+     */
+    private fun tikwm(url: String): Media? = runCatching {
+        val api = "https://www.tikwm.com/api/?hd=1&url=" + java.net.URLEncoder.encode(url, "UTF-8")
+        val con = URL(api).openConnection() as HttpURLConnection
+        val text = try {
+            con.connectTimeout = 15_000
+            con.readTimeout = 20_000
+            con.setRequestProperty("User-Agent", UA)
+            con.setRequestProperty("Accept", "application/json")
+            if (con.responseCode != 200) return@runCatching null
+            con.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        } finally {
+            con.disconnect()
+        }
+        val root = JSONObject(text)
+        if (root.optInt("code", -1) != 0) return@runCatching null
+        val d = root.optJSONObject("data") ?: return@runCatching null
+        fun abs(u: String?) = when {
+            u.isNullOrBlank() -> null
+            u.startsWith("http") -> u
+            u.startsWith("/") -> "https://www.tikwm.com$u"
+            else -> null
+        }
+        val headers = mapOf("User-Agent" to UA)
+        val variants = mutableListOf<Variant>()
+        // (heights unknown: the HD file is listed first as "Best quality")
+        abs(d.optString("hdplay"))?.let { variants += Variant(it, 0, d.optLong("hd_size", 0), "mp4") }
+        abs(d.optString("play"))?.let { if (variants.none { v -> v.url == it }) variants += Variant(it, -1, d.optLong("size", 0), "mp4") }
+        if (variants.isEmpty()) return@runCatching null
+        abs(d.optString("music"))?.let { variants += Variant(it, 0, 0, "mp3", audioOnly = true) }
+        variants.forEach { fileHeaders[it.url] = headers }
+        val author = d.optJSONObject("author")
+        Media(
+            title = d.optString("title").ifBlank { "TikTok video" }.take(120),
+            uploader = author?.optString("nickname")?.ifBlank { author.optString("unique_id") },
+            thumb = abs(d.optString("origin_cover")) ?: abs(d.optString("cover")),
+            seconds = d.optInt("duration", 0),
+            variants = variants
+        )
+    }.getOrNull()
 
     /** The video's data from TikTok's page (two page formats are in use). */
     private fun tiktokItem(html: String): JSONObject? {

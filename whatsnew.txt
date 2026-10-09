@@ -1,9 +1,3 @@
-App name is now RAINAX Tube, and no more ads
-New Social tab with how-to steps for TikTok, Instagram and Facebook
-Copied video links are offered for download
-Tap + on several videos, then download them all at once
-Shorts: endless swiping, likes, dislikes and comments work
-Fix for videos made for kids that would not play
-Clear "No internet" message with a settings button
-Easy-to-read upload dates
-Updates download in the Downloads tab with pause and resume
+TikTok links work on the first try
+TikTok videos with downloads turned off by the owner can be downloaded
+Clearer TikTok messages (private, removed, no internet)
