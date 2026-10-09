@@ -543,6 +543,14 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/batteryBtn"
+            style="@style/Widget.Rainax.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Downloads stop when the screen is off? Fix it here" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/checkAppUpdateBtn"
             style="@style/Widget.Rainax.Button.Tonal"
             android:layout_width="match_parent"

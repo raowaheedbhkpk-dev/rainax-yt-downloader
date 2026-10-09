@@ -888,13 +888,13 @@ class MainActivity : AppCompatActivity() {
             }
             vm.enqueue(items, spec, sub)
             dialog.dismiss()
-            if (!askBatteryOptimization()) {
-                val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
-                Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
-                    .setAnchorView(snackAnchor())
-                    .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
-                    .show()
-            }
+            // (no battery question: downloads run as a foreground service with a notification, which
+            // Android keeps running; the optional setting is in Settings for phones that still stop them)
+            val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
+            Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
+                .setAnchorView(snackAnchor())
+                .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
+                .show()
         }
 
         var collectJob: Job? = null
@@ -1342,6 +1342,7 @@ class MainActivity : AppCompatActivity() {
         st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
         st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
         st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
+        st.batteryBtn.setOnClickListener { openBatterySettings() }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
 
         st.autoClearSwitch.isChecked = AppPrefs.autoClear(this)
@@ -1422,25 +1423,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** One-time prompt so the system doesn't kill background downloads. Returns true if shown. */
-    private fun askBatteryOptimization(): Boolean {
+    /**
+     * Settings > "Downloads stop with the screen off?": only for phones (some Xiaomi, Oppo, Vivo, Samsung)
+     * whose battery saver closes apps even with a download notification. Never asked by itself.
+     */
+    private fun openBatterySettings() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        val prefs = getSharedPreferences("app", Context.MODE_PRIVATE)
-        if (pm.isIgnoringBatteryOptimizations(packageName) || prefs.getBoolean("battery_asked", false)) {
-            return false
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            message("Already allowed: downloads keep going with the screen off")
+            return
         }
-        prefs.edit().putBoolean("battery_asked", true).apply()
-        // a dialog (not a snackbar), so no other message can hide it
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("Added to downloads")
-            .setMessage("Allow RAINAX to run in the background so downloads keep going when the screen is off.")
-            .setPositiveButton("Allow") { _, _ ->
-                try {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                } catch (e: Exception) { /* not available on this device */ }
-            }
-            .setNegativeButton("Not now", null)
-            .show()
-        return true
+        try {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        } catch (e: Exception) {
+            message("Open Settings > Apps > RAINAX Tube > Battery and choose Unrestricted")
+        }
     }
 
     companion object {

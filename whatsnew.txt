@@ -1,3 +1,2 @@
-Timestamps and chapters in the description jump in this video (no more opening the YouTube app)
-Links to other YouTube videos and channels open inside RAINAX
-New clean description page with chapters list
+No more battery permission question when you download
+Optional fix in Settings for phones that stop downloads with the screen off
