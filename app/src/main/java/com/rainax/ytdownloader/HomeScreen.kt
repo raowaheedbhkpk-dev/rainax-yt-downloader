@@ -71,7 +71,11 @@ class HomeScreen(
     private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
     private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
-    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) })
+    // the Home feed also shows ad cards (native ads) between the videos
+    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) }).also { a ->
+        a.feedAds = true
+        Ads.onNativeReady = { a.notifyDataSetChanged() }
+    }
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     private val playlistAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     private val musicAdapter = MusicAdapter({ openPlaylist(it) }, { download(it) })

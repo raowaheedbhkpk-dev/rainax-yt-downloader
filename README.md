@@ -38,9 +38,11 @@ This is not a virus warning. To install, tap **More details > Install anyway**.
 YouTube downloaders are not allowed on the Play Store.
 
 ## Ads (AdMob)
-- A banner above the bottom bar, and a full-screen ad at most every 3rd download added (and never within 3 minutes).
+- Banner above the bottom bar; full-screen ad after every 2nd download added; app open ad when the app starts or
+  comes back after 30+ seconds (at most every 30 minutes); ad cards in the Home feed (after 3 videos, then every 8).
+- Full-screen ads never come within 2 minutes of each other, and never over a playing video, full screen or an open sheet.
 - Google's consent form appears first where the law needs it (EU/UK); Settings has "Privacy settings for ads" there.
-- The IDs live in `app/build.gradle` (`admobAppId`, `ADMOB_BANNER`, `ADMOB_INTERSTITIAL`). They are the RAINAX AdMob account's real IDs. `ADS_ENABLED = false` turns ads off.
+- The IDs live in `app/build.gradle` (`admobAppId`, `ADMOB_BANNER`, `ADMOB_INTERSTITIAL`, `ADMOB_APP_OPEN`, `ADMOB_NATIVE`). They are the RAINAX AdMob account's real IDs. `ADS_ENABLED = false` turns ads off.
 
 ## Official app and name
 - The only official RAINAX is published at **https://github.com/raowaheedbhkpk-dev/rainax-yt-downloader/releases**,

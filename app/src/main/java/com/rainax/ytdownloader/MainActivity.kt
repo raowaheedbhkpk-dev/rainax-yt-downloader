@@ -185,6 +185,8 @@ class MainActivity : AppCompatActivity() {
                 if (b.miniPlayer.root.isVisible) b.adBanner.post { placeMiniPlayer() }   // move off the banner
             }
             st.adPrivacyBtn.isVisible = Ads.privacyOptionsNeeded(this)
+            // app open ad on start (not on the very first start, and never over a video or a sheet)
+            if (savedInstanceState == null && launchCount() > 1 && canShowFullScreenAd()) Ads.showAppOpenSoon(this)
         }
 
         // New RAINAX version? (quiet check, a few seconds after start)
@@ -240,11 +242,30 @@ class MainActivity : AppCompatActivity() {
         if (blocked) return
         AppUpdater.resumeInstall(this)
         Ads.resumeBanner(b.adBanner)
+        Ads.onScreenResumed(this) { canShowFullScreenAd() }
     }
 
     override fun onPause() {
-        if (!blocked) Ads.pauseBanner(b.adBanner)
+        if (!blocked) {
+            Ads.pauseBanner(b.adBanner)
+            Ads.onScreenPaused(this)
+        }
         super.onPause()
+    }
+
+    /** A full-screen ad now would not interrupt anything: no video playing, no full screen, no sheet open. */
+    private fun canShowFullScreenAd(): Boolean =
+        !blocked && controller?.isPlaying != true && !video.fullscreen && sheet?.isShowing != true
+
+    /** How many times the app was started (counted once per start). */
+    private var launches = -1
+    private fun launchCount(): Int {
+        if (launches < 0) {
+            val p = getSharedPreferences("app", Context.MODE_PRIVATE)
+            launches = p.getInt("launches", 0) + 1
+            p.edit().putInt("launches", launches).apply()
+        }
+        return launches
     }
 
     override fun onDestroy() {

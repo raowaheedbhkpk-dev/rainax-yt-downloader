@@ -28,6 +28,21 @@ class VideoAdapter(
             notifyDataSetChanged()
         }
 
+    /** Home feed only: an ad card after the first 3 videos, then after every 8 (AdMob native ads). */
+    var feedAds = false
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
+    private val adsOn get() = feedAds && Ads.feedAdsEnabled
+    private fun adCount(n: Int) = if (!adsOn || n < AD_FIRST) 0 else 1 + (n - AD_FIRST) / AD_EVERY
+    private fun isAdPos(i: Int) = adsOn && (i == AD_FIRST || (i > AD_FIRST && (i - AD_FIRST) % (AD_EVERY + 1) == 0))
+    /** How many ad cards come before list position [i] (also the ad's own number when [i] is an ad). */
+    private fun adsBefore(i: Int) = if (!adsOn || i <= AD_FIRST) 0 else (i - AD_FIRST - 1) / (AD_EVERY + 1) + 1
+    private fun itemAt(i: Int) = items[i - adsBefore(i)]
+    private val contentCount get() = items.size + adCount(items.size)
+
     var loadingMore = false
         set(value) {
             if (field == value) return
@@ -38,6 +53,7 @@ class VideoAdapter(
     val count get() = items.size
 
     fun submit(list: List<VideoItem>) {
+        if (adsOn) Ads.resetNative()              // a new list gets fresh ads
         items.clear()
         items.addAll(list)
         notifyDataSetChanged()
@@ -56,12 +72,13 @@ class VideoAdapter(
 
     private val headerCount get() = if (header != null) 1 else 0
 
-    override fun getItemCount() = headerCount + items.size + if (loadingMore) 1 else 0
+    override fun getItemCount() = headerCount + contentCount + if (loadingMore) 1 else 0
 
     override fun getItemViewType(position: Int): Int = when {
         header != null && position == 0 -> HEADER
-        position >= headerCount + items.size -> FOOTER
-        items[position - headerCount].isChannel -> CHANNEL
+        position >= headerCount + contentCount -> FOOTER
+        isAdPos(position - headerCount) -> AD
+        itemAt(position - headerCount).isChannel -> CHANNEL
         else -> ITEM
     }
 
@@ -73,14 +90,16 @@ class VideoAdapter(
             }) {}
             FOOTER -> object : RecyclerView.ViewHolder(inf.inflate(R.layout.item_loading, parent, false)) {}
             CHANNEL -> ChannelRow(inf.inflate(R.layout.item_channel_row, parent, false))
+            AD -> AdRow(inf.inflate(R.layout.item_native_ad, parent, false))
             else -> Row(inf.inflate(if (big) R.layout.item_video_big else R.layout.item_video_small, parent, false))
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
-            is Row -> holder.bind(items[position - headerCount])
-            is ChannelRow -> holder.bind(items[position - headerCount])
+            is Row -> holder.bind(itemAt(position - headerCount))
+            is ChannelRow -> holder.bind(itemAt(position - headerCount))
+            is AdRow -> holder.bind(adsBefore(position - headerCount))
             else -> if (getItemViewType(position) == HEADER) {
                 val box = holder.itemView as FrameLayout
                 val h = header ?: return
@@ -130,6 +149,45 @@ class VideoAdapter(
         }
     }
 
+    /** An ad card (native ad). While no ad is loaded the card takes no space. */
+    inner class AdRow(v: View) : RecyclerView.ViewHolder(v) {
+        private val adView = v as com.google.android.gms.ads.nativead.NativeAdView
+        private val headline: TextView = v.findViewById(R.id.adHeadline)
+        private val body: TextView = v.findViewById(R.id.adBody)
+        private val icon: ImageView = v.findViewById(R.id.adIcon)
+        private val media: com.google.android.gms.ads.nativead.MediaView = v.findViewById(R.id.adMedia)
+        private val cta: TextView = v.findViewById(R.id.adCta)
+
+        fun bind(slot: Int) {
+            val ad = Ads.nativeFor(itemView.context, slot)
+            val lp = itemView.layoutParams
+            if (ad == null) {
+                lp.height = 0
+                itemView.layoutParams = lp
+                itemView.isVisible = false
+                return
+            }
+            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            itemView.layoutParams = lp
+            itemView.isVisible = true
+            headline.text = ad.headline
+            adView.headlineView = headline
+            body.text = ad.body.orEmpty()
+            body.isVisible = !ad.body.isNullOrBlank()
+            adView.bodyView = body
+            val drawable = ad.icon?.drawable
+            icon.setImageDrawable(drawable)
+            icon.isVisible = drawable != null
+            adView.iconView = icon
+            ad.mediaContent?.let { media.mediaContent = it }
+            adView.mediaView = media
+            cta.text = ad.callToAction ?: "Open"
+            cta.isVisible = !ad.callToAction.isNullOrBlank()
+            adView.callToActionView = cta
+            adView.setNativeAd(ad)
+        }
+    }
+
     /** A channel (search results, subscriptions): picture, name, subscribers. */
     inner class ChannelRow(v: View) : RecyclerView.ViewHolder(v) {
         private val avatar: ImageView = v.findViewById(R.id.chAvatar)
@@ -149,6 +207,9 @@ class VideoAdapter(
 
     companion object {
         private const val CHANNEL = 3
+        private const val AD = 4
+        private const val AD_FIRST = 3
+        private const val AD_EVERY = 8
         private const val HEADER = 0
         private const val ITEM = 1
         private const val FOOTER = 2

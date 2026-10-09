@@ -7,7 +7,7 @@ plugins {
 // always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.9.14"
+def rxVersionName = isTag ? tagVersion : "8.9.16"
 def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
@@ -51,6 +51,9 @@ android {
         buildConfigField "boolean", "ADS_ENABLED", "true"
         buildConfigField "String", "ADMOB_BANNER", "\"ca-app-pub-9149573632995634/1734043559\""          // your banner unit
         buildConfigField "String", "ADMOB_INTERSTITIAL", "\"ca-app-pub-9149573632995634/4168635205\""    // your interstitial unit
+        // App open ad and Home-feed ad cards (an empty ID turns that format off)
+        buildConfigField "String", "ADMOB_APP_OPEN", "\"ca-app-pub-9149573632995634/6278943160\""      // your app open unit
+        buildConfigField "String", "ADMOB_NATIVE", "\"ca-app-pub-9149573632995634/5041883116\""        // your native advanced unit
         // the MP3 encoder is native code: build it for real phones (64/32-bit ARM) and x86_64 emulators
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }
     }
@@ -126,6 +129,8 @@ dependencies {
     implementation 'com.google.android.ump:user-messaging-platform:3.1.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.6'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6'
+    // knows when the whole app goes to the background and comes back (for the app open ad)
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.6'
     // RAINAX's own extractor (the same one and version NewPipe uses). Downloads use NativeDownloader. No yt-dlp.
     implementation 'com.github.TeamNewPipe:NewPipeExtractor:13a655fe53e0c3065f88725fc1fb594c3ede0169'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.0.4'
