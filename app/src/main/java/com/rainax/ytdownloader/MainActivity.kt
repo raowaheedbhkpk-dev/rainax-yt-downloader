@@ -36,6 +36,12 @@ import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
+    }
+
+
     private lateinit var b: ActivityMainBinding
     private val vm: MainViewModel by viewModels()
 
@@ -137,6 +143,7 @@ class MainActivity : AppCompatActivity() {
 
         home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) }) { onAccountClick() }
         home.setup()
+        fitWideScreen()
         home.downloadMany = { list -> showDownloadSheet(list.map { it.url }) }
         AppUpdater.onQueued = { b.bottomNav.selectedItemId = R.id.nav_downloads }
         video = VideoScreen(
@@ -221,10 +228,21 @@ class MainActivity : AppCompatActivity() {
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         if (blocked) return
+        fitWideScreen()
         // turning the phone sideways on the video page opens the video full screen
         if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && tab == 0) {
             video.enterFullscreen()
         }
+    }
+
+    /** Tablets / wide screens: the bottom bar keeps a phone-like width, the Home feed uses columns. */
+    private fun fitWideScreen() {
+        val wide = resources.configuration.screenWidthDp >= 600
+        val lp = b.navCard.layoutParams as android.widget.LinearLayout.LayoutParams
+        lp.width = if (wide) (520 * resources.displayMetrics.density).toInt() else android.widget.LinearLayout.LayoutParams.MATCH_PARENT
+        lp.gravity = android.view.Gravity.CENTER_HORIZONTAL
+        b.navCard.layoutParams = lp
+        if (::home.isInitialized) home.applyColumns()
     }
 
     override fun onStart() {
@@ -917,18 +935,6 @@ class MainActivity : AppCompatActivity() {
         pl.clearFailedBtn.setOnClickListener {
             TaskRepository.removeFailed()
             message("Removed failed downloads")
-        }
-
-        // global actions
-        pl.pauseAllBtn.setOnClickListener { DownloadService.send(this, DownloadService.ACTION_PAUSE_ALL) }
-        pl.resumeAllBtn.setOnClickListener { DownloadService.send(this, DownloadService.ACTION_RESUME_ALL) }
-        pl.cancelAllBtn.setOnClickListener {
-            val n = latestTasks.count { it.status != Status.DONE }
-            if (n > 0) {
-                confirm("Cancel all $n downloads?", "Partial files will be deleted.") {
-                    DownloadService.send(this, DownloadService.ACTION_CANCEL_ALL)
-                }
-            }
         }
 
         // selection bar

@@ -43,14 +43,15 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
             continueAdapter.submit(list)
             b.continueBox.isVisible = list.isNotEmpty()
         }
-        if (ShortsFeed.items.isNotEmpty()) {
-            showShorts()
-        } else if (!shortsLoading && System.currentTimeMillis() - shortsTriedAt > 60_000) {
+        if (ShortsFeed.items.isNotEmpty()) showShorts()
+        // only a few Shorts so far: get more (the strip should always have plenty to swipe)
+        if (ShortsFeed.items.size < 8 && !shortsLoading && System.currentTimeMillis() - shortsTriedAt > 30_000) {
             shortsLoading = true
             shortsTriedAt = System.currentTimeMillis()
             act.lifecycleScope.launch {
                 val fresh = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
-                ShortsFeed.items.addAll(fresh)
+                val known = ShortsFeed.items.mapTo(HashSet()) { youtubeId(it.url) ?: it.url }
+                ShortsFeed.items.addAll(fresh.filter { known.add(youtubeId(it.url) ?: it.url) })
                 shortsLoading = false
                 showShorts()
             }

@@ -44,6 +44,9 @@ class VideoAdapter(
 
     val count get() = items.size
 
+    /** Header, loading row and channels take the whole width in a grid (tablets); videos one column. */
+    fun isFullWidth(position: Int): Boolean = getItemViewType(position) != ITEM
+
     fun submit(list: List<VideoItem>) {
         items.clear()
         items.addAll(list)

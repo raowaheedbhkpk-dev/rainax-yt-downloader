@@ -1,5 +1,4 @@
-Kids videos: channel picture, likes and Up next videos now show
-Comments say "turned off" on videos made for kids (YouTube turns them off)
-Pause all / Resume all and big playlists are much faster
-A failed or paused save never downloads the whole file again
-Many smaller fixes for stability
+Shorts: many different Shorts, swipe through them, new mix every time
+Downloads: Pause/Resume/Cancel all removed; select downloads, then Pause, Resume or Cancel them
+Clean, normal sizes on every phone, even with large font or display size
+Tablets: the Home feed shows 2-3 columns

@@ -266,58 +266,12 @@
                         android:textColor="?attr/colorPrimary" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/pauseAllBtn"
-                        style="@style/Widget.Rainax.Button.Tonal"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        android:paddingHorizontal="4dp"
-                        android:text="Pause all"
-                        android:textSize="13sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/resumeAllBtn"
-                        style="@style/Widget.Rainax.Button.Tonal"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        android:paddingHorizontal="4dp"
-                        android:text="Resume all"
-                        android:textSize="13sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/cancelAllBtn"
-                        style="@style/Widget.Rainax.Button.Outlined"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:insetLeft="0dp"
-                        android:insetRight="0dp"
-                        android:paddingHorizontal="4dp"
-                        android:text="Cancel all"
-                        android:textColor="?attr/colorError"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="8dp"
                     android:paddingTop="6dp"
-                    android:text="Tip: press and hold a download to select several"
+                    android:text="Tip: tap Select all, or press and hold a download, then Pause, Resume or Cancel the selected ones"
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 

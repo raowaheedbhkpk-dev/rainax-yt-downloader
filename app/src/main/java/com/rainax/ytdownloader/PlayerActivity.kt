@@ -54,6 +54,12 @@ import kotlin.math.roundToInt
 @OptIn(UnstableApi::class)
 class PlayerActivity : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
+    }
+
+
     private lateinit var b: ActivityPlayerBinding
     private var player: ExoPlayer? = null
     private val handler = Handler(Looper.getMainLooper())

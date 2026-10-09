@@ -102,7 +102,7 @@ class HomeScreen(
         hm.accountBtn.setOnClickListener { onAccount() }
         updateAccountIcon()
         hm.root.isFocusableInTouchMode = true
-        hm.feedList.layoutManager = LinearLayoutManager(act)
+        applyColumns()
         hm.feedList.adapter = bigAdapter
         hm.feedList.setHasFixedSize(true)
         hm.feedList.setItemViewCacheSize(8)
@@ -238,6 +238,35 @@ class HomeScreen(
         picked.clear()
         refreshPicks()
         return true
+    }
+
+    /**
+     * Phones: one video per row. Tablets and wide screens: 2 or 3 columns, so pictures and buttons keep a
+     * normal size instead of stretching across the whole screen. Called again when the screen turns.
+     */
+    fun applyColumns() {
+        val w = act.resources.configuration.screenWidthDp
+        val cols = when {
+            w >= 1000 -> 3
+            w >= 600 -> 2
+            else -> 1
+        }
+        val cur = hm.feedList.layoutManager
+        if (cols == 1) {
+            if (cur !is LinearLayoutManager || cur is androidx.recyclerview.widget.GridLayoutManager) {
+                hm.feedList.layoutManager = LinearLayoutManager(act)
+            }
+            return
+        }
+        val grid = (cur as? androidx.recyclerview.widget.GridLayoutManager)
+            ?: androidx.recyclerview.widget.GridLayoutManager(act, cols).also { hm.feedList.layoutManager = it }
+        grid.spanCount = cols
+        grid.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int {
+                val a = hm.feedList.adapter
+                return if (a is VideoAdapter && !a.isFullWidth(position)) 1 else cols
+            }
+        }
     }
 
     /** Home is on screen again: newest Continue watching row and watched bars. */

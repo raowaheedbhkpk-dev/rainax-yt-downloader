@@ -31,7 +31,6 @@ import com.rainax.ytdownloader.databinding.ItemShortPageBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.schabi.newpipe.extractor.Page
 
 /** The Shorts list: filled from YouTube's search for short videos, page by page, with a few topics for variety. */
 object ShortsFeed {
@@ -39,21 +38,27 @@ object ShortsFeed {
     val items = mutableListOf<VideoItem>()
 
     private val seen: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-    private var next: Page? = null
+    private var next: String? = null
     private var topic = 0
+    /** Topics in a new random order every time the app starts (a different mix each time). */
     private val topics = listOf(
-        "#shorts", "funny #shorts", "music #shorts", "satisfying #shorts",
-        "cricket #shorts", "food #shorts", "travel #shorts", "comedy #shorts"
-    )
+        "shorts", "funny shorts", "music shorts", "satisfying", "cricket shorts", "food shorts",
+        "travel shorts", "comedy", "cute animals", "trending shorts", "dance shorts", "football shorts",
+        "magic tricks", "cooking shorts", "pakistan shorts", "india shorts"
+    ).shuffled()
 
-    /** Blocking. The next Shorts not shown yet (add them to [items] on the main thread). */
+    /** Blocking. The next Shorts not shown yet, in random order (add them to [items] on the main thread). */
     @Synchronized
     fun fetchMore(): List<VideoItem> {
         repeat(4) {
-            val res = YtCatalog.shorts(topics[topic % topics.size], next)
-            next = res.next
-            if (next == null) topic++                 // this topic has no more pages: the next topic
-            val fresh = res.items.filter { seen.add(youtubeId(it.url) ?: it.url) }
+            val q = topics[topic % topics.size]
+            // YouTube's own "Shorts" search filter first; the normal search if that one fails
+            val (list, token) = runCatching { ShortsSearch.search(q, next).let { it.items to it.next } }.getOrNull()
+                ?.takeIf { it.first.isNotEmpty() }
+                ?: (runCatching { YtCatalog.shorts(q, null).items }.getOrDefault(emptyList()) to null)
+            next = token
+            if (next == null || it >= 1) { topic++; next = null }          // next time: another topic (variety)
+            val fresh = list.filter { v -> seen.add(youtubeId(v.url) ?: v.url) }.shuffled()
             if (fresh.isNotEmpty()) return fresh
         }
         return emptyList()
@@ -74,6 +79,12 @@ object ShortsFeed {
  */
 @OptIn(UnstableApi::class)
 class ShortsActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
+    }
+
 
     private lateinit var b: ActivityShortsBinding
     private var player: ExoPlayer? = null

@@ -19,6 +19,12 @@ import com.rainax.ytdownloader.databinding.ActivitySignInBinding
  */
 class SignInActivity : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
+    }
+
+
     private lateinit var b: ActivitySignInBinding
     private var done = false
 
