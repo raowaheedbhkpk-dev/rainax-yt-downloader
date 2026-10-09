@@ -35,6 +35,7 @@ fun isPlaylistUrl(url: String): Boolean =
 fun friendlyError(raw: String): String {
     val m = raw.lowercase()
     return when {
+        raw.startsWith(YtFallback.REFUSED_TEXT) -> raw          // already says exactly what YouTube answered
         "private video" in m -> "Private video — skipped."
         "sign in to confirm" in m || "not a bot" in m ->
             "YouTube blocked this request. Try again in a while."

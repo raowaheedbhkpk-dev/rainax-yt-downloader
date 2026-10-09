@@ -1,3 +1,2 @@
-TikTok links work on the first try
-TikTok videos with downloads turned off by the owner can be downloaded
-Clearer TikTok messages (private, removed, no internet)
+Kids cartoons and other "made for kids" videos play and download
+If YouTube still refuses a video, the message shows its reason

@@ -19,15 +19,30 @@ import java.net.URLDecoder
 
 /**
  * Second way to open a YouTube video, used when the normal one says "not available": videos made for kids
- * (and some others) are refused to the app's usual YouTube client but play in YouTube's TV app.
- * This asks as the TV app, unlocks the stream addresses with YouTube's own player code, and returns the
+ * (and some others) are refused to the app's usual YouTube client but play in YouTube's embedded
+ * player (the one inside other websites) or TV app. This asks as those, unlocks the stream addresses with YouTube's own player code, and returns the
  * same kind of info as the normal way, so playing and downloading work as usual.
  */
 object YtFallback {
 
-    private const val TV_VERSION = "7.20250923.13.00"
-    private const val TV_UA = "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/25.lts.30.1034943-gold (unlike Gecko), " +
-        "Unknown_TV_Unknown_0/Unknown (Unknown, Unknown)"
+    /** Start of the message shown when no way could play the video. */
+    const val REFUSED_TEXT = "YouTube refused this video:"
+
+    /** A YouTube app the request pretends to be (the same ones yt-dlp uses for these videos). */
+    private class Client(val name: String, val id: String, val version: String, val ua: String, val embedded: Boolean = false)
+
+    private const val SAFARI_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
+        "(KHTML, like Gecko) Version/15.5 Safari/605.1.15,gzip(gfe)"
+
+    /** In order: YouTube's embedded player (works for most "made for kids" videos), then the TV apps. */
+    private val CLIENTS = listOf(
+        Client("WEB_EMBEDDED_PLAYER", "56", "2.20260708.00.00", SAFARI_UA, embedded = true),
+        Client("TVHTML5", "7", "5.20260707", "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version"),
+        Client(
+            "TVHTML5", "7", "7.20260707.07.00",
+            "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/25.lts.30.1034943-gold (unlike Gecko), Unknown_TV_Unknown_0/Unknown (Unknown, Unknown)"
+        )
+    )
 
     /** True for "not available" answers this second way may solve (not private, paid or blocked-by-country ones). */
     fun canHelp(e: Throwable): Boolean =
@@ -35,27 +50,69 @@ object YtFallback {
             e is AgeRestrictedContentException ||
             e.message.orEmpty().contains("player response is not valid", ignoreCase = true)
 
-    /** Blocking. The video's info through YouTube's TV app. Throws when that doesn't work either. */
+    /** Blocking. The video's info through YouTube's embedded player or TV app. Throws when none works. */
     fun info(pageUrl: String): StreamInfo {
         val id = youtubeId(pageUrl) ?: error("No video id")
         val sts = runCatching { YoutubeJavaScriptPlayerManager.getSignatureTimestamp(id) }.getOrNull()
+        val embed = runCatching { embedPage(id) }.getOrNull()
+        var last: Exception? = null
+        for (c in CLIENTS) {
+            try {
+                return build(pageUrl, id, player(c, id, sts, embed))
+            } catch (e: Exception) {
+                android.util.Log.w("RAINAX", "${c.name} ${c.version}: ${e.message}")
+                last = e
+            }
+        }
+        throw last ?: ContentNotAvailableException("No way to play this video")
+    }
+
+    /** Values from YouTube's embed page the embedded player sends (visitor id, host flags). */
+    private class Embed(val visitor: String?, val hostFlags: String?)
+
+    private fun embedPage(id: String): Embed {
+        val con = URL("https://www.youtube.com/embed/$id?html5=1").openConnection() as HttpURLConnection
+        val html = try {
+            con.connectTimeout = 10_000
+            con.readTimeout = 15_000
+            con.setRequestProperty("User-Agent", SAFARI_UA.substringBefore(",gzip"))
+            con.setRequestProperty("Referer", "https://www.reddit.com/")
+            con.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        } finally {
+            con.disconnect()
+        }
+        fun find(key: String) = Regex("\"$key\"\\s*:\\s*\"([^\"]+)\"").find(html)?.groupValues?.get(1)
+        return Embed(find("VISITOR_DATA"), find("encryptedHostFlags"))
+    }
+
+    /** One player request as [c]; returns the answer when YouTube says the video can play. */
+    private fun player(c: Client, id: String, sts: Int?, embed: Embed?): JSONObject {
+        val client = JSONObject().put("clientName", c.name).put("clientVersion", c.version)
+            .put("hl", "en").put("gl", java.util.Locale.getDefault().country.takeIf { it.length == 2 } ?: "US")
+            .put("userAgent", c.ua)
+        embed?.visitor?.let { client.put("visitorData", it) }
+        val context = JSONObject().put("client", client)
+        if (c.embedded) context.put("thirdParty", JSONObject().put("embedUrl", "https://www.reddit.com/"))
+        val playback = JSONObject().put("html5Preference", "HTML5_PREF_WANTS")
+        if (sts != null) playback.put("signatureTimestamp", sts)
+        if (c.embedded) embed?.hostFlags?.let { playback.put("encryptedHostFlags", it) }
         val body = JSONObject()
-            .put("context", JSONObject().put("client", JSONObject()
-                .put("clientName", "TVHTML5").put("clientVersion", TV_VERSION)
-                .put("hl", "en").put("gl", java.util.Locale.getDefault().country.takeIf { it.length == 2 } ?: "US")))
+            .put("context", context)
             .put("videoId", id)
+            .put("playbackContext", JSONObject().put("contentPlaybackContext", playback))
             .put("contentCheckOk", true)
             .put("racyCheckOk", true)
-        if (sts != null) {
-            body.put("playbackContext", JSONObject().put("contentPlaybackContext",
-                JSONObject().put("signatureTimestamp", sts).put("html5Preference", "HTML5_PREF_WANTS")))
-        }
-        val res = JSONObject(post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", body.toString()))
+        val res = JSONObject(post("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", body.toString(), c, embed?.visitor))
         val play = res.optJSONObject("playabilityStatus")
         val status = play?.optString("status").orEmpty()
-        if (!status.equals("OK", true)) throw ContentNotAvailableException("TV: $status " + play?.optString("reason").orEmpty())
+        if (!status.equals("OK", true)) throw ContentNotAvailableException("$status " + play?.optString("reason").orEmpty())
+        if (res.optJSONObject("streamingData") == null) throw ContentNotAvailableException("no streams")
+        return res
+    }
+
+    private fun build(pageUrl: String, id: String, res: JSONObject): StreamInfo {
         val details = res.optJSONObject("videoDetails") ?: JSONObject()
-        val data = res.optJSONObject("streamingData") ?: throw ContentNotAvailableException("TV: no streams")
+        val data = res.getJSONObject("streamingData")
 
         val video = mutableListOf<VideoStream>()
         val videoOnly = mutableListOf<VideoStream>()
@@ -107,7 +164,7 @@ object YtFallback {
                 }
             }
         }
-        if (audio.isEmpty() && video.isEmpty()) throw ContentNotAvailableException("TV: no usable streams")
+        if (audio.isEmpty() && video.isEmpty()) throw ContentNotAvailableException("no usable streams")
 
         val info = StreamInfo(
             ServiceList.YouTube.serviceId, pageUrl, pageUrl, StreamType.VIDEO_STREAM, id,
@@ -148,7 +205,7 @@ object YtFallback {
         return YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(id, url)
     }
 
-    private fun post(url: String, json: String): String {
+    private fun post(url: String, json: String, c: Client, visitor: String?): String {
         val con = URL(url).openConnection() as HttpURLConnection
         try {
             con.requestMethod = "POST"
@@ -156,10 +213,12 @@ object YtFallback {
             con.readTimeout = 20_000
             con.doOutput = true
             con.setRequestProperty("Content-Type", "application/json")
-            con.setRequestProperty("User-Agent", TV_UA)
-            con.setRequestProperty("X-YouTube-Client-Name", "7")
-            con.setRequestProperty("X-YouTube-Client-Version", TV_VERSION)
+            con.setRequestProperty("User-Agent", c.ua)
+            con.setRequestProperty("X-YouTube-Client-Name", c.id)
+            con.setRequestProperty("X-YouTube-Client-Version", c.version)
             con.setRequestProperty("Origin", "https://www.youtube.com")
+            if (c.embedded) con.setRequestProperty("Referer", "https://www.reddit.com/")
+            visitor?.let { con.setRequestProperty("X-Goog-Visitor-Id", it) }
             con.outputStream.use { it.write(json.toByteArray()) }
             val code = con.responseCode
             val text = (if (code >= 400) con.errorStream else con.inputStream)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()

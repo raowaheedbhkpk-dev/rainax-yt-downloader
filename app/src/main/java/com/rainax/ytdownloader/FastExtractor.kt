@@ -27,6 +27,7 @@ object FastExtractor {
     const val SUPPORTED = "YouTube, TikTok, Facebook, Instagram, SoundCloud and many more sites"
 
     @Volatile private var ready = false
+    private const val REFUSED = YtFallback.REFUSED_TEXT
 
     @Synchronized
     internal fun init() {
@@ -85,8 +86,10 @@ object FastExtractor {
                     // "not available" (videos made for kids and others): try YouTube's TV app way once
                     if (!YtFallback.canHelp(e)) throw e
                     try { YtFallback.info(key) } catch (second: Exception) {
-                        android.util.Log.w("RAINAX", "TV fallback failed: ${second.message}")
-                        throw e
+                        android.util.Log.w("RAINAX", "fallback failed: ${second.message}")
+                        // YouTube's own reason, so the message says what really happened
+                        val why = second.message.orEmpty().replace(Regex("\\s+"), " ").trim().take(120)
+                        throw IllegalStateException("$REFUSED $why".trim(), e)
                     }
                 }
                 if (infoCache.size > 40) {
