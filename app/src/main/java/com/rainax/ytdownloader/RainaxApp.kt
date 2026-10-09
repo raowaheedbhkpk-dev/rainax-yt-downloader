@@ -10,6 +10,7 @@ class RainaxApp : Application() {
         // more open connections kept for reuse (6 per download, plus the extractor and pictures)
         System.setProperty("http.maxConnections", "16")
         applyTheme(AppPrefs.themeMode(this))
+        Net.init(this)
         // read the small saved lists early, so the first screens don't wait for the disk
         val app = this
         Thread { runCatching { WatchHistory.preload(app); LocalPlaylists.all(app) } }.start()

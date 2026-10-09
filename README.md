@@ -1,4 +1,4 @@
-# RAINAX YT DOWNLOADER
+# RAINAX Tube
 
 A fast Android app to watch and download videos and music. It reads YouTube with
 [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) and downloads with its own downloader, so it needs no yt-dlp or FFmpeg.
@@ -14,19 +14,21 @@ Requires Android 10 (API 29) or newer.
 - **YouTube account (optional):** sign in to see your feed and subscriptions, subscribe, like, Watch later,
   comment, and like or reply to comments (Top / Newest)
 - **Downloads:** video up to 8K when the video has it, audio as M4A, WebM or MP3, subtitles (`.srt`), and whole playlists
-- **Other sites:** TikTok, Facebook and direct video links, through Share or a pasted link
+- **Social tab:** TikTok, Instagram, Facebook and more, with simple how-to steps; copied links are offered for download
+- **Pick several:** the + on each video selects it, then one tap downloads them all
 - **Library:** your downloaded music and videos with search, playlists, Play all, Shuffle and Repeat; music files
   get their title, artist and cover picture
 - **Download manager:** 1 to 4 downloads at once, pause, resume, auto-retry, Wi-Fi only mode, and a custom download folder
 - **Themes:** System, Light, Dark and AMOLED black
-- **In-app updates** from this repository's GitHub Releases
+- **In-app updates** from this repository's GitHub Releases (they download in the Downloads tab, with pause and resume)
+- **No ads**
 
 ## Build
 Every push to `main` builds the APK (**Actions > Build RAINAX APK > Artifacts**).
 Pushing a tag publishes a **GitHub Release** with the APK and its SHA-256 checksum. `whatsnew.txt` becomes the update notes shown in the app.
 
 ```
-git tag v8.9.19 && git push origin v8.9.19
+git tag v8.9.20 && git push origin v8.9.20
 ```
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.
@@ -40,13 +42,6 @@ Create the key once with `bash scripts/make-private-key.sh` (Termux or Linux; ne
 Android warns about every app installed from outside the Play Store that Google has not scanned before ("app from an unknown developer").
 This is not a virus warning. To install, tap **More details > Install anyway**.
 YouTube downloaders are not allowed on the Play Store.
-
-## Ads (AdMob)
-- Banner above the bottom bar; full-screen ad after every 2nd download added; app open ad when the app starts or
-  comes back after 30+ seconds (at most every 30 minutes); ad cards in the Home feed (after 3 videos, then every 8).
-- Full-screen ads never come within 2 minutes of each other, and never over a playing video, full screen or an open sheet.
-- Google's consent form appears first where the law needs it (EU/UK); Settings has "Privacy settings for ads" there.
-- The IDs live in `app/build.gradle` (`admobAppId`, `ADMOB_BANNER`, `ADMOB_INTERSTITIAL`, `ADMOB_APP_OPEN`, `ADMOB_NATIVE`). They are the RAINAX AdMob account's real IDs. `ADS_ENABLED = false` turns ads off.
 
 ## Official app and name
 - The only official RAINAX is published at **https://github.com/raowaheedbhkpk-dev/rainax-yt-downloader/releases**,

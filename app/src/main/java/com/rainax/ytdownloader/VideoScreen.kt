@@ -105,8 +105,9 @@ class VideoScreen(
         likeStatus = null
         header.vSubscribe.isVisible = d.channelId != null
         Ui.subscribeButton(header.vSubscribe, false)
-        header.vLike.text = if (d.likes > 0) YtCatalog.count(d.likes) else "Like"
-        header.vDislike.text = ""
+        likeCount = d.likes
+        dislikeCount = -1
+        showCounts()
         // like and dislike counts for everyone (Return YouTube Dislike); liking needs the YouTube account
         listOf(header.vLike, header.vDislike).forEach {
             it.isVisible = true
@@ -130,13 +131,33 @@ class VideoScreen(
     }
 
     private var dislikeJob: Job? = null
+    private var likeCount = -1L
+    private var dislikeCount = -1L
+
+    private fun showCounts() {
+        header.vLike.text = if (likeCount > 0) YtCatalog.count(likeCount) else "Like"
+        header.vDislike.text = if (dislikeCount > 0) YtCatalog.count(dislikeCount) else "Dislike"
+    }
+
+    /** Your like/dislike changes the shown counts right away (from [before] to [now]). */
+    private fun moveCounts(before: String?, now: String?) {
+        if (before == "LIKE") likeCount = (likeCount - 1).coerceAtLeast(0)
+        if (before == "DISLIKE") dislikeCount = (dislikeCount - 1).coerceAtLeast(0)
+        if (now == "LIKE") likeCount = likeCount.coerceAtLeast(0) + 1
+        if (now == "DISLIKE") dislikeCount = dislikeCount.coerceAtLeast(0) + 1
+        showCounts()
+    }
 
     private fun loadDislikes(page: String) {
         val id = youtubeId(page) ?: return
         dislikeJob?.cancel()
         dislikeJob = act.lifecycleScope.launch {
             val n = withContext(Dispatchers.IO) { Dislikes.count(id) }
-            if (youtubeId(url) == id && n > 0) header.vDislike.text = YtCatalog.count(n)
+            if (youtubeId(url) == id && n >= 0) {
+                // your own dislike (made in RAINAX) is counted even before the dislike service sees it
+                dislikeCount = n + if (likeStatus == "DISLIKE" && n == 0L) 1 else 0
+                showCounts()
+            }
         }
     }
 
@@ -164,9 +185,11 @@ class VideoScreen(
         likeStatus = status
         Ui.toggleButton(header.vLike, status == "LIKE")
         Ui.toggleButton(header.vDislike, status == "DISLIKE")
+        moveCounts(before, status)
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.rate(id, status) }.isSuccess }
             if (!ok) {
+                moveCounts(status, before)
                 likeStatus = before
                 Ui.toggleButton(header.vLike, before == "LIKE")
                 Ui.toggleButton(header.vDislike, before == "DISLIKE")
@@ -280,7 +303,8 @@ class VideoScreen(
                 if (this@VideoScreen.url != clean) return@launch
                 header.vLoading.isVisible = false
                 vb.playerLoading.isVisible = false
-                showError((e.message ?: "Couldn't open this video") + "\nYou can still try Download.")
+                val text = friendlyError(e.message ?: "Couldn't open this video")
+                showError(if (text == NO_INTERNET) text else text + "\nYou can still try Download.")
             }
         }
         loadComments(clean)
@@ -369,7 +393,9 @@ class VideoScreen(
     }
 
     fun showError(text: String) {
-        header.vError.text = text
+        val offline = !Net.online(act)
+        header.vError.text = if (offline) "$NO_INTERNET\nTap here for internet settings." else text
+        header.vError.setOnClickListener { if (!Net.online(act)) Net.openSettings(act) }
         header.vError.isVisible = true
     }
 
@@ -525,7 +551,7 @@ class VideoScreen(
         sb.descTitle.text = d.title
         sb.descLikes.text = if (d.likes > 0) YtCatalog.count(d.likes) else "–"
         sb.descViews.text = if (d.views >= 0) java.text.NumberFormat.getIntegerInstance().format(d.views) else "–"
-        sb.descDate.text = d.uploaded ?: "–"
+        sb.descDate.text = d.date ?: d.uploaded ?: "–"
         val desc = d.description.trim()
         sb.descText.text = when {
             desc.isEmpty() -> "No description"
@@ -696,6 +722,7 @@ class VideoScreen(
     private fun copyLink() {
         val u = url ?: return
         val cm = act.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        AppPrefs.setClipSeen(act, u)                        // no "link copied" popup for our own copy
         cm.setPrimaryClip(android.content.ClipData.newPlainText("Video link", u))
         if (android.os.Build.VERSION.SDK_INT < 33) act.toast("Link copied")
     }

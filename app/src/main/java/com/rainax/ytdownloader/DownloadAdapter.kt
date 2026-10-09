@@ -51,7 +51,11 @@ class DownloadAdapter(
         b.title.text = t.title.ifBlank { t.url }
         b.status.text = when (t.status) {
             Status.DONE -> {
-                val kind = if (t.isAudio) "Audio" else "Video"
+                val kind = when {
+                    t.format.startsWith(AppUpdater.TASK_PREFIX) -> "App update  •  Tap to install"
+                    t.isAudio -> "Audio"
+                    else -> "Video"
+                }
                 "$kind  •  ${DateUtils.getRelativeTimeSpanString(t.createdAt)}"
             }
             else -> t.message.ifBlank { t.status.name.lowercase().replaceFirstChar { it.uppercase() } }

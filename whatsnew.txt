@@ -1,7 +1,9 @@
-Shorts: swipe up through short videos, with Download
-Continue watching on Home, videos resume where you stopped
-Chapters on the seek bar and a Chapters list
-SponsorBlock skips sponsor parts (Settings)
-Dislike counts are back
-Library: Music, Videos, your own playlists, Shuffle and Repeat
-Music files get title, artist and cover picture
+App name is now RAINAX Tube, and no more ads
+New Social tab with how-to steps for TikTok, Instagram and Facebook
+Copied video links are offered for download
+Tap + on several videos, then download them all at once
+Shorts: endless swiping, likes, dislikes and comments work
+Fix for videos made for kids that would not play
+Clear "No internet" message with a settings button
+Easy-to-read upload dates
+Updates download in the Downloads tab with pause and resume

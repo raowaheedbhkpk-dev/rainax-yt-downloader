@@ -3,19 +3,13 @@ package com.rainax.ytdownloader
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import android.view.Gravity
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.progressindicator.LinearProgressIndicator
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -38,7 +32,7 @@ object AppUpdater {
     private var job: Job? = null
     private var required: Release? = null          // newer version found: must be installed
     private var dialog: AlertDialog? = null
-    private var dlJob: Job? = null                  // APK download in progress
+    private var installAsked = false               // the installer was opened once this time
     private var readyApk: File? = null              // downloaded and complete: no need to download again
     private val dialogShowing get() = dialog?.isShowing == true
 
@@ -89,7 +83,15 @@ object AppUpdater {
             required = null
             return
         }
-        if (!dialogShowing && job?.isActive != true && dlJob?.isActive != true) offer(activity, rel, current)
+        if (dialogShowing || job?.isActive == true || downloading(rel)) return
+        val done = updateTask(rel.version)?.takeIf { it.status == Status.DONE }
+        val file = done?.fileUri?.let { File(it) }
+        if (file != null && file.exists()) {
+            if (!installAsked) { installAsked = true; installDownloaded(activity, file, rel.version) }
+            else offer(activity, rel, current)                // still required: ask again (Update now installs it)
+            return
+        }
+        offer(activity, rel, current)
     }
 
     private fun currentVersion(activity: AppCompatActivity): String = try {
@@ -103,7 +105,7 @@ object AppUpdater {
         con.connectTimeout = 15_000
         con.readTimeout = 15_000
         con.setRequestProperty("Accept", "application/vnd.github+json")
-        con.setRequestProperty("User-Agent", "RAINAX-YT-Downloader")
+        con.setRequestProperty("User-Agent", "RAINAX-Tube")
         try {
             if (con.responseCode != 200) return null
             val json = JSONObject(con.inputStream.bufferedReader().use { it.readText() })
@@ -122,6 +124,9 @@ object AppUpdater {
         }
     }
 
+    /** True when [version] is newer than the installed app. */
+    fun isNewer(activity: AppCompatActivity, version: String): Boolean = isNewer(version, currentVersion(activity))
+
     /** "7.10.0" > "7.9.2" (number by number). */
     private fun isNewer(latest: String, current: String): Boolean {
         val a = latest.split('.', '-').map { it.filter(Char::isDigit).toIntOrNull() ?: 0 }
@@ -136,16 +141,17 @@ object AppUpdater {
 
     /** Required update: no "Later". The only ways out are Update or closing the app. */
     private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
-        if (dialogShowing || activity.isFinishing || dlJob?.isActive == true) return
+        if (dialogShowing || activity.isFinishing || downloading(rel)) return
         val notes = friendlyNotes(rel.notes)
         val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
         dialog = AlertDialog.Builder(activity)
             .setTitle("Update required: v${rel.version}")
-            .setMessage("A new version of RAINAX is available. Please update to keep using the app.\n\nYou have v$current.\n\nWhat's new:\n$notes$size")
+            .setMessage("A new version of RAINAX Tube is available. Please update to keep using the app. It downloads in the Downloads tab, and you can keep using the app meanwhile.\n\nYou have v$current.\n\nWhat's new:\n$notes$size")
             .setCancelable(false)
             .setPositiveButton("Update now") { _, _ ->
                 val ready = readyApk?.takeIf { it.exists() && it.name.contains(rel.version) }
                 if (ready != null) install(activity, ready) else download(activity, rel)
+                installAsked = false
             }
             .setNegativeButton("Close app") { _, _ -> activity.finishAffinity() }
             .show()
@@ -184,119 +190,103 @@ object AppUpdater {
         return lines.joinToString("\n") { "• " + it.take(120) }
     }
 
-    private fun download(activity: AppCompatActivity, rel: Release) {
-        val density = activity.resources.displayMetrics.density
-        val bar = LinearProgressIndicator(activity).apply { max = 100; isIndeterminate = true }
-        val text = TextView(activity).apply {
-            text = "Starting…"
-            gravity = Gravity.END
-            setPadding(0, (8 * density).toInt(), 0, 0)
-        }
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = (24 * density).toInt()
-            setPadding(p, (12 * density).toInt(), p, 0)
-            addView(bar)
-            addView(text)
-        }
-        var dl: Job? = null
-        val dialog = AlertDialog.Builder(activity)
-            .setTitle("Downloading v${rel.version}")
-            .setView(box)
-            .setCancelable(false)
-            .setNegativeButton("Cancel") { _, _ ->
-                dl?.cancel()
-                required?.let { offer(activity, it, currentVersion(activity)) }
-            }
-            .show()
+    /** Prefix of the download task's format; the version follows ("app:update:8.9.20"). */
+    const val TASK_PREFIX = "app:update:"
 
-        // screen rebuilt during the download: close the progress window cleanly
-        activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
-                try { dialog.dismiss() } catch (e: Exception) { }
+    /** Called when the update was added to Downloads (the app shows the Library tab). */
+    var onQueued: (() -> Unit)? = null
+
+    private fun updateTask(version: String): DownloadTask? =
+        TaskRepository.tasks.value.firstOrNull { it.format == TASK_PREFIX + version }
+
+    /**
+     * The update downloads in the Downloads tab like any other file: you see its progress, can pause and
+     * resume it, and after a network error or a restart it continues where it stopped.
+     */
+    private fun download(activity: AppCompatActivity, rel: Release) {
+        TaskRepository.init(activity)
+        val existing = updateTask(rel.version)
+        when {
+            existing?.status == Status.DONE -> {
+                existing.fileUri?.let { installDownloaded(activity, File(it), rel.version); return }
             }
-        })
-        dl = activity.lifecycleScope.launch {
-            val dir = File(activity.cacheDir, "updates").apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() }
-            val file = File(dir, "RAINAX-update-${rel.version}.apk")
-            val ok = withContext(Dispatchers.IO) {
-                try {
-                    val con = URL(rel.apkUrl).openConnection() as HttpURLConnection
-                    con.instanceFollowRedirects = true
-                    con.connectTimeout = 20_000
-                    con.readTimeout = 30_000
-                    con.setRequestProperty("User-Agent", "RAINAX-YT-Downloader")
-                    val total = con.contentLengthLong.takeIf { it > 0 } ?: rel.size
-                    var done = 0L
-                    con.inputStream.use { input ->
-                        file.outputStream().use { out ->
-                            val buf = ByteArray(64 * 1024)
-                            var last = -1
-                            while (isActive) {
-                                val n = input.read(buf)
-                                if (n < 0) break
-                                out.write(buf, 0, n)
-                                done += n
-                                val pct = if (total > 0) (done * 100 / total).toInt() else -1
-                                if (pct != last) {
-                                    last = pct
-                                    withContext(Dispatchers.Main) {
-                                        if (pct >= 0) {
-                                            bar.isIndeterminate = false
-                                            bar.setProgressCompat(pct, true)
-                                            text.text = "$pct%  •  ${formatSize(done)} of ${formatSize(total)}"
-                                        } else text.text = formatSize(done)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    con.disconnect()
-                    // a cut-off download would make the installer say "problem parsing the package"
-                    isActive && file.length() > 0 && (total <= 0 || done == total)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    false
-                }
+            existing != null -> DownloadService.send(activity, DownloadService.ACTION_RESUME, existing.id)
+            else -> {
+                // older update downloads are not needed any more
+                TaskRepository.tasks.value.filter { it.format.startsWith(TASK_PREFIX) }.forEach { TaskRepository.remove(it.id) }
+                TaskRepository.addAll(listOf(
+                    DownloadTask(
+                        id = java.util.UUID.randomUUID().toString(),
+                        url = rel.apkUrl,
+                        title = "RAINAX Tube update v${rel.version}",
+                        format = TASK_PREFIX + rel.version,
+                        thumbPath = null,
+                        status = Status.QUEUED,
+                        progress = 0,
+                        message = "Queued",
+                        retries = 0,
+                        fileUri = null,
+                        mime = "application/vnd.android.package-archive",
+                        createdAt = System.currentTimeMillis()
+                    )
+                ))
+                DownloadService.send(activity, DownloadService.ACTION_PUMP)
             }
-            try { dialog.dismiss() } catch (e: Exception) { }
-            // Safety: the downloaded APK must be RAINAX, signed with the same key, and really newer,
-            // or Android refuses it and we'd ask forever
-            val check = if (ok) verify(activity, file) else null
-            if (ok && check != ApkCheck.OK) {
-                AppPrefs.setBadRelease(activity, rel.version)
+        }
+        toast(activity, "The update is downloading in Downloads. You can keep using the app.")
+        onQueued?.invoke()
+    }
+
+    /** The update download finished (or its row was tapped): check the file, then open the installer. */
+    fun installDownloaded(activity: AppCompatActivity, file: File, version: String) {
+        if (!file.exists()) {
+            toast(activity, "The update file is gone. Downloading it again…")
+            updateTask(version)?.let { TaskRepository.remove(it.id) }
+            required?.let { download(activity, it) }
+            return
+        }
+        when (verify(activity, file)) {
+            ApkCheck.OK -> { readyApk = file; install(activity, file) }
+            ApkCheck.OLDER -> {
+                AppPrefs.setBadRelease(activity, version)
                 required = null
                 file.delete()
-                when (check) {
-                    ApkCheck.OLDER -> toast(activity, "You already have the latest version")
-                    ApkCheck.OTHER_KEY -> AlertDialog.Builder(activity)
-                        .setTitle("New version needs a fresh install")
-                        .setMessage(
-                            "This update is signed with a new key, so it can't install over this version. " +
-                                "Uninstall RAINAX, then install the new version from its download page. " +
-                                "(Your downloaded files stay in your Downloads folder.)"
-                        )
-                        .setPositiveButton("Open download page") { _, _ ->
-                            runCatching {
-                                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$REPO/releases/latest")))
-                            }
+                updateTask(version)?.let { TaskRepository.remove(it.id) }
+                toast(activity, "You already have the latest version")
+            }
+            ApkCheck.OTHER_KEY -> {
+                AppPrefs.setBadRelease(activity, version)
+                required = null
+                file.delete()
+                updateTask(version)?.let { TaskRepository.remove(it.id) }
+                AlertDialog.Builder(activity)
+                    .setTitle("New version needs a fresh install")
+                    .setMessage(
+                        "This update is signed with a new key, so it can't install over this version. " +
+                            "Uninstall RAINAX Tube, then install the new version from its download page. " +
+                            "(Your downloaded files stay in your Downloads folder.)"
+                    )
+                    .setPositiveButton("Open download page") { _, _ ->
+                        runCatching {
+                            activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$REPO/releases/latest")))
                         }
-                        .setNegativeButton("Later", null)
-                        .show()
-                    else -> toast(activity, "The update file is damaged. Try again later.")
-                }
-            } else if (ok) {
-                readyApk = file
-                install(activity, file)
-            } else {
-                toast(activity, "Update download failed. Check your internet and try again.")
-                dlJob = null
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
+            }
+            else -> {
+                file.delete()
+                updateTask(version)?.let { TaskRepository.remove(it.id) }
+                toast(activity, "The update file is damaged. Tap Update to download it again.")
                 required?.let { offer(activity, it, currentVersion(activity)) }
             }
         }
-        dlJob = dl
+    }
+
+    /** True while the required update is downloading (the app stays usable meanwhile). */
+    private fun downloading(rel: Release): Boolean {
+        val t = updateTask(rel.version) ?: return false
+        return t.status == Status.RUNNING || t.status == Status.QUEUED || t.status == Status.WAITING
     }
 
     private enum class ApkCheck { OK, OLDER, OTHER_KEY, BROKEN }

@@ -279,10 +279,53 @@ class DownloadService : Service() {
         val task = TaskRepository.get(id) ?: return
         NativeDownloader.begin(id)
         try {
-            transfer(id, task)
+            if (task.format.startsWith(AppUpdater.TASK_PREFIX)) transferUpdate(id, task) else transfer(id, task)
         } finally {
             NativeDownloader.end(id)
         }
+    }
+
+    /**
+     * The app's own update: downloaded in pieces like a video (pause, resume, survives network errors and
+     * restarts), then kept in the app's folder for the installer.
+     */
+    private fun transferUpdate(id: String, task: DownloadTask) {
+        val version = task.format.removePrefix(AppUpdater.TASK_PREFIX)
+        val dir = File(filesDir, "downloads/$id").apply { mkdirs() }
+        val part = File(dir, "update.apk")
+        val total = java.util.concurrent.atomic.AtomicLong(0)
+        val done = java.util.concurrent.atomic.AtomicLong(0)
+        var last = 0L
+        fun report() {
+            val now = System.currentTimeMillis()
+            if (now - last < 500) return
+            last = now
+            val t = total.get()
+            val pct = if (t > 0) (done.get() * 100 / t).toInt().coerceIn(0, 99) else 0
+            val text = if (t > 0) "Downloading update $pct%  •  ${formatSize(done.get())} of ${formatSize(t)}" else "Downloading update…"
+            TaskRepository.update(id) { if (it.status != Status.RUNNING) it else it.copy(progress = pct, message = text) }
+        }
+        NativeDownloader.download(id, task.url, part, { n -> done.addAndGet(n) }, { n -> done.addAndGet(n); report() }) { total.set(it) }
+        if (TaskRepository.get(id)?.status != Status.RUNNING) return
+        val out = File(filesDir, "updates").apply { mkdirs() }
+        out.listFiles()?.forEach { it.delete() }
+        val apk = File(out, "RAINAX-update-$version.apk")
+        if (!part.renameTo(apk)) part.copyTo(apk, overwrite = true)
+        dir.deleteRecursively()
+        TaskRepository.update(id, true) {
+            it.copy(
+                status = Status.DONE, progress = 100, message = "Update ready. Tap to install",
+                fileUri = apk.absolutePath, mime = "application/vnd.android.package-archive"
+            )
+        }
+        val n = NotificationCompat.Builder(this, CH_DONE)
+            .setSmallIcon(R.drawable.ic_stat_download)
+            .setContentTitle("RAINAX Tube v$version is ready")
+            .setContentText("Tap to install the update")
+            .setAutoCancel(true)
+            .setContentIntent(openAppIntent())
+            .build()
+        nm.notify(DONE_ID + 1, n)
     }
 
     /** One attempt: find the streams, download them (several connections each), join, save. */
@@ -735,6 +778,7 @@ class DownloadService : Service() {
 
     /** One notification for all finished downloads (a 100-video playlist must not spam 100 of them). */
     private fun notifyDone(task: DownloadTask, success: Boolean) {
+        if (success && task.format.startsWith(AppUpdater.TASK_PREFIX)) return      // it has its own "ready" message
         if (!success) {
             notifyFailed()
             return
@@ -754,6 +798,7 @@ class DownloadService : Service() {
     private fun playIntent(task: DownloadTask): PendingIntent? {
         val t = TaskRepository.get(task.id) ?: task
         val uri = t.fileUri ?: return null
+        if (t.format.startsWith(AppUpdater.TASK_PREFIX)) return null
         val m = t.mime.orEmpty()
         if (!(m.startsWith("video/") || m.startsWith("audio/") || t.isAudio)) return null
         val i = Intent(this, PlayerActivity::class.java)

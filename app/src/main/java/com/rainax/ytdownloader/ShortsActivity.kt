@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -89,6 +88,51 @@ class ShortsActivity : AppCompatActivity() {
     private var loadingMore = false
     private var bottomInset = 0
     private var userPaused = false
+    /** Your like / dislike per video id ("LIKE", "DISLIKE", "INDIFFERENT"). */
+    private val rating = HashMap<String, String>()
+    private val likeCounts = HashMap<String, Long>()
+    private val dislikeCounts = HashMap<String, Long>()
+
+    private val signIn = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode == RESULT_OK) {
+            Toast.makeText(this, "Signed in to YouTube", Toast.LENGTH_SHORT).show()
+            holder(current)?.let { h -> items.getOrNull(current)?.let { h.loadState(it.url) } }
+        }
+    }
+
+    private fun askSignIn() {
+        Toast.makeText(this, "Sign in to YouTube to like and comment", Toast.LENGTH_SHORT).show()
+        signIn.launch(Intent(this, SignInActivity::class.java))
+    }
+
+    /** Like / dislike (tap again to take it back), saved to your YouTube account. */
+    private fun rate(url: String, want: String) {
+        if (!YtAccount.isSignedIn(this)) { askSignIn(); return }
+        val id = youtubeId(url) ?: return
+        fun move(from: String, to: String) {
+            if (from == "LIKE") likeCounts[id] = ((likeCounts[id] ?: 0L) - 1).coerceAtLeast(0)
+            if (from == "DISLIKE") dislikeCounts[id] = ((dislikeCounts[id] ?: 0L) - 1).coerceAtLeast(0)
+            if (to == "LIKE") likeCounts[id] = (likeCounts[id] ?: 0L).coerceAtLeast(0) + 1
+            if (to == "DISLIKE") dislikeCounts[id] = (dislikeCounts[id] ?: 0L).coerceAtLeast(0) + 1
+            rating[id] = to
+            holder(current)?.showRating()
+        }
+        lifecycleScope.launch {
+            // know your current like first (tapping Like on a video you already liked takes it back)
+            if (!rating.containsKey(id)) {
+                val st = withContext(Dispatchers.IO) { runCatching { YtAccount.videoState(id) }.getOrNull() }
+                rating[id] = st?.likeStatus ?: "INDIFFERENT"
+            }
+            val before = rating[id] ?: "INDIFFERENT"
+            val now = if (before == want) "INDIFFERENT" else want
+            move(before, now)
+            val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.rate(id, now) }.isSuccess }
+            if (!ok) {
+                move(now, before)
+                Toast.makeText(this@ShortsActivity, "Couldn't save that. Try again", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -204,9 +248,22 @@ class ShortsActivity : AppCompatActivity() {
         }
     }
 
+    /** Short videos from this Short's "up next" list join the feed (so there is always more to swipe). */
+    private fun addRelated(d: VideoDetails) {
+        val known = items.mapTo(HashSet()) { youtubeId(it.url) ?: it.url }
+        val more = d.related.filter {
+            !it.isPlaylist && !it.isChannel && (it.isShort || it.seconds in 1..180) && known.add(youtubeId(it.url) ?: it.url)
+        }
+        if (more.isEmpty()) return
+        val start = items.size
+        items.addAll(more)
+        adapter.notifyItemRangeInserted(start, more.size)
+    }
+
     private fun play(pos: Int, d: VideoDetails) {
         val p = player ?: return
         holder(pos)?.fill(d)
+        addRelated(d)
         val src = d.play
         val uri = when {
             src.video != null && src.audio != null -> Uri.Builder().scheme("rainax").authority("av")
@@ -226,17 +283,20 @@ class ShortsActivity : AppCompatActivity() {
         if (loadingMore) return
         loadingMore = true
         lifecycleScope.launch {
-            val fresh = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
+            val found = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
             loadingMore = false
+            val known = items.mapTo(HashSet()) { youtubeId(it.url) ?: it.url }
+            val fresh = found.filter { known.add(youtubeId(it.url) ?: it.url) }
             if (fresh.isEmpty()) {
                 if (items.isEmpty()) {
-                    Toast.makeText(this@ShortsActivity, "Couldn't load Shorts. Check your internet", Toast.LENGTH_LONG).show()
+                    val text = if (!Net.online(this@ShortsActivity)) NO_INTERNET else "Couldn't load Shorts. Try again in a moment"
+                    Toast.makeText(this@ShortsActivity, text, Toast.LENGTH_LONG).show()
                 }
                 return@launch
             }
             val start = items.size
             items.addAll(fresh)
-            ShortsFeed.items.addAll(fresh.filter { f -> ShortsFeed.items.none { it.url == f.url } })
+            ShortsFeed.items.addAll(found.filter { f -> ShortsFeed.items.none { it.url == f.url } })
             adapter.notifyItemRangeInserted(start, fresh.size)
             if (current < 0) select(b.pager.currentItem)
         }
@@ -320,22 +380,17 @@ class ShortsActivity : AppCompatActivity() {
             b.spPaused.isVisible = false
             b.spTitle.text = item.title
             b.spUploader.text = item.uploader
-            b.spLikeText.text = "Like"
-            b.spDislikeText.text = "Dislike"
             details[item.url]?.let { fill(it) }
             b.root.setOnClickListener { if (pos == current) togglePause() }
             b.spComments.setOnClickListener {
-                CommentsSheet(this@ShortsActivity, item.url) {
-                    Toast.makeText(this@ShortsActivity, "Sign in on the Home screen to comment", Toast.LENGTH_LONG).show()
-                }.show()
+                CommentsSheet(this@ShortsActivity, item.url) { askSignIn() }.show()
             }
             b.spDownload.setOnClickListener { chooseDownload(item) }
             b.spShare.setOnClickListener { share(item) }
-            val like = View.OnClickListener {
-                Toast.makeText(this@ShortsActivity, "Open the video on the Home screen to like it", Toast.LENGTH_SHORT).show()
-            }
-            b.spLike.setOnClickListener(like)
-            b.spDislike.setOnClickListener(like)
+            b.spLike.setOnClickListener { rate(item.url, "LIKE") }
+            b.spDislike.setOnClickListener { rate(item.url, "DISLIKE") }
+            showRating()
+            loadState(item.url)
             if (pos == current) {
                 if (playerView.parent == null) b.spVideo.addView(playerView)
                 // the playing Short shown again (e.g. after a refresh): no picture or spinner over it
@@ -354,11 +409,42 @@ class ShortsActivity : AppCompatActivity() {
             if (youtubeId(d.url) != youtubeId(url)) return
             if (d.title.isNotBlank()) b.spTitle.text = d.title
             if (d.uploader.isNotBlank()) b.spUploader.text = d.uploader
-            if (d.likes > 0) b.spLikeText.text = YtCatalog.count(d.likes)
             val id = youtubeId(d.url) ?: return
+            if (d.likes >= 0 && !likeCounts.containsKey(id)) likeCounts[id] = d.likes
+            showRating()
+            if (dislikeCounts.containsKey(id)) return
             lifecycleScope.launch {
                 val n = withContext(Dispatchers.IO) { Dislikes.count(id) }
-                if (n > 0 && youtubeId(url) == id) b.spDislikeText.text = YtCatalog.count(n)
+                if (n >= 0 && !dislikeCounts.containsKey(id)) {
+                    dislikeCounts[id] = n + if (rating[id] == "DISLIKE" && n == 0L) 1 else 0
+                    if (youtubeId(url) == id) showRating()
+                }
+            }
+        }
+
+        /** Counts and your own like/dislike (coloured) on the buttons. */
+        fun showRating() {
+            val id = youtubeId(url) ?: return
+            val likes = likeCounts[id] ?: -1
+            val dislikes = dislikeCounts[id] ?: -1
+            b.spLikeText.text = if (likes > 0) YtCatalog.count(likes) else "Like"
+            b.spDislikeText.text = if (dislikes > 0) YtCatalog.count(dislikes) else "Dislike"
+            val mine = rating[id]
+            val on = androidx.core.content.ContextCompat.getColor(this@ShortsActivity, R.color.rx_primary)
+            val off = androidx.core.content.ContextCompat.getColor(this@ShortsActivity, R.color.rx_white)
+            b.spLike.imageTintList = android.content.res.ColorStateList.valueOf(if (mine == "LIKE") on else off)
+            b.spDislike.imageTintList = android.content.res.ColorStateList.valueOf(if (mine == "DISLIKE") on else off)
+        }
+
+        /** Signed in: whether you already liked or disliked this Short. */
+        fun loadState(pageUrl: String) {
+            val id = youtubeId(pageUrl) ?: return
+            if (!YtAccount.isSignedIn(this@ShortsActivity) || rating.containsKey(id)) return
+            lifecycleScope.launch {
+                val st = withContext(Dispatchers.IO) { runCatching { YtAccount.videoState(id) }.getOrNull() } ?: return@launch
+                if (rating.containsKey(id)) return@launch
+                rating[id] = st.likeStatus ?: "INDIFFERENT"
+                if (youtubeId(url) == id) showRating()
             }
         }
 

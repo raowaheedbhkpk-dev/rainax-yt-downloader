@@ -71,11 +71,7 @@ class HomeScreen(
     private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
     private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
-    // the Home feed also shows ad cards (native ads) between the videos
-    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) }).also { a ->
-        a.feedAds = true
-        Ads.onNativeReady = { a.notifyDataSetChanged() }
-    }
+    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) })
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     /** Continue watching + Shorts, on top of the first Home tab. */
     private val shelf = HomeShelf(act, openVideo)
@@ -160,6 +156,24 @@ class HomeScreen(
         }
         hm.searchBack.setOnClickListener { back() }
         hm.feedRetry.setOnClickListener { load(reset = true) }
+        hm.feedSettings.setOnClickListener { Net.openSettings(act) }
+
+        // + on every video: pick several, then download them together
+        listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter).forEach { a ->
+            a.onPick = { togglePick(it) }
+            a.isPicked = { picked.containsKey(it) }
+        }
+        hm.pickClear.setOnClickListener {
+            picked.clear()
+            refreshPicks()
+        }
+        hm.pickDownload.setOnClickListener {
+            val list = picked.values.toList()
+            if (list.isEmpty()) return@setOnClickListener
+            picked.clear()
+            refreshPicks()
+            downloadMany(list)
+        }
 
         buildTabs()
         load(reset = true)
@@ -194,6 +208,35 @@ class HomeScreen(
             return true
         }
         return false
+    }
+
+    // ---------- picking several videos ----------
+
+    /** Called with the picked videos when Download is tapped on the bar. */
+    var downloadMany: (List<VideoItem>) -> Unit = {}
+    private val picked = LinkedHashMap<String, VideoItem>()
+
+    private fun togglePick(item: VideoItem) {
+        if (picked.remove(item.url) == null) picked[item.url] = item
+        refreshPicks()
+    }
+
+    private fun refreshPicks() {
+        val n = picked.size
+        hm.pickBar.isVisible = n > 0
+        hm.pickCount.text = if (n == 1) "1 video selected" else "$n videos selected"
+        hm.pickDownload.text = if (n > 1) "Download $n" else "Download"
+        val d = act.resources.displayMetrics.density
+        hm.feedList.setPadding(hm.feedList.paddingLeft, hm.feedList.paddingTop, hm.feedList.paddingRight, ((if (n > 0) 88 else 16) * d).toInt())
+        hm.feedList.adapter?.notifyDataSetChanged()
+    }
+
+    /** Back with videos picked: clear the picks first. */
+    fun clearPicks(): Boolean {
+        if (picked.isEmpty()) return false
+        picked.clear()
+        refreshPicks()
+        return true
     }
 
     /** Home is on screen again: newest Continue watching row and watched bars. */
@@ -575,7 +618,10 @@ class HomeScreen(
     }
 
     private fun showError(text: String) {
-        hm.feedErrorText.text = text
+        // no connection: say so plainly, with a button to the phone's internet settings
+        val offline = !Net.online(act)
+        hm.feedErrorText.text = if (offline) "No internet connection\nTurn on Wi-Fi or mobile data, then tap Try again." else friendlyError(text)
+        hm.feedSettings.isVisible = offline
         hm.feedError.isVisible = true
     }
 

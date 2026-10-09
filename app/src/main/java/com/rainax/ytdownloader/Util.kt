@@ -47,9 +47,43 @@ fun friendlyError(raw: String): String {
         "enospc" in m || "no space left" in m || "not enough storage" in m ->
             "Not enough storage on your phone. Free some space, then tap Retry."
         "unsupported url" in m -> "This site isn't supported. RAINAX downloads from ${FastExtractor.SUPPORTED}."
-        "errno 7" in m || "no address associated" in m || "name resolution" in m ||
-            "network is unreachable" in m || "timed out" in m || "unable to resolve host" in m ->
-            "Can't reach the site right now. Check your internet connection, then tap Retry."
+        isNetworkError(m) -> if (Net.online()) "Connection problem. Check your internet, then tap Retry."
+            else NO_INTERNET
         else -> raw
+    }
+}
+
+const val NO_INTERNET = "No internet connection. Turn on Wi-Fi or mobile data, then try again."
+
+/** Words of network errors (no connection, host not reachable, DNS, timeouts). */
+fun isNetworkError(text: String): Boolean {
+    val m = text.lowercase()
+    return listOf(
+        "errno 7", "no address associated", "name resolution", "network is unreachable", "timed out",
+        "unable to resolve host", "host not reachable", "unknownhost", "failed to connect", "connection refused",
+        "connection reset", "software caused connection abort", "no internet", "enetunreach", "econnrefused"
+    ).any { it in m }
+}
+
+/** Is the phone connected to the internet right now? */
+object Net {
+    @Volatile private var app: android.content.Context? = null
+
+    fun init(c: android.content.Context) { app = c.applicationContext }
+
+    fun online(c: android.content.Context? = null): Boolean {
+        val ctx = c?.applicationContext ?: app ?: return true
+        val cm = ctx.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return true
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /** Opens the phone's Wi-Fi / mobile data panel. */
+    fun openSettings(c: android.content.Context) {
+        val panel = android.content.Intent(android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY)
+        val wireless = android.content.Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)
+        try { c.startActivity(panel) } catch (e: Exception) {
+            try { c.startActivity(wireless) } catch (ignored: Exception) { }
+        }
     }
 }

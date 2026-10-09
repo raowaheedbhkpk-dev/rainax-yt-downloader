@@ -92,6 +92,19 @@
                 android:textSize="12.5sp" />
         </LinearLayout>
 
+        <!-- + : pick several videos, then download them together -->
+        <ImageButton
+            android:id="@+id/pick"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_circle_btn"
+            android:contentDescription="Select for download"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_add"
+            app:tint="@color/rx_text" />
+
         <!-- coral glass Download button -->
         <ImageButton
             android:id="@+id/download"

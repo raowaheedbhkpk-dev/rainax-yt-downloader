@@ -21,11 +21,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Rainax">
 
-        <!-- AdMob App ID (from app/build.gradle; Google's test ID until replaced) -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
-
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"

@@ -380,6 +380,43 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp" />
             </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="64dp"
+                android:orientation="horizontal"
+                android:paddingVertical="8dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Detect copied links"
+                        android:textColor="@color/rx_text"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="When you copy a YouTube, TikTok, Instagram or Facebook link, RAINAX offers to download it"
+                        android:textColor="@color/rx_text2"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/clipSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" />
+            </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
         <TextView
@@ -513,14 +550,6 @@
             android:layout_marginTop="12dp"
             android:text="Check for app update" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/adPrivacyBtn"
-            style="@style/Widget.Rainax.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Privacy settings for ads"
-            android:visibility="gone" />
         <TextView
             android:id="@+id/versionText"
             android:layout_width="wrap_content"

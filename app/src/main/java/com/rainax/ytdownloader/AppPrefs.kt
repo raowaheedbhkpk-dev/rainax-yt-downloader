@@ -54,4 +54,12 @@ object AppPrefs {
     /** Videos continue where you stopped watching them (on by default). */
     fun resumeVideos(c: Context) = p(c).getBoolean("resume_videos", true)
     fun setResumeVideos(c: Context, v: Boolean) = p(c).edit().putBoolean("resume_videos", v).apply()
+
+    /** Offer to download video links copied in other apps (on by default). */
+    fun clipDetect(c: Context) = p(c).getBoolean("clip_detect", true)
+    fun setClipDetect(c: Context, v: Boolean) = p(c).edit().putBoolean("clip_detect", v).apply()
+
+    /** The last copied link already offered (not asked again). */
+    fun clipSeen(c: Context) = p(c).getString("clip_seen", "").orEmpty()
+    fun setClipSeen(c: Context, v: String) = p(c).edit().putString("clip_seen", v).apply()
 }

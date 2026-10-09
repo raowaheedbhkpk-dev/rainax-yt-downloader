@@ -27,6 +27,11 @@
                 android:visibility="gone" />
 
             <include
+                android:id="@+id/socialPage"
+                layout="@layout/page_social"
+                android:visibility="gone" />
+
+            <include
                 android:id="@+id/settingsPage"
                 layout="@layout/page_settings"
                 android:visibility="gone" />
@@ -36,14 +41,6 @@
                 layout="@layout/page_video"
                 android:visibility="gone" />
         </FrameLayout>
-
-        <!-- AdMob banner (shown once an ad has loaded) -->
-        <FrameLayout
-            android:id="@+id/adBanner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            android:visibility="gone" />
 
         <!-- floating glass navigation bar -->
         <FrameLayout

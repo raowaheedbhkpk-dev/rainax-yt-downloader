@@ -43,8 +43,9 @@ class MainActivity : AppCompatActivity() {
     private val vp get() = b.videoPage
     private val pl get() = b.playPage
     private val st get() = b.settingsPage
+    private val so get() = b.socialPage
 
-    private var tab = 0            // bottom navigation: 0 Home, 1 Library, 2 Settings
+    private var tab = 0            // bottom navigation: 0 Home, 1 Library, 2 Settings, 3 Social
     private lateinit var home: HomeScreen
     private lateinit var video: VideoScreen
     private lateinit var library: LibraryScreen
@@ -99,6 +100,7 @@ class MainActivity : AppCompatActivity() {
                 tab == 1 && library.back() -> {}
                 tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
                 video.isOpen && !video.minimized -> video.minimize()
+                home.clearPicks() -> {}
                 home.back() -> {}
                 else -> {                    // nothing to go back to: leave the app normally
                     isEnabled = false
@@ -135,6 +137,8 @@ class MainActivity : AppCompatActivity() {
 
         home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) }) { onAccountClick() }
         home.setup()
+        home.downloadMany = { list -> showDownloadSheet(list.map { it.url }) }
+        AppUpdater.onQueued = { b.bottomNav.selectedItemId = R.id.nav_downloads }
         video = VideoScreen(
             this, vp, vm, { controller },
             download = { u, t, audio -> showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t) },
@@ -153,10 +157,12 @@ class MainActivity : AppCompatActivity() {
         }
         library.setup()
         setupSettings()
+        setupSocial()
 
         b.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
                 R.id.nav_home -> { showTab(0); true }
+                R.id.nav_social -> { showTab(3); true }
                 R.id.nav_downloads -> { showTab(1); true }
                 R.id.nav_settings -> { showTab(2); true }
                 else -> false
@@ -177,23 +183,12 @@ class MainActivity : AppCompatActivity() {
             b.bottomNav.selectedItemId = when (savedInstanceState.getInt("tab", 0)) {
                 1 -> R.id.nav_downloads
                 2 -> R.id.nav_settings
+                3 -> R.id.nav_social
                 else -> R.id.nav_home
             }
         }
 
         if (savedInstanceState == null) refreshAccount()
-
-        // Ads: consent form where the law needs it, then the banner above the bottom bar
-        Ads.start(this) {
-            if (isFinishing || isDestroyed) return@start
-            Ads.showBanner(this, b.adBanner) {
-                updateChrome()
-                if (b.miniPlayer.root.isVisible) b.adBanner.post { placeMiniPlayer() }   // move off the banner
-            }
-            st.adPrivacyBtn.isVisible = Ads.privacyOptionsNeeded(this)
-            // app open ad on start (not on the very first start, and never over a video or a sheet)
-            if (savedInstanceState == null && launchCount() > 1 && canShowFullScreenAd()) Ads.showAppOpenSoon(this)
-        }
 
         // New RAINAX version? (quiet check, a few seconds after start)
         if (savedInstanceState == null) b.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
@@ -247,40 +242,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (blocked) return
         AppUpdater.resumeInstall(this)
-        Ads.resumeBanner(b.adBanner)
-        Ads.onScreenResumed(this) { canShowFullScreenAd() }
         if (tab == 0 && ::home.isInitialized) home.onShown()
         b.root.postDelayed({ FastExtractor.warmUp() }, 3000)   // sizes show faster on the first download
     }
 
-    override fun onPause() {
-        if (!blocked) {
-            Ads.pauseBanner(b.adBanner)
-            Ads.onScreenPaused(this)
-        }
-        super.onPause()
-    }
-
-    /** A full-screen ad now would not interrupt anything: no video playing, no full screen, no sheet open. */
-    private fun canShowFullScreenAd(): Boolean =
-        !blocked && controller?.isPlaying != true && !video.fullscreen && sheet?.isShowing != true
-
-    /** How many times the app was started (counted once per start). */
-    private var launches = -1
-    private fun launchCount(): Int {
-        if (launches < 0) {
-            val p = getSharedPreferences("app", Context.MODE_PRIVATE)
-            launches = p.getInt("launches", 0) + 1
-            p.edit().putInt("launches", launches).apply()
-        }
-        return launches
-    }
 
     override fun onDestroy() {
         if (!blocked) {
             disconnectPlayer()            // the player service keeps playing on its own
             sheet?.dismiss()
-            Ads.destroyBanner(b.adBanner)
+            AppUpdater.onQueued = null
         }
         super.onDestroy()
     }
@@ -323,6 +294,10 @@ class MainActivity : AppCompatActivity() {
 
     /** Finished: open the file. Still downloading: watch the part already downloaded while the rest comes in. */
     private fun openOrWatch(t: DownloadTask) {
+        if (t.format.startsWith(AppUpdater.TASK_PREFIX)) {
+            if (t.status == Status.DONE) installUpdate(t) else onTaskAction(t)
+            return
+        }
         if (t.status == Status.DONE) {
             openFile(t)
             return
@@ -392,7 +367,7 @@ class MainActivity : AppCompatActivity() {
                     if (error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS &&
                         c.currentMediaItem?.mediaId == video.url && video.refreshStreams()
                     ) return
-                    video.showError("Couldn't play this video here. You can still download it.")
+                    video.showError(if (!Net.online(this@MainActivity)) NO_INTERNET else "Couldn't play this video here. You can still download it.")
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -453,6 +428,7 @@ class MainActivity : AppCompatActivity() {
         hm.root.isVisible = index == 0
         pl.root.isVisible = index == 1
         st.root.isVisible = index == 2
+        so.root.isVisible = index == 3
         updateChrome()
         if (index == 0) home.onShown()
     }
@@ -465,7 +441,6 @@ class MainActivity : AppCompatActivity() {
         val full = video.fullscreen
         b.navCard.isVisible = !full                    // the floating glass bar (hidden in full screen)
         // the banner hides in full screen and comes back after (only once an ad has loaded)
-        b.adBanner.isVisible = !full && Ads.bannerLoaded
         val mini = video.isOpen && !full && (video.minimized || tab != 0)
         val wasMini = b.miniPlayer.root.isVisible
         b.miniPlayer.root.isVisible = mini
@@ -561,8 +536,8 @@ class MainActivity : AppCompatActivity() {
         val insets = androidx.core.view.ViewCompat.getRootWindowInsets(root)
             ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         val top = (insets?.top ?: 0) + margin
-        // never over the ad banner (ad rules) or the bottom bar
-        val bottomView = if (b.adBanner.isVisible && b.adBanner.height > 0) b.adBanner else b.navCard
+        // never over the bottom bar
+        val bottomView = b.navCard
         val navTop = if (bottomView.isVisible && bottomView.height > 0) {
             val loc = IntArray(2); val rootLoc = IntArray(2)
             bottomView.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
@@ -622,6 +597,93 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
     // Links in / download sheet
     // =====================================================================
+
+    // =====================================================================
+    // Social tab and copied links
+    // =====================================================================
+
+    private fun setupSocial() {
+        so.socialPaste.setOnClickListener {
+            val text = clipText()
+            val url = text?.let { extractUrls(it).firstOrNull() }
+            if (url == null) message("Copy a video link first, then tap Paste") else so.socialInput.setText(url)
+        }
+        so.socialClear.setOnClickListener { so.socialInput.setText("") }
+        so.socialInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { so.socialClear.isVisible = !s.isNullOrEmpty() }
+        })
+        val go = {
+            val urls = extractUrls(so.socialInput.text.toString())
+            if (urls.isEmpty()) message("Paste a video link first")
+            else {
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .hideSoftInputFromWindow(so.socialInput.windowToken, 0)
+                AppPrefs.setClipSeen(this, urls.first())
+                showDownloadSheet(urls)
+            }
+        }
+        so.socialDownload.setOnClickListener { go() }
+        so.socialInput.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO ||
+                event?.action == android.view.KeyEvent.ACTION_UP
+            ) go()
+            true
+        }
+    }
+
+    private fun clipText(): String? = runCatching {
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+    }.getOrNull()
+
+    /** Video sites whose copied links RAINAX offers to download. */
+    private fun isVideoLink(url: String): Boolean {
+        val u = url.lowercase()
+        return FastExtractor.supports(u) || isPlaylistUrl(u) || listOf(
+            "tiktok.com", "instagram.com", "facebook.com", "fb.watch", "soundcloud.com", "bandcamp.com"
+        ).any { u.contains(it) }
+    }
+
+    private var lastClipStamp = -1L
+    private var clipDialog: AlertDialog? = null
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Android lets apps read what was copied only while they are on screen with focus
+        if (hasFocus && !blocked) b.root.postDelayed({ checkClipboard() }, 400)
+    }
+
+    /** A video link was copied in another app: offer to download it (once per link). */
+    private fun checkClipboard() {
+        if (isFinishing || !AppPrefs.clipDetect(this) || clipDialog?.isShowing == true ||
+            sheet?.isShowing == true || video.fullscreen
+        ) return
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val desc = cm.primaryClipDescription ?: return
+        // reading the text shows "pasted" on new Android versions: only when something new was copied
+        if (desc.timestamp == lastClipStamp) return
+        lastClipStamp = desc.timestamp
+        if (!desc.hasMimeType("text/*")) return
+        val url = clipText()?.let { t -> extractUrls(t).firstOrNull { isVideoLink(it) } } ?: return
+        if (url == AppPrefs.clipSeen(this)) return
+        AppPrefs.setClipSeen(this, url)
+        val site = when {
+            FastExtractor.supports(url) || isPlaylistUrl(url) -> "YouTube"
+            url.contains("tiktok", true) -> "TikTok"
+            url.contains("instagram", true) -> "Instagram"
+            url.contains("facebook", true) || url.contains("fb.watch", true) -> "Facebook"
+            else -> Uri.parse(url).host?.removePrefix("www.") ?: "Link"
+        }
+        clipDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setIcon(R.drawable.ic_link)
+            .setTitle("$site link copied")
+            .setMessage(url)
+            .setPositiveButton("Add to downloads") { _, _ -> showDownloadSheet(listOf(url)) }
+            .setNegativeButton("Not now", null)
+            .show()
+    }
 
     private fun extractUrls(text: String): List<String> =
         Regex("https?://\\S+").findAll(text).map { it.value }.distinct().toList()
@@ -714,7 +776,7 @@ class MainActivity : AppCompatActivity() {
             sb.sheetHeading.text = when (mode) {
                 MODE_ALL -> "More formats"
                 MODE_SUBS -> "Subtitles/CC"
-                else -> if (single) "Download video as" else "Download ${urls.size} links as"
+                else -> if (single) "Download video as" else "Download ${urls.size} videos as"
             }
             sb.backBtn.isVisible = mode != MODE_QUICK
             sb.sheetSub.text = when {
@@ -790,7 +852,7 @@ class MainActivity : AppCompatActivity() {
             val p = current
             val sub = if (spec.startsWith("video")) selectedSub else null
             val items = when {
-                !single -> urls.map { EnqueueItem(it, "", cookies[it]) }
+                !single -> urls.map { EnqueueItem(it, "", cookies[it], youtubeThumb(it)) }
                 p != null && p.playlist.isNotEmpty() ->
                     p.playlist.map { EnqueueItem(it.url, it.title, cookies[firstUrl], it.thumbUrl) }
                 // never save a status text like "Connecting…" as the title (blank = looked up by the service)
@@ -800,7 +862,6 @@ class MainActivity : AppCompatActivity() {
             }
             vm.enqueue(items, spec, sub)
             dialog.dismiss()
-            Ads.onDownloadAdded(this)                  // sometimes a full-screen ad (limited, see Ads)
             if (!askBatteryOptimization()) {
                 val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
                 Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
@@ -893,6 +954,7 @@ class MainActivity : AppCompatActivity() {
         pl.emptyState.isVisible = all.isEmpty() && library.showingDownloads
         pl.playScroll.isVisible = all.isNotEmpty() && library.showingDownloads
         library.onTasks(all)
+        checkUpdateReady(all)
 
         pl.activeSection.isVisible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
@@ -1055,7 +1117,9 @@ class MainActivity : AppCompatActivity() {
         var deleted = 0
         for (t in tasks) {
             val uri = t.fileUri ?: continue
-            if (FileStore.delete(this, uri)) deleted++
+            // the app's update is a file in the app's own folder, not in Downloads
+            val ok = if (t.format.startsWith(AppUpdater.TASK_PREFIX)) java.io.File(uri).delete() else FileStore.delete(this, uri)
+            if (ok) deleted++
         }
         TaskRepository.removeMany(tasks.map { it.id })
         message("Deleted $deleted of ${tasks.size} files")
@@ -1086,8 +1150,29 @@ class MainActivity : AppCompatActivity() {
                 DownloadService.send(this, DownloadService.ACTION_PAUSE, t.id)
             Status.PAUSED, Status.FAILED ->
                 DownloadService.send(this, DownloadService.ACTION_RESUME, t.id)
-            Status.DONE -> openFile(t)
+            Status.DONE -> if (t.format.startsWith(AppUpdater.TASK_PREFIX)) installUpdate(t) else openFile(t)
         }
+    }
+
+    private fun installUpdate(t: DownloadTask) {
+        val path = t.fileUri ?: return
+        AppUpdater.installDownloaded(this, java.io.File(path), t.format.removePrefix(AppUpdater.TASK_PREFIX))
+    }
+
+    /** The update finished downloading while the app is open: open the installer once. */
+    private val updatePrompted = HashSet<String>()
+
+    private fun checkUpdateReady(all: List<DownloadTask>) {
+        val t = all.firstOrNull { it.format.startsWith(AppUpdater.TASK_PREFIX) && it.status == Status.DONE } ?: return
+        val version = t.format.removePrefix(AppUpdater.TASK_PREFIX)
+        if (!AppUpdater.isNewer(this, version) || version == AppPrefs.badRelease(this)) {
+            // already installed: the finished update row and its file are not needed any more
+            t.fileUri?.let { java.io.File(it).delete() }
+            TaskRepository.remove(t.id)
+            return
+        }
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || !updatePrompted.add(t.id)) return
+        installUpdate(t)
     }
 
     private fun onTaskClose(t: DownloadTask, anchor: View) {
@@ -1098,6 +1183,17 @@ class MainActivity : AppCompatActivity() {
                     DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
                 }
             } else DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
+            return
+        }
+        if (t.format.startsWith(AppUpdater.TASK_PREFIX)) {
+            val menu = PopupMenu(this, anchor)
+            menu.menu.add(0, 1, 0, "Install")
+            menu.menu.add(0, 2, 1, "Delete")
+            menu.setOnMenuItemClickListener { item ->
+                if (item.itemId == 1) installUpdate(t) else deleteFilesOf(listOf(t))
+                true
+            }
+            menu.show()
             return
         }
         val popup = PopupMenu(this, anchor)
@@ -1114,6 +1210,7 @@ class MainActivity : AppCompatActivity() {
                 6 -> openWithOtherApp(t)
                 3 -> {
                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    AppPrefs.setClipSeen(this, t.url)
                     cm.setPrimaryClip(ClipData.newPlainText("link", t.url))
                     message("Link copied")
                 }
@@ -1224,8 +1321,9 @@ class MainActivity : AppCompatActivity() {
         st.sponsorSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setSponsorBlock(this, on) }
         st.resumeSwitch.isChecked = AppPrefs.resumeVideos(this)
         st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
+        st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
+        st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
-        st.adPrivacyBtn.setOnClickListener { Ads.showPrivacyOptions(this) }
 
         st.autoClearSwitch.isChecked = AppPrefs.autoClear(this)
         st.autoClearSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoClear(this, on) }
@@ -1270,7 +1368,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             ""
         }
-        st.versionText.text = "RAINAX YT DOWNLOADER  v$version"
+        st.versionText.text = "RAINAX Tube  v$version"
     }
 
     private fun renderFolder() {
@@ -1289,7 +1387,7 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     /** Messages sit above the ad banner (never over it) or above the bottom bar. */
-    private fun snackAnchor(): View = if (b.adBanner.isVisible) b.adBanner else b.navCard
+    private fun snackAnchor(): View = b.navCard
 
     private fun message(text: String) {
         Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(snackAnchor()).show()

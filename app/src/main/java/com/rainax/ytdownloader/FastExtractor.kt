@@ -79,7 +79,16 @@ object FastExtractor {
         val running = inFlight.putIfAbsent(key, mine) ?: mine
         if (running === mine) {
             try {
-                val info = StreamInfo.getInfo(key)
+                val info = try {
+                    StreamInfo.getInfo(key)
+                } catch (e: Exception) {
+                    // "not available" (videos made for kids and others): try YouTube's TV app way once
+                    if (!YtFallback.canHelp(e)) throw e
+                    try { YtFallback.info(key) } catch (second: Exception) {
+                        android.util.Log.w("RAINAX", "TV fallback failed: ${second.message}")
+                        throw e
+                    }
+                }
                 if (infoCache.size > 40) {
                     infoCache.entries.minByOrNull { it.value.at }?.let { infoCache.remove(it.key) }
                 }
@@ -134,7 +143,8 @@ object FastExtractor {
     /** True for YouTube videos and Shorts (used for look-ahead, cache keys and thumbnails). */
     fun supports(url: String): Boolean {
         val u = url.lowercase()
-        val yt = u.contains("youtube.com/watch") || u.contains("youtube.com/shorts/") || u.contains("youtu.be/")
+        val yt = u.contains("youtube.com/watch") || u.contains("youtube.com/shorts/") || u.contains("youtu.be/") ||
+            u.contains("youtubekids.com/watch")
         return yt && !u.contains("music.youtube.com")
     }
 
@@ -145,7 +155,7 @@ object FastExtractor {
     fun videoUrl(url: String): String {
         val u = url.trim()
         val low = u.lowercase()
-        val isYt = low.contains("youtube.com/") || low.contains("youtu.be/")
+        val isYt = low.contains("youtube.com/") || low.contains("youtu.be/") || low.contains("youtubekids.com/")
         if (!isYt) return u
         Regex("[?&]v=([\\w-]{6,})").find(u)?.let { return "https://www.youtube.com/watch?v=" + it.groupValues[1] }
         Regex("youtube\\.com/shorts/([\\w-]{6,})", RegexOption.IGNORE_CASE).find(u)
@@ -468,6 +478,14 @@ object FastExtractor {
     fun readable(e: Throwable): String {
         val name = e.javaClass.simpleName
         val msg = e.message.orEmpty()
+        // no connection (also when it is hidden inside another error): one clear message
+        val net = generateSequence(e) { it.cause }.take(6).any {
+            it is java.net.UnknownHostException || it is java.net.ConnectException ||
+                it is java.net.NoRouteToHostException || it is java.net.SocketTimeoutException
+        }
+        if (net || isNetworkError(msg)) {
+            return if (!Net.online()) NO_INTERNET else "Connection problem. Check your internet, then try again."
+        }
         return when {
             name.contains("PrivateContent") -> "Private video"
             name.contains("AccountTerminated") -> "Video unavailable: the channel was terminated"
@@ -479,8 +497,6 @@ object FastExtractor {
             name.contains("ReCaptcha") -> "YouTube is limiting requests right now. Trying again later"
             msg.contains("No service can handle", true) ->
                 "Unsupported URL: RAINAX downloads from $SUPPORTED"
-            e is java.net.UnknownHostException -> "Unable to resolve host (no internet)"
-            e is java.net.SocketTimeoutException -> "Connection timed out"
             e is IllegalStateException && msg.isNotBlank() -> msg
             else -> (msg.ifBlank { name }).take(160)
         }

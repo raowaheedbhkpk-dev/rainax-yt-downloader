@@ -292,6 +292,59 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="Try again" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/feedSettings"
+                style="@style/Widget.Rainax.Button.Text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Internet settings"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Several videos picked with +: how many, Clear, Download all -->
+        <LinearLayout
+            android:id="@+id/pickBar"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_gravity="bottom"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_glass_nav"
+            android:elevation="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="18dp"
+            android:paddingEnd="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/pickCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/rx_display_semibold"
+                android:textColor="@color/rx_text"
+                android:textSize="16sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/pickClear"
+                style="@style/Widget.Rainax.Button.Text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Clear" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/pickDownload"
+                style="@style/Widget.Rainax.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="Download"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_download"
+                app:iconTint="@color/rx_on_primary" />
         </LinearLayout>
     </FrameLayout>
 </LinearLayout>

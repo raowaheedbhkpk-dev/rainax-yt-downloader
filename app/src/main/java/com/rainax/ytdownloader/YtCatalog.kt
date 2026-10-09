@@ -93,7 +93,8 @@ class VideoDetails(
     val play: PlaySource,
     val audioUrl: String?,
     val channelUrl: String? = null,
-    val chapters: List<Chapter> = emptyList()
+    val chapters: List<Chapter> = emptyList(),
+    val date: String? = null           // full upload date ("12 March 2024") for the description
 ) {
     /** "UC..." from the channel address (for Subscribe). */
     val channelId: String? get() = channelUrl?.let { Regex("/channel/([\\w-]+)").find(it)?.groupValues?.get(1) }
@@ -314,7 +315,8 @@ object YtCatalog {
             subscribers = info.uploaderSubscriberCount,
             views = info.viewCount,
             likes = info.likeCount,
-            uploaded = info.textualUploadDate,
+            uploaded = niceDate(info.textualUploadDate),
+            date = fullDate(info.textualUploadDate),
             description = runCatching { info.description?.content() }.getOrNull().orEmpty(),
             thumb = best(info.thumbnails, 720),
             seconds = info.duration,
@@ -378,7 +380,7 @@ object YtCatalog {
                 VideoItem(
                     url = i.url, title = i.name.orEmpty(), uploader = i.uploaderName.orEmpty(),
                     thumb = best(i.thumbnails, 480), seconds = if (live) -1 else i.duration.coerceAtLeast(0),
-                    views = i.viewCount, uploaded = i.textualUploadDate,
+                    views = i.viewCount, uploaded = niceDate(i.textualUploadDate),
                     avatar = runCatching { best(i.uploaderAvatars, 68) }.getOrNull(),
                     isShort = runCatching { i.isShortFormContent }.getOrDefault(false) || i.url.contains("/shorts/")
                 )
@@ -525,6 +527,31 @@ object YtCatalog {
     }
 
     private fun trim(v: Double): String = if (v >= 100 || v == Math.floor(v)) v.toLong().toString() else "%.1f".format(java.util.Locale.US, v)
+
+    /** "2024-03-12T09:00:05-07:00" -> "3 weeks ago"; text that is already readable stays. */
+    fun niceDate(text: String?): String? {
+        val t = text?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val day = isoDay(t) ?: return t
+        val days = java.time.temporal.ChronoUnit.DAYS.between(day, java.time.LocalDate.now())
+        fun n(v: Long, unit: String) = "$v $unit" + (if (v == 1L) "" else "s") + " ago"
+        return when {
+            days <= 0 -> "Today"
+            days == 1L -> "Yesterday"
+            days < 7 -> n(days, "day")
+            days < 31 -> n(days / 7, "week")
+            days < 365 -> n(days / 30, "month")
+            else -> n(days / 365, "year")
+        }
+    }
+
+    /** "2024-03-12..." -> "12 March 2024" (null when it isn't a date). */
+    fun fullDate(text: String?): String? {
+        val day = text?.trim()?.let { isoDay(it) } ?: return text?.trim()?.takeIf { it.isNotEmpty() }
+        return day.format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.ENGLISH))
+    }
+
+    private fun isoDay(t: String): java.time.LocalDate? =
+        if (Regex("^\\d{4}-\\d{2}-\\d{2}").containsMatchIn(t)) runCatching { java.time.LocalDate.parse(t.take(10)) }.getOrNull() else null
 
     fun duration(s: Long): String = when {
         s < 0 -> "LIVE"

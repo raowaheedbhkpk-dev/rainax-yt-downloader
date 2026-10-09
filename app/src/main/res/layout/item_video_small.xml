@@ -74,6 +74,19 @@
     </LinearLayout>
 
     <ImageButton
+        android:id="@+id/pick"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/bg_circle_btn"
+        android:contentDescription="Select for download"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_add"
+        app:tint="@color/rx_text" />
+
+    <ImageButton
         android:id="@+id/download"
         android:layout_width="38dp"
         android:layout_height="38dp"
