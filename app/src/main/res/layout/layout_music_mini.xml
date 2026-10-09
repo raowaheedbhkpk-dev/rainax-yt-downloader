@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mini music bar above the bottom bar (like YouTube Music): tap to open the player, swipe sideways to close -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginTop="6dp"
+    android:clickable="true"
+    android:contentDescription="Music playing. Tap to open the player"
+    android:elevation="6dp"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="4dp">
+
+        <ImageView
+            android:id="@+id/mmArt"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="@drawable/bg_song_art"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/mmTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/rx_white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/mmArtist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#B3FFFFFF"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/mmPlay"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Play or pause"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_p_pause"
+            app:tint="@color/rx_white" />
+
+        <ImageButton
+            android:id="@+id/mmNext"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Next"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_p_next"
+            app:tint="@color/rx_white" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/mmProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="14dp"
+        android:max="1000"
+        android:progressDrawable="@drawable/bg_mp_progress" />
+</FrameLayout>

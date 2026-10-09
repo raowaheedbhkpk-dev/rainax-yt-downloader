@@ -33,6 +33,18 @@ class BgPlayService : MediaSessionService() {
         override fun run() {
             val p = session?.player ?: return
             if (!p.isPlaying) { ticking = false; return }
+            // Music player's sleep timer
+            val sleepAt = MusicQueue.sleepAt
+            val now = System.currentTimeMillis()
+            if (sleepAt in 1..now) {
+                MusicQueue.sleepAt = 0
+                // (the time passed while paused: playing again was asked for, so keep playing)
+                if (now - sleepAt > 3000) { onTick(p); handler.postDelayed(this, 500); return }
+                p.pause()
+                Toast.makeText(this@BgPlayService, "Sleep timer: music paused", Toast.LENGTH_SHORT).show()
+                ticking = false
+                return
+            }
             onTick(p)
             handler.postDelayed(this, 500)
         }
@@ -48,6 +60,7 @@ class BgPlayService : MediaSessionService() {
         val item = p.currentMediaItem ?: return
         val page = item.mediaId
         if (youtubeId(page) == null || p.isCurrentMediaItemLive) return
+        if (MusicPlayer.isMusic(item)) return                       // songs don't go to Continue watching
         val dur = p.duration
         if (dur <= 0 || dur == C.TIME_UNSET) return
         val md = item.mediaMetadata
@@ -97,6 +110,15 @@ class BgPlayService : MediaSessionService() {
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 if (mediaItem?.mediaId != retriedFor) retriedFor = null
+                // Music player: sleep timer "end of this song", and similar songs before the list runs out
+                if (MusicQueue.sleepEndOfSong && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT)
+                ) {
+                    MusicQueue.sleepEndOfSong = false
+                    player.pause()
+                    Toast.makeText(this@BgPlayService, "Sleep timer: music paused", Toast.LENGTH_SHORT).show()
+                }
+                if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) MusicQueue.topUpIfNeeded(player)
                 // look up the parts to skip of the next video early
                 val id = youtubeId(mediaItem?.mediaId)
                 if (id != null && AppPrefs.sponsorBlock(this@BgPlayService) && SponsorBlock.cached(id) == null && fetching.add(id)) {
@@ -110,6 +132,7 @@ class BgPlayService : MediaSessionService() {
 
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY) { retriedFor = null; skips = 0 }   // playing fine again
+                if (state == Player.STATE_ENDED) MusicQueue.sleepEndOfSong = false  // nothing left to stop after
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -134,8 +157,15 @@ class BgPlayService : MediaSessionService() {
                         // picture + sound addresses expired: keep going with fresh sound right away
                         // (the app puts the picture back when it is open)
                         val pos = player.currentPosition
+                        // (a Music player song stays a Music player song, now sound only)
+                        val keep = android.os.Bundle().apply {
+                            if (MusicPlayer.isMusic(item)) {
+                                putAll(item.mediaMetadata.extras ?: android.os.Bundle())
+                                putBoolean(MusicPlayer.EXTRA_PICTURE, false)
+                            }
+                        }
                         val fresh = item.buildUpon().setUri(lazyUri(page))
-                            .setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(android.os.Bundle()).build())
+                            .setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(keep).build())
                             .build()
                         player.replaceMediaItem(player.currentMediaItemIndex, fresh)
                         player.seekTo(pos)
@@ -160,6 +190,8 @@ class BgPlayService : MediaSessionService() {
                 ).show()
             }
         })
+
+        MusicQueue.player = player
 
         val open = PendingIntent.getActivity(
             this, 0,
@@ -238,6 +270,10 @@ class BgPlayService : MediaSessionService() {
 
     override fun onDestroy() {
         handler.removeCallbacks(tick)
+        if (MusicQueue.player === session?.player) {
+            MusicQueue.reset()
+            MusicQueue.player = null
+        }
         session?.player?.let { saveProgress(it, true) }
         session?.run {
             player.release()

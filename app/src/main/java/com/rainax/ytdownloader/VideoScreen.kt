@@ -390,8 +390,11 @@ class VideoScreen(
         url = null
         details = null
         player()?.run {
-            stop()
-            clearMediaItems()
+            // songs of the Music player (a video was opened over them and didn't start): leave them
+            if (!MusicPlayer.isMusic(currentMediaItem)) {
+                stop()
+                clearMediaItems()
+            }
         }
         onChanged()
     }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder Music row while it loads -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="22dp">
+
+    <View
+        android:layout_width="160dp"
+        android:layout_height="20dp"
+        android:background="@drawable/bg_skeleton_line" />
+
+    <LinearLayout
+        android:id="@+id/skRows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="vertical" />
+</LinearLayout>

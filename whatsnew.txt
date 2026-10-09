@@ -1,2 +1,4 @@
-No more battery permission question when you download
-Optional fix in Settings for phones that stop downloads with the screen off
+New Music tab like YouTube Music: mood chips, Quick picks, Listen again and song rows with Play all
+New full music player: big cover in its own colours, Song / Video switch, like, comments, download and share
+Up next list, shuffle, repeat, sleep timer, and a mini player bar above the menu
+Similar songs keep playing when a list ends

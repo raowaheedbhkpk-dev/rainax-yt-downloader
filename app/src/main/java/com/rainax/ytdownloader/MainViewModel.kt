@@ -39,8 +39,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Home tabs and searches already loaded (kept while the app is open, e.g. across theme changes). */
     val feedCache = HashMap<String, Pair<List<VideoItem>, org.schabi.newpipe.extractor.Page?>>()
 
-    /** Music tab rows (kept while the app is open). */
-    var musicCache: List<MusicSection>? = null
+    /** Music tab rows by mood chip ("" = the Music home), kept while the app is open. */
+    val musicCache = HashMap<String, List<MusicSection>>()
 
     init {
         TaskRepository.init(app)

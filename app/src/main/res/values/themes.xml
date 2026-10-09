@@ -206,6 +206,14 @@
         <item name="chipCornerRadius">20dp</item>
     </style>
 
+    <!-- Music tab mood chips: soft rounded squares, like YouTube Music -->
+    <style name="Widget.Rainax.Chip.Mood" parent="Widget.Rainax.Chip.Filter">
+        <item name="chipCornerRadius">10dp</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipStartPadding">6dp</item>
+        <item name="chipEndPadding">6dp</item>
+    </style>
+
     <!-- Cards -->
     <style name="Widget.Rainax.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">?attr/rxCard</item>

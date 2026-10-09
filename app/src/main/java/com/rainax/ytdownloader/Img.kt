@@ -60,6 +60,48 @@ object Img {
         view.setTag(R.id.img_job, job)
     }
 
+    /** Blocking: a picture (from memory when it was loaded before). Null when it can't be loaded. */
+    fun bitmap(url: String, widthPx: Int = 640): Bitmap? {
+        cache.get(url)?.let { return it }
+        return fetch(url, widthPx)?.also { cache.put(url, it) }
+    }
+
+    /**
+     * A song cover: [url] (or the first of [fallbacks] that loads) cut to a square without the black bars of
+     * YouTube thumbnails. [onBitmap] gets the square picture (the player takes its colours from it).
+     */
+    fun loadSquare(
+        view: ImageView, url: String?, widthPx: Int = 320, fallbacks: List<String> = emptyList(),
+        onBitmap: ((Bitmap) -> Unit)? = null
+    ) {
+        (view.getTag(R.id.img_job) as? Job)?.cancel()
+        val tries = (listOfNotNull(url) + fallbacks).filter { it.isNotBlank() }.distinct()
+        val key = tries.firstOrNull()?.let { "sq:$it" }
+        view.setTag(R.id.img_url, key)
+        if (key == null) {
+            view.setImageDrawable(null)
+            return
+        }
+        cache.get(key)?.let {
+            view.setImageBitmap(it)
+            onBitmap?.invoke(it)
+            return
+        }
+        view.setImageDrawable(null)
+        val job = scope.launch {
+            val square = withContext(io) {
+                tries.firstNotNullOfOrNull { u -> fetch(u, widthPx)?.takeIf { it.width > 1 && it.height > 1 } }
+                    ?.let { MusicArt.square(it) }
+            } ?: return@launch
+            cache.put(key, square)
+            if (view.getTag(R.id.img_url) == key) {
+                view.setImageBitmap(square)
+                onBitmap?.invoke(square)
+            }
+        }
+        view.setTag(R.id.img_job, job)
+    }
+
     private fun show(view: ImageView, bmp: Bitmap, circle: Boolean) {
         if (circle) {
             view.setImageDrawable(RoundedBitmapDrawableFactory.create(view.resources, bmp).apply { isCircular = true })

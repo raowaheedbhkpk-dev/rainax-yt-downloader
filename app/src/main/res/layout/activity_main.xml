@@ -42,6 +42,12 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <!-- mini music bar (while songs play in the Music player) -->
+        <include
+            android:id="@+id/musicMini"
+            layout="@layout/layout_music_mini"
+            android:visibility="gone" />
+
         <!-- floating glass navigation bar -->
         <FrameLayout
             android:id="@+id/navCard"
@@ -72,5 +78,11 @@
         android:layout_width="208dp"
         android:layout_height="117dp"
         android:layout_gravity="top|start" />
+
+    <!-- the big Music player (over everything, like YouTube Music) -->
+    <include
+        android:id="@+id/musicPage"
+        layout="@layout/page_music_player"
+        android:visibility="gone" />
 
 </FrameLayout>

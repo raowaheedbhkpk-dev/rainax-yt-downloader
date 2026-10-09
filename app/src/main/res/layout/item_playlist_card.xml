@@ -21,15 +21,18 @@
             android:importantForAccessibility="no"
             android:scaleType="centerCrop" />
 
-        <ImageView
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+        <!-- plays the playlist in the Music player -->
+        <ImageButton
+            android:id="@+id/cardPlay"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_gravity="bottom|end"
-            android:layout_margin="8dp"
-            android:background="@drawable/bg_duration"
-            android:importantForAccessibility="no"
-            android:padding="5dp"
-            android:src="@drawable/ic_playlist"
+            android:layout_margin="6dp"
+            android:background="@drawable/bg_mini_button"
+            android:contentDescription="Play playlist"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_p_play"
             app:tint="@color/rx_white" />
     </com.rainax.ytdownloader.SquareFrameLayout>
 

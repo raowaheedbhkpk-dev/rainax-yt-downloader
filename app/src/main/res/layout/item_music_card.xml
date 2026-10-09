@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Listen again: a square song cover with its title and artist -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="140dp"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="6dp"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical">
+
+    <com.rainax.ytdownloader.SquareFrameLayout
+        android:id="@+id/mcBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_thumb">
+
+        <ImageView
+            android:id="@+id/mcArt"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+    </com.rainax.ytdownloader.SquareFrameLayout>
+
+    <TextView
+        android:id="@+id/mcTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/rx_text"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/mcSub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/rx_text2"
+        android:textSize="12.5sp" />
+</LinearLayout>

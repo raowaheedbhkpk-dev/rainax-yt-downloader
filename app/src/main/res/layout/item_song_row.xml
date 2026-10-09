@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One song: cover, title, "artist • 3:24", more button (Music tab rows and the Up next list) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp">
+
+    <FrameLayout
+        android:id="@+id/songArtBox"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_song_art">
+
+        <ImageView
+            android:id="@+id/songArt"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <ImageView
+            android:id="@+id/songNow"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_song_now"
+            android:contentDescription="Playing now"
+            android:padding="14dp"
+            android:src="@drawable/ic_equalizer"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/songTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="@font/rx_body"
+            android:maxLines="1"
+            android:textColor="@color/rx_text"
+            android:textSize="15.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/songSub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/rx_text2"
+            android:textSize="13.5sp" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/songMore"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="More options"
+        android:padding="10dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_more"
+        app:tint="@color/rx_text2" />
+</LinearLayout>

@@ -43,8 +43,14 @@ class ChannelDetails(
 
 class FeedPage(val items: List<VideoItem>, val next: Page?)
 
-/** A row on the Music tab: a title and a strip of playlists. */
-class MusicSection(val title: String, val items: List<VideoItem>)
+/** A row on the Music tab: songs (in columns of 4, like YouTube Music), song covers, or playlists. */
+class MusicSection(val title: String, val items: List<VideoItem>, val kind: Int = PLAYLISTS) {
+    companion object {
+        const val SONGS = 0
+        const val COVERS = 1
+        const val PLAYLISTS = 2
+    }
+}
 
 class Comment(
     val author: String,
@@ -190,19 +196,7 @@ object YtCatalog {
         return FeedPage(mixed.filter { !it.isPlaylist }, trending.next)
     }
 
-    /** Music tab rows: title -> what to look for on YouTube Music. */
-    val MUSIC_SECTIONS = listOf(
-        "Punjabi Hits" to "punjabi hits",
-        "Bollywood" to "bollywood hits",
-        "Ghazal & Sufi" to "sufi qawwali ghazal",
-        "Pakistani Hits" to "coke studio pakistan",
-        "Romantic" to "romantic hindi songs",
-        "Party Music" to "party hits",
-        "Global Top Hits" to "top hits",
-        "Lofi & Chill" to "lofi chill"
-    )
-
-    /** Blocking. Playlists for one Music row (YouTube Music playlists, else normal YouTube playlists). */
+    /** Blocking. Playlists for a Music row (YouTube Music playlists, else normal YouTube playlists). */
     fun musicSection(query: String): List<VideoItem> = guard {
         FastExtractor.init()
         val fromMusic = runCatching {
@@ -213,6 +207,95 @@ object YtCatalog {
             val handler = yt.searchQHFactory.fromQuery("$query playlist", listOf(YoutubeSearchQueryHandlerFactory.PLAYLISTS), "")
             SearchInfo.getInfo(yt, handler).relatedItems.mapNotNull { item(it) }.filter { it.isPlaylist }
         }.take(12)
+    }
+
+    // ---------- YouTube Music (the Music tab and its player) ----------
+
+    /** Music tab song rows: title -> what to look for on YouTube Music. */
+    val MUSIC_SHELVES = listOf(
+        "Punjabi hits" to "punjabi hits",
+        "Bollywood hits" to "bollywood hits",
+        "Covers and remixes" to "remix songs hindi punjabi",
+        "Ghazal & Sufi" to "sufi qawwali ghazal",
+        "Pakistani hits" to "coke studio pakistan",
+        "Romantic" to "romantic hindi songs",
+        "Lofi & chill" to "lofi slowed reverb",
+        "Global top hits" to "top hits"
+    )
+
+    /** Mood chips on the Music tab: chip -> its rows (title -> search). */
+    val MUSIC_MOODS = listOf(
+        "Relax" to listOf("Relaxing songs" to "relaxing songs", "Calm Hindi" to "calm hindi songs", "Soft Punjabi" to "soft punjabi songs"),
+        "Energize" to listOf("Feel-good energy" to "energetic songs", "Bhangra beats" to "punjabi bhangra hits", "Bollywood dance" to "bollywood dance songs"),
+        "Romance" to listOf("Love songs" to "romantic songs", "Romantic Hindi" to "romantic hindi songs", "Romantic Punjabi" to "romantic punjabi songs"),
+        "Sad" to listOf("Sad songs" to "sad songs", "Sad Hindi" to "sad hindi songs", "Sad Punjabi" to "sad punjabi songs"),
+        "Party" to listOf("Party starters" to "party songs", "Bollywood party" to "bollywood party songs", "Punjabi party" to "punjabi party songs"),
+        "Workout" to listOf("Workout" to "workout songs", "Gym motivation" to "gym motivation songs", "Punjabi gym" to "punjabi gym songs"),
+        "Focus" to listOf("Focus" to "focus music", "Lofi study" to "lofi study", "Piano" to "instrumental piano"),
+        "Sleep" to listOf("Sleep" to "sleep music", "Slowed + reverb" to "slowed reverb songs", "Calm instrumental" to "calm instrumental"),
+        "Commute" to listOf("Road trip" to "road trip songs", "Driving Hindi" to "driving songs hindi", "Driving Punjabi" to "punjabi driving songs"),
+        "Qawwali" to listOf("Qawwali" to "qawwali", "Nusrat Fateh Ali Khan" to "nusrat fateh ali khan", "Sufi" to "sufi songs")
+    )
+
+    /** "top songs Pakistan": the most played songs in the phone's country (Quick picks before anything was played). */
+    fun topSongsQuery(): String {
+        val name = java.util.Locale("", deviceCountry()).getDisplayCountry(java.util.Locale.ENGLISH)
+        return ("top songs " + name).trim()
+    }
+
+    /**
+     * Blocking. Songs for a search, from YouTube Music (songs, else music videos), else normal YouTube videos
+     * of song length. Every song gets a plain YouTube link and a big square cover where YouTube Music has one.
+     */
+    fun musicSongs(query: String, limit: Int = 20): List<VideoItem> = guard {
+        FastExtractor.init()
+        fun find(filter: String): List<VideoItem> = runCatching {
+            val handler = yt.searchQHFactory.fromQuery(query, listOf(filter), "")
+            SearchInfo.getInfo(yt, handler).relatedItems.mapNotNull { item(it) }
+                .filter { !it.isPlaylist && !it.isChannel && it.seconds > 0 }
+                .map { song(it) }
+        }.getOrDefault(emptyList())
+        val songs = find(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS)
+            .ifEmpty { find(YoutubeSearchQueryHandlerFactory.MUSIC_VIDEOS) }
+            .ifEmpty {
+                videoSearch("$query song", null).items
+                    .filter { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds in 60..900 }
+                    .map { song(it) }
+            }
+        songs.distinctBy { youtubeId(it.url) }.take(limit)
+    }
+
+    /**
+     * Blocking. Songs like [url]: YouTube's Mix for it (the radio YouTube Music plays after a song), else its
+     * "up next" videos. The song itself is left out.
+     */
+    fun musicRadio(url: String): List<VideoItem> = guard {
+        FastExtractor.init()
+        val id = youtubeId(url) ?: return@guard emptyList()
+        fun clean(list: List<VideoItem>) = list
+            .filter { !it.isPlaylist && !it.isChannel && it.seconds > 0 && youtubeId(it.url) != id }
+            .map { song(it) }
+            .distinctBy { youtubeId(it.url) }
+        for (mix in listOf("RDAMVM$id", "RD$id")) {
+            val items = runCatching {
+                org.schabi.newpipe.extractor.playlist.PlaylistInfo
+                    .getInfo(yt, "https://www.youtube.com/watch?v=$id&list=$mix")
+                    .relatedItems.mapNotNull { item(it) }
+            }.getOrDefault(emptyList())
+            val list = clean(items)
+            if (list.size >= 5) return@guard list.take(50)
+        }
+        clean(FastExtractor.streamInfo(FastExtractor.videoUrl(url)).relatedItems.orEmpty().mapNotNull { item(it) }).take(30)
+    }
+
+    /** A song as the Music tab shows it: plain YouTube link, artist without " - Topic", a cover that fits. */
+    private fun song(v: VideoItem): VideoItem {
+        val id = youtubeId(v.url) ?: return v
+        return v.copy(
+            url = "https://www.youtube.com/watch?v=$id",
+            uploader = v.uploader.removeSuffix(" - Topic"),
+            thumb = MusicArt.sized(v.thumb, 226) ?: "https://i.ytimg.com/vi/$id/mqdefault.jpg"
+        )
     }
 
     /** Blocking. One page of a playlist's videos. */

@@ -28,7 +28,7 @@ Every push to `main` builds the APK (**Actions > Build RAINAX APK > Artifacts**)
 Pushing a tag publishes a **GitHub Release** with the APK and its SHA-256 checksum. `whatsnew.txt` becomes the update notes shown in the app.
 
 ```
-git tag v8.9.27 && git push origin v8.9.27
+git tag v8.9.28 && git push origin v8.9.28
 ```
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.

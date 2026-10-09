@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var home: HomeScreen
     private lateinit var video: VideoScreen
     private lateinit var library: LibraryScreen
+    private lateinit var music: MusicPlayer
     private var pendingVideo: String? = null     // reopen this video page once the player is connected
 
     private var latestTasks: List<DownloadTask> = emptyList()
@@ -101,6 +102,7 @@ class MainActivity : AppCompatActivity() {
     private val backCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             when {
+                music.back() -> {}
                 video.fullscreen -> video.exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
                 tab == 1 && library.back() -> {}
@@ -157,6 +159,20 @@ class MainActivity : AppCompatActivity() {
             signIn = { onAccountClick() }
         ) { updateChrome() }
         video.setup()
+        // Music tab player (YouTube Music style): songs play in the same background player as videos
+        music = MusicPlayer(
+            this, b.musicPage, b.musicMini, { controller },
+            download = { u, t, audio -> showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t) },
+            beforePlay = { if (video.isOpen) video.close() },
+            signIn = { onAccountClick() }
+        ) { updateChrome() }
+        music.setup()
+        music.onNowPlaying = { home.musicNowPlaying(it) }
+        music.onTone = { home.musicTone(it) }
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { MusicHistory.recent(applicationContext) }   // read early, off the main thread
+        home.musicPlay = { songs, index, from, radio -> music.play(songs, index, from, radio) }
+        home.musicSongMenu = { music.songMenu(it) }
+        home.musicPlayPlaylist = { music.playPlaylist(it) }
         setupMiniPlayer()
         setupPlay()
         library = LibraryScreen(this, pl, { onLibraryMode() }, { shareFile(it) }) { t ->
@@ -268,6 +284,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (!blocked) {
             disconnectPlayer()            // the player service keeps playing on its own
+            music.release()
             sheet?.dismiss()
             clipDialog?.dismiss()
             AppUpdater.onQueued = null
@@ -365,6 +382,7 @@ class MainActivity : AppCompatActivity() {
             if (controllerFuture !== future) { c.release(); return@addListener }
             controller = c
             video.attach(c)
+            music.attach(c)
             video.onPlayerReady()
             syncVideoSurface()
             c.addListener(object : androidx.media3.common.Player.Listener {
@@ -404,6 +422,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun disconnectPlayer() {
         video.attach(null)
+        music.attach(null)
+        music.videoView.player = null
         b.miniPlayer.miniVideo.player = null
         controllerFuture?.let { androidx.media3.session.MediaController.releaseFuture(it) }
         controllerFuture = null
@@ -440,12 +460,18 @@ class MainActivity : AppCompatActivity() {
         if (video.isOpen && id == video.url &&
             c.currentMediaItem?.mediaMetadata?.extras?.getBoolean(VideoScreen.EXTRA_VIDEO) != true
         ) video.refreshStreams()
+        // songs from the Music player stay in the Music player (mini bar), they don't open the video page
+        if (MusicPlayer.isMusic(c.currentMediaItem)) {
+            music.sync()
+            return
+        }
         if (c.mediaItemCount > 0 && c.playbackState != androidx.media3.common.Player.STATE_IDLE &&
             id != null && FastExtractor.supports(id) && id != video.url
         ) {
             if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
             video.follow(c)
         }
+        music.sync()
     }
 
     private fun showTab(index: Int) {
@@ -461,11 +487,16 @@ class MainActivity : AppCompatActivity() {
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
     private fun updateChrome() {
+        if (!::music.isInitialized) return
+        // a video opened while the big Music player was open: show the video
+        if (video.isOpen && !video.minimized && music.expanded) music.collapse()
         val wasShown = vp.root.isVisible
         vp.root.isVisible = video.isOpen && !video.minimized && tab == 0
         if (wasShown && !vp.root.isVisible && tab == 0) home.onShown()      // back on Home: fresh watched bars
         val full = video.fullscreen
         b.navCard.isVisible = !full                    // the floating glass bar (hidden in full screen)
+        // mini music bar: songs loaded, big player closed, no video open
+        b.musicMini.root.isVisible = music.active && !music.expanded && !video.isOpen && !full
         // the banner hides in full screen and comes back after (only once an ad has loaded)
         val mini = video.isOpen && !full && (video.minimized || tab != 0)
         val wasMini = b.miniPlayer.root.isVisible
@@ -608,11 +639,16 @@ class MainActivity : AppCompatActivity() {
         val c = controller ?: return
         val mini = b.miniPlayer.miniVideo
         val page = video.playerView
-        val (show, hide) = if (b.miniPlayer.root.isVisible) mini to page else page to mini
-        if (show.player === c && hide.player == null) return
-        // only one view may draw the picture: detach both, then attach the visible one
-        hide.player = null
-        show.player = null
+        val song = music.videoView
+        val show = when {
+            music.wantsPicture -> song                 // a song's video in the big Music player
+            b.miniPlayer.root.isVisible -> mini
+            else -> page
+        }
+        val all = listOf(mini, page, song)
+        if (show.player === c && all.all { it === show || it.player == null }) return
+        // only one view may draw the picture: detach all, then attach the visible one
+        all.forEach { it.player = null }
         show.player = c
     }
 

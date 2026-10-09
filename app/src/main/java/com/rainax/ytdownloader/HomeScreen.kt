@@ -76,7 +76,27 @@ class HomeScreen(
     /** Continue watching + Shorts, on top of the first Home tab. */
     private val shelf = HomeShelf(act, openVideo)
     private val playlistAdapter = VideoAdapter(false, { open(it) }, { download(it) })
-    private val musicAdapter = MusicAdapter({ openPlaylist(it) }, { download(it) })
+    /** The Music tab (YouTube Music style). What its buttons do is set by the main screen (the Music player). */
+    var musicPlay: (List<VideoItem>, Int, String, Boolean) -> Unit = { _, _, _, _ -> }
+    var musicSongMenu: (VideoItem) -> Unit = {}
+    var musicPlayPlaylist: (VideoItem) -> Unit = {}
+    private val musicHome = MusicHome(
+        play = { songs, index, from, radio -> musicPlay(songs, index, from, radio) },
+        songMenu = { musicSongMenu(it) },
+        openPlaylist = { openPlaylist(it) },
+        playPlaylist = { musicPlayPlaylist(it) },
+        downloadPlaylist = { download(it) },
+        onMood = {
+            hm.feedList.scrollToPosition(0)
+            loadMusic(pulled = false)
+        }
+    )
+    private var musicSeenVersion = -1
+    /** Soft glow at the top of the Music tab, in the colour of the song playing (like YouTube Music). */
+    private val musicGlow = android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+        intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary), 0x30), android.graphics.Color.TRANSPARENT)
+    )
     private val adapter get() = when {
         channelUrl != null -> channelAdapter
         playlistUrl != null -> playlistAdapter
@@ -92,8 +112,10 @@ class HomeScreen(
         val wantHeader = if (shelfHere) shelf.root else null
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
         if (shelfHere) shelf.refresh()
-        val want: RecyclerView.Adapter<*> = if (isMusic) musicAdapter else adapter
+        val want: RecyclerView.Adapter<*> = if (isMusic) musicHome else adapter
         if (hm.feedList.adapter !== want) hm.feedList.adapter = want
+        val bg = if (isMusic) musicGlow else null
+        if (hm.feedList.background !== bg) hm.feedList.background = bg
     }
     private val suggestAdapter = SuggestAdapter { submit(it) }
 
@@ -118,7 +140,7 @@ class HomeScreen(
         // pull down: fresh list (not the saved one)
         hm.feedRefresh.setColorSchemeResources(R.color.rx_primary)
         hm.feedRefresh.setOnRefreshListener {
-            if (isMusic) vm.musicCache = null else vm.feedCache.remove(cacheKey())
+            if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
             load(reset = true, pulled = true)
         }
         hm.titleBack.setOnClickListener { back() }
@@ -272,6 +294,7 @@ class HomeScreen(
     /** Home is on screen again: newest Continue watching row and watched bars. */
     fun onShown() {
         if (bigAdapter.header != null) shelf.refresh()
+        if (isMusic && hm.feedList.adapter === musicHome) refreshListenAgain()
         if (hm.feedList.adapter === bigAdapter || hm.feedList.adapter === smallAdapter) hm.feedList.adapter?.notifyDataSetChanged()
     }
 
@@ -464,34 +487,81 @@ class HomeScreen(
         else -> openVideo(item)
     }
 
-    /** Music tab: all rows load at the same time and appear as soon as each is ready. */
+    // ---------- Music tab ----------
+
+    /** The playing song's cover colour: the Music tab's glow takes it (bright and soft, for light and dark). */
+    fun musicTone(c: Int) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(c, hsv)
+        val glow = if (hsv[1] < 0.1f) androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary)
+        else android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1].coerceAtMost(0.8f), 0.9f))
+        musicGlow.colors = intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(glow, 0x38), android.graphics.Color.TRANSPARENT)
+    }
+
+    /** The song playing in the Music player (its cover in the rows shows the equalizer). */
+    fun musicNowPlaying(url: String?) = musicHome.setNowPlaying(url)
+
+    /** A row to load: its title, kind (songs, covers, playlists) and how to get it (blocking). */
+    private class MusicRow(val title: String, val kind: Int, val load: () -> List<VideoItem>)
+
+    /** The rows of the Music home, or of a mood chip. */
+    private fun musicPlan(mood: String?, recent: List<VideoItem>): List<MusicRow> {
+        if (mood != null) {
+            val rows = YtCatalog.MUSIC_MOODS.firstOrNull { it.first == mood }?.second.orEmpty()
+            return rows.map { (title, q) -> MusicRow(title, MusicSection.SONGS) { YtCatalog.musicSongs(q) } } +
+                MusicRow("$mood playlists", MusicSection.PLAYLISTS) { YtCatalog.musicSection("$mood songs playlist") }
+        }
+        val seed = recent.firstOrNull()
+        val top = YtCatalog.topSongsQuery()
+        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val first = listOf(
+            // songs like the last one you played (YouTube Music's Quick picks), else the country's top songs
+            MusicRow(MusicHome.QUICK_PICKS, MusicSection.SONGS) {
+                val radio = if (seed != null) runCatching { YtCatalog.musicRadio(seed.url) }.getOrDefault(emptyList()) else emptyList()
+                radio.ifEmpty { YtCatalog.musicSongs(top) }.take(20)
+            },
+            MusicRow(if (seed != null) "Trending songs" else "New releases", MusicSection.SONGS) {
+                YtCatalog.musicSongs(if (seed != null) top else "new songs $year")
+            }
+        )
+        return first + YtCatalog.MUSIC_SHELVES.map { (title, q) -> MusicRow(title, MusicSection.SONGS) { YtCatalog.musicSongs(q) } } +
+            MusicRow("Featured playlists", MusicSection.PLAYLISTS) { YtCatalog.musicSection("top hits playlist") }
+    }
+
+    /** Listen again: songs you played (needs a few). */
+    private fun listenAgain(recent: List<VideoItem>): MusicSection? =
+        if (recent.size >= 3) MusicSection(MusicHome.LISTEN_AGAIN, recent.take(20), MusicSection.COVERS) else null
+
+    /** Music tab: all rows load at the same time and appear as soon as each is ready (Listen again at once). */
     private fun loadMusic(pulled: Boolean) {
         loadJob?.cancel()
         hm.feedError.isVisible = false
-        vm.musicCache?.let {
-            musicAdapter.submit(it)
-            hm.feedLoading.isVisible = false
+        hm.feedLoading.isVisible = false
+        val mood = musicHome.mood
+        val key = mood.orEmpty()
+        val recent = MusicHistory.recent(act)
+        musicSeenVersion = MusicHistory.version
+        val local = if (mood == null) listenAgain(recent) else null
+        vm.musicCache[key]?.let {
+            musicHome.submit(listOfNotNull(local) + it, false)
             hm.feedRefresh.isRefreshing = false
+            applyListAdapter()
             return
         }
-        if (!pulled) {
-            musicAdapter.submit(emptyList())
-            showSkeleton()
-        }
-        val rows = YtCatalog.MUSIC_SECTIONS
+        if (!pulled) musicHome.submit(listOfNotNull(local), true)
+        applyListAdapter()
+        val plan = musicPlan(mood, recent)
         loadJob = act.lifecycleScope.launch {
-            val results = arrayOfNulls<MusicSection>(rows.size)
+            val results = arrayOfNulls<MusicSection>(plan.size)
             var failed: Exception? = null
             coroutineScope {
-                rows.forEachIndexed { i, row ->
+                plan.forEachIndexed { i, row ->
                     launch {
                         try {
-                            val items = withContext(Dispatchers.IO) { YtCatalog.musicSection(row.second) }
+                            val items = withContext(Dispatchers.IO) { row.load() }
                             if (items.isNotEmpty()) {
-                                results[i] = MusicSection(row.first, items)
-                                musicAdapter.submit(results.filterNotNull())
-                                applyListAdapter()
-                                hm.feedLoading.isVisible = false
+                                results[i] = MusicSection(row.title, items, row.kind)
+                                musicHome.submit(listOfNotNull(local) + results.filterNotNull(), true)
                                 hm.feedRefresh.isRefreshing = false
                             }
                         } catch (e: CancellationException) {
@@ -502,13 +572,22 @@ class HomeScreen(
                     }
                 }
             }
-            hm.feedLoading.isVisible = false
             hm.feedRefresh.isRefreshing = false
-            applyListAdapter()
             val list = results.filterNotNull()
+            musicHome.submit(listOfNotNull(local) + list, false)
             if (list.isEmpty()) showError(failed?.message ?: "Couldn't load music. Check your internet")
-            else vm.musicCache = list
+            else vm.musicCache[key] = list
         }
+    }
+
+    /** Back on the Music tab after playing songs: a fresh Listen again row. */
+    private fun refreshListenAgain() {
+        if (MusicHistory.version == musicSeenVersion || loadJob?.isActive == true) return
+        musicSeenVersion = MusicHistory.version
+        val mood = musicHome.mood
+        val rows = vm.musicCache[mood.orEmpty()] ?: return
+        val local = if (mood == null) listenAgain(MusicHistory.recent(act)) else null
+        musicHome.submit(listOfNotNull(local) + rows, false)
     }
 
     /** Loads the first page ([reset]) or the next page when the list is scrolled to the end. */
