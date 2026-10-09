@@ -571,26 +571,137 @@ class VideoScreen(
         commentsSheet = CommentsSheet(act, u, signIn).also { it.show() }
     }
 
-    /** Full description with likes, views, upload date and clickable links. */
+    /**
+     * Full description: likes, views, upload date, the chapters (tap to jump) and the text. Its timestamps
+     * and links to this video jump in this player; links to other YouTube videos open here in RAINAX;
+     * only other websites open in the browser.
+     */
     private fun showDescription() {
         val d = details ?: return
         val sb = com.rainax.ytdownloader.databinding.SheetDescriptionBinding.inflate(act.layoutInflater)
         val dialog = BottomSheetDialog(act)
         dialog.setContentView(sb.root)
         sb.descTitle.text = d.title
-        sb.descLikes.text = if (d.likes > 0) YtCatalog.count(d.likes) else "–"
-        sb.descViews.text = if (d.views >= 0) java.text.NumberFormat.getIntegerInstance().format(d.views) else "–"
+        sb.descLikes.text = if (likeCount > 0) YtCatalog.count(likeCount) else if (d.likes > 0) YtCatalog.count(d.likes) else "–"
+        sb.descViews.text = if (d.views >= 0) YtCatalog.count(d.views) else "–"
         sb.descDate.text = d.date ?: d.uploaded ?: "–"
-        val desc = d.description.trim()
-        sb.descText.text = when {
-            desc.isEmpty() -> "No description"
-            desc.contains('<') -> HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT)
-            else -> desc
+
+        // chapters, with the one playing now marked
+        if (d.chapters.size >= 2) {
+            sb.descChapterBox.isVisible = true
+            val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: -1L
+            val now = if (pos >= 0) d.chapters.indexOfLast { it.startMs <= pos } else -1
+            d.chapters.forEachIndexed { i, c ->
+                val row = act.layoutInflater.inflate(R.layout.item_desc_chapter, sb.descChapters, false)
+                row.findViewById<android.widget.TextView>(R.id.chTime).text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
+                row.findViewById<android.widget.TextView>(R.id.chTitle).text = c.title.ifBlank { "Chapter ${i + 1}" }
+                row.findViewById<View>(R.id.chNow).isVisible = i == now
+                row.setOnClickListener { seekHere(c.startMs, dialog) }
+                sb.descChapters.addView(row)
+            }
         }
-        sb.descText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
-        if (!desc.contains('<')) android.text.util.Linkify.addLinks(sb.descText, android.text.util.Linkify.WEB_URLS)
+
+        val desc = d.description.trim()
+        if (desc.isEmpty()) {
+            sb.descText.text = "No description"
+        } else {
+            sb.descText.text = richDescription(desc, dialog)
+            sb.descText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
+            sb.descText.highlightColor = android.graphics.Color.TRANSPARENT
+        }
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.skipCollapsed = true
         dialog.show()
+    }
+
+    /** The description with every link and timestamp handled inside the app (see [openDescLink]). */
+    private fun richDescription(desc: String, dialog: BottomSheetDialog): CharSequence {
+        val html = desc.contains('<')
+        val text = android.text.SpannableStringBuilder(
+            if (html) HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT) else desc
+        )
+        if (!html) android.text.util.Linkify.addLinks(text, android.text.util.Linkify.WEB_URLS)
+        // plain "1:23" / "1:02:03" timestamps that aren't links yet
+        val linked = text.getSpans(0, text.length, android.text.style.URLSpan::class.java)
+            .map { text.getSpanStart(it) until text.getSpanEnd(it) }
+        Regex("(?<![\\d:])(\\d{1,2}:)?\\d{1,2}:\\d{2}(?![\\d:])").findAll(text).forEach { m ->
+            if (linked.none { m.range.first in it }) {
+                val sec = m.value.split(':').fold(0L) { acc, x -> acc * 60 + (x.toLongOrNull() ?: 0) }
+                text.setSpan(android.text.style.URLSpan("rxseek:$sec"), m.range.first, m.range.last + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        val primary = androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary)
+        for (span in text.getSpans(0, text.length, android.text.style.URLSpan::class.java)) {
+            val start = text.getSpanStart(span)
+            val end = text.getSpanEnd(span)
+            val link = span.url
+            val isTime = link.startsWith("rxseek:") || seekSeconds(link) != null && youtubeId(absolute(link)) == youtubeId(url)
+            text.removeSpan(span)
+            text.setSpan(object : android.text.style.ClickableSpan() {
+                override fun onClick(widget: View) = openDescLink(link, dialog)
+                override fun updateDrawState(ds: android.text.TextPaint) {
+                    ds.color = primary
+                    ds.isUnderlineText = false
+                    ds.isFakeBoldText = isTime                  // timestamps stand out like on YouTube
+                }
+            }, start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return text
+    }
+
+    private fun absolute(link: String): String = when {
+        link.startsWith("//") -> "https:$link"
+        link.startsWith("/") -> "https://www.youtube.com$link"
+        else -> link
+    }
+
+    /** "t=83", "t=83s", "t=1m23s", "t=1h2m3s" (also "start=") -> seconds; null when there is none. */
+    private fun seekSeconds(link: String): Long? {
+        val v = Regex("[?&#](?:t|start|time_continue)=([0-9hms]+)").find(link)?.groupValues?.get(1) ?: return null
+        if (v.all { it.isDigit() }) return v.toLongOrNull()
+        var total = 0L
+        Regex("(\\d+)([hms])").findAll(v).forEach { m ->
+            val n = m.groupValues[1].toLong()
+            total += when (m.groupValues[2]) { "h" -> n * 3600; "m" -> n * 60; else -> n }
+        }
+        return total
+    }
+
+    private fun openDescLink(raw: String, dialog: BottomSheetDialog) {
+        if (raw.startsWith("rxseek:")) {
+            raw.removePrefix("rxseek:").toLongOrNull()?.let { seekHere(it * 1000, dialog) }
+            return
+        }
+        val link = absolute(raw)
+        val id = youtubeId(link)
+        val sec = seekSeconds(link)
+        when {
+            // this video at a time: jump there in this player
+            id != null && id == youtubeId(url) -> seekHere((sec ?: 0) * 1000, dialog)
+            // another YouTube video: open it here in RAINAX
+            id != null -> {
+                dialog.dismiss()
+                open("https://www.youtube.com/watch?v=$id", startMs = (sec ?: 0) * 1000)
+            }
+            // a YouTube channel: its page here in RAINAX
+            Regex("youtube\\.com/(@[^/?#]+|channel/[\\w-]+|c/[^/?#]+|user/[^/?#]+)").containsMatchIn(link) -> {
+                dialog.dismiss()
+                openChannel(link.substringBefore('?'), null, null)
+            }
+            else -> runCatching {
+                act.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)).addCategory(Intent.CATEGORY_BROWSABLE))
+            }.onFailure { act.toast("Can't open this link") }
+        }
+    }
+
+    /** Jumps to [ms] in the playing video and closes the sheet. */
+    private fun seekHere(ms: Long, dialog: BottomSheetDialog?) {
+        val p = player()?.takeIf { it.currentMediaItem?.mediaId == url }
+        if (p == null) { act.toast("Start the video first"); return }
+        p.seekTo(ms.coerceAtLeast(0))
+        p.play()
+        dialog?.dismiss()
+        vb.videoList.smoothScrollToPosition(0)               // the player in view
     }
 
     // ---------- quality and speed (like YouTube's gear menu) ----------

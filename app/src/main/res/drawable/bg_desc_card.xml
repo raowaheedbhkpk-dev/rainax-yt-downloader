@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- soft rounded panel for the description sheet (stats, chapters, text) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/rxSurfaceAlt" />
+    <corners android:radius="16dp" />
+</shape>

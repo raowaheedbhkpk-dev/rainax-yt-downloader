@@ -1,4 +1,3 @@
-Shorts: many different Shorts, swipe through them, new mix every time
-Downloads: Pause/Resume/Cancel all removed; select downloads, then Pause, Resume or Cancel them
-Clean, normal sizes on every phone, even with large font or display size
-Tablets: the Home feed shows 2-3 columns
+Timestamps and chapters in the description jump in this video (no more opening the YouTube app)
+Links to other YouTube videos and channels open inside RAINAX
+New clean description page with chapters list
