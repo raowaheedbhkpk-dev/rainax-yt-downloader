@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One Short: picture until the video starts, title and channel, and the buttons on the right -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/rx_black">
+
+    <ImageView
+        android:id="@+id/spThumb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
+
+    <FrameLayout
+        android:id="@+id/spVideo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ProgressBar
+        android:id="@+id/spLoading"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:indeterminateTint="@color/rx_white" />
+
+    <ImageView
+        android:id="@+id/spPaused"
+        android:layout_width="76dp"
+        android:layout_height="76dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_mini_button"
+        android:importantForAccessibility="no"
+        android:padding="20dp"
+        android:src="@drawable/ic_play"
+        android:visibility="gone"
+        app:tint="@color/rx_white" />
+
+    <TextView
+        android:id="@+id/spError"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="Couldn't play this Short. Swipe for the next one."
+        android:textColor="@color/rx_white"
+        android:visibility="gone" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="280dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_short_scrim" />
+
+    <LinearLayout
+        android:id="@+id/spInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:gravity="bottom"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="20dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/spUploader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:textColor="@color/rx_white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/spTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:ellipsize="end"
+                android:maxLines="3"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:textColor="@color/rx_white"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/spLike"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_mini_button"
+                android:contentDescription="Like"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_thumb_up"
+                app:tint="@color/rx_white" />
+
+            <TextView
+                android:id="@+id/spLikeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:text="Like"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp" />
+
+            <ImageButton
+                android:id="@+id/spDislike"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_mini_button"
+                android:contentDescription="Dislike"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_thumb_down"
+                app:tint="@color/rx_white" />
+
+            <TextView
+                android:id="@+id/spDislikeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:text="Dislike"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp" />
+
+            <ImageButton
+                android:id="@+id/spComments"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_mini_button"
+                android:contentDescription="Comments"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_comment"
+                app:tint="@color/rx_white" />
+
+            <TextView
+                android:id="@+id/spCommentsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:text="Comments"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp" />
+
+            <ImageButton
+                android:id="@+id/spDownload"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_mini_button"
+                android:contentDescription="Download"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_download"
+                app:tint="@color/rx_white" />
+
+            <TextView
+                android:id="@+id/spDownloadText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:text="Download"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp" />
+
+            <ImageButton
+                android:id="@+id/spShare"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_mini_button"
+                android:contentDescription="Share"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_share"
+                app:tint="@color/rx_white" />
+
+            <TextView
+                android:id="@+id/spShareText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:shadowColor="#99000000"
+                android:shadowRadius="3"
+                android:text="Share"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

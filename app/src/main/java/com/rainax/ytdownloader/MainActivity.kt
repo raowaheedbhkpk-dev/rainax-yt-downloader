@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private var tab = 0            // bottom navigation: 0 Home, 1 Library, 2 Settings
     private lateinit var home: HomeScreen
     private lateinit var video: VideoScreen
+    private lateinit var library: LibraryScreen
     private var pendingVideo: String? = null     // reopen this video page once the player is connected
 
     private var latestTasks: List<DownloadTask> = emptyList()
@@ -95,6 +96,7 @@ class MainActivity : AppCompatActivity() {
             when {
                 video.fullscreen -> video.exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
+                tab == 1 && library.back() -> {}
                 tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
                 video.isOpen && !video.minimized -> video.minimize()
                 home.back() -> {}
@@ -146,6 +148,10 @@ class MainActivity : AppCompatActivity() {
         video.setup()
         setupMiniPlayer()
         setupPlay()
+        library = LibraryScreen(this, pl, { onLibraryMode() }, { shareFile(it) }) { t ->
+            confirm("Delete this file?", "\"${t.title}\" will be removed from your phone.") { deleteFilesOf(listOf(t)) }
+        }
+        library.setup()
         setupSettings()
 
         b.bottomNav.setOnItemSelectedListener {
@@ -243,6 +249,7 @@ class MainActivity : AppCompatActivity() {
         AppUpdater.resumeInstall(this)
         Ads.resumeBanner(b.adBanner)
         Ads.onScreenResumed(this) { canShowFullScreenAd() }
+        if (tab == 0 && ::home.isInitialized) home.onShown()
         b.root.postDelayed({ FastExtractor.warmUp() }, 3000)   // sizes show faster on the first download
     }
 
@@ -336,8 +343,14 @@ class MainActivity : AppCompatActivity() {
 
     /** A video from a list: open its page (playlists go straight to the download sheet). */
     private fun openItem(item: VideoItem) {
-        if (item.isPlaylist) home.openPlaylist(item)
-        else video.open(item.url, item.title, item.uploader, thumb = item.thumb)
+        when {
+            item.isPlaylist -> home.openPlaylist(item)
+            item.isShort -> {
+                video.minimize()                        // a video playing keeps going in the mini player (it pauses for the Short)
+                ShortsActivity.open(this, item)
+            }
+            else -> video.open(item.url, item.title, item.uploader, thumb = item.thumb)
+        }
     }
 
     // =====================================================================
@@ -441,11 +454,14 @@ class MainActivity : AppCompatActivity() {
         pl.root.isVisible = index == 1
         st.root.isVisible = index == 2
         updateChrome()
+        if (index == 0) home.onShown()
     }
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
     private fun updateChrome() {
+        val wasShown = vp.root.isVisible
         vp.root.isVisible = video.isOpen && !video.minimized && tab == 0
+        if (wasShown && !vp.root.isVisible && tab == 0) home.onShown()      // back on Home: fresh watched bars
         val full = video.fullscreen
         b.navCard.isVisible = !full                    // the floating glass bar (hidden in full screen)
         // the banner hides in full screen and comes back after (only once an ad has loaded)
@@ -856,6 +872,13 @@ class MainActivity : AppCompatActivity() {
         pl.actDelete.setOnClickListener { deleteSelected() }
     }
 
+    /** Library chips: Downloads shows the download manager, the others show your files. */
+    private fun onLibraryMode() {
+        if (selecting) exitSelection()
+        pl.emptyState.isVisible = latestTasks.isEmpty() && library.showingDownloads
+        pl.playScroll.isVisible = latestTasks.isNotEmpty() && library.showingDownloads
+    }
+
     private fun renderTasks(all: List<DownloadTask>) {
         latestTasks = all
         val active = all.filter { it.status != Status.DONE }
@@ -867,8 +890,9 @@ class MainActivity : AppCompatActivity() {
         val selectionChanged = before != selected.size || (selecting && selected.isEmpty())
         if (selecting && selected.isEmpty()) selecting = false
 
-        pl.emptyState.isVisible = all.isEmpty()
-        pl.playScroll.isVisible = all.isNotEmpty()
+        pl.emptyState.isVisible = all.isEmpty() && library.showingDownloads
+        pl.playScroll.isVisible = all.isNotEmpty() && library.showingDownloads
+        library.onTasks(all)
 
         pl.activeSection.isVisible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
@@ -1196,6 +1220,10 @@ class MainActivity : AppCompatActivity() {
         st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
         st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
         st.bgPlaySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setBackgroundPlay(this, on) }
+        st.sponsorSwitch.isChecked = AppPrefs.sponsorBlock(this)
+        st.sponsorSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setSponsorBlock(this, on) }
+        st.resumeSwitch.isChecked = AppPrefs.resumeVideos(this)
+        st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
         st.adPrivacyBtn.setOnClickListener { Ads.showPrivacyOptions(this) }
 

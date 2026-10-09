@@ -26,7 +26,8 @@ data class VideoItem(
     val isPlaylist: Boolean = false,
     val count: Long = -1,       // playlist size
     val avatar: String? = null, // channel picture
-    val isChannel: Boolean = false
+    val isChannel: Boolean = false,
+    val isShort: Boolean = false
 )
 
 /** A channel page: header and the id needed to subscribe. */
@@ -73,6 +74,9 @@ class PlaySource(
     val dash: String? = null        // Auto quality: every H.264 quality in one manifest, the player switches by network speed
 )
 
+/** A chapter of a video (from its description's timestamps). */
+class Chapter(val startMs: Long, val title: String)
+
 class VideoDetails(
     val url: String,
     val title: String,
@@ -88,7 +92,8 @@ class VideoDetails(
     val related: List<VideoItem>,
     val play: PlaySource,
     val audioUrl: String?,
-    val channelUrl: String? = null
+    val channelUrl: String? = null,
+    val chapters: List<Chapter> = emptyList()
 ) {
     /** "UC..." from the channel address (for Subscribe). */
     val channelId: String? get() = channelUrl?.let { Regex("/channel/([\\w-]+)").find(it)?.groupValues?.get(1) }
@@ -257,6 +262,16 @@ object YtCatalog {
 
     private fun hidden(v: VideoItem): Boolean = v.title.lowercase().let { it == "[private video]" || it == "[deleted video]" }
 
+    /**
+     * Blocking. Shorts for the Shorts feed: YouTube's short videos (search pages; [query] picks the topic).
+     * Only short videos (marked as Shorts, or up to 3 minutes) are kept.
+     */
+    fun shorts(query: String, page: Page?): FeedPage = guard {
+        FastExtractor.init()
+        val res = videoSearch(query, page)
+        FeedPage(res.items.filter { !it.isPlaylist && !it.isChannel && (it.isShort || it.seconds in 1..180) }, res.next)
+    }
+
     /** Blocking. One page of search results ([playlists] = playlists only, else videos). */
     /** Search result kinds (the chips): videos, channels, playlists. */
     val SEARCH_KINDS = listOf(
@@ -306,7 +321,10 @@ object YtCatalog {
             related = related,
             play = playSource(info),
             audioUrl = bestAudio(info),
-            channelUrl = info.uploaderUrl
+            channelUrl = info.uploaderUrl,
+            chapters = runCatching {
+                info.streamSegments.orEmpty().map { Chapter(it.startTimeSeconds * 1000L, it.title.orEmpty()) }.sortedBy { it.startMs }
+            }.getOrDefault(emptyList())
         )
     }
 
@@ -361,7 +379,8 @@ object YtCatalog {
                     url = i.url, title = i.name.orEmpty(), uploader = i.uploaderName.orEmpty(),
                     thumb = best(i.thumbnails, 480), seconds = if (live) -1 else i.duration.coerceAtLeast(0),
                     views = i.viewCount, uploaded = i.textualUploadDate,
-                    avatar = runCatching { best(i.uploaderAvatars, 68) }.getOrNull()
+                    avatar = runCatching { best(i.uploaderAvatars, 68) }.getOrNull(),
+                    isShort = runCatching { i.isShortFormContent }.getOrDefault(false) || i.url.contains("/shorts/")
                 )
             }
         }

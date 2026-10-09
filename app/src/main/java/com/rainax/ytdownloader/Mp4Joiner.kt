@@ -78,9 +78,12 @@ internal object Mp4Joiner {
         }
     }
 
-    /** Ready to write: both files were read and understood. */
+    /** Song or video information written into the file (shown by music players and galleries). */
+    class Meta(val title: String, val artist: String, val cover: ByteArray?)
+
+    /** Ready to write: the files were read and understood. */
     class Job internal constructor(
-        private val v: Track, private val a: Track,
+        private val tracks: List<Track>,
         private val order: List<Pair<Track, Chunk>>, private val header: ByteArray, val size: Long
     ) {
         /** Writes the joined MP4 to [out]. [progress] gets 0..100. Throws [NativeDownloader.Stopped] when [stopped]. */
@@ -89,60 +92,62 @@ internal object Mp4Joiner {
             var written = header.size.toLong()
             var lastPct = -1
             val buf = ByteArray(1 shl 20)
-            RandomAccessFile(v.file, "r").use { vf ->
-                RandomAccessFile(a.file, "r").use { af ->
-                    for ((t, c) in order) {
-                        val raf = if (t === v) vf else af
-                        raf.seek(c.offset)
-                        var left = c.length
-                        while (left > 0) {
-                            if (stopped()) throw NativeDownloader.Stopped()
-                            val n = minOf(left, buf.size.toLong()).toInt()
-                            raf.readFully(buf, 0, n)
-                            out.write(buf, 0, n)
-                            left -= n
-                            written += n
-                            val pct = (written * 100 / size).toInt()
-                            if (pct != lastPct) { lastPct = pct; progress(pct) }
-                        }
+            val files = tracks.associateWith { RandomAccessFile(it.file, "r") }
+            try {
+                for ((t, c) in order) {
+                    val raf = files.getValue(t)
+                    raf.seek(c.offset)
+                    var left = c.length
+                    while (left > 0) {
+                        if (stopped()) throw NativeDownloader.Stopped()
+                        val n = minOf(left, buf.size.toLong()).toInt()
+                        raf.readFully(buf, 0, n)
+                        out.write(buf, 0, n)
+                        left -= n
+                        written += n
+                        val pct = (written * 100 / size).toInt()
+                        if (pct != lastPct) { lastPct = pct; progress(pct) }
                     }
                 }
+            } finally {
+                files.values.forEach { runCatching { it.close() } }
             }
             out.flush()
         }
     }
 
-    /** Reads both files (only their headers, fast). Throws [NotSupported] when they can't be joined this way. */
-    fun prepare(video: File, audio: File): Job {
-        val v = read(Track(video, "vide"))
-        val a = read(Track(audio, "soun"))
+    /**
+     * Reads the files (only their headers, fast). [video] null = a sound-only file (M4A) that gets
+     * re-written as a normal M4A with [meta]. Throws [NotSupported] when they can't be joined this way.
+     */
+    fun prepare(video: File?, audio: File, meta: Meta? = null): Job {
+        val tracks = listOfNotNull(video?.let { read(Track(it, "vide")) }, read(Track(audio, "soun")))
 
         // picture and sound pieces in time order, so a player finds both close together
-        val order = ArrayList<Pair<Track, Chunk>>(v.chunks.size + a.chunks.size)
-        var i = 0
-        var j = 0
-        while (i < v.chunks.size || j < a.chunks.size) {
-            val takeVideo = j >= a.chunks.size || (i < v.chunks.size && v.chunks[i].time <= a.chunks[j].time)
-            order += if (takeVideo) v to v.chunks[i++] else a to a.chunks[j++]
-        }
+        val order = tracks.flatMapIndexed { k, t -> t.chunks.map { Triple(k, t, it) } }
+            .sortedWith(compareBy<Triple<Int, Track, Chunk>> { it.third.time }.thenBy { it.first })
+            .map { it.second to it.third }
         // where each piece will be, counted from the start of the data
         val rel = HashMap<Chunk, Long>(order.size * 2)
         var data = 0L
         for ((_, c) in order) { rel[c] = data; data += c.length }
 
         val ftyp = W().apply {
-            box("ftyp") { ascii("isom"); int(0x200); ascii("isom"); ascii("iso2"); ascii("mp41") }
+            box("ftyp") {
+                if (video == null) { ascii("M4A "); int(0); ascii("M4A "); ascii("mp42"); ascii("isom") }
+                else { ascii("isom"); int(0x200); ascii("isom"); ascii("iso2"); ascii("mp41") }
+            }
         }.bytes()
         val mdatHead = if (data + 8 > 0xFFFFFFFFL) 16 else 8
         var co64 = false
-        var moov = moov(v, a, rel, 0, co64)
+        var moov = moov(tracks, rel, 0, co64, meta)
         var base = ftyp.size + moov.size + mdatHead.toLong()
         if (base + data > 0xFFFFFFFFL) {
             co64 = true
-            moov = moov(v, a, rel, 0, co64)
+            moov = moov(tracks, rel, 0, co64, meta)
             base = ftyp.size + moov.size + mdatHead.toLong()
         }
-        moov = moov(v, a, rel, base, co64)          // same size, real positions
+        moov = moov(tracks, rel, base, co64, meta)          // same size, real positions
 
         val head = W()
         head.raw(ftyp)
@@ -153,7 +158,7 @@ internal object Mp4Joiner {
             head.int((data + 8).toInt()); head.ascii("mdat")
         }
         val header = head.bytes()
-        return Job(v, a, order, header, header.size + data)
+        return Job(tracks, order, header, header.size + data)
     }
 
     // ---------- reading ----------
@@ -489,21 +494,38 @@ internal object Mp4Joiner {
     private fun trackDuration(t: Track): Long =
         edits(t)?.sumOf { it[0] } ?: toMovie(mediaDuration(t), t.timescale)
 
-    private fun moov(v: Track, a: Track, rel: Map<Chunk, Long>, base: Long, co64: Boolean): ByteArray {
+    private fun moov(tracks: List<Track>, rel: Map<Chunk, Long>, base: Long, co64: Boolean, meta: Meta?): ByteArray {
         val w = W()
-        val dur = maxOf(trackDuration(v), trackDuration(a))
+        val dur = tracks.maxOf { trackDuration(it) }
         w.box("moov") {
             full("mvhd", 1, 0) {
                 long(0); long(0); int(MOVIE_SCALE.toInt()); long(dur)
                 int(0x10000); short(0x100); short(0); int(0); int(0)
                 intArrayOf(0x10000, 0, 0, 0, 0x10000, 0, 0, 0, 0x40000000).forEach { int(it) }
                 repeat(6) { int(0) }
-                int(3)
+                int(tracks.size + 1)
             }
-            trak(this, v, 1, rel, base, co64)
-            trak(this, a, 2, rel, base, co64)
+            tracks.forEachIndexed { i, t -> trak(this, t, i + 1, rel, base, co64) }
+            if (meta != null) tags(this, meta)
         }
         return w.bytes()
+    }
+
+    /** Title, artist and cover picture (iTunes-style tags, read by every music player). */
+    private fun tags(w: W, meta: Meta) = w.box("udta") {
+        full("meta", 0, 0) {
+            full("hdlr", 0, 0) { int(0); ascii("mdir"); ascii("appl"); int(0); int(0); d.writeByte(0) }
+            box("ilst") {
+                fun text(type: String, value: String) {
+                    if (value.isBlank()) return
+                    box(type) { box("data") { int(1); int(0); raw(value.toByteArray(Charsets.UTF_8)) } }
+                }
+                text("\u00A9nam", meta.title)
+                text("\u00A9ART", meta.artist)
+                text("\u00A9too", "RAINAX Tube")
+                meta.cover?.let { jpeg -> box("covr") { box("data") { int(13); int(0); raw(jpeg) } } }
+            }
+        }
     }
 
     private fun tkhd(t: Track, id: Int): ByteArray {

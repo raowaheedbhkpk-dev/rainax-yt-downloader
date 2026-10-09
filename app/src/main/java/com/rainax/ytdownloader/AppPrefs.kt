@@ -47,5 +47,11 @@ object AppPrefs {
     fun badRelease(c: Context) = p(c).getString("bad_release", "").orEmpty()
     fun setBadRelease(c: Context, v: String) = p(c).edit().putString("bad_release", v).apply()
 
+    /** SponsorBlock: skip sponsor, self-promotion and "subscribe" parts inside videos (on by default). */
+    fun sponsorBlock(c: Context) = p(c).getBoolean("sponsor_block", true)
+    fun setSponsorBlock(c: Context, v: Boolean) = p(c).edit().putBoolean("sponsor_block", v).apply()
 
+    /** Videos continue where you stopped watching them (on by default). */
+    fun resumeVideos(c: Context) = p(c).getBoolean("resume_videos", true)
+    fun setResumeVideos(c: Context, v: Boolean) = p(c).edit().putBoolean("resume_videos", v).apply()
 }

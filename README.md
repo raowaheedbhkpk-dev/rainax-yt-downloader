@@ -9,10 +9,14 @@ Requires Android 10 (API 29) or newer.
 - **YouTube built in:** home feed, Music, search (videos, channels, playlists), channels and playlists
 - **Player:** quality choice (Auto adapts to your network), playback speed, fullscreen, mini player,
   and background play with lock-screen controls
+- **Watching extras:** Shorts feed (swipe up), Continue watching, chapters on the seek bar, SponsorBlock skipping
+  and Return YouTube Dislike counts
 - **YouTube account (optional):** sign in to see your feed and subscriptions, subscribe, like, Watch later,
   comment, and like or reply to comments (Top / Newest)
 - **Downloads:** video up to 8K when the video has it, audio as M4A, WebM or MP3, subtitles (`.srt`), and whole playlists
 - **Other sites:** TikTok, Facebook and direct video links, through Share or a pasted link
+- **Library:** your downloaded music and videos with search, playlists, Play all, Shuffle and Repeat; music files
+  get their title, artist and cover picture
 - **Download manager:** 1 to 4 downloads at once, pause, resume, auto-retry, Wi-Fi only mode, and a custom download folder
 - **Themes:** System, Light, Dark and AMOLED black
 - **In-app updates** from this repository's GitHub Releases
@@ -22,7 +26,7 @@ Every push to `main` builds the APK (**Actions > Build RAINAX APK > Artifacts**)
 Pushing a tag publishes a **GitHub Release** with the APK and its SHA-256 checksum. `whatsnew.txt` becomes the update notes shown in the app.
 
 ```
-git tag v8.9.18 && git push origin v8.9.18
+git tag v8.9.19 && git push origin v8.9.19
 ```
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.

@@ -34,6 +34,15 @@
             android:textColor="@color/rx_white"
             android:textSize="12sp"
             android:textStyle="bold" />
+        <ProgressBar
+            android:id="@+id/watchBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_gravity="bottom"
+            android:max="1000"
+            android:progressDrawable="@drawable/bg_watch_bar"
+            android:visibility="gone" />
     </com.rainax.ytdownloader.RatioFrameLayout>
 
     <LinearLayout

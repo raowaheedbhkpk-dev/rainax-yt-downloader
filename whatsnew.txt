@@ -1,3 +1,7 @@
-Joining video and sound is much faster, even for long videos
-Joining shows its progress in %
-Faster saving: no extra copy at the end
+Shorts: swipe up through short videos, with Download
+Continue watching on Home, videos resume where you stopped
+Chapters on the seek bar and a Chapters list
+SponsorBlock skips sponsor parts (Settings)
+Dislike counts are back
+Library: Music, Videos, your own playlists, Shuffle and Repeat
+Music files get title, artist and cover picture

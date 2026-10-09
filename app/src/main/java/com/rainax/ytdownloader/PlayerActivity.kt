@@ -62,6 +62,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private var uris = arrayListOf<String>()
     private var titles = arrayListOf<String>()
+    private var shuffleRequest: Boolean? = null          // "Shuffle" or "Play all" from the Library
     private var watching: String? = null           // download being watched while it downloads
     private var partialRetries = 0
 
@@ -164,6 +165,7 @@ class PlayerActivity : AppCompatActivity() {
 
     /** Reads the list to play: from the app (several files) or from another app (one file). */
     private fun readIntent(i: Intent): Boolean {
+        shuffleRequest = null
         val partial = i.getStringExtra(EXTRA_PARTIAL)
         if (partial != null) {
             PartialFiles.watch(partial)                // its files stay until this player closes
@@ -175,6 +177,7 @@ class PlayerActivity : AppCompatActivity() {
             return true
         }
         val list = i.getStringArrayListExtra(EXTRA_URIS)
+        shuffleRequest = if (i.hasExtra(EXTRA_SHUFFLE)) i.getBooleanExtra(EXTRA_SHUFFLE, false) else null
         if (!list.isNullOrEmpty()) {
             stopWatching()
             uris = list
@@ -252,6 +255,9 @@ class PlayerActivity : AppCompatActivity() {
         val resumeAt = if (posMs >= 0) posMs else savedPosition(uris[start])
         p.setMediaItems(items, start, resumeAt.coerceAtLeast(0L))
         p.repeatMode = prefs.getInt("repeat", Player.REPEAT_MODE_OFF)
+        val shuffle = shuffleRequest ?: prefs.getBoolean("shuffle", false)
+        if (shuffle) shuffleFrom(p, start)
+        p.shuffleModeEnabled = shuffle
         p.setPlaybackSpeed(prefs.getFloat("speed", 1f))
         p.prepare()
         p.playWhenReady = true
@@ -552,7 +558,7 @@ class PlayerActivity : AppCompatActivity() {
             Player.REPEAT_MODE_ALL -> "Repeat: all"
             else -> "Repeat: off"
         }
-        val items = arrayOf(repeatLabel, "Open with another app", "Share")
+        val items = arrayOf(repeatLabel, if (p.shuffleModeEnabled) "Shuffle: on" else "Shuffle: off", "Open with another app", "Share")
         AlertDialog.Builder(this)
             .setItems(items) { _, which ->
                 when (which) {
@@ -572,11 +578,26 @@ class PlayerActivity : AppCompatActivity() {
                             }
                         )
                     }
-                    1 -> openExternally()
-                    2 -> share()
+                    1 -> {
+                        val on = !p.shuffleModeEnabled
+                        if (on) shuffleFrom(p, p.currentMediaItemIndex)
+                        p.shuffleModeEnabled = on
+                        prefs.edit().putBoolean("shuffle", on).apply()
+                        info(if (on) "Shuffle on" else "Shuffle off")
+                    }
+                    2 -> openExternally()
+                    3 -> share()
                 }
             }
             .show()
+    }
+
+    /** Shuffle that starts with [first] and then plays every other file once, in random order. */
+    private fun shuffleFrom(p: ExoPlayer, first: Int) {
+        val n = p.mediaItemCount
+        if (n < 2 || first !in 0 until n) return
+        val order = intArrayOf(first) + (0 until n).filter { it != first }.shuffled().toIntArray()
+        p.setShuffleOrder(androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder(order, System.nanoTime()))
     }
 
     private fun share() {
@@ -929,6 +950,7 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_URIS = "uris"
         const val EXTRA_TITLES = "titles"
         const val EXTRA_INDEX = "index"
+        const val EXTRA_SHUFFLE = "shuffle"
         const val EXTRA_PARTIAL = "partial_task"
         const val EXTRA_PARTIAL_TITLE = "partial_title"
 
@@ -941,12 +963,14 @@ class PlayerActivity : AppCompatActivity() {
             )
         }
 
-        fun open(context: Context, uris: List<String>, titles: List<String>, index: Int) {
+        /** Plays [uris] as a list from [index]; [shuffle] null = the last shuffle setting. */
+        fun open(context: Context, uris: List<String>, titles: List<String>, index: Int, shuffle: Boolean? = null) {
             val i = Intent(context, PlayerActivity::class.java)
                 .putStringArrayListExtra(EXTRA_URIS, ArrayList(uris))
                 .putStringArrayListExtra(EXTRA_TITLES, ArrayList(titles))
                 .putExtra(EXTRA_INDEX, index)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (shuffle != null) i.putExtra(EXTRA_SHUFFLE, shuffle)
             context.startActivity(i)
         }
     }

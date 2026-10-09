@@ -401,7 +401,8 @@ class DownloadService : Service() {
                 TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Joining video and sound $pct%") }
             }
             // fast way (MP4): joined straight into the saved file, no second copy
-            saved = if (plan.webm) null else fastJoin(id, vf, gotAudio, title, joining)
+            val meta = Mp4Joiner.Meta(title, Tags.artist(plan.uploader), null)
+            saved = if (plan.webm) null else fastJoin(id, vf, gotAudio, title, meta, joining)
             if (saved == null) {
                 val joined = File(dir, if (plan.webm) "joined.webm" else "joined.mp4")
                 // joining writes a second copy: make sure it fits first (never lose the downloaded parts)
@@ -430,17 +431,24 @@ class DownloadService : Service() {
                 AudioConverter.toMp3(out, mp3, 192, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
                     TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
                 }
-                if (!PartialFiles.isWatched(id)) {
-                    PartialFiles.forget(id)
-                    out.delete()
-                }                                                     // still playing it? it goes with the folder later
+                // the downloaded sound stays until the end (a pause while saving won't download it again);
+                // the whole folder is removed when the download is done
                 out = mp3
+                output = mp3
             }
 
             // Paused or cancelled at the very end: keep the files for resume, save nothing
             if (TaskRepository.get(id)?.status != Status.RUNNING) return
             TaskRepository.update(id) { it.copy(progress = 99, message = "Saving…") }
 
+            val ext = out.extension.lowercase()
+            // music: title, artist and cover picture inside the file (shown by every music player)
+            if (task.format.startsWith("audio") && (ext == "mp3" || ext == "m4a")) {
+                saved = saveTagged(id, out, ext, title, plan)
+            }
+        }
+        if (saved == null) {
+            val out = output ?: error("Nothing was downloaded")
             val ext = out.extension.lowercase()
             val named = File(dir, NativeDownloader.safeName(title, ext))
             if (named.path != out.path) {
@@ -489,9 +497,11 @@ class DownloadService : Service() {
      * Joins an MP4 picture and sound by copying their data in big pieces straight into the saved file
      * (seconds to a minute for a 2-hour video). Null when these files need the slower MediaMuxer way.
      */
-    private fun fastJoin(id: String, video: File, audio: File, title: String, progress: (Int) -> Unit): FileStore.Saved? {
+    private fun fastJoin(
+        id: String, video: File, audio: File, title: String, meta: Mp4Joiner.Meta, progress: (Int) -> Unit
+    ): FileStore.Saved? {
         val job = try {
-            Mp4Joiner.prepare(video, audio)
+            Mp4Joiner.prepare(video, audio, meta)
         } catch (e: Exception) {                    // not an MP4 this joiner knows (or a damaged one)
             android.util.Log.w("RAINAX", "fast join not possible: ${e.message}")
             return null
@@ -503,6 +513,37 @@ class DownloadService : Service() {
         return FileStore.saveWith(this, NativeDownloader.safeName(title, "mp4"), "video/mp4") { out ->
             job.write(out, { TaskRepository.get(id)?.status != Status.RUNNING }, progress)
         }
+    }
+
+    /** Saves a music file with its song information. Null when that isn't possible (then it is saved as it is). */
+    private fun saveTagged(id: String, file: File, ext: String, title: String, plan: FastExtractor.Plan): FileStore.Saved? {
+        val artist = Tags.artist(plan.uploader)
+        val cover = Tags.cover(plan.thumbUrl, square = true)
+        val name = NativeDownloader.safeName(title, ext)
+        val stopped = { TaskRepository.get(id)?.status != Status.RUNNING }
+        if (ext == "mp3") {
+            val tag = Tags.id3(title, artist, cover)
+            return FileStore.saveWith(this, name, "audio/mpeg") { out ->
+                out.write(tag)
+                file.inputStream().use { input ->
+                    val buf = ByteArray(1 shl 20)
+                    while (true) {
+                        if (stopped()) throw NativeDownloader.Stopped()
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                    }
+                }
+            }
+        }
+        // M4A: written again as a normal M4A (YouTube's is made for streaming) with the tags in it
+        val job = try {
+            Mp4Joiner.prepare(null, file, Mp4Joiner.Meta(title, artist, cover))
+        } catch (e: Exception) {
+            android.util.Log.w("RAINAX", "m4a tags not possible: ${e.message}")
+            return null
+        }
+        return FileStore.saveWith(this, name, "audio/mp4") { out -> job.write(out, stopped) { } }
     }
 
     /** Loads missing thumbnails (playlist items, shared links) one by one in the background. */

@@ -43,6 +43,23 @@ object Img {
         view.setTag(R.id.img_job, job)
     }
 
+    /** Shows a picture file saved on the phone (download thumbnails). Safe in recycled list rows. */
+    fun loadFile(view: ImageView, path: String) {
+        val key = "file:$path"
+        (view.getTag(R.id.img_job) as? Job)?.cancel()
+        view.setTag(R.id.img_url, key)
+        cache.get(key)?.let { view.setImageBitmap(it); return }
+        view.setImageDrawable(null)
+        val job = scope.launch {
+            val bmp = withContext(io) {
+                runCatching { BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = 2 }) }.getOrNull()
+            } ?: return@launch
+            cache.put(key, bmp)
+            if (view.getTag(R.id.img_url) == key) view.setImageBitmap(bmp)
+        }
+        view.setTag(R.id.img_job, job)
+    }
+
     private fun show(view: ImageView, bmp: Bitmap, circle: Boolean) {
         if (circle) {
             view.setImageDrawable(RoundedBitmapDrawableFactory.create(view.resources, bmp).apply { isCircular = true })

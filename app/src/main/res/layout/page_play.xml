@@ -20,11 +20,202 @@
         android:text="Library"
         android:textColor="@color/rx_text" />
 
+    <!-- Downloads / Music / Videos / Playlists -->
+    <HorizontalScrollView
+        android:id="@+id/libChipsScroll"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="68dp"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/libChips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            app:chipSpacingHorizontal="8dp"
+            app:selectionRequired="true"
+            app:singleLine="true"
+            app:singleSelection="true" />
+    </HorizontalScrollView>
+
+    <!-- Music, Videos and Playlists: your downloaded files, ready to play -->
+    <LinearLayout
+        android:id="@+id/libraryBox"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="120dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/libPlaylistBar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="12dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/libPlaylistBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Back to playlists"
+                android:src="@drawable/ic_back"
+                app:tint="@color/rx_text" />
+
+            <TextView
+                android:id="@+id/libPlaylistName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/rx_display_semibold"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/libPlaylistMore"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Playlist options"
+                android:src="@drawable/ic_more"
+                app:tint="@color/rx_text" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_search"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_search"
+                app:tint="@color/rx_text2" />
+
+            <EditText
+                android:id="@+id/libSearch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Search your downloads"
+                android:imeOptions="actionSearch"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textColorHint="@color/rx_text2"
+                android:textSize="15sp" />
+
+            <ImageButton
+                android:id="@+id/libSearchClear"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Clear"
+                android:src="@drawable/ic_close"
+                android:visibility="gone"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/libPlayAll"
+                style="@style/Widget.Rainax.Button"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="Play all"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_play"
+                app:iconTint="@color/rx_on_primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/libShuffle"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="Shuffle"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_shuffle"
+                app:iconTint="@color/rx_text" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/libNewPlaylist"
+                style="@style/Widget.Rainax.Button"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="New playlist"
+                android:visibility="gone"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_add"
+                app:iconTint="@color/rx_on_primary" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/libList"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="120dp" />
+
+            <TextView
+                android:id="@+id/libEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginBottom="80dp"
+                android:gravity="center"
+                android:paddingHorizontal="32dp"
+                android:textColor="@color/rx_text2"
+                android:textSize="15sp"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+
     <androidx.core.widget.NestedScrollView
         android:id="@+id/playScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="72dp"
+        android:layout_marginTop="116dp"
         android:fillViewport="true">
 
         <LinearLayout

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Continue watching card: picture with the watched bar, title, channel -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="220dp"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="4dp"
+    android:background="@drawable/bg_glass_card"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <FrameLayout
+        android:id="@+id/cwThumbBox"
+        android:layout_width="match_parent"
+        android:layout_height="117dp"
+        android:background="@drawable/bg_thumb">
+
+        <ImageView
+            android:id="@+id/cwThumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <TextView
+            android:id="@+id/cwLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="6dp"
+            android:background="@drawable/bg_duration"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="1dp"
+            android:textColor="@color/rx_white"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/cwBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_gravity="bottom"
+            android:max="1000"
+            android:progressDrawable="@drawable/bg_watch_bar" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/cwTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:minLines="2"
+        android:paddingHorizontal="2dp"
+        android:textColor="@color/rx_text"
+        android:textSize="13.5sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/cwMeta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:paddingHorizontal="2dp"
+        android:paddingBottom="2dp"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp" />
+</LinearLayout>

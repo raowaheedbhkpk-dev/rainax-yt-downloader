@@ -23,6 +23,56 @@ import androidx.media3.session.MediaSessionService
 class BgPlayService : MediaSessionService() {
 
     private var session: MediaSession? = null
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var ticking = false
+    private var ticks = 0
+    private val fetching = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** Every half second while playing: skip SponsorBlock parts, and remember where you are (Continue watching). */
+    private val tick = object : Runnable {
+        override fun run() {
+            val p = session?.player ?: return
+            if (!p.isPlaying) { ticking = false; return }
+            onTick(p)
+            handler.postDelayed(this, 500)
+        }
+    }
+
+    private fun startTicking() {
+        if (ticking) return
+        ticking = true
+        handler.postDelayed(tick, 500)
+    }
+
+    private fun saveProgress(p: Player, force: Boolean) {
+        val item = p.currentMediaItem ?: return
+        val page = item.mediaId
+        if (youtubeId(page) == null || p.isCurrentMediaItemLive) return
+        val dur = p.duration
+        if (dur <= 0 || dur == C.TIME_UNSET) return
+        val md = item.mediaMetadata
+        WatchHistory.save(
+            this, page, md.title?.toString().orEmpty(), md.artist?.toString().orEmpty(),
+            md.artworkUri?.toString(), p.currentPosition.coerceAtLeast(0), dur, force
+        )
+    }
+
+    private fun onTick(p: Player) {
+        val page = p.currentMediaItem?.mediaId ?: return
+        val id = youtubeId(page) ?: return
+        if (++ticks % 10 == 0) saveProgress(p, false)                 // every 5 seconds
+        if (!AppPrefs.sponsorBlock(this) || p.isCurrentMediaItemLive) return
+        val segs = SponsorBlock.cached(id)
+        if (segs == null) {
+            if (fetching.add(id)) Thread { SponsorBlock.segments(id); fetching.remove(id) }.start()
+            return
+        }
+        val pos = p.currentPosition
+        val s = segs.firstOrNull { pos >= it.startMs && pos < it.endMs - 400 } ?: return
+        val dur = p.duration
+        p.seekTo(if (dur > 0 && dur != C.TIME_UNSET) minOf(s.endMs, dur) else s.endMs)
+        Toast.makeText(this, "Skipped " + SponsorBlock.label(s.category), Toast.LENGTH_SHORT).show()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -47,6 +97,15 @@ class BgPlayService : MediaSessionService() {
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 if (mediaItem?.mediaId != retriedFor) retriedFor = null
+                // look up the parts to skip of the next video early
+                val id = youtubeId(mediaItem?.mediaId)
+                if (id != null && AppPrefs.sponsorBlock(this@BgPlayService) && SponsorBlock.cached(id) == null && fetching.add(id)) {
+                    Thread { SponsorBlock.segments(id); fetching.remove(id) }.start()
+                }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) startTicking() else saveProgress(player, true)
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -178,6 +237,8 @@ class BgPlayService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(tick)
+        session?.player?.let { saveProgress(it, true) }
         session?.run {
             player.release()
             release()

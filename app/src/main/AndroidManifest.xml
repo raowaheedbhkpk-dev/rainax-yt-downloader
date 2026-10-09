@@ -50,6 +50,14 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Shorts: full-screen short videos, swipe up for the next -->
+        <activity
+            android:name=".ShortsActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Rainax.Player" />
+
         <!-- Built-in player for finished downloads; also offered for any video/audio file ("Open with") -->
         <activity
             android:name=".PlayerActivity"

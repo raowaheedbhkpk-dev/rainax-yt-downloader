@@ -80,8 +80,13 @@ class VideoScreen(
             d.channelUrl?.let { openChannel(it, d.uploader, d.avatar) }
         }
         header.vSubscribe.setOnClickListener { toggleSubscribe() }
-        header.vLike.setOnClickListener { rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE") }
-        header.vDislike.setOnClickListener { rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE") }
+        header.vLike.setOnClickListener {
+            if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE")
+        }
+        header.vDislike.setOnClickListener {
+            if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE")
+        }
+        header.vChapters.setOnClickListener { showChapters() }
         header.vSave.setOnClickListener { saveWatchLater() }
     }
 
@@ -101,10 +106,15 @@ class VideoScreen(
         header.vSubscribe.isVisible = d.channelId != null
         Ui.subscribeButton(header.vSubscribe, false)
         header.vLike.text = if (d.likes > 0) YtCatalog.count(d.likes) else "Like"
-        listOf(header.vLike, header.vDislike, header.vSave).forEach {
-            it.isVisible = signedIn
+        header.vDislike.text = ""
+        // like and dislike counts for everyone (Return YouTube Dislike); liking needs the YouTube account
+        listOf(header.vLike, header.vDislike).forEach {
+            it.isVisible = true
             Ui.toggleButton(it, false)
         }
+        header.vSave.isVisible = signedIn
+        Ui.toggleButton(header.vSave, false)
+        loadDislikes(d.url)
         if (!signedIn) return
         val id = videoId(d.url) ?: return
         stateJob?.cancel()
@@ -116,6 +126,17 @@ class VideoScreen(
             Ui.subscribeButton(header.vSubscribe, st.subscribed == true)
             Ui.toggleButton(header.vLike, st.likeStatus == "LIKE")
             Ui.toggleButton(header.vDislike, st.likeStatus == "DISLIKE")
+        }
+    }
+
+    private var dislikeJob: Job? = null
+
+    private fun loadDislikes(page: String) {
+        val id = youtubeId(page) ?: return
+        dislikeJob?.cancel()
+        dislikeJob = act.lifecycleScope.launch {
+            val n = withContext(Dispatchers.IO) { Dislikes.count(id) }
+            if (youtubeId(url) == id && n > 0) header.vDislike.text = YtCatalog.count(n)
         }
     }
 
@@ -226,7 +247,8 @@ class VideoScreen(
         header.vDesc.isVisible = false
         header.vDesc.maxLines = 3
         header.vUpNext.isVisible = false
-        listOf(header.vSubscribe, header.vLike, header.vDislike, header.vSave).forEach { it.isVisible = false }
+        listOf(header.vSubscribe, header.vLike, header.vDislike, header.vSave, header.vChapters).forEach { it.isVisible = false }
+        vb.playerView.setExtraAdGroupMarkers(null, null)
         related.submit(emptyList())
         vb.videoList.scrollToPosition(0)
         vm.prefetch(clean)                    // the download sheet then has the sizes at once
@@ -249,7 +271,9 @@ class VideoScreen(
                 if (this@VideoScreen.url != clean) return@launch
                 details = d
                 fill(d)
-                if (!keep) play(d, startMs)
+                // continue where you stopped watching (unless a start time was asked for)
+                val start = if (startMs == 0L && AppPrefs.resumeVideos(act)) WatchHistory.resumeAt(act, clean) else startMs
+                if (!keep) play(d, start)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -435,7 +459,36 @@ class VideoScreen(
         }
         related.submit(d.related)
         header.vUpNext.isVisible = d.related.isNotEmpty()
+        showChapterMarks(d)
         onChanged()                            // the mini player shows the real title
+    }
+
+    // ---------- chapters ----------
+
+    /** Chapter starts as marks on the seek bar, and the Chapters button. */
+    private fun showChapterMarks(d: VideoDetails) {
+        val list = d.chapters.filter { it.startMs > 0 }
+        header.vChapters.isVisible = d.chapters.size >= 2
+        if (list.isEmpty()) {
+            vb.playerView.setExtraAdGroupMarkers(null, null)
+            return
+        }
+        vb.playerView.setExtraAdGroupMarkers(list.map { it.startMs }.toLongArray(), BooleanArray(list.size))
+    }
+
+    private fun showChapters() {
+        val d = details ?: return
+        if (d.chapters.isEmpty()) return
+        val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: 0L
+        val current = d.chapters.indexOfLast { it.startMs <= pos }
+        optionsSheet("Chapters", d.chapters.mapIndexed { i, c ->
+            Opt(c.title.ifBlank { "Chapter ${i + 1}" }, YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }, checked = i == current) {
+                player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.let {
+                    it.seekTo(c.startMs)
+                    it.play()
+                }
+            }
+        })
     }
 
     private fun loadComments(clean: String) {

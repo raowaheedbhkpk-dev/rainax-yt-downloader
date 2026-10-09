@@ -77,6 +77,8 @@ class HomeScreen(
         Ads.onNativeReady = { a.notifyDataSetChanged() }
     }
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
+    /** Continue watching + Shorts, on top of the first Home tab. */
+    private val shelf = HomeShelf(act, openVideo)
     private val playlistAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     private val musicAdapter = MusicAdapter({ openPlaylist(it) }, { download(it) })
     private val adapter get() = when {
@@ -90,6 +92,10 @@ class HomeScreen(
     private val isMusic get() = query == null && playlistUrl == null && channelUrl == null && tabs[tabIndex].second == YtCatalog.MUSIC
 
     private fun applyListAdapter() {
+        val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null
+        val wantHeader = if (shelfHere) shelf.root else null
+        if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
+        if (shelfHere) shelf.refresh()
         val want: RecyclerView.Adapter<*> = if (isMusic) musicAdapter else adapter
         if (hm.feedList.adapter !== want) hm.feedList.adapter = want
     }
@@ -188,6 +194,12 @@ class HomeScreen(
             return true
         }
         return false
+    }
+
+    /** Home is on screen again: newest Continue watching row and watched bars. */
+    fun onShown() {
+        if (bigAdapter.header != null) shelf.refresh()
+        if (hm.feedList.adapter === bigAdapter || hm.feedList.adapter === smallAdapter) hm.feedList.adapter?.notifyDataSetChanged()
     }
 
     /** Search for [text] (used by the search box and for links that are not videos). */

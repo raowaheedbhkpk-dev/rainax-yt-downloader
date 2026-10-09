@@ -1,0 +1,391 @@
+package com.rainax.ytdownloader
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.annotation.OptIn
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.rainax.ytdownloader.databinding.ActivityShortsBinding
+import com.rainax.ytdownloader.databinding.ItemShortPageBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.schabi.newpipe.extractor.Page
+
+/** The Shorts list: filled from YouTube's search for short videos, page by page, with a few topics for variety. */
+object ShortsFeed {
+    /** Read and changed on the main thread only. */
+    val items = mutableListOf<VideoItem>()
+
+    private val seen: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private var next: Page? = null
+    private var topic = 0
+    private val topics = listOf(
+        "#shorts", "funny #shorts", "music #shorts", "satisfying #shorts",
+        "cricket #shorts", "food #shorts", "travel #shorts", "comedy #shorts"
+    )
+
+    /** Blocking. The next Shorts not shown yet (add them to [items] on the main thread). */
+    @Synchronized
+    fun fetchMore(): List<VideoItem> {
+        repeat(4) {
+            val res = YtCatalog.shorts(topics[topic % topics.size], next)
+            next = res.next
+            if (next == null) topic++                 // this topic has no more pages: the next topic
+            val fresh = res.items.filter { seen.add(youtubeId(it.url) ?: it.url) }
+            if (fresh.isNotEmpty()) return fresh
+        }
+        return emptyList()
+    }
+
+    /** A Short opened from a list: it plays first, the feed follows. */
+    fun putFirst(item: VideoItem) {
+        val id = youtubeId(item.url)
+        items.removeAll { youtubeId(it.url) == id }
+        items.add(0, item)
+        id?.let { seen.add(it) }
+    }
+}
+
+/**
+ * Shorts: one full-screen video at a time, swipe up for the next (like YouTube Shorts). Each Short repeats,
+ * tap to pause, and has Like/Dislike counts, Comments, Download and Share.
+ */
+@OptIn(UnstableApi::class)
+class ShortsActivity : AppCompatActivity() {
+
+    private lateinit var b: ActivityShortsBinding
+    private var player: ExoPlayer? = null
+    private lateinit var playerView: PlayerView
+    private val adapter = PageAdapter()
+    /** This screen's own list (the Home strip may change the shared one while it is open). */
+    private val items = mutableListOf<VideoItem>()
+    private val details = HashMap<String, VideoDetails>()
+    private val loadingDetails = HashSet<String>()
+    private val failed = HashSet<String>()
+    private var current = -1
+    private var loadingMore = false
+    private var bottomInset = 0
+    private var userPaused = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        items.addAll(ShortsFeed.items)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        b = ActivityShortsBinding.inflate(layoutInflater)
+        setContentView(b.root)
+        b.root.isForceDarkAllowed = false
+        ViewCompat.setOnApplyWindowInsetsListener(b.root) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            b.shortsTop.updatePadding(top = bars.top)
+            if (bottomInset != bars.bottom) {
+                bottomInset = bars.bottom
+                // only move the text up on the pages already shown (a full refresh would restart them)
+                (b.pager.getChildAt(0) as? RecyclerView)?.let { rv ->
+                    for (i in 0 until rv.childCount) (rv.getChildViewHolder(rv.getChildAt(i)) as? PageVH)?.padInfo()
+                }
+            }
+            insets
+        }
+        b.shortsBack.setOnClickListener { finish() }
+
+        playerView = layoutInflater.inflate(R.layout.view_short_player, b.root, false) as PlayerView
+        val p = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(RxMediaSourceFactory())
+            .setAudioAttributes(
+                AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
+                true                                   // the other player (video page, music) pauses
+            )
+            .setLoadControl(
+                androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(10_000, 30_000, 700, 1_500)
+                    .build()
+            )
+            .build()
+        p.repeatMode = Player.REPEAT_MODE_ONE
+        p.addListener(object : Player.Listener {
+            override fun onRenderedFirstFrame() = holder(current)?.started() ?: Unit
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) holder(current)?.started()
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                val item = items.getOrNull(current) ?: return
+                // expired or refused address: once more with a fresh lookup, then give up on this one
+                if (failed.add(item.url)) {
+                    details.remove(item.url)
+                    FastExtractor.forget(item.url)
+                    loadAndPlay(current)
+                } else {
+                    holder(current)?.showError()
+                }
+            }
+        })
+        player = p
+        playerView.player = p
+
+        b.pager.orientation = ViewPager2.ORIENTATION_VERTICAL
+        b.pager.offscreenPageLimit = 1
+        b.pager.adapter = adapter
+        b.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) = select(position)
+        })
+        val start = intent.getIntExtra(EXTRA_INDEX, 0).coerceIn(0, (items.size - 1).coerceAtLeast(0))
+        if (items.isEmpty()) loadMore() else b.pager.setCurrentItem(start, false)
+        b.pager.post { if (current < 0 && items.isNotEmpty()) select(b.pager.currentItem) }
+    }
+
+    private fun holder(pos: Int): PageVH? =
+        (b.pager.getChildAt(0) as? RecyclerView)?.findViewHolderForAdapterPosition(pos) as? PageVH
+
+    /** A Short came on screen: move the video surface there and play it. */
+    private fun select(pos: Int) {
+        if (pos == current || pos !in items.indices) return
+        current = pos
+        userPaused = false
+        player?.run { stop(); clearMediaItems() }
+        attachSurface(pos)
+        loadAndPlay(pos)
+        // the next Short is looked up now, so it starts at once
+        items.getOrNull(pos + 1)?.let { prefetch(it.url) }
+        if (pos >= items.size - 4) loadMore()
+    }
+
+    private fun attachSurface(pos: Int) {
+        val h = holder(pos)
+        if (h == null) {
+            b.pager.post { if (current == pos) attachSurface(pos) }
+            return
+        }
+        (playerView.parent as? ViewGroup)?.removeView(playerView)
+        h.b.spVideo.addView(playerView)
+    }
+
+    private fun prefetch(url: String) {
+        if (details.containsKey(url) || !loadingDetails.add(url)) return
+        lifecycleScope.launch {
+            val d = withContext(Dispatchers.IO) { runCatching { YtCatalog.video(url) }.getOrNull() }
+            loadingDetails.remove(url)
+            if (d != null) details[url] = d
+        }
+    }
+
+    private fun loadAndPlay(pos: Int) {
+        val item = items.getOrNull(pos) ?: return
+        details[item.url]?.let { play(pos, it); return }
+        lifecycleScope.launch {
+            val d = withContext(Dispatchers.IO) { runCatching { YtCatalog.video(item.url) }.getOrNull() }
+            if (d != null) details[item.url] = d
+            if (current != pos) return@launch
+            if (d == null) holder(pos)?.showError() else play(pos, d)
+        }
+    }
+
+    private fun play(pos: Int, d: VideoDetails) {
+        val p = player ?: return
+        holder(pos)?.fill(d)
+        val src = d.play
+        val uri = when {
+            src.video != null && src.audio != null -> Uri.Builder().scheme("rainax").authority("av")
+                .appendQueryParameter("v", src.video).appendQueryParameter("a", src.audio)
+                .appendQueryParameter("u", d.url).build()
+            src.muxed != null -> Uri.parse(src.muxed)
+            src.hls != null -> Uri.Builder().scheme("rainax").authority("hls")
+                .appendQueryParameter("h", src.hls).appendQueryParameter("u", d.url).build()
+            else -> { holder(pos)?.showError(); return }
+        }
+        p.setMediaItem(MediaItem.Builder().setMediaId(d.url).setUri(uri).build())
+        p.prepare()
+        if (!userPaused) p.play()
+    }
+
+    private fun loadMore() {
+        if (loadingMore) return
+        loadingMore = true
+        lifecycleScope.launch {
+            val fresh = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
+            loadingMore = false
+            if (fresh.isEmpty()) {
+                if (items.isEmpty()) {
+                    Toast.makeText(this@ShortsActivity, "Couldn't load Shorts. Check your internet", Toast.LENGTH_LONG).show()
+                }
+                return@launch
+            }
+            val start = items.size
+            items.addAll(fresh)
+            ShortsFeed.items.addAll(fresh.filter { f -> ShortsFeed.items.none { it.url == f.url } })
+            adapter.notifyItemRangeInserted(start, fresh.size)
+            if (current < 0) select(b.pager.currentItem)
+        }
+    }
+
+    private fun togglePause() {
+        val p = player ?: return
+        if (p.isPlaying) {
+            userPaused = true
+            p.pause()
+        } else {
+            userPaused = false
+            p.play()
+        }
+        holder(current)?.b?.spPaused?.isVisible = userPaused
+    }
+
+    private fun chooseDownload(item: VideoItem) {
+        val specs = listOf("video:720" to "Video (HD 720p)", "video:0" to "Video (best quality)", "audio:m4a" to "Music (M4A)", "audio:mp3" to "Music (MP3)")
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setTitle("Download this Short")
+            .setItems(specs.map { it.second }.toTypedArray()) { _, which ->
+                val title = details[item.url]?.title ?: item.title
+                val app = applicationContext
+                lifecycleScope.launch(Dispatchers.IO) {
+                    Downloader.enqueue(app, listOf(EnqueueItem(item.url, title, null, item.thumb)), specs[which].first, null, null)
+                }
+                Toast.makeText(this, "Added to downloads", Toast.LENGTH_SHORT).show()
+            }
+            .show()
+    }
+
+    private fun share(item: VideoItem) {
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_TEXT, listOf(item.title, item.url).filter { it.isNotBlank() }.joinToString("\n"))
+        runCatching { startActivity(Intent.createChooser(send, "Share Short")) }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        player?.pause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (current >= 0 && !userPaused) player?.play()
+    }
+
+    override fun onDestroy() {
+        playerView.player = null
+        player?.release()
+        player = null
+        super.onDestroy()
+    }
+
+    // ---------- pages ----------
+
+    private inner class PageAdapter : RecyclerView.Adapter<PageVH>() {
+        override fun getItemCount() = items.size
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            PageVH(ItemShortPageBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+        override fun onBindViewHolder(holder: PageVH, position: Int) = holder.bind(items[position], position)
+
+        override fun onViewRecycled(holder: PageVH) {
+            if (playerView.parent === holder.b.spVideo) holder.b.spVideo.removeView(playerView)
+        }
+    }
+
+    private inner class PageVH(val b: ItemShortPageBinding) : RecyclerView.ViewHolder(b.root) {
+        private var url: String? = null
+
+        fun bind(item: VideoItem, pos: Int) {
+            url = item.url
+            padInfo()
+            Img.load(b.spThumb, HomeShelf.shortThumb(item), widthPx = 720)
+            b.spThumb.isVisible = true
+            b.spLoading.isVisible = true
+            b.spError.isVisible = false
+            b.spPaused.isVisible = false
+            b.spTitle.text = item.title
+            b.spUploader.text = item.uploader
+            b.spLikeText.text = "Like"
+            b.spDislikeText.text = "Dislike"
+            details[item.url]?.let { fill(it) }
+            b.root.setOnClickListener { if (pos == current) togglePause() }
+            b.spComments.setOnClickListener {
+                CommentsSheet(this@ShortsActivity, item.url) {
+                    Toast.makeText(this@ShortsActivity, "Sign in on the Home screen to comment", Toast.LENGTH_LONG).show()
+                }.show()
+            }
+            b.spDownload.setOnClickListener { chooseDownload(item) }
+            b.spShare.setOnClickListener { share(item) }
+            val like = View.OnClickListener {
+                Toast.makeText(this@ShortsActivity, "Open the video on the Home screen to like it", Toast.LENGTH_SHORT).show()
+            }
+            b.spLike.setOnClickListener(like)
+            b.spDislike.setOnClickListener(like)
+            if (pos == current) {
+                if (playerView.parent == null) b.spVideo.addView(playerView)
+                // the playing Short shown again (e.g. after a refresh): no picture or spinner over it
+                if ((player?.playbackState ?: Player.STATE_IDLE) == Player.STATE_READY) started()
+                b.spPaused.isVisible = userPaused
+            } else if (playerView.parent === b.spVideo) {
+                b.spVideo.removeView(playerView)
+            }
+        }
+
+        fun padInfo() {
+            b.spInfo.updatePadding(bottom = bottomInset + (20 * resources.displayMetrics.density).toInt())
+        }
+
+        fun fill(d: VideoDetails) {
+            if (youtubeId(d.url) != youtubeId(url)) return
+            if (d.title.isNotBlank()) b.spTitle.text = d.title
+            if (d.uploader.isNotBlank()) b.spUploader.text = d.uploader
+            if (d.likes > 0) b.spLikeText.text = YtCatalog.count(d.likes)
+            val id = youtubeId(d.url) ?: return
+            lifecycleScope.launch {
+                val n = withContext(Dispatchers.IO) { Dislikes.count(id) }
+                if (n > 0 && youtubeId(url) == id) b.spDislikeText.text = YtCatalog.count(n)
+            }
+        }
+
+        fun started() {
+            b.spThumb.isVisible = false
+            b.spLoading.isVisible = false
+            b.spError.isVisible = false
+        }
+
+        fun showError() {
+            b.spLoading.isVisible = false
+            b.spError.isVisible = true
+        }
+    }
+
+    companion object {
+        private const val EXTRA_INDEX = "index"
+
+        /** Opens the Shorts feed at [index]. */
+        fun open(context: Context, index: Int) {
+            context.startActivity(Intent(context, ShortsActivity::class.java).putExtra(EXTRA_INDEX, index))
+        }
+
+        /** Opens [item] first (a Short tapped in a list), then the feed. */
+        fun open(context: Context, item: VideoItem) {
+            ShortsFeed.putFirst(item)
+            open(context, 0)
+        }
+    }
+}

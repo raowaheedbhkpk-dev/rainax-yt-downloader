@@ -291,7 +291,8 @@ object FastExtractor {
         val webm: Boolean,         // join as WebM (VP9 + Opus) instead of MP4
         val subtitle: SubtitlesStream?,
         val canFallBack: Boolean = false,  // 2K/4K (VP9/AV1): if this phone can't join it, retry as 1080p H.264
-        val audioAlts: List<Part> = emptyList()   // other sound streams to try if YouTube refuses the first one
+        val audioAlts: List<Part> = emptyList(),  // other sound streams to try if YouTube refuses the first one
+        val uploader: String = ""                 // channel name (the artist in music files)
     )
 
     /** Blocking. Picks the streams for a quality choice ("video:720", "video:0" = best, "audio:..."). */
@@ -320,12 +321,14 @@ object FastExtractor {
                 val alts = (ranked.drop(1) + rankAudio(audios, preferM4a = true))
                     .distinctBy { it.content }.filter { it.content != a.content }.take(4)
                     .map { part(it, audioSize(it, duration)) }
-                return@guard Plan(info.name, thumb, null, null, part(a, audioSize(a, duration)), false, null, audioAlts = alts)
+                return@guard Plan(info.name, thumb, null, null, part(a, audioSize(a, duration)), false, null, audioAlts = alts,
+                    uploader = info.uploaderName.orEmpty())
             }
             // no separate sound on this site: save the smallest video that has sound
             val v = usable(info.videoStreams).minByOrNull { heightOf(it) ?: Int.MAX_VALUE }
                 ?: error("No audio found for this link")
-            return@guard Plan(info.name, thumb, null, null, part(v, sizeOf(v.itagItem?.contentLength, v.bitrate, duration)), false, null)
+            return@guard Plan(info.name, thumb, null, null, part(v, sizeOf(v.itagItem?.contentLength, v.bitrate, duration)), false, null,
+                uploader = info.uploaderName.orEmpty())
         }
 
         val want = spec.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
@@ -357,11 +360,11 @@ object FastExtractor {
             val alts = (if (webm) webmList else m4aList).filter { it.content != a.content }.take(3)
                 .map { part(it, audioSize(it, duration)) }
             return@guard Plan(info.name, thumb, vp, part(a, audioSize(a, duration)), null, webm, sub,
-                canFallBack = !isAvc(v), audioAlts = alts)
+                canFallBack = !isAvc(v), audioAlts = alts, uploader = info.uploaderName.orEmpty())
         }
         if (muxed != null) {
             val s = part(muxed, sizeOf(muxed.itagItem?.contentLength, muxed.bitrate, duration))
-            return@guard Plan(info.name, thumb, null, null, s, false, sub)
+            return@guard Plan(info.name, thumb, null, null, s, false, sub, uploader = info.uploaderName.orEmpty())
         }
         error("No video format found for this link")
     }

@@ -119,6 +119,7 @@ class VideoAdapter(
         private val meta: TextView = v.findViewById(R.id.meta)
         private val download: ImageButton = v.findViewById(R.id.download)
         private val avatar: ImageView? = v.findViewById(R.id.avatar)      // big rows only
+        private val watchBar: android.widget.ProgressBar? = v.findViewById(R.id.watchBar)
 
         init {
             (thumb.parent as View).clipToOutline = true      // rounded corners from the background shape
@@ -139,8 +140,13 @@ class VideoAdapter(
             meta.text = parts.joinToString(" • ")
             val badge = when {
                 item.isPlaylist -> if (item.count > 0) "${item.count} videos" else "Playlist"
+                item.isShort -> "SHORTS"
                 else -> YtCatalog.duration(item.seconds)
             }
+            // how much of it you watched (red bar, like YouTube)
+            val watched = if (item.isPlaylist || item.isChannel) -1f else WatchHistory.progress(itemView.context, item.url)
+            watchBar?.isVisible = watched > 0f
+            if (watched > 0f) watchBar?.progress = (watched * 1000).toInt()
             duration.text = badge
             duration.isVisible = badge.isNotEmpty()
             duration.setBackgroundResource(if (item.seconds < 0) R.drawable.bg_live else R.drawable.bg_duration)
