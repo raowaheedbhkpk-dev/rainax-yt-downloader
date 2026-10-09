@@ -31,7 +31,7 @@
             android:text="Sign in to YouTube"
             android:textColor="@color/rx_text"
             android:textSize="18sp"
-            android:fontFamily="@font/rx_display_semibold" />
+            android:fontFamily="sans-serif-medium" />
 
         <ImageView
             android:layout_width="26dp"

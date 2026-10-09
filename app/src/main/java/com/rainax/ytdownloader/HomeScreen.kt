@@ -274,6 +274,9 @@ class HomeScreen(
             else -> 1
         }
         val cur = hm.feedList.layoutManager
+        // columns: a small gap between the full-width pictures
+        if (cols > 1 && hm.feedList.itemDecorationCount == 0) hm.feedList.addItemDecoration(columnGap)
+        if (cols == 1 && hm.feedList.itemDecorationCount > 0) hm.feedList.removeItemDecoration(columnGap)
         if (cols == 1) {
             if (cur !is LinearLayoutManager || cur is androidx.recyclerview.widget.GridLayoutManager) {
                 hm.feedList.layoutManager = LinearLayoutManager(act)
@@ -288,6 +291,13 @@ class HomeScreen(
                 val a = hm.feedList.adapter
                 return if (a is VideoAdapter && !a.isFullWidth(position)) 1 else cols
             }
+        }
+    }
+
+    private val columnGap = object : RecyclerView.ItemDecoration() {
+        override fun getItemOffsets(out: android.graphics.Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
+            val g = (6 * act.resources.displayMetrics.density).toInt()
+            out.set(g, 0, g, 0)
         }
     }
 

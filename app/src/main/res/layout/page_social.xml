@@ -17,7 +17,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/rx_display"
+            android:fontFamily="sans-serif-medium"
             android:text="Social downloads"
             android:textColor="@color/rx_text"
             android:textSize="30sp" />

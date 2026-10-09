@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- "Midnight Glass": frosted see-through cards with a bright edge over a background with soft coral and
-         blue glows. Fonts: Bricolage Grotesque (titles) and Figtree (text), both SIL Open Font License.
+    <!-- "Tube": a flat YouTube-like look. Near-black (#0F0F0F) or white pages, grey pills and chips, red
+         accent, the phone's own Roboto font. Bricolage Grotesque (SIL Open Font License) is kept for the logo.
          One theme for light and dark. Colours come from values/colors.xml and values-night/colors.xml,
          so every screen follows the same palette. forceDarkAllowed=false stops phone makers
          (Xiaomi/MIUI, Oppo, ...) from re-colouring the app on their own. -->
@@ -14,8 +14,8 @@
         <item name="rxSurfaceAlt">@color/rx_surface_alt</item>
         <item name="rxOutline">@color/rx_outline</item>
         <item name="rxAmbient">@drawable/bg_ambient</item>
-        <item name="android:fontFamily">@font/rx_body</item>
-        <item name="fontFamily">@font/rx_body</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="fontFamily">sans-serif</item>
         <item name="colorPrimary">@color/rx_primary</item>
         <item name="colorOnPrimary">@color/rx_on_primary</item>
         <item name="colorPrimaryContainer">@color/rx_primary_container</item>
@@ -101,7 +101,7 @@
     </style>
 
     <style name="ShapeAppearance.Rainax.Large" parent="ShapeAppearance.Material3.LargeComponent">
-        <item name="cornerSize">24dp</item>
+        <item name="cornerSize">16dp</item>
     </style>
 
     <!-- fully rounded, like YouTube's pill buttons -->
@@ -112,31 +112,38 @@
 
     <style name="ShapeAppearance.Rainax.Sheet" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">28dp</item>
-        <item name="cornerSizeTopRight">28dp</item>
+        <item name="cornerSizeTopLeft">16dp</item>
+        <item name="cornerSizeTopRight">16dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
     <!-- Buttons: colours are set explicitly, never inherited from the system -->
     <style name="TextAppearance.Rainax.Button" parent="TextAppearance.Material3.LabelLarge">
-        <item name="fontFamily">@font/rx_body</item>
-        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">14sp</item>
         <item name="textAllCaps">false</item>
     </style>
 
     <style name="TextAppearance.Rainax.Chip" parent="TextAppearance.Material3.LabelLarge">
-        <item name="fontFamily">@font/rx_body</item>
-        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textStyle">bold</item>
     </style>
 
-    <!-- titles: Bricolage Grotesque -->
+    <!-- bottom bar labels: small, like YouTube -->
+    <style name="TextAppearance.Rainax.Nav" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <!-- titles -->
     <style name="TextAppearance.Rainax.Display" parent="">
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="fontFamily">sans-serif-medium</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="android:letterSpacing">-0.02</item>
     </style>
@@ -191,9 +198,8 @@
         <item name="chipBackgroundColor">?attr/rxSurfaceAlt</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="android:textAppearance">@style/TextAppearance.Rainax.Chip</item>
-        <item name="chipStrokeColor">?attr/rxOutline</item>
-        <item name="chipStrokeWidth">1dp</item>
-        <item name="chipCornerRadius">20dp</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipCornerRadius">8dp</item>
     </style>
 
     <style name="Widget.Rainax.Chip.Filter" parent="Widget.Material3.Chip.Filter">
@@ -201,14 +207,13 @@
         <item name="android:textColor">@color/rx_chip_text</item>
         <item name="checkedIconTint">@color/rx_chip_on_text</item>
         <item name="android:textAppearance">@style/TextAppearance.Rainax.Chip</item>
-        <item name="chipStrokeColor">?attr/rxOutline</item>
-        <item name="chipStrokeWidth">1dp</item>
-        <item name="chipCornerRadius">20dp</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipCornerRadius">8dp</item>
     </style>
 
     <!-- Music tab mood chips: soft rounded squares, like YouTube Music -->
     <style name="Widget.Rainax.Chip.Mood" parent="Widget.Rainax.Chip.Filter">
-        <item name="chipCornerRadius">10dp</item>
+        <item name="chipCornerRadius">8dp</item>
         <item name="chipStrokeWidth">0dp</item>
         <item name="chipStartPadding">6dp</item>
         <item name="chipEndPadding">6dp</item>
@@ -217,18 +222,19 @@
     <!-- Cards -->
     <style name="Widget.Rainax.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">?attr/rxCard</item>
-        <item name="strokeColor">?attr/rxOutline</item>
-        <item name="strokeWidth">1dp</item>
+        <item name="strokeWidth">0dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="cardCornerRadius">24dp</item>
+        <item name="cardCornerRadius">14dp</item>
     </style>
 
     <!-- Bottom navigation -->
     <!-- floating glass navigation: the bar is see-through, its glass card is in activity_main -->
     <style name="Widget.Rainax.BottomNav" parent="Widget.Material3.BottomNavigationView">
         <item name="backgroundTint">@android:color/transparent</item>
-        <item name="itemTextAppearanceActive">@style/TextAppearance.Rainax.Chip</item>
-        <item name="itemTextAppearanceInactive">@style/TextAppearance.Rainax.Chip</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.Rainax.Nav</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.Rainax.Nav</item>
+        <item name="itemPaddingTop">8dp</item>
+        <item name="itemPaddingBottom">8dp</item>
         <item name="itemIconTint">@color/rx_nav_item</item>
         <item name="itemTextColor">@color/rx_nav_item</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.Rainax.NavIndicator</item>
@@ -236,7 +242,7 @@
     </style>
 
     <style name="Widget.Rainax.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/rx_primary_container</item>
+        <item name="android:color">@android:color/transparent</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Pill</item>
     </style>
 

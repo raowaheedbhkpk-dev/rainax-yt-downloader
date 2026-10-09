@@ -45,7 +45,7 @@
                 android:maxLines="2"
                 android:textColor="@color/rx_text"
                 android:textSize="20sp"
-                android:fontFamily="@font/rx_display_semibold" />
+                android:fontFamily="sans-serif-medium" />
 
             <TextView
                 android:id="@+id/chHeadMeta"

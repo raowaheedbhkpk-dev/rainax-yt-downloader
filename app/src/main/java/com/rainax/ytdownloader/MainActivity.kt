@@ -185,6 +185,13 @@ class MainActivity : AppCompatActivity() {
         b.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
                 R.id.nav_home -> { showTab(0); true }
+                R.id.nav_shorts -> {
+                    // Shorts open full screen (the tab you were on stays selected), like YouTube
+                    video.minimize()
+                    music.collapse()
+                    ShortsActivity.open(this, 0)
+                    false
+                }
                 R.id.nav_social -> { showTab(3); true }
                 R.id.nav_downloads -> { showTab(1); true }
                 R.id.nav_settings -> { showTab(2); true }
@@ -253,11 +260,10 @@ class MainActivity : AppCompatActivity() {
 
     /** Tablets / wide screens: the bottom bar keeps a phone-like width, the Home feed uses columns. */
     private fun fitWideScreen() {
+        // the bottom bar is full width (flat, like YouTube); on wide screens its buttons stay close together
         val wide = resources.configuration.screenWidthDp >= 600
-        val lp = b.navCard.layoutParams as android.widget.LinearLayout.LayoutParams
-        lp.width = if (wide) (520 * resources.displayMetrics.density).toInt() else android.widget.LinearLayout.LayoutParams.MATCH_PARENT
-        lp.gravity = android.view.Gravity.CENTER_HORIZONTAL
-        b.navCard.layoutParams = lp
+        val pad = if (wide) ((resources.configuration.screenWidthDp - 560).coerceAtLeast(0) / 2 * resources.displayMetrics.density).toInt() else 0
+        b.bottomNav.setPadding(pad, 0, pad, 0)
         if (::home.isInitialized) home.applyColumns()
     }
 
@@ -494,7 +500,7 @@ class MainActivity : AppCompatActivity() {
         vp.root.isVisible = video.isOpen && !video.minimized && tab == 0
         if (wasShown && !vp.root.isVisible && tab == 0) home.onShown()      // back on Home: fresh watched bars
         val full = video.fullscreen
-        b.navCard.isVisible = !full                    // the floating glass bar (hidden in full screen)
+        b.navCard.isVisible = !full                    // the bottom bar (hidden in full screen)
         // mini music bar: songs loaded, big player closed, no video open
         b.musicMini.root.isVisible = music.active && !music.expanded && !video.isOpen && !full
         // the banner hides in full screen and comes back after (only once an ad has loaded)

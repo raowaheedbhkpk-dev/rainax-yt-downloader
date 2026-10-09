@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- RAINAX "Midnight Glass", dark: deep ink blue, frosted cards, coral light -->
-    <color name="rx_bg">#0B1020</color>
-    <color name="rx_surface">#10172B</color>
-    <color name="rx_card">#B31A2443</color>
-    <color name="rx_surface_alt">#1FFFFFFF</color>
-    <color name="rx_text">#EEF1FA</color>
-    <color name="rx_text2">#9AA3BF</color>
-    <color name="rx_outline">#24FFFFFF</color>
-    <color name="rx_divider">#1AFFFFFF</color>
-    <color name="rx_primary">#FF7A59</color>
-    <color name="rx_on_primary">#1B0E0B</color>
-    <color name="rx_primary_container">#2EFF7A59</color>
-    <color name="rx_on_primary_container">#FFB9A6</color>
-    <color name="rx_accent">#8EA2FF</color>
+    <!-- RAINAX "Tube", dark: near-black like YouTube, grey pills, red accent -->
+    <color name="rx_bg">#0F0F0F</color>
+    <color name="rx_surface">#212121</color>
+    <color name="rx_card">#181818</color>
+    <color name="rx_surface_alt">#272727</color>
+    <color name="rx_text">#F1F1F1</color>
+    <color name="rx_text2">#AAAAAA</color>
+    <color name="rx_outline">#14FFFFFF</color>
+    <color name="rx_divider">#1FFFFFFF</color>
+    <color name="rx_primary">#FF0033</color>
+    <color name="rx_on_primary">#FFFFFF</color>
+    <color name="rx_primary_container">#29FF0033</color>
+    <color name="rx_on_primary_container">#FF8A9B</color>
+    <color name="rx_accent">#3EA6FF</color>
     <color name="rx_error">#FF6B63</color>
     <color name="rx_error_container">#4A1D24</color>
-    <color name="rx_chip_on">#FF7A59</color>
-    <color name="rx_chip_on_text">#1B0E0B</color>
+    <color name="rx_chip_on">#F1F1F1</color>
+    <color name="rx_chip_on_text">#0F0F0F</color>
 
-    <color name="rx_bg_top">#0E1530</color>
-    <color name="rx_bg_bottom">#080C18</color>
-    <color name="rx_glow_coral">#40FF7A59</color>
-    <color name="rx_glow_blue">#385B6CFF</color>
-    <color name="rx_glass_nav">#D9141C36</color>
+    <color name="rx_bg_top">#0F0F0F</color>
+    <color name="rx_bg_bottom">#0F0F0F</color>
+    <color name="rx_glow_coral">#00000000</color>
+    <color name="rx_glow_blue">#00000000</color>
+    <color name="rx_glass_nav">#0F0F0F</color>
 </resources>

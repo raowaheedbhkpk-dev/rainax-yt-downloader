@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- RAINAX mark in the app: white download arrow on a coral rounded square -->
+<!-- RAINAX mark in the app: white download arrow on a red rounded square -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">

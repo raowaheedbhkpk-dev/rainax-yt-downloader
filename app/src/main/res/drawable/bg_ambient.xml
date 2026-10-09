@@ -1,21 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Midnight Glass background: deep gradient with two soft colour glows (coral top right, blue bottom left) -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <gradient android:angle="270" android:startColor="@color/rx_bg_top" android:endColor="@color/rx_bg_bottom" />
-        </shape>
-    </item>
-    <item>
-        <shape android:shape="rectangle">
-            <gradient android:type="radial" android:centerX="0.95" android:centerY="0.02" android:gradientRadius="70%p"
-                android:startColor="@color/rx_glow_coral" android:endColor="#00000000" />
-        </shape>
-    </item>
-    <item>
-        <shape android:shape="rectangle">
-            <gradient android:type="radial" android:centerX="0.0" android:centerY="0.85" android:gradientRadius="80%p"
-                android:startColor="@color/rx_glow_blue" android:endColor="#00000000" />
-        </shape>
-    </item>
-</layer-list>
+<!-- Page background: flat, like YouTube (#FFFFFF light, #0F0F0F dark) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/rx_bg" />
+</shape>

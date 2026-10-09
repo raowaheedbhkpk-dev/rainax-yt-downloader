@@ -48,18 +48,12 @@
             layout="@layout/layout_music_mini"
             android:visibility="gone" />
 
-        <!-- floating glass navigation bar -->
+        <!-- bottom bar: flat, full width, thin line on top (like YouTube) -->
         <FrameLayout
             android:id="@+id/navCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_glass_nav"
-            android:elevation="4dp"
-            android:outlineProvider="background"
-            android:padding="4dp">
+            android:background="@drawable/bg_nav_bar">
 
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottomNav"

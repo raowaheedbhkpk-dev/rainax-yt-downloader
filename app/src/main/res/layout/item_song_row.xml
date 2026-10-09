@@ -45,7 +45,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="@font/rx_body"
+            android:fontFamily="sans-serif"
             android:maxLines="1"
             android:textColor="@color/rx_text"
             android:textSize="15.5sp"

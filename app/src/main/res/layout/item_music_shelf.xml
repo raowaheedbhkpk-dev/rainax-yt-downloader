@@ -39,7 +39,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:fontFamily="@font/rx_display_semibold"
+                android:fontFamily="sans-serif-medium"
                 android:letterSpacing="-0.01"
                 android:maxLines="1"
                 android:textColor="@color/rx_text"

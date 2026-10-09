@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom bar: page colour with a thin line on top, like YouTube -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape android:shape="rectangle"><solid android:color="@color/rx_divider" /></shape></item>
+    <item android:top="0.7dp"><shape android:shape="rectangle"><solid android:color="?attr/rxBg" /></shape></item>
+</layer-list>

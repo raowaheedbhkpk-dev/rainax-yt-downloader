@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- round glass button (coral tint) -->
+<!-- round grey button (+ and Download on videos) -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="?attr/colorControlHighlight">
     <item>
         <shape android:shape="oval">
-            <solid android:color="@color/rx_primary_container" />
-            <stroke android:width="1dp" android:color="?attr/rxOutline" />
+            <solid android:color="?attr/rxSurfaceAlt" />
         </shape>
     </item>
 </ripple>

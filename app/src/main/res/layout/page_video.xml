@@ -19,7 +19,9 @@
             android:id="@+id/playerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            app:played_color="@color/rx_primary"
             app:resize_mode="fit"
+            app:scrubber_color="@color/rx_primary"
             app:show_buffering="when_playing"
             app:show_shuffle_button="false"
             app:show_subtitle_button="false" />

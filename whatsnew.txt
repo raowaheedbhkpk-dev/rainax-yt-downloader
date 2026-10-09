@@ -1,4 +1,5 @@
-New Music tab like YouTube Music: mood chips, Quick picks, Listen again and song rows with Play all
-New full music player: big cover in its own colours, Song / Video switch, like, comments, download and share
-Up next list, shuffle, repeat, sleep timer, and a mini player bar above the menu
-Similar songs keep playing when a list ends
+All-new look like YouTube: clean dark (or white) theme with a red accent
+Full-width videos on Home with Download and + on every video
+New bottom bar with Shorts, new chips, search box and video page buttons
+New Music tab like YouTube Music: moods, Quick picks, Listen again, Play all
+New music player with Song / Video switch, Up next, shuffle, repeat and sleep timer

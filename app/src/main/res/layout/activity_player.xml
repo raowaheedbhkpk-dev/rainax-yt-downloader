@@ -63,7 +63,7 @@
         android:paddingVertical="12dp"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
-        android:fontFamily="@font/rx_display_semibold"
+        android:fontFamily="sans-serif-medium"
         android:visibility="gone" />
 
     <FrameLayout

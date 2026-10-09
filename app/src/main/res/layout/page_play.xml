@@ -16,7 +16,7 @@
         android:maxLines="1"
         android:paddingHorizontal="20dp"
         android:paddingVertical="12dp"
-        android:fontFamily="@font/rx_display"
+        android:fontFamily="sans-serif-medium"
         android:text="Library"
         android:textColor="@color/rx_text" />
 
@@ -75,7 +75,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ellipsize="end"
-                android:fontFamily="@font/rx_display_semibold"
+                android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
                 android:textSize="18sp" />

@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home / Up next: a frosted glass card with a rounded picture, channel picture, title, details and Download -->
+<!-- Home / Up next, like YouTube: full-width picture, then channel picture, title, "channel • views • time",
+     and the + (pick several) and Download buttons -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="14dp"
-    android:layout_marginVertical="7dp"
-    android:background="@drawable/bg_glass_card"
-    android:orientation="vertical"
-    android:padding="8dp">
+    android:layout_marginBottom="18dp"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical">
 
     <com.rainax.ytdownloader.RatioFrameLayout
         android:layout_width="match_parent"
@@ -27,10 +26,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="10dp"
+            android:layout_margin="8dp"
             android:background="@drawable/bg_duration"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="3dp"
+            android:paddingHorizontal="5dp"
+            android:paddingVertical="1dp"
             android:textColor="@color/rx_white"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -50,15 +49,15 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="6dp"
+        android:paddingStart="12dp"
         android:paddingTop="12dp"
-        android:paddingEnd="2dp"
-        android:paddingBottom="6dp">
+        android:paddingEnd="6dp">
 
         <ImageView
             android:id="@+id/avatar"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="top"
             android:background="@drawable/bg_avatar"
             android:importantForAccessibility="no"
             android:scaleType="centerCrop" />
@@ -75,11 +74,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:lineSpacingExtra="2dp"
+                android:lineSpacingExtra="1dp"
                 android:maxLines="2"
                 android:textColor="@color/rx_text"
-                android:textSize="15.5sp"
-                android:textStyle="bold" />
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium" />
 
             <TextView
                 android:id="@+id/meta"
@@ -97,7 +96,7 @@
             android:id="@+id/pick"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/bg_circle_btn"
             android:contentDescription="Select for download"
             android:padding="10dp"
@@ -105,15 +104,15 @@
             android:src="@drawable/ic_add"
             app:tint="@color/rx_text" />
 
-        <!-- coral glass Download button -->
+        <!-- Download (red arrow on a grey circle) -->
         <ImageButton
             android:id="@+id/download"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="6dp"
             android:background="@drawable/bg_circle_btn"
             android:contentDescription="Download"
-            android:padding="12dp"
+            android:padding="10dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_download"
             app:tint="@color/rx_primary" />

@@ -120,7 +120,7 @@
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
                 android:textSize="18sp"
-                android:fontFamily="@font/rx_display_semibold" />
+                android:fontFamily="sans-serif-medium" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/titleDownload"
@@ -323,7 +323,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:fontFamily="@font/rx_display_semibold"
+                android:fontFamily="sans-serif-medium"
                 android:textColor="@color/rx_text"
                 android:textSize="16sp" />
 
