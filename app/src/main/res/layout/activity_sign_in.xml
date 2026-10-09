@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/rxBg"
+    android:background="?attr/rxAmbient"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -31,7 +31,7 @@
             android:text="Sign in to YouTube"
             android:textColor="@color/rx_text"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/rx_display_semibold" />
 
         <ImageView
             android:layout_width="26dp"

@@ -3,22 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/rxBg">
+    android:background="@android:color/transparent">
 
     <!-- fits its 72dp row at any font size (the list starts below it) -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:autoSizeMaxTextSize="26sp"
+        android:autoSizeMaxTextSize="34sp"
         android:autoSizeMinTextSize="16sp"
         android:autoSizeTextType="uniform"
         android:gravity="center_vertical"
         android:maxLines="1"
         android:paddingHorizontal="20dp"
         android:paddingVertical="12dp"
+        android:fontFamily="@font/rx_display"
         android:text="Library"
-        android:textColor="@color/rx_text"
-        android:textStyle="bold" />
+        android:textColor="@color/rx_text" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/playScroll"

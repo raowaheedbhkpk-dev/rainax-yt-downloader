@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- RAINAX mark: white download arrow on a red rounded square (same as the app icon) -->
+<!-- RAINAX mark in the app: white download arrow on a coral rounded square -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <gradient android:angle="315" android:endColor="@color/ic_launcher_bg_end" android:startColor="@color/ic_launcher_bg_start" />
-            <corners android:radius="8dp" />
+            <gradient android:angle="315" android:endColor="@color/rx_logo_end" android:startColor="@color/rx_logo_start" />
+            <corners android:radius="9dp" />
         </shape>
     </item>
     <item android:drawable="@drawable/ic_launcher_foreground" />

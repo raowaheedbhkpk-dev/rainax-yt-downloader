@@ -5,4 +5,6 @@
     <attr name="rxCard" format="color" />
     <attr name="rxSurfaceAlt" format="color" />
     <attr name="rxOutline" format="color" />
+    <!-- page background (Midnight Glass glows; pure black for AMOLED) -->
+    <attr name="rxAmbient" format="reference" />
 </resources>

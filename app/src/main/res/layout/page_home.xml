@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/rxBg"
+    android:background="@android:color/transparent"
     android:orientation="vertical">
 
     <FrameLayout
@@ -41,10 +41,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:fontFamily="sans-serif-black"
+                    android:fontFamily="@font/rx_display"
                     android:importantForAccessibility="no"
                     android:includeFontPadding="false"
-                    android:letterSpacing="-0.01"
+                    android:letterSpacing="-0.02"
                     android:text="RAINAX"
                     android:textColor="@color/rx_text"
                     android:textSize="21sp" />
@@ -53,7 +53,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="3dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_display_semibold"
                     android:importantForAccessibility="no"
                     android:includeFontPadding="false"
                     android:letterSpacing="-0.02"
@@ -120,7 +120,7 @@
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
                 android:textSize="18sp"
-                android:textStyle="bold" />
+                android:fontFamily="@font/rx_display_semibold" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/titleDownload"
@@ -204,7 +204,7 @@
         android:id="@+id/chipsScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/rxBg"
+        android:background="@android:color/transparent"
         android:clipToPadding="false"
         android:paddingHorizontal="12dp"
         android:paddingTop="4dp"
@@ -247,7 +247,7 @@
             android:id="@+id/suggestList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="?attr/rxBg"
+            android:background="?attr/rxAmbient"
             android:visibility="gone" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

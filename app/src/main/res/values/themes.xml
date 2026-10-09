@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- One theme for light and dark. Colours come from values/colors.xml and values-night/colors.xml,
+    <!-- "Midnight Glass": frosted see-through cards with a bright edge over a background with soft coral and
+         blue glows. Fonts: Bricolage Grotesque (titles) and Figtree (text), both SIL Open Font License.
+         One theme for light and dark. Colours come from values/colors.xml and values-night/colors.xml,
          so every screen follows the same palette. forceDarkAllowed=false stops phone makers
          (Xiaomi/MIUI, Oppo, ...) from re-colouring the app on their own. -->
     <style name="Theme.Rainax" parent="Theme.Material3.DayNight.NoActionBar">
@@ -11,6 +13,9 @@
         <item name="rxCard">@color/rx_card</item>
         <item name="rxSurfaceAlt">@color/rx_surface_alt</item>
         <item name="rxOutline">@color/rx_outline</item>
+        <item name="rxAmbient">@drawable/bg_ambient</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
         <item name="colorPrimary">@color/rx_primary</item>
         <item name="colorOnPrimary">@color/rx_on_primary</item>
         <item name="colorPrimaryContainer">@color/rx_primary_container</item>
@@ -27,7 +32,7 @@
         <item name="colorSurfaceContainerLowest">?attr/rxBg</item>
         <item name="colorSurfaceContainerLow">?attr/rxSurface</item>
         <item name="colorSurfaceContainer">?attr/rxSurface</item>
-        <item name="colorSurfaceContainerHigh">?attr/rxCard</item>
+        <item name="colorSurfaceContainerHigh">?attr/rxSurface</item>
         <item name="colorSurfaceContainerHighest">?attr/rxSurfaceAlt</item>
         <item name="colorOutline">@color/rx_text2</item>
         <item name="colorOutlineVariant">?attr/rxOutline</item>
@@ -35,11 +40,11 @@
         <item name="colorErrorContainer">@color/rx_error_container</item>
         <item name="android:colorBackground">?attr/rxBg</item>
         <item name="colorOnBackground">@color/rx_text</item>
-        <item name="android:windowBackground">?attr/rxBg</item>
+        <item name="android:windowBackground">?attr/rxAmbient</item>
         <!-- Android 12+ start screen: the white arrow sits on the red icon background (visible in light theme) -->
         <item name="android:windowSplashScreenIconBackgroundColor" tools:targetApi="31">@color/ic_launcher_bg_start</item>
-        <item name="android:statusBarColor">?attr/rxBg</item>
-        <item name="android:navigationBarColor">?attr/rxSurface</item>
+        <item name="android:statusBarColor">@color/rx_bg_top</item>
+        <item name="android:navigationBarColor">@color/rx_bg_bottom</item>
         <item name="android:windowLightStatusBar">@bool/rx_light_bars</item>
         <item name="android:windowLightNavigationBar">@bool/rx_light_bars</item>
         <item name="android:forceDarkAllowed">false</item>
@@ -61,6 +66,9 @@
         <item name="rxCard">@color/rx_amoled_card</item>
         <item name="rxSurfaceAlt">@color/rx_amoled_alt</item>
         <item name="rxOutline">@color/rx_amoled_outline</item>
+        <item name="rxAmbient">@drawable/bg_ambient_amoled</item>
+        <item name="android:statusBarColor">@color/rx_black</item>
+        <item name="android:navigationBarColor">@color/rx_black</item>
     </style>
 
     <!-- Full-screen black video player -->
@@ -82,7 +90,7 @@
         <item name="buttonBarPositiveButtonStyle">@style/Widget.Rainax.Button.Text</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.Rainax.Button.Text</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.Rainax.Button.Text</item>
-        <item name="colorSurfaceContainerHigh">?attr/rxCard</item>
+        <item name="colorSurfaceContainerHigh">?attr/rxSurface</item>
         <item name="android:textColorPrimary">@color/rx_text</item>
         <item name="android:textColorSecondary">@color/rx_text2</item>
     </style>
@@ -93,7 +101,7 @@
     </style>
 
     <style name="ShapeAppearance.Rainax.Large" parent="ShapeAppearance.Material3.LargeComponent">
-        <item name="cornerSize">12dp</item>
+        <item name="cornerSize">24dp</item>
     </style>
 
     <!-- fully rounded, like YouTube's pill buttons -->
@@ -104,18 +112,41 @@
 
     <style name="ShapeAppearance.Rainax.Sheet" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">16dp</item>
-        <item name="cornerSizeTopRight">16dp</item>
+        <item name="cornerSizeTopLeft">28dp</item>
+        <item name="cornerSizeTopRight">28dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
     <!-- Buttons: colours are set explicitly, never inherited from the system -->
+    <style name="TextAppearance.Rainax.Button" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/rx_body</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="textAllCaps">false</item>
+    </style>
+
+    <style name="TextAppearance.Rainax.Chip" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/rx_body</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- titles: Bricolage Grotesque -->
+    <style name="TextAppearance.Rainax.Display" parent="">
+        <item name="android:fontFamily">@font/rx_display</item>
+        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:textColor">@color/rx_text</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
     <style name="Widget.Rainax.Button" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/rx_primary</item>
         <item name="android:textColor">@color/rx_on_primary</item>
         <item name="iconTint">@color/rx_on_primary</item>
-        <item name="cornerRadius">24dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
+        <item name="cornerRadius">28dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
@@ -125,7 +156,10 @@
         <item name="backgroundTint">@color/rx_primary_container</item>
         <item name="android:textColor">@color/rx_on_primary_container</item>
         <item name="iconTint">@color/rx_on_primary_container</item>
-        <item name="cornerRadius">24dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
+        <item name="strokeColor">?attr/rxOutline</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">28dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -135,7 +169,8 @@
         <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="iconTint">@color/rx_text</item>
-        <item name="cornerRadius">24dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
+        <item name="cornerRadius">28dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -155,16 +190,20 @@
     <style name="Widget.Rainax.Chip" parent="Widget.Material3.Chip.Assist">
         <item name="chipBackgroundColor">?attr/rxSurfaceAlt</item>
         <item name="android:textColor">@color/rx_text</item>
-        <item name="chipStrokeWidth">0dp</item>
-        <item name="chipCornerRadius">8dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Chip</item>
+        <item name="chipStrokeColor">?attr/rxOutline</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipCornerRadius">20dp</item>
     </style>
 
     <style name="Widget.Rainax.Chip.Filter" parent="Widget.Material3.Chip.Filter">
         <item name="chipBackgroundColor">@color/rx_chip_bg</item>
         <item name="android:textColor">@color/rx_chip_text</item>
         <item name="checkedIconTint">@color/rx_chip_on_text</item>
-        <item name="chipStrokeWidth">0dp</item>
-        <item name="chipCornerRadius">8dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Chip</item>
+        <item name="chipStrokeColor">?attr/rxOutline</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipCornerRadius">20dp</item>
     </style>
 
     <!-- Cards -->
@@ -173,12 +212,15 @@
         <item name="strokeColor">?attr/rxOutline</item>
         <item name="strokeWidth">1dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="cardCornerRadius">12dp</item>
+        <item name="cardCornerRadius">24dp</item>
     </style>
 
     <!-- Bottom navigation -->
+    <!-- floating glass navigation: the bar is see-through, its glass card is in activity_main -->
     <style name="Widget.Rainax.BottomNav" parent="Widget.Material3.BottomNavigationView">
-        <item name="backgroundTint">?attr/rxSurface</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.Rainax.Chip</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.Rainax.Chip</item>
         <item name="itemIconTint">@color/rx_nav_item</item>
         <item name="itemTextColor">@color/rx_nav_item</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.Rainax.NavIndicator</item>
@@ -186,7 +228,8 @@
     </style>
 
     <style name="Widget.Rainax.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@android:color/transparent</item>
+        <item name="android:color">@color/rx_primary_container</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Pill</item>
     </style>
 
     <!-- Top pill tabs -->

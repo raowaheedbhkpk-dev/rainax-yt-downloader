@@ -425,8 +425,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateChrome() {
         vp.root.isVisible = video.isOpen && !video.minimized && tab == 0
         val full = video.fullscreen
-        b.bottomNav.isVisible = !full
-        b.navDivider.isVisible = !full
+        b.navCard.isVisible = !full                    // the floating glass bar (hidden in full screen)
         // the banner hides in full screen and comes back after (only once an ad has loaded)
         b.adBanner.isVisible = !full && Ads.bannerLoaded
         val mini = video.isOpen && !full && (video.minimized || tab != 0)
@@ -525,7 +524,7 @@ class MainActivity : AppCompatActivity() {
             ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         val top = (insets?.top ?: 0) + margin
         // never over the ad banner (ad rules) or the bottom bar
-        val bottomView = if (b.adBanner.isVisible && b.adBanner.height > 0) b.adBanner else b.bottomNav
+        val bottomView = if (b.adBanner.isVisible && b.adBanner.height > 0) b.adBanner else b.navCard
         val navTop = if (bottomView.isVisible && bottomView.height > 0) {
             val loc = IntArray(2); val rootLoc = IntArray(2)
             bottomView.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
@@ -1240,7 +1239,7 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     /** Messages sit above the ad banner (never over it) or above the bottom bar. */
-    private fun snackAnchor(): View = if (b.adBanner.isVisible) b.adBanner else b.bottomNav
+    private fun snackAnchor(): View = if (b.adBanner.isVisible) b.adBanner else b.navCard
 
     private fun message(text: String) {
         Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(snackAnchor()).show()

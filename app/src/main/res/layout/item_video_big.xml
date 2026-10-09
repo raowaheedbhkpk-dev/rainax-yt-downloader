@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home / Up next: full-width picture, channel picture, title, details and a Download button -->
+<!-- Home / Up next: a frosted glass card with a rounded picture, channel picture, title, details and Download -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:layout_marginHorizontal="14dp"
+    android:layout_marginVertical="7dp"
+    android:background="@drawable/bg_glass_card"
     android:orientation="vertical"
-    android:paddingBottom="18dp">
+    android:padding="8dp">
 
     <com.rainax.ytdownloader.RatioFrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/rxSurfaceAlt">
+        android:background="@drawable/bg_thumb_big">
 
         <ImageView
             android:id="@+id/thumb"
@@ -25,10 +27,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="8dp"
+            android:layout_margin="10dp"
             android:background="@drawable/bg_duration"
-            android:paddingHorizontal="5dp"
-            android:paddingVertical="2dp"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
             android:textColor="@color/rx_white"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -37,15 +39,17 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
+        android:paddingStart="6dp"
         android:paddingTop="12dp"
-        android:paddingEnd="8dp">
+        android:paddingEnd="2dp"
+        android:paddingBottom="6dp">
 
         <ImageView
             android:id="@+id/avatar"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:background="@drawable/bg_avatar"
             android:importantForAccessibility="no"
             android:scaleType="centerCrop" />
@@ -62,11 +66,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:fontFamily="sans-serif-medium"
                 android:lineSpacingExtra="2dp"
                 android:maxLines="2"
                 android:textColor="@color/rx_text"
-                android:textSize="15sp" />
+                android:textSize="15.5sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/meta"
@@ -79,16 +83,17 @@
                 android:textSize="12.5sp" />
         </LinearLayout>
 
+        <!-- coral glass Download button -->
         <ImageButton
             android:id="@+id/download"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_circle_btn"
             android:contentDescription="Download"
-            android:padding="8dp"
+            android:padding="12dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_download"
-            app:tint="@color/rx_text" />
+            app:tint="@color/rx_primary" />
     </LinearLayout>
 </LinearLayout>

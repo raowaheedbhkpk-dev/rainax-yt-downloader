@@ -60,3 +60,4 @@ RAINAX is released under GPL-3.0, as required by NewPipe Extractor.
 - [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor): GPL-3.0
 - [LAME](https://lame.sourceforge.io/) 3.99.5 (MP3 encoder, `app/src/main/cpp/lame`): LGPL-2.0-or-later, see `app/src/main/cpp/lame/COPYING`
 - AndroidX, Media3 (ExoPlayer) and Material Components: Apache-2.0
+- Fonts [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) and [Figtree](https://fonts.google.com/specimen/Figtree) (`app/src/main/res/font`): SIL Open Font License 1.1

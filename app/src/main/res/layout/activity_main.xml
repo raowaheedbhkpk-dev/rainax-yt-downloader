@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/rxBg"
+    android:background="?attr/rxAmbient"
     android:forceDarkAllowed="false">
 
     <LinearLayout
@@ -42,21 +42,30 @@
             android:id="@+id/adBanner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/rxBg"
+            android:background="@android:color/transparent"
             android:visibility="gone" />
 
-        <View
-            android:id="@+id/navDivider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?attr/rxOutline" />
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNav"
+        <!-- floating glass navigation bar -->
+        <FrameLayout
+            android:id="@+id/navCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/bottom_nav" />
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_glass_nav"
+            android:elevation="4dp"
+            android:outlineProvider="background"
+            android:padding="4dp">
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottomNav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/bottom_nav" />
+        </FrameLayout>
     </LinearLayout>
 
     <!-- floating mini player (placed and dragged in code) -->

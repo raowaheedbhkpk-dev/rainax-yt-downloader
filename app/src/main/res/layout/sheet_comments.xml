@@ -20,7 +20,7 @@
             android:text="Comments"
             android:textColor="@color/rx_text"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/rx_display_semibold" />
 
         <TextView
             android:id="@+id/commentCount"
