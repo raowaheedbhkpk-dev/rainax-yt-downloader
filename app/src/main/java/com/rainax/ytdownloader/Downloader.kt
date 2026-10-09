@@ -13,6 +13,8 @@ object Downloader {
         val tasks = items.mapIndexed { index, item ->
             val id = UUID.randomUUID().toString()
             val thumb = if (single) info?.thumb?.let { InfoFetcher.saveThumb(context, id, it) } else null
+            // no picture yet: the download service loads it in the background
+            val thumbUrl = item.thumbUrl ?: if (single) info?.thumbUrl else null
             DownloadTask(
                 id = id,
                 url = item.url,
@@ -27,7 +29,7 @@ object Downloader {
                 mime = null,
                 createdAt = now + index,
                 subLang = subLang,
-                thumbUrl = item.thumbUrl
+                thumbUrl = thumbUrl
             )
         }
         TaskRepository.addAll(tasks)         // a single write, even for a 500-video playlist

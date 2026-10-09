@@ -7,6 +7,8 @@ import androidx.appcompat.app.AppCompatDelegate
 class RainaxApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        // more open connections kept for reuse (6 per download, plus the extractor and pictures)
+        System.setProperty("http.maxConnections", "16")
         applyTheme(AppPrefs.themeMode(this))
     }
 

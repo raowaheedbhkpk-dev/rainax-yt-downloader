@@ -25,7 +25,8 @@ import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper
 object NativeDownloader {
 
     internal const val BLOCK = 1024 * 1024L      // piece size (also read by PartialFiles for paused downloads)
-    private const val THREADS = 4
+    // 6 connections at once: much faster on most networks (each one stays open for the next pieces)
+    private const val THREADS = 6
     private const val ATTEMPTS = 4
 
     class Stopped : IOException("stopped")
@@ -81,16 +82,20 @@ object NativeDownloader {
     /** Total size and whether the server allows pieces (Range). */
     private fun probe(url: String): Pair<Long, Boolean> {
         val con = open(url, 0, 0)
+        var keep = false
         try {
             val code = con.responseCode
             if (code == 206) {
                 val total = con.getHeaderField("Content-Range")?.substringAfter('/')?.trim()?.toLongOrNull() ?: -1L
+                // read the 1-byte answer to the end: the connection is then reused by the first piece
+                con.inputStream.use { it.readBytes() }
+                keep = true
                 return total to (total > 0)
             }
             if (code in 200..299) return con.contentLengthLong to false
             throw IOException("HTTP error $code")
         } finally {
-            con.disconnect()
+            if (!keep) con.disconnect()
         }
     }
 
@@ -198,6 +203,7 @@ object NativeDownloader {
             try {
                 val con = open(url, start, end)
                 track(id, con)
+                var ok = false
                 try {
                     val code = con.responseCode
                     if (code != 206) throw IOException("HTTP error $code")
@@ -217,11 +223,14 @@ object NativeDownloader {
                             onBytes(n.toLong())
                         }
                     }
+                    ok = written == end - start + 1
                 } finally {
                     untrack(id, con)
-                    con.disconnect()
+                    // a fully read piece keeps its connection open for the next one (no new handshake,
+                    // which made every 1 MB piece slow); only a failed or stopped piece drops it
+                    if (!ok) con.disconnect()
                 }
-                if (written != end - start + 1) throw IOException("Piece cut short")
+                if (!ok) throw IOException("Piece cut short")
                 return
             } catch (e: Stopped) {
                 if (written > 0) onBytes(-written)

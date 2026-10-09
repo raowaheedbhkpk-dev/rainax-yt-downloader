@@ -290,8 +290,9 @@ class DownloadService : Service() {
         // Fresh stream addresses on every attempt (YouTube's links expire after some hours)
         val plan = FastExtractor.plan(task.url, task.format, task.subLang)
         if (task.title.isBlank()) {
-            val thumbPath = plan.thumbUrl?.let { InfoFetcher.loadBitmap(it) }?.let { InfoFetcher.saveThumb(this, id, it) }
-            TaskRepository.update(id, true) { it.copy(title = plan.title, thumbPath = thumbPath ?: it.thumbPath) }
+            // the picture loads in the background, so the download starts at once
+            TaskRepository.update(id, true) { it.copy(title = plan.title, thumbUrl = it.thumbUrl ?: plan.thumbUrl) }
+            fillThumbnails()
         }
         // Paused or cancelled meanwhile? Don't start the transfer.
         if (TaskRepository.get(id)?.status != Status.RUNNING) return
@@ -473,6 +474,7 @@ class DownloadService : Service() {
     }
 
     /** Loads missing thumbnails (playlist items, shared links) one by one in the background. */
+    @Synchronized
     private fun fillThumbnails() {
         if (thumbJob?.isActive == true) return
         val pending = TaskRepository.tasks.value.any {

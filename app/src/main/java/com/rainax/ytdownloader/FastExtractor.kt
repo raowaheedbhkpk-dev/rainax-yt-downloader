@@ -43,6 +43,24 @@ object FastExtractor {
         ready = true
     }
 
+    @Volatile private var warmed = false
+
+    /**
+     * Background, once per app start: downloads YouTube's player code now, so the first "Download"
+     * shows its sizes at once instead of waiting for it.
+     */
+    fun warmUp() {
+        if (warmed) return
+        warmed = true
+        Thread {
+            runCatching {
+                init()
+                org.schabi.newpipe.extractor.services.youtube.YoutubeJavaScriptPlayerManager
+                    .getSignatureTimestamp("dQw4w9WgXcQ")
+            }.onFailure { warmed = false }          // offline: try again next time
+        }.apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
+    }
+
     // ---------- one lookup per video ----------
     // The video page, the download sheet and the download itself all need the same video info.
     // It is fetched once (even when asked for at the same moment) and kept for 20 minutes.
@@ -184,7 +202,6 @@ object FastExtractor {
         PreviewState(
             title = info.name,
             subtitle = subtitleLine(info.uploaderName, duration),
-            thumb = thumbUrl?.let { InfoFetcher.loadBitmap(it) },
             quick = if (progressive.isEmpty() && videoOnly.isEmpty()) built.quick.filter { it.kind == KIND_AUDIO } else built.quick,
             all = if (progressive.isEmpty() && videoOnly.isEmpty()) built.all.filter { it.kind == KIND_AUDIO } else built.all,
             subtitles = built.subs,
@@ -492,9 +509,12 @@ object FastExtractor {
                 val stream = if (code >= 400) con.errorStream else con.inputStream
                 val text = stream?.use { it.readBytes().toString(Charsets.UTF_8) }
                 val headers = con.headerFields.filterKeys { it != null }
+                // the body was read to the end and closed, so the connection goes back to the pool and the
+                // next request skips the slow new handshake (only a failed request drops it)
                 return Response(code, con.responseMessage, headers, text, con.url.toString())
-            } finally {
+            } catch (e: Exception) {
                 con.disconnect()
+                throw e
             }
         }
     }

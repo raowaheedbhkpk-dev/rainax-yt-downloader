@@ -1,2 +1,3 @@
-Ad improvements
-Smoother start and fixes
+Sizes show much faster when you tap Download
+Faster downloads (6 connections that stay open)
+Downloads start at once, the picture loads after

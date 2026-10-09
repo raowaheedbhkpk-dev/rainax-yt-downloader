@@ -77,7 +77,6 @@ object SocialExtractor {
         return PreviewState(
             title = m.title,
             subtitle = listOfNotNull(m.uploader?.takeIf { it.isNotBlank() }, duration(m.seconds)).joinToString("  •  "),
-            thumb = m.thumb?.let { InfoFetcher.loadBitmap(it) },
             quick = choices,
             all = choices,
             thumbUrl = m.thumb,

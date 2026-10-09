@@ -243,6 +243,7 @@ class MainActivity : AppCompatActivity() {
         AppUpdater.resumeInstall(this)
         Ads.resumeBanner(b.adBanner)
         Ads.onScreenResumed(this) { canShowFullScreenAd() }
+        b.root.postDelayed({ FastExtractor.warmUp() }, 3000)   // sizes show faster on the first download
     }
 
     override fun onPause() {
