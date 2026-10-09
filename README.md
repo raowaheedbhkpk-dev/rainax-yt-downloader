@@ -28,7 +28,7 @@ Every push to `main` builds the APK (**Actions > Build RAINAX APK > Artifacts**)
 Pushing a tag publishes a **GitHub Release** with the APK and its SHA-256 checksum. `whatsnew.txt` becomes the update notes shown in the app.
 
 ```
-git tag v8.9.22 && git push origin v8.9.22
+git tag v8.9.23 && git push origin v8.9.23
 ```
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.
@@ -61,4 +61,5 @@ RAINAX is released under GPL-3.0, as required by NewPipe Extractor.
 - [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor): GPL-3.0
 - [LAME](https://lame.sourceforge.io/) 3.99.5 (MP3 encoder, `app/src/main/cpp/lame`): LGPL-2.0-or-later, see `app/src/main/cpp/lame/COPYING`
 - AndroidX, Media3 (ExoPlayer) and Material Components: Apache-2.0
+- [yt-dlp-ejs](https://github.com/yt-dlp/ejs) 0.8.0 (YouTube player-code solver, `app/src/main/assets/ejs`): Unlicense; it bundles meriyah (ISC) and astring (MIT), whose licences are at the top of `lib.min.js`
 - Fonts [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) and [Figtree](https://fonts.google.com/specimen/Figtree) (`app/src/main/res/font`): SIL Open Font License 1.1

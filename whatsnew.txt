@@ -1,2 +1,2 @@
-Kids cartoons and other "made for kids" videos play and download
-If YouTube still refuses a video, the message shows its reason
+Kids cartoons ("made for kids" videos) now play and download
+YouTube stream addresses are unlocked with YouTube's own player code, like yt-dlp

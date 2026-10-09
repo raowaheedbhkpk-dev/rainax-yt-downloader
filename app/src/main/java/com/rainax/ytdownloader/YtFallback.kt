@@ -53,12 +53,14 @@ object YtFallback {
     /** Blocking. The video's info through YouTube's embedded player or TV app. Throws when none works. */
     fun info(pageUrl: String): StreamInfo {
         val id = youtubeId(pageUrl) ?: error("No video id")
-        val sts = runCatching { YoutubeJavaScriptPlayerManager.getSignatureTimestamp(id) }.getOrNull()
         val embed = runCatching { embedPage(id) }.getOrNull()
+        // YouTube's current player code: its version goes into the request, and it unlocks the addresses
+        val js = embed?.playerId?.let { pid -> runCatching { JsSolver.prepare(pid) }.getOrNull() }
+        val sts = js?.sts ?: runCatching { YoutubeJavaScriptPlayerManager.getSignatureTimestamp(id) }.getOrNull()
         var last: Exception? = null
         for (c in CLIENTS) {
             try {
-                return build(pageUrl, id, player(c, id, sts, embed))
+                return build(pageUrl, id, player(c, id, sts, embed), js?.id)
             } catch (e: Exception) {
                 android.util.Log.w("RAINAX", "${c.name} ${c.version}: ${e.message}")
                 last = e
@@ -68,7 +70,7 @@ object YtFallback {
     }
 
     /** Values from YouTube's embed page the embedded player sends (visitor id, host flags). */
-    private class Embed(val visitor: String?, val hostFlags: String?)
+    private class Embed(val visitor: String?, val hostFlags: String?, val playerId: String?)
 
     private fun embedPage(id: String): Embed {
         val con = URL("https://www.youtube.com/embed/$id?html5=1").openConnection() as HttpURLConnection
@@ -82,7 +84,8 @@ object YtFallback {
             con.disconnect()
         }
         fun find(key: String) = Regex("\"$key\"\\s*:\\s*\"([^\"]+)\"").find(html)?.groupValues?.get(1)
-        return Embed(find("VISITOR_DATA"), find("encryptedHostFlags"))
+        val playerId = Regex("/s/player/([a-zA-Z0-9_-]{6,})/").find(html)?.groupValues?.get(1)
+        return Embed(find("VISITOR_DATA"), find("encryptedHostFlags"), playerId)
     }
 
     /** One player request as [c]; returns the answer when YouTube says the video can play. */
@@ -110,24 +113,24 @@ object YtFallback {
         return res
     }
 
-    private fun build(pageUrl: String, id: String, res: JSONObject): StreamInfo {
+    private fun build(pageUrl: String, id: String, res: JSONObject, playerId: String?): StreamInfo {
         val details = res.optJSONObject("videoDetails") ?: JSONObject()
         val data = res.getJSONObject("streamingData")
+        val raw = mutableListOf<JSONObject>()
+        each(data.optJSONArray("formats")) { raw += it }
+        each(data.optJSONArray("adaptiveFormats")) { raw += it }
+        val urls = unlock(id, raw, playerId)
+        // check one address really opens (a wrong unlock gives "403 refused"): then the next way is tried
+        urls.values.firstOrNull()?.let { if (!opens(it)) throw ContentNotAvailableException("stream refused (403)") }
 
         val video = mutableListOf<VideoStream>()
         val videoOnly = mutableListOf<VideoStream>()
         val audio = mutableListOf<AudioStream>()
-        fun each(arr: JSONArray?, f: (JSONObject) -> Unit) {
-            if (arr != null) for (i in 0 until arr.length()) arr.optJSONObject(i)?.let(f)
-        }
-        val formats = mutableListOf<JSONObject>()
-        each(data.optJSONArray("formats")) { formats += it }
-        each(data.optJSONArray("adaptiveFormats")) { formats += it }
-        for (f in formats) {
+        for (f in raw) {
             runCatching {
                 if (f.optString("type").equals("FORMAT_STREAM_TYPE_OTF", true)) return@runCatching
                 val item = ItagItem.getItag(f.getInt("itag"))
-                val url = streamUrl(id, f) ?: return@runCatching
+                val url = urls[f] ?: return@runCatching
                 val mime = f.optString("mimeType")
                 item.setBitrate(f.optInt("bitrate"))
                 item.setWidth(f.optInt("width"))
@@ -188,7 +191,77 @@ object YtFallback {
         return info
     }
 
-    /** A stream's address, unlocked (signature and speed parameter) with YouTube's player code. */
+    private fun opens(url: String): Boolean = try {
+        val con = URL(url).openConnection() as HttpURLConnection
+        try {
+            con.connectTimeout = 10_000
+            con.readTimeout = 10_000
+            con.setRequestProperty("User-Agent", FastExtractor.UA)
+            con.setRequestProperty("Range", "bytes=0-0")
+            con.responseCode != 403
+        } finally {
+            con.disconnect()
+        }
+    } catch (e: Exception) {
+        true                                        // no answer (network): don't blame the address
+    }
+
+    private fun each(arr: JSONArray?, f: (JSONObject) -> Unit) {
+        if (arr != null) for (i in 0 until arr.length()) arr.optJSONObject(i)?.let(f)
+    }
+
+    /** One stream's address parts: the base address, its "n" value, and its signature (if it has one). */
+    private class Raw(val base: String, val n: String?, val s: String?, val sp: String)
+
+    private fun parts(f: JSONObject): Raw? {
+        var url = f.optString("url")
+        var s: String? = null
+        var sp = "signature"
+        if (url.isBlank()) {
+            val cipher = f.optString("signatureCipher").ifBlank { f.optString("cipher") }
+            if (cipher.isBlank()) return null
+            val p = cipher.split('&').associate {
+                it.substringBefore('=') to URLDecoder.decode(it.substringAfter('=', ""), "UTF-8")
+            }
+            url = p["url"] ?: return null
+            s = p["s"] ?: return null
+            sp = p["sp"] ?: "signature"
+        }
+        val n = Regex("[?&]n=([^&]+)").find(url)?.groupValues?.get(1)?.let { URLDecoder.decode(it, "UTF-8") }
+        return Raw(url, n, s, sp)
+    }
+
+    /**
+     * Every stream's working address. First with YouTube's own player code (the yt-dlp solver in a WebView),
+     * then, if that can't run, with the extractor's older way.
+     */
+    private fun unlock(id: String, formats: List<JSONObject>, playerId: String?): Map<JSONObject, String> {
+        val raws = formats.associateWith { parts(it) }
+        if (playerId != null) {
+            try {
+                val nList = raws.values.mapNotNull { it?.n }.toSet()
+                val sList = raws.values.mapNotNull { it?.s }.toSet()
+                val (nOut, sOut) = JsSolver.solve(playerId, nList, sList)
+                val out = HashMap<JSONObject, String>()
+                for ((f, r) in raws) {
+                    if (r == null) continue
+                    var u = r.base
+                    if (r.s != null) u += "&" + r.sp + "=" + (sOut[r.s] ?: continue)
+                    if (r.n != null) {
+                        val solved = nOut[r.n] ?: continue
+                        u = u.replace(Regex("([?&])n=[^&]+"), "$1n=" + java.net.URLEncoder.encode(solved, "UTF-8"))
+                    }
+                    out[f] = u
+                }
+                if (out.isNotEmpty()) return out
+            } catch (e: Exception) {
+                android.util.Log.w("RAINAX", "player code solver failed: ${e.message}")
+            }
+        }
+        return formats.mapNotNull { f -> runCatching { streamUrl(id, f) }.getOrNull()?.let { f to it } }.toMap()
+    }
+
+    /** A stream's address, unlocked (signature and speed parameter) with the extractor's older way. */
     private fun streamUrl(id: String, f: JSONObject): String? {
         var url = f.optString("url")
         if (url.isBlank()) {

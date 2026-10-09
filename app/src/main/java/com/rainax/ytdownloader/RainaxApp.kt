@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatDelegate
 class RainaxApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        app = this
         // more open connections kept for reuse (6 per download, plus the extractor and pictures)
         System.setProperty("http.maxConnections", "16")
         applyTheme(AppPrefs.themeMode(this))
@@ -17,6 +18,10 @@ class RainaxApp : Application() {
     }
 
     companion object {
+        /** The app (for helpers that run without a screen, e.g. the YouTube player-code solver). */
+        @Volatile var app: android.content.Context? = null
+            private set
+
         /** 0 = follow the phone, 1 = light, 2 = dark, 3 = AMOLED black (dark + pure black) */
         fun applyTheme(mode: Int) {
             AppCompatDelegate.setDefaultNightMode(
