@@ -1,2 +1,5 @@
-Kids cartoons ("made for kids" videos) now play and download
-YouTube stream addresses are unlocked with YouTube's own player code, like yt-dlp
+Kids videos: channel picture, likes and Up next videos now show
+Comments say "turned off" on videos made for kids (YouTube turns them off)
+Pause all / Resume all and big playlists are much faster
+A failed or paused save never downloads the whole file again
+Many smaller fixes for stability

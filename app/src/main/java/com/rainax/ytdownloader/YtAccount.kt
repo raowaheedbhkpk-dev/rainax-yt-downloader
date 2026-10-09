@@ -126,6 +126,7 @@ object YtAccount {
         val name = text(header.optJSONObject("accountName")) ?: return null
         val handle = text(header.optJSONObject("channelHandle"))
         val avatar = lastThumb(header.optJSONObject("accountPhoto"))
+        if (!isSignedIn(c)) return null                 // signed out while this was loading: don't bring it back
         prefs(c).edit().putString("name", name).putString("handle", handle).putString("avatar", avatar).apply()
         return Profile(name, handle, avatar)
     }

@@ -34,15 +34,19 @@ object JsSolver {
     private fun ctx(): Context = RainaxApp.app ?: error("App not ready")
 
     /** The player code's version number YouTube wants in player requests (loads the player code once). */
+    fun prepare(playerId: String): Player = prepared(playerId).let { Player(playerId, it.sts) }
+
     @Synchronized
-    fun prepare(playerId: String): Player {
-        players[playerId]?.let { return Player(playerId, it.sts) }
+    private fun prepared(playerId: String): Prepared {
+        players[playerId]?.let { return it }
         val js = get("https://www.youtube.com/s/player/$playerId/player_ias.vflset/en_US/base.js")
         val sts = Regex("(?:signatureTimestamp|sts)\\s*:\\s*([0-9]{5})").find(js)?.groupValues?.get(1)?.toIntOrNull()
         if (players.size > 3) players.clear()
-        players[playerId] = Prepared(js, false, sts)
-        return Player(playerId, sts)
+        return Prepared(js, false, sts).also { players[playerId] = it }
     }
+
+    /** One solve at a time: the second one then gets the trimmed (fast) player code from the first. */
+    private val solveLock = Any()
 
     /**
      * Blocking (not on the main thread). Solves the given challenges with player [playerId]
@@ -50,7 +54,11 @@ object JsSolver {
      */
     fun solve(playerId: String, n: Collection<String>, sig: Collection<String>): Pair<Map<String, String>, Map<String, String>> {
         if (n.isEmpty() && sig.isEmpty()) return emptyMap<String, String>() to emptyMap()
-        val p = players[playerId] ?: run { prepare(playerId); players.getValue(playerId) }
+        synchronized(solveLock) { return solveLocked(playerId, n, sig) }
+    }
+
+    private fun solveLocked(playerId: String, n: Collection<String>, sig: Collection<String>): Pair<Map<String, String>, Map<String, String>> {
+        val p = prepared(playerId)
         val requests = JSONArray()
         if (n.isNotEmpty()) requests.put(JSONObject().put("type", "n").put("challenges", JSONArray(n.toList())))
         if (sig.isNotEmpty()) requests.put(JSONObject().put("type", "sig").put("challenges", JSONArray(sig.toList())))

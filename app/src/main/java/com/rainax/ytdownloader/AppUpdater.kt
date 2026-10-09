@@ -213,7 +213,8 @@ object AppUpdater {
             existing != null -> DownloadService.send(activity, DownloadService.ACTION_RESUME, existing.id)
             else -> {
                 // older update downloads are not needed any more
-                TaskRepository.tasks.value.filter { it.format.startsWith(TASK_PREFIX) }.forEach { TaskRepository.remove(it.id) }
+                val olds = TaskRepository.tasks.value.filter { it.format.startsWith(TASK_PREFIX) }.map { it.id }
+                if (olds.isNotEmpty()) DownloadService.send(activity, DownloadService.ACTION_CANCEL_SEL, ids = olds.toTypedArray())
                 TaskRepository.addAll(listOf(
                     DownloadTask(
                         id = java.util.UUID.randomUUID().toString(),
@@ -245,7 +246,15 @@ object AppUpdater {
             required?.let { download(activity, it) }
             return
         }
-        when (verify(activity, file)) {
+        // checking the APK reads the whole file: off the main thread
+        activity.lifecycleScope.launch {
+            val check = withContext(Dispatchers.IO) { verify(activity, file) }
+            if (!activity.isFinishing && !activity.isDestroyed) afterCheck(activity, file, version, check)
+        }
+    }
+
+    private fun afterCheck(activity: AppCompatActivity, file: File, version: String, check: ApkCheck) {
+        when (check) {
             ApkCheck.OK -> { readyApk = file; install(activity, file) }
             ApkCheck.OLDER -> {
                 AppPrefs.setBadRelease(activity, version)

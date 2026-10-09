@@ -152,8 +152,11 @@ class VideoScreen(
         val id = youtubeId(page) ?: return
         dislikeJob?.cancel()
         dislikeJob = act.lifecycleScope.launch {
-            val n = withContext(Dispatchers.IO) { Dislikes.count(id) }
-            if (youtubeId(url) == id && n >= 0) {
+            val (likes, n) = withContext(Dispatchers.IO) { Dislikes.votes(id) }
+            if (youtubeId(url) != id) return@launch
+            // YouTube didn't give the likes (e.g. videos made for kids): the dislike service's count
+            if (likeCount <= 0 && likes > 0) { likeCount = likes + if (likeStatus == "LIKE") 1 else 0; showCounts() }
+            if (n >= 0) {
                 // your own dislike (made in RAINAX) is counted even before the dislike service sees it
                 dislikeCount = n + if (likeStatus == "DISLIKE" && n == 0L) 1 else 0
                 showCounts()
@@ -257,6 +260,7 @@ class VideoScreen(
         this.url = clean
         if (!keepMinimized && minimized) setMinimized(false)
         details = null
+        commentsOff = false
         onChanged()
 
         header.vTitle.text = title.orEmpty()
@@ -401,8 +405,19 @@ class VideoScreen(
 
     // ---------- playback ----------
 
+    /** A video waiting for the player to connect (opened right at app start). */
+    private var pendingPlay: Pair<VideoDetails, Long>? = null
+
+    /** The player is connected now: start the video that was waiting for it. */
+    fun onPlayerReady() {
+        val (d, start) = pendingPlay ?: return
+        pendingPlay = null
+        if (url == d.url) play(d, start)
+    }
+
     private fun play(d: VideoDetails, startMs: Long) {
-        val p = player() ?: run { showError("The player is starting. Tap the video again in a moment."); return }
+        val p = player() ?: run { pendingPlay = d to startMs; return }      // starts as soon as it connects
+        pendingPlay = null
         val src = d.play
         // Auto: one manifest with every quality, the player picks and changes it with the network speed
         val adaptive = AppPrefs.playerQuality(act) <= 0 && src.dash != null
@@ -520,11 +535,22 @@ class VideoScreen(
     private fun loadComments(clean: String) {
         commentsJob?.cancel()
         commentsJob = act.lifecycleScope.launch {
-            val fetched = withContext(Dispatchers.IO) { YtCatalog.comments(clean) }
+            val page = withContext(Dispatchers.IO) { runCatching { YtCatalog.comments(clean, null) }.getOrNull() }
             // your own comment first (YouTube shows it on top to you)
-            val list = videoId(clean)?.let { MyComments.forVideo(act, it) }.orEmpty() + fetched
-            if (url != clean || list.isEmpty()) return@launch
+            val list = videoId(clean)?.let { MyComments.forVideo(act, it) }.orEmpty() + page?.items.orEmpty().take(20)
+            if (url != clean) return@launch
+            // turned off by YouTube (always for videos made for kids): say so instead of showing nothing
+            commentsOff = list.isEmpty() && (page?.disabled == true || YtFallback.served(videoId(clean)))
+            if (commentsOff) {
+                Img.load(header.vCommentAvatar, null)
+                header.vCommentAvatar.isVisible = false
+                header.vCommentText.text = "Comments are turned off for this video"
+                header.vComments.isVisible = true
+                return@launch
+            }
+            if (list.isEmpty()) return@launch
             val first = list.first()
+            header.vCommentAvatar.isVisible = true
             Img.load(header.vCommentAvatar, first.avatar, circle = true, widthPx = 80)
             header.vCommentText.text = plain(first)
             header.vComments.isVisible = true
@@ -536,8 +562,11 @@ class VideoScreen(
 
     private var commentsSheet: CommentsSheet? = null
 
+    private var commentsOff = false
+
     private fun showComments() {
         val u = url ?: return
+        if (commentsOff) { act.toast("Comments are turned off for this video"); return }
         if (commentsSheet?.isShowing == true) return          // a quick double tap opens it once
         commentsSheet = CommentsSheet(act, u, signIn).also { it.show() }
     }

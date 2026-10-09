@@ -156,13 +156,17 @@ class DownloadService : Service() {
         // Network came back (or Wi-Fi-only was switched off): waiting tasks rejoin the queue
         if (canDownload()) {
             val now = System.currentTimeMillis()
-            TaskRepository.tasks.value.filter { it.status == Status.WAITING && (retryAt[it.id] ?: 0L) <= now }.forEach { t ->
-                TaskRepository.update(t.id, true) { it.copy(status = Status.QUEUED, message = "Queued") }
+            TaskRepository.updateWhere({ it.status == Status.WAITING && (retryAt[it.id] ?: 0L) <= now }) {
+                it.copy(status = Status.QUEUED, message = "Queued")
             }
+        } else {
+            // no network (or Wi-Fi only on mobile data): the whole queue waits, with one save
+            val msg = if (!isOnline()) "Waiting for network…" else "Waiting for Wi-Fi…"
+            TaskRepository.updateWhere({ it.status == Status.QUEUED }) { it.copy(status = Status.WAITING, message = msg) }
         }
         // "running" with no job behind it (the service was stopped and started again): queue it again
-        TaskRepository.tasks.value.filter { it.status == Status.RUNNING && !running.containsKey(it.id) }.forEach { t ->
-            TaskRepository.update(t.id, true) { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED, message = "Queued") else it }
+        TaskRepository.updateWhere({ it.status == Status.RUNNING && !running.containsKey(it.id) }) {
+            it.copy(status = Status.QUEUED, message = "Queued")
         }
         var slots = AppPrefs.maxParallel(this) - running.size
         for (t in TaskRepository.tasks.value.asReversed()) { // oldest first
@@ -214,6 +218,9 @@ class DownloadService : Service() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // the service is closing (or a pause): not a network problem, keep the retry budget
+                if (e is NativeDownloader.Stopped) return
+                if (e is Downgrade) continue                         // 2K/4K -> 1080p: try again at once
                 val cur = TaskRepository.get(id) ?: return          // cancelled
                 if (cur.status != Status.RUNNING) return            // paused
                 val msg = e.readable()
@@ -244,7 +251,8 @@ class DownloadService : Service() {
                     return
                 }
                 attempt++
-                set { it.copy(retries = attempt, message = "Connection problem. Retrying $attempt/$MAX_RETRIES…") }
+                val why = if (isNetworkError(msg) || msg == NO_INTERNET) "Connection problem" else "Trying again"
+                set { it.copy(retries = attempt, message = "$why. Retrying $attempt/$MAX_RETRIES…") }
                 delay(3_000L * attempt)
                 if (TaskRepository.get(id)?.status != Status.RUNNING) return
             }
@@ -458,7 +466,7 @@ class DownloadService : Service() {
                     dir.listFiles()?.forEach { it.delete() }
                     val want = task.format.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: 1080
                     TaskRepository.update(id, true) { t -> t.copy(format = "video:${minOf(want, 1080)}:mp4") }
-                    throw java.io.IOException("Trying 1080p instead of 2K/4K on this phone")
+                    throw Downgrade()
                 }
                 output = joined
             }
@@ -493,17 +501,21 @@ class DownloadService : Service() {
         if (saved == null) {
             val out = output ?: error("Nothing was downloaded")
             val ext = out.extension.lowercase()
-            val named = File(dir, NativeDownloader.safeName(title, ext))
-            if (named.path != out.path) {
-                named.delete()
-                // being watched: copy, so the player keeps reading the same file
-                val watched = PartialFiles.isWatched(id)
-                if (!watched) PartialFiles.forget(id)
-                if (watched || !out.renameTo(named)) out.copyTo(named, overwrite = true)
-            }
             val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
                 ?: if (task.format.startsWith("audio")) "audio/mp4" else "video/mp4"
-            saved = FileStore.save(this, named, mime)
+            // copied straight into the saved file (the downloaded part stays until the end, so a failed or
+            // paused save never means downloading it all again); pause and cancel stop it at once
+            saved = FileStore.saveWith(this, NativeDownloader.safeName(title, ext), mime) { o ->
+                out.inputStream().use { input ->
+                    val buf = ByteArray(1 shl 20)
+                    while (true) {
+                        if (TaskRepository.get(id)?.status != Status.RUNNING) throw NativeDownloader.Stopped()
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        o.write(buf, 0, n)
+                    }
+                }
+            }
         }
         val result = saved ?: return
         // cancelled while saving: don't leave a file the app no longer knows about
@@ -588,6 +600,9 @@ class DownloadService : Service() {
         }
         return FileStore.saveWith(this, name, "audio/mp4") { out -> job.write(out, stopped) { } }
     }
+
+    /** 2K/4K couldn't be joined on this phone: the task was switched to 1080p and starts again at once. */
+    private class Downgrade : java.io.IOException("Trying 1080p instead of 2K/4K on this phone")
 
     /** Loads missing thumbnails (playlist items, shared links) one by one in the background. */
     @Synchronized
@@ -675,11 +690,16 @@ class DownloadService : Service() {
     }
 
     private fun pauseAll() {
-        TaskRepository.tasks.value.forEach { pause(it.id) }
+        val active = setOf(Status.RUNNING, Status.QUEUED, Status.WAITING)
+        val ids = TaskRepository.tasks.value.filter { it.status in active }.map { it.id }
+        TaskRepository.updateWhere({ it.status in active }) { it.copy(status = Status.PAUSED, message = "Paused") }
+        ids.forEach { NativeDownloader.stop(it); running[it]?.cancel() }
     }
 
     private fun resumeAll() {
-        TaskRepository.tasks.value.forEach { resume(it.id) }
+        val again = setOf(Status.PAUSED, Status.FAILED, Status.WAITING)
+        TaskRepository.tasks.value.filter { it.status in again }.forEach { retryAt.remove(it.id); autoTries.remove(it.id) }
+        TaskRepository.updateWhere({ it.status in again }) { it.copy(status = Status.QUEUED, message = "Queued", retries = 0) }
     }
 
     // ---------- storage ----------

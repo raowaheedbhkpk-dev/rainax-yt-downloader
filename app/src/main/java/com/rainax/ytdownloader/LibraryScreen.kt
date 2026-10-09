@@ -181,8 +181,14 @@ class LibraryScreen(
     /** New list of downloads from the download manager. */
     fun onTasks(all: List<DownloadTask>) {
         tasks = all
+        // only finished files matter here: skip the many progress updates of running downloads
+        val key = all.filter { it.status == Status.DONE }.joinToString { it.id + it.title + it.thumbPath }.hashCode()
+        if (key == shownKey) return
+        shownKey = key
         if (mode != 0) render()
     }
+
+    private var shownKey = 0
 
     private fun playable(t: DownloadTask): Boolean {
         if (t.status != Status.DONE || t.fileUri == null) return false

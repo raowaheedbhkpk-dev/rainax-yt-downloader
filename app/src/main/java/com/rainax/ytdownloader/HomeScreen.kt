@@ -189,6 +189,7 @@ class HomeScreen(
             hm.titleBar.isVisible = false
             hm.chipsScroll.isVisible = true
             if (query != null) hm.searchBar.isVisible = true else hm.brandBar.isVisible = true
+            if (query == null) buildTabs()
             applyListAdapter()
             load(reset = true)                     // the list before is still saved: shows at once
             return true
@@ -585,8 +586,8 @@ class HomeScreen(
         tabIndex = 0
         vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
         updateAccountIcon()
+        if (query == null) buildTabs()            // new chips now, even if a channel is open (Back shows them)
         if (query == null && playlistUrl == null && channelUrl == null) {
-            buildTabs()
             applyListAdapter()
             load(reset = true)
         }

@@ -25,6 +25,11 @@ import java.net.URLDecoder
  */
 object YtFallback {
 
+    private val served = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** True when video [id] was opened this second way (its page needs the extra details looked up). */
+    fun served(id: String?) = id != null && id in served
+
     /** Start of the message shown when no way could play the video. */
     const val REFUSED_TEXT = "YouTube refused this video:"
 
@@ -60,7 +65,7 @@ object YtFallback {
         var last: Exception? = null
         for (c in CLIENTS) {
             try {
-                return build(pageUrl, id, player(c, id, sts, embed), js?.id)
+                return build(pageUrl, id, player(c, id, sts, embed), js?.id).also { served += id }
             } catch (e: Exception) {
                 android.util.Log.w("RAINAX", "${c.name} ${c.version}: ${e.message}")
                 last = e

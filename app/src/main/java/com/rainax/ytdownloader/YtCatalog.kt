@@ -306,15 +306,47 @@ object YtCatalog {
     fun video(url: String): VideoDetails = guard {
         FastExtractor.init()
         val info = FastExtractor.streamInfo(url)
-        val related = info.relatedItems.orEmpty().mapNotNull { item(it) }.filter { !it.isPlaylist }
+        var related = info.relatedItems.orEmpty().mapNotNull { item(it) }.filter { !it.isPlaylist }
+        var avatar = best(info.uploaderAvatars, 88)
+        var subscribers = info.uploaderSubscriberCount
+        var likes = info.likeCount
+        // opened the second way (videos made for kids): that answer has no channel picture, "up next" or likes,
+        // so look them up separately (at the same time)
+        if (YtFallback.served(info.id)) {
+            val pool = java.util.concurrent.Executors.newFixedThreadPool(3)
+            try {
+                val ch = info.uploaderUrl?.takeIf { it.isNotBlank() }?.let { u ->
+                    pool.submit<org.schabi.newpipe.extractor.channel.ChannelInfo?> {
+                        runCatching { org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(yt, u) }.getOrNull()
+                    }
+                }
+                val more = pool.submit<List<VideoItem>> {
+                    val words = info.name.orEmpty().split('|', '-', '#').firstOrNull().orEmpty().trim().take(60)
+                    runCatching { videoSearch("$words ${info.uploaderName.orEmpty()}".trim(), null).items }.getOrDefault(emptyList())
+                }
+                val votes = pool.submit<Pair<Long, Long>> { Dislikes.votes(info.id) }
+                ch?.get(20, java.util.concurrent.TimeUnit.SECONDS)?.let { c ->
+                    avatar = best(c.avatars, 88)
+                    subscribers = c.subscriberCount
+                }
+                related = runCatching { more.get(20, java.util.concurrent.TimeUnit.SECONDS) }.getOrDefault(emptyList())
+                    .filter { !it.isPlaylist && !it.isChannel && youtubeId(it.url) != info.id }.take(25)
+                val v = runCatching { votes.get(10, java.util.concurrent.TimeUnit.SECONDS) }.getOrNull()
+                if (likes <= 0 && v != null && v.first > 0) likes = v.first
+            } catch (e: Exception) {
+                android.util.Log.w("RAINAX", "extra details failed: ${e.message}")
+            } finally {
+                pool.shutdownNow()
+            }
+        }
         VideoDetails(
             url = FastExtractor.videoUrl(url),
             title = info.name.orEmpty(),
             uploader = info.uploaderName.orEmpty(),
-            avatar = best(info.uploaderAvatars, 88),
-            subscribers = info.uploaderSubscriberCount,
+            avatar = avatar,
+            subscribers = subscribers,
             views = info.viewCount,
-            likes = info.likeCount,
+            likes = likes,
             uploaded = niceDate(info.textualUploadDate),
             date = fullDate(info.textualUploadDate),
             description = runCatching { info.description?.content() }.getOrNull().orEmpty(),

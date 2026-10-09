@@ -67,7 +67,11 @@ class YtChunkDataSource : BaseDataSource(true) {
         while (true) {
             if (end in 0..pos) return C.RESULT_END_OF_INPUT
             if (chunkLeft <= 0L || input == null) {
-                if (reopened) return C.RESULT_END_OF_INPUT      // server had nothing more
+                if (reopened) {
+                    // the server stopped before the known end: an error (the player retries), not "finished"
+                    if (end >= 0 && pos < end) throw java.io.IOException("Stream ended early")
+                    return C.RESULT_END_OF_INPUT                 // server had nothing more
+                }
                 closeConnection()
                 openChunkWithRefresh()
                 reopened = true

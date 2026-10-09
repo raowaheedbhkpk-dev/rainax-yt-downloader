@@ -63,6 +63,13 @@ class CommentsSheet(
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = true
         dialog.setOnDismissListener { scope.coroutineContext[Job]?.cancel() }
+        // the screen closes or is rebuilt (theme change): close the sheet and stop its loading too
+        act.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                scope.coroutineContext[Job]?.cancel()
+                runCatching { dialog.dismiss() }
+            }
+        })
         // typing: the window shrinks above the keyboard and the sheet shrinks with it,
         // so the text box always sits right on top of the keyboard and you see what you type
         @Suppress("DEPRECATION")

@@ -85,19 +85,23 @@ object SponsorBlock {
 
 /** Return YouTube Dislike (returnyoutubedislikeapi.com): estimated dislike count of a video. */
 object Dislikes {
-    private val cache = ConcurrentHashMap<String, Long>()
+    private val cache = ConcurrentHashMap<String, Pair<Long, Long>>()      // id -> likes, dislikes
+
+    /** Blocking. Likes and dislikes (-1 when unknown). */
+    fun votes(id: String): Pair<Long, Long> {
+        cache[id]?.let { return it }
+        val text = getText("https://returnyoutubedislikeapi.com/votes?videoId=$id") ?: return -1L to -1L
+        val v = runCatching { JSONObject(text).let { it.optLong("likes", -1) to it.optLong("dislikes", -1) } }
+            .getOrDefault(-1L to -1L)
+        if (v.second >= 0) {
+            if (cache.size > 200) cache.clear()
+            cache[id] = v
+        }
+        return v
+    }
 
     /** Blocking. -1 when unknown. */
-    fun count(id: String): Long {
-        cache[id]?.let { return it }
-        val text = getText("https://returnyoutubedislikeapi.com/votes?videoId=$id") ?: return -1
-        val n = runCatching { JSONObject(text).optLong("dislikes", -1) }.getOrDefault(-1)
-        if (n >= 0) {
-            if (cache.size > 200) cache.clear()
-            cache[id] = n
-        }
-        return n
-    }
+    fun count(id: String): Long = votes(id).second
 }
 
 /**

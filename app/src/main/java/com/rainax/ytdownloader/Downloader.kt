@@ -1,10 +1,20 @@
 package com.rainax.ytdownloader
 
 import android.content.Context
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 /** Turns links into queued tasks and wakes the download service. */
 object Downloader {
+
+    /** Lives as long as the app: a download added just before a screen closes is never lost. */
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** Adds the downloads in the background (safe to call from a screen that is closing). */
+    fun enqueueAsync(context: Context, items: List<EnqueueItem>, spec: String, subLang: String?, info: PreviewState?) {
+        val app = context.applicationContext
+        scope.launch { enqueue(app, items, spec, subLang, info) }
+    }
 
     fun enqueue(context: Context, items: List<EnqueueItem>, spec: String, subLang: String?, info: PreviewState?) {
         TaskRepository.init(context)

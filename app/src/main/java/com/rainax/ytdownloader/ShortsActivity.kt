@@ -321,9 +321,7 @@ class ShortsActivity : AppCompatActivity() {
             .setItems(specs.map { it.second }.toTypedArray()) { _, which ->
                 val title = details[item.url]?.title ?: item.title
                 val app = applicationContext
-                lifecycleScope.launch(Dispatchers.IO) {
-                    Downloader.enqueue(app, listOf(EnqueueItem(item.url, title, null, item.thumb)), specs[which].first, null, null)
-                }
+                Downloader.enqueueAsync(app, listOf(EnqueueItem(item.url, title, null, item.thumb)), specs[which].first, null, null)
                 Toast.makeText(this, "Added to downloads", Toast.LENGTH_SHORT).show()
             }
             .show()
@@ -414,7 +412,8 @@ class ShortsActivity : AppCompatActivity() {
             showRating()
             if (dislikeCounts.containsKey(id)) return
             lifecycleScope.launch {
-                val n = withContext(Dispatchers.IO) { Dislikes.count(id) }
+                val (likes, n) = withContext(Dispatchers.IO) { Dislikes.votes(id) }
+                if (likes > 0 && (likeCounts[id] ?: 0L) <= 0L) likeCounts[id] = likes
                 if (n >= 0 && !dislikeCounts.containsKey(id)) {
                     dislikeCounts[id] = n + if (rating[id] == "DISLIKE" && n == 0L) 1 else 0
                     if (youtubeId(url) == id) showRating()

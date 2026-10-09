@@ -48,6 +48,14 @@ object TaskRepository {
         if (persist) persist()
     }
 
+    /** Changes every task matching [where] with one save (big playlists stay fast). */
+    @Synchronized
+    fun updateWhere(where: (DownloadTask) -> Boolean, block: (DownloadTask) -> DownloadTask) {
+        var changed = false
+        _tasks.value = _tasks.value.map { if (where(it)) { changed = true; block(it) } else it }
+        if (changed) persist()
+    }
+
     @Synchronized
     fun remove(id: String) {
         get(id)?.let { cleanup(it) }
@@ -101,7 +109,8 @@ object TaskRepository {
             if (it.status == Status.DONE) { doneCount++; doneCount <= MAX_DONE } else true
         }
         if (kept.size != _tasks.value.size) {
-            _tasks.value.filter { it !in kept }.forEach { t -> t.thumbPath?.let { File(it).delete() } }
+            val keptIds = kept.mapTo(HashSet()) { it.id }
+            _tasks.value.filter { it.id !in keptIds }.forEach { t -> t.thumbPath?.let { File(it).delete() } }
         }
         _tasks.value = kept
         val arr = JSONArray()

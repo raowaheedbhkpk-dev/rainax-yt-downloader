@@ -176,10 +176,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Queues the links; the foreground service does the actual downloading. */
     fun enqueue(items: List<EnqueueItem>, spec: String, subLang: String?) {
         val info = _preview.value?.takeIf { items.size == 1 && !it.loading && it.error == null }
-        viewModelScope.launch(Dispatchers.IO) {
-            Downloader.enqueue(app, items, spec, subLang, info)
-            // (the download sheet shows its own "Added to downloads  View" message)
-        }
+        Downloader.enqueueAsync(app, items, spec, subLang, info)   // (the sheet shows its own "Added" message)
     }
 
     companion object {

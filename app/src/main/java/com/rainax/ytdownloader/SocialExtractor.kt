@@ -98,7 +98,10 @@ object SocialExtractor {
         } else {
             val video = m.variants.filter { !it.audioOnly }.sortedByDescending { it.height }
             val index = spec.split(':').getOrNull(2)?.toIntOrNull() ?: 0
-            video.getOrNull(index) ?: video.firstOrNull() ?: error("No video found on this page")
+            val h = spec.split(':').getOrNull(1)?.toIntOrNull()
+            // the quality you picked (by its height; the list may be ordered differently on this new read)
+            video.firstOrNull { h != null && h > 0 && it.height == h }
+                ?: video.getOrNull(index) ?: video.firstOrNull() ?: error("No video found on this page")
         }
         return FastExtractor.Plan(
             m.title, m.thumb, null, null, FastExtractor.Part(pick.url, pick.size, pick.ext), false, null

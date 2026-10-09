@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) refreshAccount()
 
         // New RAINAX version? (quiet check, a few seconds after start)
-        if (savedInstanceState == null) b.root.postDelayed({ if (!isFinishing) AppUpdater.checkOnStart(this) }, 4000)
+        if (savedInstanceState == null) b.root.postDelayed({ if (!isFinishing && !isDestroyed) AppUpdater.checkOnStart(this) }, 4000)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -251,6 +251,7 @@ class MainActivity : AppCompatActivity() {
         if (!blocked) {
             disconnectPlayer()            // the player service keeps playing on its own
             sheet?.dismiss()
+            clipDialog?.dismiss()
             AppUpdater.onQueued = null
         }
         super.onDestroy()
@@ -346,6 +347,7 @@ class MainActivity : AppCompatActivity() {
             if (controllerFuture !== future) { c.release(); return@addListener }
             controller = c
             video.attach(c)
+            video.onPlayerReady()
             syncVideoSurface()
             c.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
@@ -376,6 +378,7 @@ class MainActivity : AppCompatActivity() {
             })
             val reopen = pendingVideo
             pendingVideo = null
+            enableVideo(c)                               // (the screen was rebuilt while away: picture back too)
             if (reopen != null) video.open(reopen, resume = true)
             else if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) backInApp()
         }, ContextCompat.getMainExecutor(this))
@@ -403,12 +406,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Back in the app: picture on again, and the page shows what is playing (maybe a later track). */
-    private fun backInApp() {
-        val c = controller ?: return
+    /** Picture on again (it was turned off to save battery while the app was away). */
+    private fun enableVideo(c: androidx.media3.session.MediaController) {
         if (c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)) {
             c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false).build()
         }
+    }
+
+    private fun backInApp() {
+        val c = controller ?: return
+        enableVideo(c)
         val id = c.currentMediaItem?.mediaId
         // the open video is playing as sound only (its addresses were renewed in the background): picture back
         if (video.isOpen && id == video.url &&
@@ -657,7 +665,7 @@ class MainActivity : AppCompatActivity() {
 
     /** A video link was copied in another app: offer to download it (once per link). */
     private fun checkClipboard() {
-        if (isFinishing || !AppPrefs.clipDetect(this) || clipDialog?.isShowing == true ||
+        if (isFinishing || isDestroyed || !AppPrefs.clipDetect(this) || clipDialog?.isShowing == true ||
             sheet?.isShowing == true || video.fullscreen
         ) return
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -1113,16 +1121,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Deletes the files (off the main thread); only rows whose file is really gone leave the list. */
     private fun deleteFilesOf(tasks: List<DownloadTask>) {
-        var deleted = 0
-        for (t in tasks) {
-            val uri = t.fileUri ?: continue
-            // the app's update is a file in the app's own folder, not in Downloads
-            val ok = if (t.format.startsWith(AppUpdater.TASK_PREFIX)) java.io.File(uri).delete() else FileStore.delete(this, uri)
-            if (ok) deleted++
+        val app = applicationContext
+        lifecycleScope.launch {
+            val gone = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                tasks.filter { t ->
+                    val uri = t.fileUri ?: return@filter true
+                    // the app's update is a file in the app's own folder, not in Downloads
+                    if (t.format.startsWith(AppUpdater.TASK_PREFIX)) java.io.File(uri).let { !it.exists() || it.delete() }
+                    else FileStore.delete(app, uri)
+                }.map { it.id }
+            }
+            TaskRepository.removeMany(gone)
+            val failed = tasks.size - gone.size
+            message(
+                if (failed == 0) (if (gone.size == 1) "File deleted" else "Deleted ${gone.size} files")
+                else "$failed file(s) couldn't be deleted. Use \"Remove from list\", or delete them in your Downloads folder"
+            )
         }
-        TaskRepository.removeMany(tasks.map { it.id })
-        message("Deleted $deleted of ${tasks.size} files")
     }
 
     /** Selects every unfinished (done = false) or finished (done = true) item. */
@@ -1215,11 +1232,7 @@ class MainActivity : AppCompatActivity() {
                     message("Link copied")
                 }
                 4 -> TaskRepository.remove(t.id)
-                5 -> confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") {
-                    t.fileUri?.let { FileStore.delete(this, it) }
-                    TaskRepository.remove(t.id)
-                    message("File deleted")
-                }
+                5 -> confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") { deleteFilesOf(listOf(t)) }
             }
             true
         }

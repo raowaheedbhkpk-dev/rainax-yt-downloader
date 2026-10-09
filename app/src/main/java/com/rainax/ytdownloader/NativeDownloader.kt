@@ -53,6 +53,12 @@ object NativeDownloader {
 
     private fun track(id: String, con: HttpURLConnection) {
         conns.getOrPut(id) { ConcurrentHashMap.newKeySet() }.add(con)
+        // paused between the check and opening this connection: cut it now (stop() didn't see it)
+        if (stopped(id)) {
+            conns[id]?.remove(con)
+            runCatching { con.disconnect() }
+            throw Stopped()
+        }
     }
 
     private fun untrack(id: String, con: HttpURLConnection) {
@@ -74,7 +80,10 @@ object NativeDownloader {
         con.setRequestProperty("User-Agent", ua)
         con.setRequestProperty("Accept", "*/*")
         con.setRequestProperty("Accept-Encoding", "identity")
-        SocialExtractor.headersFor(url).forEach { (k, v) -> con.setRequestProperty(k, v) }   // TikTok cookies, Referer...
+        // TikTok cookies, Referer...: cookies only to TikTok's own servers
+        val host = con.url.host.lowercase()
+        val tiktok = host.endsWith("tiktok.com") || host.endsWith("tiktokcdn.com") || host.endsWith("tiktokcdn-us.com")
+        SocialExtractor.headersFor(url).forEach { (k, v) -> if (k != "Cookie" || tiktok) con.setRequestProperty(k, v) }
         if (to != null) con.setRequestProperty("Range", "bytes=$from-$to")
         return con
     }
