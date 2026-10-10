@@ -89,7 +89,30 @@ class VideoScreen(
         header.vChapters.setOnClickListener { showChapters() }
         header.vSave.setOnClickListener { saveWatchLater() }
         vb.vNextBar.setOnClickListener { showUpNext() }
+        // + on Up next videos: pick several and download them together (the same picks as on Home)
+        related.onPick = { Picks.toggle(it) }
+        related.isPicked = { Picks.has(it) }
+        Picks.listen { showPicks() }
+        vb.vPickClear.setOnClickListener { Picks.clear() }
+        vb.vPickDownload.setOnClickListener {
+            val list = Picks.all()
+            if (list.isEmpty()) return@setOnClickListener
+            Picks.clear()
+            downloadMany(list)
+        }
         vb.playerUnlock.setOnClickListener { setLocked(false) }
+    }
+
+    /** Download for the videos picked with + (set by the main screen). */
+    var downloadMany: (List<VideoItem>) -> Unit = {}
+
+    private fun showPicks() {
+        val n = Picks.size
+        vb.vPickBar.isVisible = n > 0 && !fullscreen
+        vb.vPickCount.text = if (n == 1) "1 video selected" else "$n videos selected"
+        vb.vPickDownload.text = if (n > 1) "Download $n" else "Download"
+        if (n > 0) vb.vNextBar.isVisible = false else showNextBar(details)
+        related.notifyDataSetChanged()
     }
 
     // ---------- Next / Mix bar and the Up next list ----------
@@ -97,7 +120,7 @@ class VideoScreen(
     /** Bottom bar: "Next: <video>" and "Mix - <this video>" (tap for the whole list). */
     private fun showNextBar(d: VideoDetails?) {
         val next = d?.related?.firstOrNull { it.seconds > 0 }
-        vb.vNextBar.isVisible = next != null && !fullscreen
+        vb.vNextBar.isVisible = next != null && !fullscreen && Picks.size == 0
         if (next == null || d == null) return
         vb.vNextTitle.text = "Next: " + next.title
         vb.vNextFrom.text = "Mix - " + d.title
@@ -130,6 +153,8 @@ class VideoScreen(
             dialog.dismiss()
             open(it.url, it.title, it.uploader, thumb = it.thumb)
         }, { download(it.url, it.title, false) })
+        rows.onPick = { Picks.toggle(it); rows.notifyDataSetChanged() }
+        rows.isPicked = { Picks.has(it) }
         list.adapter = rows
         rows.submit(d.related.filter { !it.isPlaylist && !it.isChannel })
         box.addView(head)
@@ -990,7 +1015,7 @@ class VideoScreen(
         vb.videoClose.isVisible = !on
         vb.playerTitle.visibility = if (on) View.VISIBLE else View.INVISIBLE
         vb.playerTitle.text = currentTitle().orEmpty()
-        if (on) vb.vNextBar.isVisible = false else showNextBar(details)
+        if (on) { vb.vNextBar.isVisible = false; vb.vPickBar.isVisible = false } else showPicks()
         act.requestedOrientation =
             if (on) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         val ctl = WindowCompat.getInsetsController(act.window, act.window.decorView)

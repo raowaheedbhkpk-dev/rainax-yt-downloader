@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Continue watching card: picture with the watched bar, title, channel -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="220dp"
+    android:layout_width="232dp"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="4dp"
-    android:background="@drawable/bg_glass_card"
-    android:orientation="vertical"
-    android:padding="6dp">
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical">
 
     <FrameLayout
         android:id="@+id/cwThumbBox"
         android:layout_width="match_parent"
-        android:layout_height="117dp"
+        android:layout_height="130dp"
         android:background="@drawable/bg_thumb">
 
         <ImageView

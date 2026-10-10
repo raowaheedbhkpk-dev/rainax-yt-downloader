@@ -145,6 +145,7 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, backCallback)
 
         TaskRepository.init(applicationContext)
+        Picks.clearListeners()                      // (screens below register again)
         if (AppPrefs.autoClear(this)) {
             TaskRepository.removeDoneOlderThan(System.currentTimeMillis() - 7L * 24 * 3600 * 1000)
         }
@@ -166,6 +167,7 @@ class MainActivity : AppCompatActivity() {
             signIn = { onAccountClick() }
         ) { updateChrome() }
         video.setup()
+        video.downloadMany = { list -> showDownloadSheet(list.map { it.url }) }
         // Music tab player (YouTube Music style): songs play in the same background player as videos
         music = MusicPlayer(
             this, b.musicPage, b.musicMini, { controller },

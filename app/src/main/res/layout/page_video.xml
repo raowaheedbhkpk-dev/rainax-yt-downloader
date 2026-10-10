@@ -135,6 +135,49 @@
         android:clipToPadding="false"
         android:paddingBottom="16dp" />
 
+    <!-- Videos picked with + : how many, Clear, Download all (same picks as on Home) -->
+    <LinearLayout
+        android:id="@+id/vPickBar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_glass_nav"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/vPickCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/rx_text"
+            android:textSize="16sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/vPickClear"
+            style="@style/Widget.Rainax.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/vPickDownload"
+            style="@style/Widget.Rainax.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Download"
+            app:cornerRadius="22dp"
+            app:icon="@drawable/ic_download"
+            app:iconTint="@color/rx_on_primary" />
+    </LinearLayout>
+
     <!-- Next video / Mix bar at the bottom (tap: the Up next list), like YouTube -->
     <LinearLayout
         android:id="@+id/vNextBar"

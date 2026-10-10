@@ -127,10 +127,11 @@
         <item name="textAllCaps">false</item>
     </style>
 
+    <!-- chips: medium weight, like YouTube's (not bold) -->
     <style name="TextAppearance.Rainax.Chip" parent="TextAppearance.Material3.LabelLarge">
-        <item name="fontFamily">sans-serif</item>
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:textStyle">bold</item>
+        <item name="fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">normal</item>
     </style>
 
     <!-- bottom bar labels: small, like YouTube -->

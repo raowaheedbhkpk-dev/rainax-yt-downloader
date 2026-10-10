@@ -43,6 +43,13 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
         b.continueList.adapter = continueAdapter
         b.shortsList.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
         b.shortsList.adapter = shortsAdapter
+        // swipe to the end of the Shorts strip: more Shorts load by themselves
+        b.shortsList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                val lm = rv.layoutManager as LinearLayoutManager
+                if (dx > 0 && lm.findLastVisibleItemPosition() >= shortsAdapter.itemCount - 4) loadMoreShorts(force = true)
+            }
+        })
     }
 
     /** Called when Home shows: newest Continue watching list, and the Shorts strip (loaded once). */
@@ -56,16 +63,22 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
         }
         if (ShortsFeed.items.isNotEmpty()) showShorts()
         // only a few Shorts so far: get more (the strip should always have plenty to swipe)
-        if (ShortsFeed.items.size < 8 && !shortsLoading && System.currentTimeMillis() - shortsTriedAt > 30_000) {
-            shortsLoading = true
-            shortsTriedAt = System.currentTimeMillis()
-            act.lifecycleScope.launch {
-                val fresh = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
-                val known = ShortsFeed.items.mapTo(HashSet()) { youtubeId(it.url) ?: it.url }
-                ShortsFeed.items.addAll(fresh.filter { known.add(youtubeId(it.url) ?: it.url) })
-                shortsLoading = false
-                showShorts()
-            }
+        if (ShortsFeed.items.size < 12) loadMoreShorts(force = false)
+    }
+
+    /** More Shorts at the end of the strip ([force]: the strip was swiped to its end, no 30 s wait). */
+    private fun loadMoreShorts(force: Boolean) {
+        if (shortsLoading) return
+        val since = System.currentTimeMillis() - shortsTriedAt
+        if (since < (if (force) 3_000 else 30_000)) return
+        shortsLoading = true
+        shortsTriedAt = System.currentTimeMillis()
+        act.lifecycleScope.launch {
+            val fresh = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
+            val known = ShortsFeed.items.mapTo(HashSet()) { youtubeId(it.url) ?: it.url }
+            ShortsFeed.items.addAll(fresh.filter { known.add(youtubeId(it.url) ?: it.url) })
+            shortsLoading = false
+            showShorts()
         }
     }
 
@@ -91,7 +104,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     }
 
     private fun showShorts() {
-        val list = ShortsFeed.items.take(15)
+        val list = ShortsFeed.items.toList()
         shortsAdapter.submit(list)
         b.shortsBox.isVisible = list.isNotEmpty()
     }
@@ -148,8 +161,18 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
 
         override fun getItemCount() = items.size
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_short_card, parent, false))
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_short_card, parent, false)
+            // about two and a bit Shorts across the screen, tall 9:16 like YouTube's
+            val d = parent.resources.displayMetrics
+            val full = parent.width.takeIf { it > 0 } ?: d.widthPixels
+            val w = (full / 2.25f).toInt().coerceAtMost((190 * d.density).toInt())
+            val lp = v.layoutParams
+            lp.width = w
+            lp.height = w * 16 / 9
+            v.layoutParams = lp
+            return VH(v)
+        }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = items[position]

@@ -1,8 +1,8 @@
-Shorts open at full size right away (no small picture before playing)
+New Shorts icon, bigger Shorts on Home and endless Shorts: swipe the strip and more load by themselves
++ button on Up next and Mix videos too: pick several and download them together
+Cleaner Home: more space between sections, lighter chips, new Continue watching cards
 All-new look like YouTube: clean dark (or white) theme with a red accent, full-width videos
-New bottom bar: Home, Shorts, + (download from a link), Subscriptions and You
-New Subscriptions page and your channels' pictures on Home
-New side menu (Music, Trending, Gaming, News, Sports, Movies, Podcasts, Live) and notifications bell
-Voice search, Liked videos, Watch later and History on the You page
+Bottom bar with Home, Shorts, + (download from a link), Subscriptions and You
+Side menu, notifications bell, voice search, Subscriptions page and your channels on Home
 Video page: Next / Mix bar, comments under the video with quick emoji, lock screen
 New Music tab and player like YouTube Music (Song / Video, Up next, sleep timer)

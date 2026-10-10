@@ -5,7 +5,7 @@
     android:layout_width="128dp"
     android:layout_height="228dp"
     android:layout_marginHorizontal="4dp"
-    android:background="@drawable/bg_thumb_big">
+    android:background="@drawable/bg_short_card">
 
     <ImageView
         android:id="@+id/scThumb"
@@ -26,11 +26,11 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:ellipsize="end"
-        android:maxLines="3"
-        android:padding="8dp"
+        android:maxLines="2"
+        android:padding="10dp"
         android:shadowColor="#99000000"
         android:shadowRadius="4"
         android:textColor="@color/rx_white"
-        android:textSize="12.5sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 </FrameLayout>

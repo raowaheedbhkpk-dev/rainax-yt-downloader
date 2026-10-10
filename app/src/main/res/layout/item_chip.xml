@@ -7,5 +7,5 @@
     android:checkable="true"
     android:textSize="14sp"
     app:checkedIconVisible="false"
-    app:chipMinHeight="34dp"
+    app:chipMinHeight="32dp"
     app:ensureMinTouchTargetSize="false" />

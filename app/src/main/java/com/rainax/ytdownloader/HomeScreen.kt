@@ -208,18 +208,15 @@ class HomeScreen(
 
         // + on every video: pick several, then download them together
         listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter, specialAdapter).forEach { a ->
-            a.onPick = { togglePick(it) }
-            a.isPicked = { picked.containsKey(it) }
+            a.onPick = { Picks.toggle(it) }
+            a.isPicked = { Picks.has(it) }
         }
-        hm.pickClear.setOnClickListener {
-            picked.clear()
-            refreshPicks()
-        }
+        Picks.listen { refreshPicks() }
+        hm.pickClear.setOnClickListener { Picks.clear() }
         hm.pickDownload.setOnClickListener {
-            val list = picked.values.toList()
+            val list = Picks.all()
             if (list.isEmpty()) return@setOnClickListener
-            picked.clear()
-            refreshPicks()
+            Picks.clear()
             downloadMany(list)
         }
 
@@ -264,15 +261,9 @@ class HomeScreen(
 
     /** Called with the picked videos when Download is tapped on the bar. */
     var downloadMany: (List<VideoItem>) -> Unit = {}
-    private val picked = LinkedHashMap<String, VideoItem>()
-
-    private fun togglePick(item: VideoItem) {
-        if (picked.remove(item.url) == null) picked[item.url] = item
-        refreshPicks()
-    }
 
     private fun refreshPicks() {
-        val n = picked.size
+        val n = Picks.size
         hm.pickBar.isVisible = n > 0
         hm.pickCount.text = if (n == 1) "1 video selected" else "$n videos selected"
         hm.pickDownload.text = if (n > 1) "Download $n" else "Download"
@@ -283,9 +274,8 @@ class HomeScreen(
 
     /** Back with videos picked: clear the picks first. */
     fun clearPicks(): Boolean {
-        if (picked.isEmpty()) return false
-        picked.clear()
-        refreshPicks()
+        if (Picks.size == 0) return false
+        Picks.clear()
         return true
     }
 
