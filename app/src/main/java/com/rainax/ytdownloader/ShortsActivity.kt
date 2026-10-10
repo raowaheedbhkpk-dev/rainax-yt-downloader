@@ -382,7 +382,14 @@ class ShortsActivity : AppCompatActivity() {
         fun bind(item: VideoItem, pos: Int) {
             url = item.url
             padInfo()
-            Img.load(b.spThumb, HomeShelf.shortThumb(item), widthPx = 720)
+            // tall picture, same size as the video will be (no small picture that then jumps bigger)
+            val id = youtubeId(item.url)
+            Img.loadPortrait(b.spThumb, listOfNotNull(
+                id?.let { "https://i.ytimg.com/vi/$it/oar2.jpg" },
+                id?.let { "https://i.ytimg.com/vi/$it/hq720.jpg" },
+                id?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" },
+                item.thumb
+            ))
             b.spThumb.isVisible = true
             b.spLoading.isVisible = true
             b.spError.isVisible = false

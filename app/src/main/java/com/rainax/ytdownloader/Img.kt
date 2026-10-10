@@ -102,6 +102,47 @@ object Img {
         view.setTag(R.id.img_job, job)
     }
 
+    /**
+     * A Short's picture while it loads, the same tall shape as the video (so nothing jumps when it plays):
+     * YouTube's tall Shorts picture when there is one, else the wide one cut down to the tall picture inside it.
+     */
+    fun loadPortrait(view: ImageView, urls: List<String>) {
+        (view.getTag(R.id.img_job) as? Job)?.cancel()
+        val tries = urls.filter { it.isNotBlank() }.distinct()
+        val key = tries.firstOrNull()?.let { "tall:$it" }
+        view.setTag(R.id.img_url, key)
+        if (key == null) { view.setImageDrawable(null); return }
+        cache.get(key)?.let { view.setImageBitmap(it); return }
+        view.setImageDrawable(null)
+        val job = scope.launch {
+            val tall = withContext(io) {
+                tries.firstNotNullOfOrNull { u -> fetch(u, 1080)?.takeIf { it.width > 1 && it.height > 1 && !isPlaceholder(it) } }
+                    ?.let { portrait(it) }
+            } ?: return@launch
+            cache.put(key, tall)
+            if (view.getTag(R.id.img_url) == key) view.setImageBitmap(tall)
+        }
+        view.setTag(R.id.img_job, job)
+    }
+
+    /** YouTube answers a missing picture with a tiny grey 120x90 one. */
+    private fun isPlaceholder(b: Bitmap) = b.width <= 120 && b.height <= 90
+
+    /** The tall (9:16) middle of a wide picture, without YouTube's black bars; tall pictures stay. */
+    private fun portrait(b: Bitmap): Bitmap {
+        val w = b.width
+        val h = b.height
+        if (h >= w) return b
+        var top = 0
+        var inner = h
+        if (kotlin.math.abs(h * 4 - w * 3) <= 4) {           // 4:3 with a 16:9 picture inside
+            inner = w * 9 / 16
+            top = (h - inner) / 2
+        }
+        val cw = (inner * 9 / 16).coerceIn(1, w)
+        return runCatching { Bitmap.createBitmap(b, (w - cw) / 2, top, cw, inner) }.getOrDefault(b)
+    }
+
     private fun show(view: ImageView, bmp: Bitmap, circle: Boolean) {
         if (circle) {
             view.setImageDrawable(RoundedBitmapDrawableFactory.create(view.resources, bmp).apply { isCircular = true })
