@@ -1,3 +1,5 @@
+Fixed: the downloads page no longer freezes with 1000+ downloads in the list
+Smoother app while big playlists download (saving the list runs in the background)
 Much faster: formats and sizes now show in about a second
 Download shows only the real formats of each video with their real sizes (also for several videos, playlists and Shorts)
 Sizes come faster: picked videos are looked up right away, 4 at a time

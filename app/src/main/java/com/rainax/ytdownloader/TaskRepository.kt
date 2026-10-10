@@ -19,6 +19,12 @@ object TaskRepository {
 
     private lateinit var prefs: SharedPreferences
     private lateinit var filesRoot: File
+    private lateinit var saveFile: File
+
+    /** Saving runs on its own thread, at most every [SAVE_GAP_MS], always with the newest list. */
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val saveQueued = java.util.concurrent.atomic.AtomicBoolean(false)
+    private const val SAVE_GAP_MS = 400L
     private val _tasks = MutableStateFlow<List<DownloadTask>>(emptyList())
     val tasks: StateFlow<List<DownloadTask>> = _tasks.asStateFlow()
 
@@ -27,6 +33,7 @@ object TaskRepository {
         if (::prefs.isInitialized) return
         prefs = context.applicationContext.getSharedPreferences("tasks", Context.MODE_PRIVATE)
         filesRoot = context.applicationContext.filesDir
+        saveFile = File(filesRoot, "tasks.json")
         // Anything that was mid-download when the process died goes back to the queue (auto resume)
         _tasks.value = load().map {
             if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED, message = "Queued") else it
@@ -113,24 +120,43 @@ object TaskRepository {
             _tasks.value.filter { it.id !in keptIds }.forEach { t -> t.thumbPath?.let { File(it).delete() } }
         }
         _tasks.value = kept
-        val arr = JSONArray()
-        kept.forEach { t ->
-            arr.put(
-                JSONObject()
-                    .put("id", t.id).put("url", t.url).put("title", t.title)
-                    .put("format", t.format).put("thumbPath", t.thumbPath ?: "")
-                    .put("status", t.status.name).put("progress", t.progress)
-                    .put("message", t.message).put("retries", t.retries)
-                    .put("fileUri", t.fileUri ?: "").put("mime", t.mime ?: "")
-                    .put("createdAt", t.createdAt)
-                    .put("subLang", t.subLang ?: "").put("thumbUrl", t.thumbUrl ?: "")
-            )
+        // Turning 1000+ downloads into text and writing it took long enough to freeze the app when it ran on
+        // every change: now it runs in the background, and many quick changes make one save.
+        if (saveQueued.compareAndSet(false, true)) {
+            writer.execute {
+                try { Thread.sleep(SAVE_GAP_MS) } catch (e: InterruptedException) { }
+                saveQueued.set(false)
+                write(_tasks.value)
+            }
         }
-        prefs.edit().putString(KEY, arr.toString()).apply()
+    }
+
+    private fun write(list: List<DownloadTask>) {
+        runCatching {
+            val arr = JSONArray()
+            list.forEach { t ->
+                arr.put(
+                    JSONObject()
+                        .put("id", t.id).put("url", t.url).put("title", t.title)
+                        .put("format", t.format).put("thumbPath", t.thumbPath ?: "")
+                        .put("status", t.status.name).put("progress", t.progress)
+                        .put("message", t.message).put("retries", t.retries)
+                        .put("fileUri", t.fileUri ?: "").put("mime", t.mime ?: "")
+                        .put("createdAt", t.createdAt)
+                        .put("subLang", t.subLang ?: "").put("thumbUrl", t.thumbUrl ?: "")
+                )
+            }
+            val tmp = File(saveFile.path + ".tmp")
+            tmp.writeText(arr.toString())
+            if (!tmp.renameTo(saveFile)) { saveFile.delete(); tmp.renameTo(saveFile) }
+            // the old place (settings file) is emptied once: a big list there slowed every screen change
+            if (prefs.contains(KEY)) prefs.edit().remove(KEY).apply()
+        }
     }
 
     private fun load(): List<DownloadTask> = try {
-        val arr = JSONArray(prefs.getString(KEY, "[]"))
+        val text = if (saveFile.exists()) saveFile.readText() else prefs.getString(KEY, "[]")
+        val arr = JSONArray(text)
         (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
             DownloadTask(

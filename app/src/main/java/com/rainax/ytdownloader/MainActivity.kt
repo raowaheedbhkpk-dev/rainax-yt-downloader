@@ -74,6 +74,9 @@ class MainActivity : AppCompatActivity() {
         { toggleSelect(it) }, { startSelect(it) }
     )
 
+    private val activeHeader by lazy { SectionHeader(pl.activeSection) }
+    private val doneHeader by lazy { SectionHeader(pl.doneSection) }
+
     private val signIn =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
             if (r.resultCode != RESULT_OK) return@registerForActivityResult
@@ -253,7 +256,13 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch { TaskRepository.tasks.collect { renderTasks(it) } }
+                launch {
+                    // StateFlow keeps only the newest list; the pause limits redraws (1000 downloads stay smooth)
+                    TaskRepository.tasks.collect {
+                        renderTasks(it)
+                        kotlinx.coroutines.delay(250)
+                    }
+                }
                 launch {
                     vm.events.collect {
                         message(it)
@@ -1229,10 +1238,10 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     private fun setupPlay() {
-        pl.activeList.layoutManager = LinearLayoutManager(this)
-        pl.activeList.adapter = activeAdapter
-        pl.doneList.layoutManager = LinearLayoutManager(this)
-        pl.doneList.adapter = doneAdapter
+        // both sections in one recycling list: only the rows on screen are made, however many downloads there are
+        pl.playList.layoutManager = LinearLayoutManager(this)
+        (pl.playList.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
+        pl.playList.adapter = androidx.recyclerview.widget.ConcatAdapter(activeHeader, activeAdapter, doneHeader, doneAdapter)
 
         pl.emptySearchBtn.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_home }
         pl.selectActiveBtn.setOnClickListener { selectAll(done = false) }
@@ -1277,7 +1286,7 @@ class MainActivity : AppCompatActivity() {
         library.onTasks(all)
         checkUpdateReady(all)
 
-        pl.activeSection.isVisible = active.isNotEmpty()
+        activeHeader.visible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
         pl.activeTitle.text = "Downloading (${active.size})"
         // Downloading now always on top, then the queue in the order it will download
@@ -1296,10 +1305,10 @@ class MainActivity : AppCompatActivity() {
         )
         val topChanged = newActive.firstOrNull()?.id != activeAdapter.currentList.firstOrNull()?.id
         // show the new top download, unless you scrolled far down to look at something else
-        val nearTop = pl.playScroll.scrollY < resources.displayMetrics.heightPixels / 2
-        activeAdapter.submitList(newActive) { if (topChanged && nearTop) pl.playScroll.smoothScrollTo(0, 0) }
+        val nearTop = pl.playList.computeVerticalScrollOffset() < resources.displayMetrics.heightPixels / 2
+        activeAdapter.submitList(newActive) { if (topChanged && nearTop) pl.playList.scrollToPosition(0) }
 
-        pl.doneSection.isVisible = done.isNotEmpty()
+        doneHeader.visible = done.isNotEmpty()
         pl.doneTitle.text = "Downloaded (${done.size})"
         doneAdapter.submitList(done.sortedByDescending { it.createdAt })      // newest download first
 

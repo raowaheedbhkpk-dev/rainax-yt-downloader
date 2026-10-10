@@ -137,3 +137,34 @@ class DownloadAdapter(
         override fun areContentsTheSame(a: DownloadTask, b: DownloadTask) = a == b
     }
 }
+
+/**
+ * One header row (a section title with its buttons) inside the downloads list. The same [view] is kept and
+ * moved into whichever row shows it, so its buttons and texts can be changed from outside at any time.
+ */
+class SectionHeader(private val view: View) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    /** Shows or hides the row. */
+    var visible = false
+        set(v) {
+            if (field == v) return
+            field = v
+            if (v) notifyItemInserted(0) else notifyItemRemoved(0)
+        }
+
+    override fun getItemCount() = if (visible) 1 else 0
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val box = android.widget.FrameLayout(parent.context)
+        box.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        return object : RecyclerView.ViewHolder(box) {}
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val box = holder.itemView as ViewGroup
+        view.isVisible = true
+        if (view.parent === box) return
+        (view.parent as? ViewGroup)?.removeView(view)
+        box.addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    }
+}

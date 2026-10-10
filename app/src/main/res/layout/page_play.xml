@@ -257,19 +257,29 @@
         </FrameLayout>
     </LinearLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <!-- One recycling list for both sections: only the rows on screen exist, so 1000+ downloads stay smooth -->
+    <FrameLayout
         android:id="@+id/playScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="116dp"
-        android:fillViewport="true">
+        android:layout_marginTop="116dp">
 
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/playList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="96dp"
+            android:scrollbars="vertical" />
+
+        <!-- Section headers: moved into the list above when the page is set up -->
         <LinearLayout
+            android:id="@+id/playHeaders"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="12dp"
-            android:paddingBottom="96dp">
+            android:visibility="gone">
 
             <!-- Downloading -->
             <LinearLayout
@@ -320,12 +330,6 @@
                     android:text="Tip: tap Select all, or press and hold a download, then Pause, Resume or Cancel the selected ones"
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/activeList"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false" />
             </LinearLayout>
 
             <!-- Downloaded -->
@@ -391,15 +395,9 @@
                         android:textColor="?attr/colorError"
                         android:textSize="13sp" />
                 </LinearLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/doneList"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false" />
             </LinearLayout>
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/emptyState"
