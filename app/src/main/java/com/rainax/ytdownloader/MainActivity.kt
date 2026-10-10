@@ -149,7 +149,10 @@ class MainActivity : AppCompatActivity() {
         if (AppPrefs.autoClear(this)) {
             TaskRepository.removeDoneOlderThan(System.currentTimeMillis() - 7L * 24 * 3600 * 1000)
         }
-        if (savedInstanceState == null) requestNotificationPermission()
+        if (savedInstanceState == null) {
+            // first run: two short questions (storage, then app updates); later runs: notifications only
+            if (!AppPrefs.firstRunAsked(this)) b.root.post { askStorage() } else requestNotificationPermission()
+        }
 
         home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) }) { onAccountClick() }
         home.setup()
@@ -320,6 +323,7 @@ class MainActivity : AppCompatActivity() {
             music.release()
             sheet?.dismiss()
             clipDialog?.dismiss()
+            permDialog?.dismiss()
             AppUpdater.onQueued = null
         }
         super.onDestroy()
@@ -906,7 +910,7 @@ class MainActivity : AppCompatActivity() {
 
     /** A video link was copied in another app: offer to download it (once per link). */
     private fun checkClipboard() {
-        if (isFinishing || isDestroyed || !AppPrefs.clipDetect(this) || clipDialog?.isShowing == true ||
+        if (isFinishing || isDestroyed || !AppPrefs.clipDetect(this) || clipDialog?.isShowing == true || permDialog?.isShowing == true ||
             sheet?.isShowing == true || video.fullscreen
         ) return
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -1634,6 +1638,58 @@ class MainActivity : AppCompatActivity() {
 
     private fun message(text: String) {
         Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(snackAnchor()).show()
+    }
+
+    // ----- first run: storage access, then permission to install updates -----
+
+    private var permDialog: AlertDialog? = null
+
+    private val storagePermission =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { askInstallUpdates() }
+
+    /** Pop-up 1: storage (with notifications on Android 13+, for download progress). */
+    private fun askStorage() {
+        if (isFinishing || isDestroyed) return
+        val perms = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= 33) {
+            perms += Manifest.permission.READ_MEDIA_VIDEO
+            perms += Manifest.permission.READ_MEDIA_AUDIO
+            perms += Manifest.permission.POST_NOTIFICATIONS
+        } else {
+            perms += Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isEmpty()) { askInstallUpdates(); return }
+        permDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setIcon(R.drawable.ic_download)
+            .setTitle("Allow storage access")
+            .setMessage("RAINAX Tube saves your videos and music on this phone, in your Download, Movies and Music folders. " +
+                "Allow access so the app can save them and show them in your Library" +
+                (if (Build.VERSION.SDK_INT >= 33) ", and show download progress in notifications." else "."))
+            .setCancelable(false)
+            .setPositiveButton("Allow") { _, _ -> storagePermission.launch(missing.toTypedArray()) }
+            .setNegativeButton("Not now") { _, _ -> askInstallUpdates() }
+            .show()
+    }
+
+    /** Pop-up 2: allow installing RAINAX updates (Android asks once per app). */
+    private fun askInstallUpdates() {
+        if (isFinishing || isDestroyed) return
+        AppPrefs.setFirstRunAsked(this)
+        if (packageManager.canRequestPackageInstalls()) return
+        permDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setIcon(R.drawable.ic_refresh)
+            .setTitle("Allow app updates")
+            .setMessage("New versions of RAINAX Tube download inside the app. To install them with one tap, " +
+                "turn on \"Allow from this source\" on the next screen, then come back.")
+            .setCancelable(false)
+            .setPositiveButton("Allow") { _, _ ->
+                runCatching {
+                    startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+                }.onFailure { message("Open Settings > Apps > RAINAX Tube > Install unknown apps") }
+            }
+            .setNegativeButton("Not now", null)
+            .show()
     }
 
     private fun requestNotificationPermission() {

@@ -94,6 +94,7 @@ class VideoScreen(
         related.isPicked = { Picks.has(it) }
         Picks.listen { showPicks() }
         vb.vPickClear.setOnClickListener { Picks.clear() }
+        vb.vPickCount.setOnClickListener { PicksSheet.show(act) { downloadMany(it) } }
         vb.vPickDownload.setOnClickListener {
             val list = Picks.all()
             if (list.isEmpty()) return@setOnClickListener
@@ -109,7 +110,7 @@ class VideoScreen(
     private fun showPicks() {
         val n = Picks.size
         vb.vPickBar.isVisible = n > 0 && !fullscreen
-        vb.vPickCount.text = if (n == 1) "1 video selected" else "$n videos selected"
+        vb.vPickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
         vb.vPickDownload.text = if (n > 1) "Download $n" else "Download"
         if (n > 0) vb.vNextBar.isVisible = false else showNextBar(details)
         related.notifyDataSetChanged()

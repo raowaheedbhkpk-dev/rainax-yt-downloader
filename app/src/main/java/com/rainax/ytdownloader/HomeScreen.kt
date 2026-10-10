@@ -213,6 +213,7 @@ class HomeScreen(
         }
         Picks.listen { refreshPicks() }
         hm.pickClear.setOnClickListener { Picks.clear() }
+        hm.pickCount.setOnClickListener { PicksSheet.show(act) { downloadMany(it) } }
         hm.pickDownload.setOnClickListener {
             val list = Picks.all()
             if (list.isEmpty()) return@setOnClickListener
@@ -265,7 +266,7 @@ class HomeScreen(
     private fun refreshPicks() {
         val n = Picks.size
         hm.pickBar.isVisible = n > 0
-        hm.pickCount.text = if (n == 1) "1 video selected" else "$n videos selected"
+        hm.pickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
         hm.pickDownload.text = if (n > 1) "Download $n" else "Download"
         val d = act.resources.displayMetrics.density
         hm.feedList.setPadding(hm.feedList.paddingLeft, hm.feedList.paddingTop, hm.feedList.paddingRight, ((if (n > 0) 88 else 16) * d).toInt())

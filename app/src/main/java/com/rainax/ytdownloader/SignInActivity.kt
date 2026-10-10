@@ -69,12 +69,35 @@ class SignInActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (b.signInWeb.canGoBack()) b.signInWeb.goBack() else finish()
+                when {
+                    b.signInIntro.visibility == View.VISIBLE -> finish()
+                    b.signInWeb.canGoBack() -> b.signInWeb.goBack()
+                    else -> finish()
+                }
             }
         })
 
+        // first the page that says what signing in gives; Sign in opens Google's page
+        b.signInStart.setOnClickListener { startSignIn() }
+        if (savedInstanceState?.getBoolean(STARTED) == true) startSignIn()
+        else {
+            b.signInIntro.visibility = View.VISIBLE
+            b.signInProgress.visibility = View.GONE
+        }
+    }
+
+    private var started = false
+
+    private fun startSignIn() {
+        started = true
+        b.signInIntro.visibility = View.GONE
         // always (also after the screen was rebuilt), or the page would stay blank
         b.signInWeb.loadUrl(SIGN_IN_URL)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STARTED, started)
     }
 
     /** Signed in? Keep YouTube's cookies and close. */
@@ -96,6 +119,7 @@ class SignInActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val STARTED = "started"
         private const val SIGN_IN_URL = "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true" +
             "&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26next%3Dhttps%253A%252F%252Fm.youtube.com%252F"
     }

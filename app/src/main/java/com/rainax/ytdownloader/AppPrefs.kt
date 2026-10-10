@@ -62,4 +62,8 @@ object AppPrefs {
     /** The last copied link already offered (not asked again). */
     fun clipSeen(c: Context) = p(c).getString("clip_seen", "").orEmpty()
     fun setClipSeen(c: Context, v: String) = p(c).edit().putString("clip_seen", v).apply()
+
+    /** The first-run questions (storage, app updates) were shown. */
+    fun firstRunAsked(c: Context) = p(c).getBoolean("first_run_asked", false)
+    fun setFirstRunAsked(c: Context) = p(c).edit().putBoolean("first_run_asked", true).apply()
 }

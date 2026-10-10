@@ -1,3 +1,6 @@
+First start: asks to allow storage access and app updates (one tap installs new versions)
+See your selected videos as a list and remove any before downloading
+New Sign in with YouTube page that shows what you get before signing in
 New Shorts icon, bigger Shorts on Home and endless Shorts: swipe the strip and more load by themselves
 + button on Up next and Mix videos too: pick several and download them together
 Cleaner Home: more space between sections, lighter chips, new Continue watching cards
