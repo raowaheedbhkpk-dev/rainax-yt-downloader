@@ -1,3 +1,4 @@
+Much faster: formats and sizes now show in about a second
 Download shows only the real formats of each video with their real sizes (also for several videos, playlists and Shorts)
 Sizes come faster: picked videos are looked up right away, 4 at a time
 First start: asks to allow storage access and app updates (one tap installs new versions)

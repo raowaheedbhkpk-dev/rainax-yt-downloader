@@ -313,7 +313,7 @@ class MainActivity : AppCompatActivity() {
         if (blocked) return
         AppUpdater.resumeInstall(this)
         if (tab == 0 && ::home.isInitialized) home.onShown()
-        b.root.postDelayed({ FastExtractor.warmUp() }, 3000)   // sizes show faster on the first download
+        b.root.postDelayed({ FastExtractor.warmUp() }, 800)    // sizes show faster on the first download
     }
 
 

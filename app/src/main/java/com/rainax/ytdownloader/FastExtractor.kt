@@ -58,6 +58,13 @@ object FastExtractor {
                 init()
                 org.schabi.newpipe.extractor.services.youtube.YoutubeJavaScriptPlayerManager
                     .getSignatureTimestamp("dQw4w9WgXcQ")
+                // also prepare the code that unlocks stream addresses (the slowest step of the first look-up)
+                runCatching {
+                    org.schabi.newpipe.extractor.services.youtube.YoutubeJavaScriptPlayerManager
+                        .getUrlWithThrottlingParameterDeobfuscated(
+                            "dQw4w9WgXcQ", "https://rr1---sn-a5mekn6r.googlevideo.com/videoplayback?expire=1&n=AbCdEfGhIjKlMnOp&itag=18"
+                        )
+                }
             }.onFailure { warmed = false }          // offline: try again next time
         }.apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
@@ -182,6 +189,14 @@ object FastExtractor {
     fun fetch(url: String): PreviewState = guard {
         init()
         if (SocialExtractor.handles(url)) return@guard SocialExtractor.fetch(url)     // TikTok, Facebook, Instagram...
+        // YouTube: formats and sizes from one quick question to YouTube (about a second), not the full look-up
+        // (5 requests in a row + the player code). The full look-up then runs in the background for the download.
+        if (supports(url) && infoCache[videoUrl(url)] == null) {
+            quickSizes(url)?.let { quick ->
+                warmFull(url)
+                return@guard quick
+            }
+        }
         val info = streamInfo(url)
         checkPlayable(info)
         val duration = info.duration.toInt()
@@ -224,6 +239,123 @@ object FastExtractor {
             related = relatedOf(info)
         )
     }
+
+    // ---------- quick sizes (download sheet) ----------
+
+    private val fullPool = java.util.concurrent.Executors.newFixedThreadPool(2)
+
+    /** The full look-up (stream addresses for the download) in the background, so Download starts at once. */
+    private fun warmFull(url: String) {
+        fullPool.execute { runCatching { streamInfo(url) } }
+    }
+
+    /**
+     * Blocking. Title, picture, formats with sizes and subtitles straight from YouTube's answer to the
+     * visionOS app (the same answer the full look-up uses for its streams), without the extra web,
+     * "up next" and player-code requests. Null when anything is unusual (age limits, kids videos, live,
+     * changes on YouTube's side): then the normal full look-up runs.
+     */
+    private fun quickSizes(url: String): PreviewState? = runCatching {
+        val id = Regex("(?:[?&]v=|youtu\\.be/|shorts/|/live/)([\\w-]{11})").find(url)?.groupValues?.get(1) ?: return null
+        val helper = Class.forName("org.schabi.newpipe.extractor.services.youtube.YoutubeStreamHelper")
+        val m = helper.getMethod(
+            "getVisionOsPlayerResponse",
+            org.schabi.newpipe.extractor.localization.ContentCountry::class.java,
+            org.schabi.newpipe.extractor.localization.Localization::class.java,
+            String::class.java, String::class.java
+        )
+        val res = m.invoke(
+            null, NewPipe.getPreferredContentCountry(), NewPipe.getPreferredLocalization(), id,
+            org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.generateContentPlaybackNonce()
+        ) ?: return null
+        // (the answer is the extractor's own JSON object: written back to text with its JSON writer)
+        val writer = Class.forName("com.grack.nanojson.JsonWriter").methods
+            .first { it.name == "string" && it.parameterTypes.size == 1 && java.lang.reflect.Modifier.isStatic(it.modifiers) }
+        val text = writer.invoke(null, res) as String
+        val json = org.json.JSONObject(text)
+        if (json.optJSONObject("playabilityStatus")?.optString("status") != "OK") return null
+        val details = json.optJSONObject("videoDetails") ?: return null
+        if (details.optString("videoId") != id || details.optBoolean("isLive") || details.optBoolean("isPostLiveDvr")) return null
+        val sd = json.optJSONObject("streamingData") ?: return null
+        val duration = details.optString("lengthSeconds").toIntOrNull() ?: 0
+
+        fun size(f: org.json.JSONObject): Long {
+            val len = f.optString("contentLength").toLongOrNull() ?: 0L
+            if (len > 0) return len
+            val ms = f.optString("approxDurationMs").toLongOrNull()?.div(1000)?.toInt() ?: duration
+            return sizeOf(null, f.optInt("averageBitrate", f.optInt("bitrate")), ms)
+        }
+        fun known(f: org.json.JSONObject) = runCatching {
+            org.schabi.newpipe.extractor.services.youtube.ItagItem.isSupported(f.optInt("itag"))
+        }.getOrDefault(false)
+        fun codecs(f: org.json.JSONObject) = f.optString("mimeType").substringAfter("codecs=\"", "").substringBefore('"').lowercase()
+
+        val progressive = mutableMapOf<Int, Long>()
+        val formats = sd.optJSONArray("formats")
+        for (i in 0 until (formats?.length() ?: 0)) {
+            val f = formats!!.getJSONObject(i)
+            if (!known(f) || !f.optString("mimeType").startsWith("video/")) continue
+            val h = f.optInt("height")
+            if (h > 0) progressive[h] = maxOf(progressive[h] ?: 0L, size(f))
+        }
+        val videoOnly = mutableMapOf<Int, Long>()
+        var bestAudio = 0L
+        var bestM4a = 0L
+        val adaptive = sd.optJSONArray("adaptiveFormats")
+        for (i in 0 until (adaptive?.length() ?: 0)) {
+            val f = adaptive!!.getJSONObject(i)
+            if (!known(f)) continue
+            val mime = f.optString("mimeType")
+            val c = codecs(f)
+            if (mime.startsWith("video/")) {
+                // only pictures Android can join with sound (same rule as the full look-up)
+                val ok = when {
+                    mime.startsWith("video/mp4") -> c.isEmpty() || c.startsWith("avc") || (c.startsWith("av01") && android.os.Build.VERSION.SDK_INT >= 31)
+                    mime.startsWith("video/webm") -> c.isEmpty() || c.startsWith("vp9") || c.startsWith("vp09") || c.startsWith("vp8")
+                    else -> false
+                }
+                val h = f.optInt("height")
+                if (ok && h > 0) videoOnly[h] = maxOf(videoOnly[h] ?: 0L, size(f))
+            } else if (mime.startsWith("audio/")) {
+                // the original sound track (not dubbed copies), not the "stable volume" copy
+                val track = f.optJSONObject("audioTrack")
+                if (track != null && !track.optBoolean("audioIsDefault", true)) continue
+                if (f.optBoolean("isDrc")) continue
+                val sz = size(f)
+                bestAudio = maxOf(bestAudio, sz)
+                if (mime.startsWith("audio/mp4")) bestM4a = maxOf(bestM4a, sz)
+            }
+        }
+        if (progressive.isEmpty() && videoOnly.isEmpty() && bestAudio == 0L) return null
+
+        val subs = mutableListOf<SubtitleOption>()
+        val tracks = json.optJSONObject("captions")?.optJSONObject("playerCaptionsTracklistRenderer")?.optJSONArray("captionTracks")
+        for (i in 0 until (tracks?.length() ?: 0)) {
+            val t = tracks!!.getJSONObject(i)
+            val code = t.optString("languageCode").takeIf { it.isNotBlank() } ?: continue
+            val nameObj = t.optJSONObject("name")
+            val name = nameObj?.optString("simpleText")?.takeIf { it.isNotBlank() }
+                ?: nameObj?.optJSONArray("runs")?.optJSONObject(0)?.optString("text")?.takeIf { it.isNotBlank() }
+                ?: runCatching { java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.ENGLISH) }.getOrNull()
+                ?: code
+            if (subs.none { it.code == code }) subs += SubtitleOption(code, if (t.optString("kind") == "asr") "$name (auto)" else name)
+        }
+
+        val built = InfoFetcher.buildChoices(progressive, videoOnly, bestAudio, bestM4a, duration, subs.take(30))
+        val onlyAudio = progressive.isEmpty() && videoOnly.isEmpty()
+        val thumbs = details.optJSONObject("thumbnail")?.optJSONArray("thumbnails")
+        val thumb = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url")?.takeIf { it.isNotBlank() }
+            ?: "https://i.ytimg.com/vi/$id/hqdefault.jpg"
+        PreviewState(
+            title = details.optString("title"),
+            subtitle = subtitleLine(details.optString("author"), duration),
+            quick = if (onlyAudio) built.quick.filter { it.kind == KIND_AUDIO } else built.quick,
+            all = if (onlyAudio) built.all.filter { it.kind == KIND_AUDIO } else built.all,
+            subtitles = built.subs,
+            thumbUrl = thumb,
+            uploader = details.optString("author")
+        )
+    }.onFailure { android.util.Log.w("RAINAX", "quick sizes: ${it.message}") }.getOrNull()
 
     /** YouTube's "up next" videos (used as next/previous tracks in background play). */
     private fun relatedOf(info: StreamInfo): List<PlaylistEntry> = runCatching {
