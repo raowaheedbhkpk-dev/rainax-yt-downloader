@@ -114,8 +114,20 @@ object YtCatalog {
 
     /** Home tabs: title -> list id ("home" = popular videos and the user's interests, "trending_music" = music charts). */
     val TABS = listOf(
-        "YouTube" to HOME,
+        "All" to HOME,
         "Music" to MUSIC
+    ) + TOPICS
+
+    /** Topic chips (like YouTube's): each one is a video search ("q:<words>"). */
+    val TOPICS: List<Pair<String, String>> get() = listOf(
+        "Live" to "q:live now",
+        "Gaming" to "q:gaming",
+        "News" to "q:news today",
+        "Podcasts" to "q:podcast",
+        "Cricket" to "q:cricket highlights",
+        "Movies" to "q:full movie",
+        "Comedy" to "q:comedy",
+        "Recently uploaded" to "q:new videos today"
     )
 
     /** Country the music charts work for (YouTube Charts skips some countries, e.g. Pakistan: then India, then US). */
@@ -126,9 +138,10 @@ object YtCatalog {
     /** Blocking. One page of a Home tab. */
     fun kiosk(id: String, page: Page?, history: List<String> = emptyList()): FeedPage = guard {
         FastExtractor.init()
-        when (id) {
-            HOME -> home(history, page)
-            MUSIC -> music(page)
+        when {
+            id.startsWith("q:") -> videoSearch(id.removePrefix("q:"), page).let { p -> FeedPage(p.items.filter { !it.isPlaylist && !it.isChannel }, p.next) }
+            id == HOME -> home(history, page)
+            id == MUSIC -> music(page)
             else -> kioskPage(id, page, null)
         }
     }

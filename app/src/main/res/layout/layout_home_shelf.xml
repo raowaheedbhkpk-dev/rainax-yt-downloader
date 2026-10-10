@@ -6,6 +6,37 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+    <!-- your channels (signed in), like the top of YouTube's Home -->
+    <LinearLayout
+        android:id="@+id/subsBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="6dp"
+        android:visibility="gone">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/subsRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingHorizontal="6dp" />
+
+        <TextView
+            android:id="@+id/subsRowAll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:text="All"
+            android:textColor="@color/rx_accent"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/continueBox"
         android:layout_width="match_parent"

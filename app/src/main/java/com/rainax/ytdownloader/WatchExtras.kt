@@ -208,6 +208,15 @@ object WatchHistory {
         return if (e.posMs < 10_000) -1f else if (e.unfinished) e.fraction else 1f
     }
 
+    /** Every watched video, newest first (History on the You tab when not signed in). */
+    @Synchronized
+    fun recentItems(c: Context): List<VideoItem> {
+        load(c)
+        return entries.values.sortedByDescending { it.at }.map { e ->
+            VideoItem(e.url, e.title, e.uploader, e.thumb, e.durMs / 1000, -1, null)
+        }
+    }
+
     /** Videos to continue, newest first. */
     @Synchronized
     fun continueList(c: Context): List<Entry> {

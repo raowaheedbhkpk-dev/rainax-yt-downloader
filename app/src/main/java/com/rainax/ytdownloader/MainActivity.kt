@@ -50,12 +50,14 @@ class MainActivity : AppCompatActivity() {
     private val pl get() = b.playPage
     private val st get() = b.settingsPage
     private val so get() = b.socialPage
+    private val sb get() = b.subsPage
 
-    private var tab = 0            // bottom navigation: 0 Home, 1 Library, 2 Settings, 3 Social
+    private var tab = 0            // pages: 0 Home, 1 You (library), 2 Settings, 3 Add link (+), 4 Subscriptions
     private lateinit var home: HomeScreen
     private lateinit var video: VideoScreen
     private lateinit var library: LibraryScreen
     private lateinit var music: MusicPlayer
+    private lateinit var subs: SubsScreen
     private var pendingVideo: String? = null     // reopen this video page once the player is connected
 
     private var latestTasks: List<DownloadTask> = emptyList()
@@ -76,6 +78,9 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
             if (r.resultCode != RESULT_OK) return@registerForActivityResult
             home.onAccountChanged()
+            subs.onAccountChanged()
+            if (tab == 4) subs.onShown()
+            refreshYou()
             message("Signed in to YouTube")
             refreshAccount()
         }
@@ -102,10 +107,12 @@ class MainActivity : AppCompatActivity() {
     private val backCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             when {
+                exploreOpen -> closeExplore()
                 music.back() -> {}
                 video.fullscreen -> video.exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
                 tab == 1 && library.back() -> {}
+                tab == 2 -> b.bottomNav.selectedItemId = R.id.nav_downloads      // Settings -> back to You
                 tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
                 video.isOpen && !video.minimized -> video.minimize()
                 home.clearPicks() -> {}
@@ -181,6 +188,20 @@ class MainActivity : AppCompatActivity() {
         library.setup()
         setupSettings()
         setupSocial()
+        setupYou()
+        setupExplore()
+        subs = SubsScreen(
+            this, sb,
+            openVideo = { goHome(); openItem(it) },
+            download = { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) },
+            openChannel = { goHome(); video.minimize(); home.openChannel(it.url, it.title, it.thumb) },
+            openAllChannels = { openHomeList("All subscriptions", "acc:FEchannels") },
+            signIn = { onAccountClick() }
+        )
+        subs.setup()
+        home.onMenu = { openExplore() }
+        home.onVoice = { startVoiceSearch() }
+        home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
             when (it.itemId) {
@@ -194,7 +215,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_social -> { showTab(3); true }
                 R.id.nav_downloads -> { showTab(1); true }
-                R.id.nav_settings -> { showTab(2); true }
+                R.id.nav_subs -> { showTab(4); true }
                 else -> false
             }
         }
@@ -210,12 +231,14 @@ class MainActivity : AppCompatActivity() {
         } else {
             // Theme switch rebuilds the screen: reopen the video page (the player keeps playing)
             pendingVideo = savedInstanceState.getString("videoUrl")
-            b.bottomNav.selectedItemId = when (savedInstanceState.getInt("tab", 0)) {
-                1 -> R.id.nav_downloads
-                2 -> R.id.nav_settings
+            val saved = savedInstanceState.getInt("tab", 0)
+            b.bottomNav.selectedItemId = when (saved) {
+                1, 2 -> R.id.nav_downloads
                 3 -> R.id.nav_social
+                4 -> R.id.nav_subs
                 else -> R.id.nav_home
             }
+            if (saved == 2) showTab(2)                     // Settings (opened from You)
         }
 
         if (savedInstanceState == null) refreshAccount()
@@ -262,8 +285,10 @@ class MainActivity : AppCompatActivity() {
     private fun fitWideScreen() {
         // the bottom bar is full width (flat, like YouTube); on wide screens its buttons stay close together
         val wide = resources.configuration.screenWidthDp >= 600
-        val pad = if (wide) ((resources.configuration.screenWidthDp - 560).coerceAtLeast(0) / 2 * resources.displayMetrics.density).toInt() else 0
-        b.bottomNav.setPadding(pad, 0, pad, 0)
+        val lp = b.bottomNav.layoutParams as android.widget.FrameLayout.LayoutParams
+        lp.width = if (wide) (560 * resources.displayMetrics.density).toInt() else android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+        lp.gravity = android.view.Gravity.CENTER_HORIZONTAL
+        b.bottomNav.layoutParams = lp
         if (::home.isInitialized) home.applyColumns()
     }
 
@@ -318,6 +343,9 @@ class MainActivity : AppCompatActivity() {
             YtAccount.signOut(this)
             android.webkit.CookieManager.getInstance().removeAllCookies(null)
             home.onAccountChanged()
+            subs.onAccountChanged()
+            if (tab == 4) subs.onShown()
+            refreshYou()
             message("Signed out of YouTube")
         }
         dialog.show()
@@ -330,7 +358,10 @@ class MainActivity : AppCompatActivity() {
             val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching { YtAccount.refreshProfile(this@MainActivity) }.getOrNull()
             }
-            if (ok != null) home.updateAccountIcon()
+            if (ok != null) {
+                home.updateAccountIcon()
+                refreshYou()
+            }
         }
     }
 
@@ -487,8 +518,11 @@ class MainActivity : AppCompatActivity() {
         pl.root.isVisible = index == 1
         st.root.isVisible = index == 2
         so.root.isVisible = index == 3
+        sb.root.isVisible = index == 4
         updateChrome()
         if (index == 0) home.onShown()
+        if (index == 1) refreshYou()
+        if (index == 4) subs.onShown()
     }
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
@@ -665,6 +699,151 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
     // Links in / download sheet
     // =====================================================================
+
+    // =====================================================================
+    // You (library header), side menu, voice search
+    // =====================================================================
+
+    /** Home tab with nothing on top (for lists opened from other places). */
+    private fun goHome() {
+        if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+        music.collapse()
+    }
+
+    /** A list on Home with its own title bar (topics, liked, history...). */
+    private fun openHomeList(title: String, id: String) {
+        goHome()
+        video.minimize()
+        home.openList(title, id)
+    }
+
+    private fun setupYou() {
+        pl.youSettings.setOnClickListener { showTab(2) }
+        pl.youHeader.setOnClickListener { onAccountClick() }
+        // shortcuts after Downloads / Music / Videos / Playlists, like YouTube's Library
+        listOf(
+            "History" to { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") },
+            "Liked videos" to { openHomeList("Liked videos", "acc:VLLL") },
+            "Watch later" to { openHomeList("Watch later", "acc:VLWL") }
+        ).forEach { (title, action) ->
+            val chip = layoutInflater.inflate(R.layout.item_chip, pl.libChips, false) as com.google.android.material.chip.Chip
+            chip.id = View.generateViewId()
+            chip.text = title
+            chip.isCheckable = false
+            chip.setOnClickListener { action() }
+            pl.libChips.addView(chip)
+        }
+        refreshYou()
+    }
+
+    /** You header: your YouTube picture and name, or Sign in. */
+    private fun refreshYou() {
+        val signedIn = YtAccount.isSignedIn(this)
+        val p = if (signedIn) YtAccount.profile(this) else null
+        if (p != null && !p.avatar.isNullOrBlank()) {
+            pl.youName.text = p.name.ifBlank { "You" }
+            pl.youHandle.text = p.handle?.takeIf { it.isNotBlank() } ?: "Signed in to YouTube"
+            pl.youAvatar.imageTintList = null
+            pl.youAvatar.setPadding(0, 0, 0, 0)
+            Img.load(pl.youAvatar, p.avatar, circle = true, widthPx = 160)
+        } else {
+            pl.youName.text = p?.name?.takeIf { it.isNotBlank() } ?: "You"
+            pl.youHandle.text = if (signedIn) (p?.handle?.takeIf { it.isNotBlank() } ?: "Signed in to YouTube")
+            else "Sign in to YouTube for subscriptions, likes and history"
+            Img.load(pl.youAvatar, null)
+            pl.youAvatar.setImageResource(R.drawable.ic_person)
+            val pad = (10 * resources.displayMetrics.density).toInt()
+            pl.youAvatar.setPadding(pad, pad, pad, pad)
+            pl.youAvatar.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text2))
+        }
+    }
+
+    private var exploreOpen = false
+
+    private fun setupExplore() {
+        val e = b.explore
+        e.exploreScrim.setOnClickListener { closeExplore() }
+        fun add(icon: Int, text: String, action: () -> Unit) {
+            val row = com.rainax.ytdownloader.databinding.ItemOptionBinding.inflate(layoutInflater, e.exploreList, false)
+            row.optText.text = text
+            row.optValue.isVisible = false
+            row.optIcon.setImageResource(icon)
+            row.optIcon.isVisible = true
+            row.root.setOnClickListener {
+                closeExplore()
+                action()
+            }
+            e.exploreList.addView(row.root)
+        }
+        fun divider() {
+            val v = View(this)
+            v.setBackgroundColor(ContextCompat.getColor(this, R.color.rx_divider))
+            val lp = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * resources.displayMetrics.density).toInt().coerceAtLeast(1))
+            lp.topMargin = (8 * resources.displayMetrics.density).toInt()
+            lp.bottomMargin = lp.topMargin
+            e.exploreList.addView(v, lp)
+        }
+        add(R.drawable.ic_music_note, "Music") { goHome(); video.minimize(); home.showMusic() }
+        add(R.drawable.ic_trending, "Trending") { openHomeList("Trending", "q:trending") }
+        add(R.drawable.ic_gaming, "Gaming") { openHomeList("Gaming", "q:gaming") }
+        add(R.drawable.ic_news, "News") { openHomeList("News", "q:news today") }
+        add(R.drawable.ic_sports, "Sports") { openHomeList("Sports", "q:sports highlights") }
+        add(R.drawable.ic_movie, "Movies") { openHomeList("Movies", "q:full movie") }
+        add(R.drawable.ic_podcast, "Podcasts") { openHomeList("Podcasts", "q:podcast") }
+        add(R.drawable.ic_live, "Live") { openHomeList("Live", "q:live now") }
+        divider()
+        add(R.drawable.ic_shorts, "Shorts") { video.minimize(); ShortsActivity.open(this, 0) }
+        add(R.drawable.ic_nav_subs, "Subscriptions") { b.bottomNav.selectedItemId = R.id.nav_subs }
+        add(R.drawable.ic_history, "History") { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") }
+        add(R.drawable.ic_download, "Downloads") { b.bottomNav.selectedItemId = R.id.nav_downloads }
+        add(R.drawable.ic_link, "Download from a link") { b.bottomNav.selectedItemId = R.id.nav_social }
+        divider()
+        add(R.drawable.ic_gear, "Settings") {
+            if (tab != 1) b.bottomNav.selectedItemId = R.id.nav_downloads
+            showTab(2)
+        }
+        val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull()
+        e.exploreVersion.text = "RAINAX Tube" + (version?.let { " v$it" } ?: "")
+    }
+
+    private fun openExplore() {
+        val e = b.explore
+        if (exploreOpen) return
+        exploreOpen = true
+        // start off screen (300dp wide panel), then slide in
+        e.explorePanel.translationX = -(e.explorePanel.width.takeIf { it > 0 } ?: (300 * resources.displayMetrics.density).toInt()).toFloat()
+        e.root.isVisible = true
+        e.explorePanel.animate().translationX(0f).setDuration(220).start()
+        e.exploreScrim.alpha = 0f
+        e.exploreScrim.animate().alpha(1f).setDuration(220).start()
+    }
+
+    private fun closeExplore() {
+        val e = b.explore
+        if (!exploreOpen) return
+        exploreOpen = false
+        e.exploreScrim.animate().alpha(0f).setDuration(180).start()
+        e.explorePanel.animate().translationX(-e.explorePanel.width.toFloat()).setDuration(180)
+            .withEndAction { if (!exploreOpen) e.root.isVisible = false }.start()
+    }
+
+    private val voiceSearch =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+            val text = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (r.resultCode == RESULT_OK && !text.isNullOrBlank()) home.search(text)
+        }
+
+    /** Mic in the search box: speak, then the words are searched. */
+    private fun startVoiceSearch() {
+        val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Search YouTube")
+        try {
+            voiceSearch.launch(i)
+        } catch (e: Exception) {
+            message("Voice search isn't available on this phone")
+        }
+    }
 
     // =====================================================================
     // Social tab and copied links

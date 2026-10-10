@@ -88,6 +88,74 @@ class VideoScreen(
         }
         header.vChapters.setOnClickListener { showChapters() }
         header.vSave.setOnClickListener { saveWatchLater() }
+        vb.vNextBar.setOnClickListener { showUpNext() }
+        vb.playerUnlock.setOnClickListener { setLocked(false) }
+    }
+
+    // ---------- Next / Mix bar and the Up next list ----------
+
+    /** Bottom bar: "Next: <video>" and "Mix - <this video>" (tap for the whole list). */
+    private fun showNextBar(d: VideoDetails?) {
+        val next = d?.related?.firstOrNull { it.seconds > 0 }
+        vb.vNextBar.isVisible = next != null && !fullscreen
+        if (next == null || d == null) return
+        vb.vNextTitle.text = "Next: " + next.title
+        vb.vNextFrom.text = "Mix - " + d.title
+    }
+
+    private fun showUpNext() {
+        val d = details ?: return
+        if (d.related.isEmpty()) return
+        val dialog = BottomSheetDialog(act)
+        val box = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
+        val dp = act.resources.displayMetrics.density
+        val head = android.widget.TextView(act).apply {
+            text = "Mix - " + d.title
+            setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
+            textSize = 18f
+            setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding((18 * dp).toInt(), (18 * dp).toInt(), (18 * dp).toInt(), (2 * dp).toInt())
+        }
+        val sub = android.widget.TextView(act).apply {
+            text = "Mixes are playlists made for you"
+            setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text2))
+            textSize = 13f
+            setPadding((18 * dp).toInt(), 0, (18 * dp).toInt(), (10 * dp).toInt())
+        }
+        val list = androidx.recyclerview.widget.RecyclerView(act)
+        list.layoutManager = LinearLayoutManager(act)
+        val rows = VideoAdapter(false, {
+            dialog.dismiss()
+            open(it.url, it.title, it.uploader, thumb = it.thumb)
+        }, { download(it.url, it.title, false) })
+        list.adapter = rows
+        rows.submit(d.related.filter { !it.isPlaylist && !it.isChannel })
+        box.addView(head)
+        box.addView(sub)
+        box.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (act.resources.displayMetrics.heightPixels * 0.6).toInt()))
+        dialog.setContentView(box)
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        dialog.show()
+    }
+
+    // ---------- Lock screen ----------
+
+    private var locked = false
+
+    /** Lock screen: the player ignores touches (for kids, or in a pocket) until Unlock is tapped. */
+    private fun setLocked(on: Boolean) {
+        locked = on
+        vb.playerLock.isVisible = on
+        if (on) {
+            vb.playerView.hideController()
+            vb.playerView.useController = false
+            vb.playerTop.visibility = View.GONE
+        } else {
+            vb.playerView.useController = true
+            vb.playerView.showController()
+        }
     }
 
     // ---------- account actions (subscribe, like, Watch later) ----------
@@ -274,6 +342,8 @@ class VideoScreen(
         header.vDesc.isVisible = false
         header.vDesc.maxLines = 3
         header.vUpNext.isVisible = false
+        vb.vNextBar.isVisible = false
+        if (locked && !resume) setLocked(false)          // the next song/video keeps the lock
         listOf(header.vSubscribe, header.vLike, header.vDislike, header.vSave, header.vChapters).forEach { it.isVisible = false }
         vb.playerView.setExtraAdGroupMarkers(null, null)
         related.submit(emptyList())
@@ -383,6 +453,7 @@ class VideoScreen(
     val playerView: PlayerView get() = vb.playerView
 
     fun close() {
+        if (locked) setLocked(false)
         if (fullscreen) exitFullscreen()
         if (minimized) setMinimized(false)
         job?.cancel()
@@ -503,6 +574,8 @@ class VideoScreen(
         }
         related.submit(d.related)
         header.vUpNext.isVisible = d.related.isNotEmpty()
+        showNextBar(d)
+        vb.playerTitle.text = d.title
         showChapterMarks(d)
         onChanged()                            // the mini player shows the real title
     }
@@ -544,6 +617,7 @@ class VideoScreen(
             if (url != clean) return@launch
             // turned off by YouTube (always for videos made for kids): say so instead of showing nothing
             commentsOff = list.isEmpty() && (page?.disabled == true || YtFallback.served(videoId(clean)))
+            header.vCommentsTitle.text = if (page != null && page.total > 0) "Comments  " + YtCatalog.count(page.total.toLong()) else "Comments"
             if (commentsOff) {
                 Img.load(header.vCommentAvatar, null)
                 header.vCommentAvatar.isVisible = false
@@ -571,7 +645,11 @@ class VideoScreen(
         val u = url ?: return
         if (commentsOff) { act.toast("Comments are turned off for this video"); return }
         if (commentsSheet?.isShowing == true) return          // a quick double tap opens it once
-        commentsSheet = CommentsSheet(act, u, signIn).also { it.show() }
+        // opens under the video (the video keeps playing above it), like YouTube
+        val loc = IntArray(2)
+        vb.playerBox.getLocationOnScreen(loc)
+        val below = act.resources.displayMetrics.heightPixels - (loc[1] + vb.playerBox.height)
+        commentsSheet = CommentsSheet(act, u, signIn, if (fullscreen) 0 else below).also { it.show() }
     }
 
     /**
@@ -791,7 +869,10 @@ class VideoScreen(
         val speed = p?.playbackParameters?.speed ?: 1f
         optionsSheet("Settings", listOf(
             Opt("Quality", qValue, R.drawable.ic_hd) { showQualityMenu() },
-            Opt("Playback speed", speedLabel(speed), R.drawable.ic_speed) { showSpeedMenu() }
+            Opt("Playback speed", speedLabel(speed), R.drawable.ic_speed) { showSpeedMenu() },
+            Opt("Lock screen", null, R.drawable.ic_lock) { setLocked(true) },
+            Opt("Copy link", null, R.drawable.ic_link) { copyLink() },
+            Opt("Share", null, R.drawable.ic_share) { share() }
         ))
     }
 
@@ -907,6 +988,9 @@ class VideoScreen(
         vb.playerBox.layoutParams = lp
         vb.videoList.isVisible = !on
         vb.videoClose.isVisible = !on
+        vb.playerTitle.visibility = if (on) View.VISIBLE else View.INVISIBLE
+        vb.playerTitle.text = currentTitle().orEmpty()
+        if (on) vb.vNextBar.isVisible = false else showNextBar(details)
         act.requestedOrientation =
             if (on) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         val ctl = WindowCompat.getInsetsController(act.window, act.window.decorView)

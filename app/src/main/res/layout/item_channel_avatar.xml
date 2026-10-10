@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A subscribed channel in the row of round pictures (Home and Subscriptions) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="80dp"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingVertical="6dp">
+
+    <ImageView
+        android:id="@+id/caAvatar"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_avatar"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
+
+    <TextView
+        android:id="@+id/caName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:gravity="center_horizontal"
+        android:maxLines="1"
+        android:paddingHorizontal="4dp"
+        android:textColor="@color/rx_text"
+        android:textSize="12sp" />
+</LinearLayout>

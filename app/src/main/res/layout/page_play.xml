@@ -5,20 +5,66 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- fits its 72dp row at any font size (the list starts below it) -->
-    <TextView
+    <!-- You (like YouTube): your picture and name (or Sign in), and Settings -->
+    <LinearLayout
+        android:id="@+id/youHeader"
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:autoSizeMaxTextSize="34sp"
-        android:autoSizeMinTextSize="16sp"
-        android:autoSizeTextType="uniform"
+        android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:maxLines="1"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="12dp"
-        android:fontFamily="sans-serif-medium"
-        android:text="Library"
-        android:textColor="@color/rx_text" />
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="4dp">
+
+        <ImageView
+            android:id="@+id/youAvatar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_avatar"
+            android:importantForAccessibility="no"
+            android:padding="0dp"
+            android:scaleType="centerCrop" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/youName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:text="You"
+                android:textColor="@color/rx_text"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/youHandle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Sign in to YouTube"
+                android:textColor="@color/rx_text2"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/youSettings"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Settings"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_gear"
+            app:tint="@color/rx_text" />
+    </LinearLayout>
 
     <!-- Downloads / Music / Videos / Playlists -->
     <HorizontalScrollView

@@ -32,6 +32,11 @@
                 android:visibility="gone" />
 
             <include
+                android:id="@+id/subsPage"
+                layout="@layout/page_subs"
+                android:visibility="gone" />
+
+            <include
                 android:id="@+id/settingsPage"
                 layout="@layout/page_settings"
                 android:visibility="gone" />
@@ -72,6 +77,12 @@
         android:layout_width="208dp"
         android:layout_height="117dp"
         android:layout_gravity="top|start" />
+
+    <!-- side menu -->
+    <include
+        android:id="@+id/explore"
+        layout="@layout/layout_explore"
+        android:visibility="gone" />
 
     <!-- the big Music player (over everything, like YouTube Music) -->
     <include

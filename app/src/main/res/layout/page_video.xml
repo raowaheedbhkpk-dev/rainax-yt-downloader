@@ -63,10 +63,19 @@
                 android:src="@drawable/ic_chevron_down"
                 app:tint="@color/rx_white" />
 
-            <View
+            <!-- the title (full screen only, like YouTube) -->
+            <TextView
+                android:id="@+id/playerTitle"
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/rx_white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="invisible" />
 
             <TextView
                 android:id="@+id/qualityBadge"
@@ -92,6 +101,30 @@
                 android:src="@drawable/ic_gear"
                 app:tint="@color/rx_white" />
         </LinearLayout>
+
+        <!-- Lock screen (from the gear menu): touches do nothing until Unlock -->
+        <FrameLayout
+            android:id="@+id/playerLock"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/playerUnlock"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:alpha="0.85"
+                android:background="@drawable/bg_mini_button"
+                android:contentDescription="Unlock screen"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_lock_open"
+                app:tint="@color/rx_white" />
+        </FrameLayout>
     </com.rainax.ytdownloader.RatioFrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -101,4 +134,63 @@
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="16dp" />
+
+    <!-- Next video / Mix bar at the bottom (tap: the Up next list), like YouTube -->
+    <LinearLayout
+        android:id="@+id/vNextBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_glass_card"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_radio"
+            app:tint="@color/rx_text" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/vNextTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/vNextFrom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/rx_text2"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:importantForAccessibility="no"
+            android:padding="8dp"
+            android:rotation="180"
+            android:src="@drawable/ic_chevron_down"
+            app:tint="@color/rx_text" />
+    </LinearLayout>
 </LinearLayout>

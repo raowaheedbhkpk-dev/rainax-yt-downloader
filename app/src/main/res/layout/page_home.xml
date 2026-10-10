@@ -18,8 +18,18 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="16dp"
+            android:paddingStart="4dp"
             android:paddingEnd="4dp">
+
+            <!-- ≡ side menu (Music, Gaming, News...) -->
+            <ImageButton
+                android:id="@+id/homeMenu"
+                android:layout_width="44dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Menu"
+                android:src="@drawable/ic_menu"
+                app:tint="@color/rx_text" />
 
             <!-- RAINAX Tube logo: the RAINAX mark + wordmark -->
             <LinearLayout
@@ -61,6 +71,15 @@
                     android:textColor="@color/rx_primary"
                     android:textSize="21sp" />
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/homeBell"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Notifications"
+                android:src="@drawable/ic_bell"
+                app:tint="@color/rx_text" />
 
             <ImageButton
                 android:id="@+id/searchOpen"
@@ -195,6 +214,18 @@
                     android:src="@drawable/ic_close"
                     android:visibility="gone"
                     app:tint="@color/rx_text2" />
+
+                <!-- voice search -->
+                <ImageButton
+                    android:id="@+id/searchMic"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Search with your voice"
+                    android:padding="7dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_mic"
+                    app:tint="@color/rx_text" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

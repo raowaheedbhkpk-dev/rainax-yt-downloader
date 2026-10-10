@@ -53,7 +53,7 @@ class HomeScreen(
             "Liked" to "acc:VLLL",
             "Channels" to "acc:FEchannels",
             "Watch later" to "acc:VLWL"
-        ) else YtCatalog.TABS
+        ) + YtCatalog.TOPICS else YtCatalog.TABS
 
     private var tabIndex = 0
     private var query: String? = null          // showing search results for this
@@ -97,7 +97,15 @@ class HomeScreen(
         android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
         intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary), 0x30), android.graphics.Color.TRANSPARENT)
     )
+    /**
+     * A list opened from the side menu, the bell or the You tab (title bar with Back):
+     * "acc:<YouTube list>" (needs the account), "q:<topic search>" or "local:history".
+     */
+    private var special: String? = null
+    private val specialAdapter = VideoAdapter(true, { open(it) }, { download(it) })
+
     private val adapter get() = when {
+        special != null -> specialAdapter
         channelUrl != null -> channelAdapter
         playlistUrl != null -> playlistAdapter
         query != null -> smallAdapter
@@ -105,10 +113,11 @@ class HomeScreen(
     }
 
     /** Music tab (rows of playlists) is showing. */
-    private val isMusic get() = query == null && playlistUrl == null && channelUrl == null && tabs[tabIndex].second == YtCatalog.MUSIC
+    private val isMusic get() = query == null && playlistUrl == null && channelUrl == null && special == null &&
+        tabs[tabIndex].second == YtCatalog.MUSIC
 
     private fun applyListAdapter() {
-        val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null
+        val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null && special == null
         val wantHeader = if (shelfHere) shelf.root else null
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
         if (shelfHere) shelf.refresh()
@@ -117,9 +126,22 @@ class HomeScreen(
         val bg = if (isMusic) musicGlow else null
         if (hm.feedList.background !== bg) hm.feedList.background = bg
     }
-    private val suggestAdapter = SuggestAdapter { submit(it) }
+    private val suggestAdapter = SuggestAdapter({ submit(it) }) { text ->
+        // ↖ : put the suggestion in the box to keep typing
+        hm.searchInput.setText(text)
+        hm.searchInput.setSelection(hm.searchInput.text.length)
+    }
+
+    /** The ≡ button (side menu) and the mic (voice search): handled by the main screen. */
+    var onMenu: () -> Unit = {}
+    var onVoice: () -> Unit = {}
+
+    /** All on the channels row: the Subscriptions tab (set by the main screen). */
+    var onAllSubs: () -> Unit = {}
 
     fun setup() {
+        shelf.openChannel = { openChannel(it.url, it.title, it.thumb) }
+        shelf.openAllSubs = { onAllSubs() }
         tabs = computeTabs()
         hm.accountBtn.setOnClickListener { onAccount() }
         updateAccountIcon()
@@ -156,6 +178,9 @@ class HomeScreen(
         }
 
         hm.searchOpen.setOnClickListener { startTyping() }
+        hm.homeMenu.setOnClickListener { onMenu() }
+        hm.homeBell.setOnClickListener { openNotifications() }
+        hm.searchMic.setOnClickListener { onVoice() }
         hm.searchInput.setOnFocusChangeListener { _, focused -> if (focused) startTyping() }
         hm.searchInput.setOnClickListener { startTyping() }
         hm.searchInput.setOnEditorActionListener { _, actionId, _ ->
@@ -169,6 +194,7 @@ class HomeScreen(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 hm.searchClear.isVisible = !s.isNullOrEmpty()
+                hm.searchMic.isVisible = s.isNullOrEmpty()
                 if (hm.suggestList.isVisible) suggest(s?.toString().orEmpty())
             }
         })
@@ -181,7 +207,7 @@ class HomeScreen(
         hm.feedSettings.setOnClickListener { Net.openSettings(act) }
 
         // + on every video: pick several, then download them together
-        listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter).forEach { a ->
+        listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter, specialAdapter).forEach { a ->
             a.onPick = { togglePick(it) }
             a.isPicked = { picked.containsKey(it) }
         }
@@ -203,7 +229,8 @@ class HomeScreen(
 
     /** Back: stop typing, or leave the search results. Returns false when there is nothing to undo. */
     fun back(): Boolean {
-        if (playlistUrl != null || channelUrl != null) {
+        if (playlistUrl != null || channelUrl != null || special != null) {
+            special = null
             playlistUrl = null
             playlistItem = null
             channelUrl = null
@@ -376,10 +403,57 @@ class HomeScreen(
         load(reset = true)
     }
 
+    /**
+     * A list with its own title bar: a topic from the side menu ("q:music"), a YouTube list of the account
+     * ("acc:VLLL" liked, "acc:VLWL" Watch later, "acc:FEhistory"), or "local:history" (watched in RAINAX).
+     */
+    fun openList(title: String, id: String) {
+        if (hm.suggestList.isVisible) stopTyping()
+        if (id.startsWith("acc:") && !YtAccount.isSignedIn(act)) {
+            onAccount()                                  // sign in first
+            return
+        }
+        rememberScroll()
+        playlistUrl = null
+        playlistItem = null
+        channelUrl = null
+        channel = null
+        special = id
+        hm.titleText.text = title
+        hm.titleDownload.isVisible = false
+        hm.brandBar.isVisible = false
+        hm.searchBar.isVisible = false
+        hm.titleBar.isVisible = true
+        hm.chipsScroll.isVisible = false
+        if (id == "local:history" || id.startsWith("acc:")) vm.feedCache.remove("sp:$id")    // always fresh
+        applyListAdapter()
+        load(reset = true)
+    }
+
+    /** The Music chip (YouTube Music style tab), from the side menu. */
+    fun showMusic() {
+        var guard = 0
+        while (back() && guard++ < 6) { /* leave search results, lists and typing */ }
+        val i = tabs.indexOfFirst { it.second == YtCatalog.MUSIC }
+        if (i < 0) return
+        (hm.homeChips.getChildAt(i) as? Chip)?.isChecked = true
+    }
+
+    /** The bell: new videos from your channels (YouTube's notifications are about those). */
+    fun openNotifications() {
+        if (!YtAccount.isSignedIn(act)) {
+            android.widget.Toast.makeText(act, "Sign in to YouTube to see new videos from your channels", android.widget.Toast.LENGTH_LONG).show()
+            onAccount()
+            return
+        }
+        openList("Notifications", "acc:FEsubscriptions")
+    }
+
     /** A playlist: its videos (each with Download) and "Download all" at the top. */
     fun openPlaylist(item: VideoItem) {
         if (hm.suggestList.isVisible) stopTyping()
         rememberScroll()
+        special = null
         channelUrl = null
         channel = null
         playlistUrl = item.url
@@ -398,6 +472,7 @@ class HomeScreen(
     fun openChannel(url: String, name: String? = null, avatar: String? = null) {
         if (hm.suggestList.isVisible) stopTyping()
         rememberScroll()
+        special = null
         playlistUrl = null
         playlistItem = null
         channelUrl = url
@@ -488,7 +563,7 @@ class HomeScreen(
         scrollMemory[cacheKey()] = hm.feedList.layoutManager?.onSaveInstanceState()
     }
 
-    private fun cacheKey(): String = channelUrl?.let { "ch:$it" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
+    private fun cacheKey(): String = special?.let { "sp:$it" } ?: channelUrl?.let { "ch:$it" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
         ?: "tab:${tabs[tabIndex].second}"
 
     private fun open(item: VideoItem) = when {
@@ -637,6 +712,7 @@ class HomeScreen(
         val chUrl = channelUrl
         val pl = searchKind
         val tabId = tabs[tabIndex].second
+        val sp = special
         val page = next
         val key = cacheKey()
         val history = AppPrefs.searchHistory(act)
@@ -645,6 +721,9 @@ class HomeScreen(
                 var header: ChannelDetails? = null
                 val res = withContext(Dispatchers.IO) {
                     when {
+                        sp != null && sp.startsWith("q:") -> YtCatalog.kiosk(sp, page)
+                        sp == "local:history" -> FeedPage(WatchHistory.recentItems(act), null)
+                        sp != null -> YtAccount.browse(sp.removePrefix("acc:"), page)
                         chUrl != null && page == null -> YtCatalog.channel(chUrl).let { header = it.first; it.second }
                         chUrl != null -> YtCatalog.channelMore(chUrl, page!!)
                         plUrl != null -> YtCatalog.playlist(plUrl, page)
@@ -675,7 +754,7 @@ class HomeScreen(
                 applyListAdapter()
                 hm.feedRefresh.isRefreshing = false
                 if (reset) hm.feedList.scrollToPosition(0)
-                if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else emptyText(tabId))
+                if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else emptyText(sp ?: tabId))
                 // a short page that doesn't fill the screen can't be scrolled: load the next one by itself
                 if (added > 0 && next != null) hm.feedList.post {
                     if (loadJob?.isActive != true && !hm.feedList.canScrollVertically(1)) load(reset = false)
@@ -705,7 +784,7 @@ class HomeScreen(
         vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
         updateAccountIcon()
         if (query == null) buildTabs()            // new chips now, even if a channel is open (Back shows them)
-        if (query == null && playlistUrl == null && channelUrl == null) {
+        if (query == null && playlistUrl == null && channelUrl == null && special == null) {
             applyListAdapter()
             load(reset = true)
         }
@@ -733,6 +812,7 @@ class HomeScreen(
         "acc:FEhistory" -> "No watch history yet.\nVideos you watch on YouTube show here."
         "acc:VLLL" -> "No liked videos yet.\nTap Like on a video to save it here."
         "acc:VLWL" -> "Watch later is empty.\nTap Save on a video to add it."
+        "local:history" -> "No watch history yet.\nVideos you watch in RAINAX Tube show here."
         else -> "Nothing here right now"
     }
 
@@ -763,7 +843,10 @@ class HomeScreen(
     }
 
     /** Search suggestions: recent searches (clock icon) first, then YouTube's suggestions. */
-    private class SuggestAdapter(private val onPick: (String) -> Unit) : RecyclerView.Adapter<SuggestAdapter.VH>() {
+    private class SuggestAdapter(
+        private val onPick: (String) -> Unit,
+        private val onFill: (String) -> Unit
+    ) : RecyclerView.Adapter<SuggestAdapter.VH>() {
         private var items: List<String> = emptyList()
         private var historyCount = 0
 
@@ -783,11 +866,13 @@ class HomeScreen(
             holder.text.text = text
             holder.icon.setImageResource(if (position < historyCount) R.drawable.ic_history else R.drawable.ic_search)
             holder.itemView.setOnClickListener { onPick(text) }
+            holder.fill.setOnClickListener { onFill(text) }
         }
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
             val icon: ImageView = v.findViewById(R.id.icon)
             val text: TextView = v.findViewById(R.id.text)
+            val fill: ImageView = v.findViewById(R.id.fill)
         }
     }
 }

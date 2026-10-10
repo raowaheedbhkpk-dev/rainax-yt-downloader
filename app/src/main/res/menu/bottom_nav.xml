@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Like YouTube: Home, Shorts, + (download from a link), Subscriptions, You (downloads, library, settings) -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/nav_home" android:icon="@drawable/ic_nav_home" android:title="Home" />
     <item android:id="@+id/nav_shorts" android:icon="@drawable/ic_shorts" android:title="Shorts" />
-    <item android:id="@+id/nav_social" android:icon="@drawable/ic_nav_social" android:title="Social" />
-    <item android:id="@+id/nav_downloads" android:icon="@drawable/ic_nav_play" android:title="You" />
-    <item android:id="@+id/nav_settings" android:icon="@drawable/ic_nav_settings" android:title="Settings" />
+    <item android:id="@+id/nav_social" android:icon="@drawable/ic_nav_create" android:title="Add" />
+    <item android:id="@+id/nav_subs" android:icon="@drawable/ic_nav_subs" android:title="Subscriptions" />
+    <item android:id="@+id/nav_downloads" android:icon="@drawable/ic_nav_you" android:title="You" />
 </menu>

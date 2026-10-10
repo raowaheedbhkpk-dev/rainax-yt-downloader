@@ -28,7 +28,17 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     private var shortsLoading = false
     private var shortsTriedAt = 0L
 
+    /** Tap on a channel picture, and on All (the Subscriptions tab). */
+    var openChannel: (VideoItem) -> Unit = {}
+    var openAllSubs: () -> Unit = {}
+    private val subsAdapter = ChannelAvatarAdapter { openChannel(it) }
+    private var subsLoading = false
+    private var subsTriedAt = 0L
+
     init {
+        b.subsRow.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
+        b.subsRow.adapter = subsAdapter
+        b.subsRowAll.setOnClickListener { openAllSubs() }
         b.continueList.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
         b.continueList.adapter = continueAdapter
         b.shortsList.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
@@ -37,6 +47,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
 
     /** Called when Home shows: newest Continue watching list, and the Shorts strip (loaded once). */
     fun refresh() {
+        refreshSubs()
         if (WatchHistory.version != shownVersion || shownVersion < 0) {
             shownVersion = WatchHistory.version
             val list = WatchHistory.continueList(act)
@@ -55,6 +66,27 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                 shortsLoading = false
                 showShorts()
             }
+        }
+    }
+
+    /** Signed in: the round pictures of your channels on top (loaded once, kept 30 minutes). */
+    private fun refreshSubs() {
+        if (!YtAccount.isSignedIn(act)) {
+            b.subsBox.isVisible = false
+            return
+        }
+        val have = SubsChannels.cached()
+        subsAdapter.submit(have)
+        b.subsBox.isVisible = have.isNotEmpty()
+        if (subsLoading || System.currentTimeMillis() - subsTriedAt < 60_000) return
+        subsLoading = true
+        subsTriedAt = System.currentTimeMillis()
+        act.lifecycleScope.launch {
+            val list = withContext(Dispatchers.IO) { runCatching { SubsChannels.load() }.getOrDefault(emptyList()) }
+            subsLoading = false
+            if (!YtAccount.isSignedIn(act)) return@launch
+            subsAdapter.submit(list)
+            b.subsBox.isVisible = list.isNotEmpty()
         }
     }
 

@@ -33,7 +33,9 @@ import org.schabi.newpipe.extractor.Page
 class CommentsSheet(
     private val act: AppCompatActivity,
     private val videoUrl: String,
-    private val onSignIn: () -> Unit
+    private val onSignIn: () -> Unit,
+    /** Height of the sheet (0 = most of the screen). The video page passes the space below the video. */
+    private val heightPx: Int = 0
 ) {
     private val sb = SheetCommentsBinding.inflate(act.layoutInflater)
     private val dialog = BottomSheetDialog(act)
@@ -55,7 +57,21 @@ class CommentsSheet(
 
     fun show() {
         dialog.setContentView(sb.root)
-        val tall = (act.resources.displayMetrics.heightPixels * 0.85).toInt()
+        val tall = heightPx.takeIf { it > act.resources.displayMetrics.heightPixels / 3 }
+            ?: (act.resources.displayMetrics.heightPixels * 0.85).toInt()
+        if (tall == heightPx) dialog.window?.setDimAmount(0.1f)     // under the video: the video stays bright
+        // quick emoji while typing: tap one to put it where the cursor is
+        for (i in 0 until sb.commentEmojis.childCount) {
+            val v = sb.commentEmojis.getChildAt(i) as? android.widget.TextView ?: continue
+            v.setOnClickListener {
+                val e = sb.commentInput.text
+                val at = sb.commentInput.selectionStart.coerceIn(0, e.length)
+                e.insert(at, v.text)
+            }
+        }
+        sb.commentInput.setOnFocusChangeListener { _, focused ->
+            sb.commentEmojis.isVisible = focused && YtAccount.isSignedIn(act)
+        }
         sb.root.layoutParams?.let {
             it.height = tall
             sb.root.layoutParams = it
