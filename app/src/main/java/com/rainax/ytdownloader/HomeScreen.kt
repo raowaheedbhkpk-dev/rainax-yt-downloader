@@ -208,7 +208,7 @@ class HomeScreen(
 
         // + on every video: pick several, then download them together
         listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter, specialAdapter).forEach { a ->
-            a.onPick = { Picks.toggle(it) }
+            a.onPick = { Picks.toggle(it); if (Picks.has(it.url)) vm.warm(it.url) }
             a.isPicked = { Picks.has(it) }
         }
         Picks.listen { refreshPicks() }

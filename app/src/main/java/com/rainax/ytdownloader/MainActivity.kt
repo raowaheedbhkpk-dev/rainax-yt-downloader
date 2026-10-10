@@ -990,32 +990,98 @@ class MainActivity : AppCompatActivity() {
             return out
         }
 
+        // Several videos (picked with +) and playlists: each video's own formats are looked up (4 at a time),
+        // and only the formats those videos really have are shown, with their sizes added up.
+        // A playlist uses its first videos and scales their sizes to the whole list (shown with ≈).
+        val found = java.util.concurrent.ConcurrentHashMap<String, PreviewState>()
+        var lookups: Job? = null
+        var sampled: List<PlaylistEntry> = emptyList()
+        var renderNow: () -> Unit = {}
+
+        fun lookUp(list: List<String>) {
+            lookups?.cancel()
+            lookups = lifecycleScope.launch {
+                list.forEach { u ->
+                    launch {
+                        found[u] = vm.infoFor(u)
+                        if (sheet === dialog) renderNow()
+                    }
+                }
+            }
+        }
+
+        fun heightOf(spec: String) = spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
+
+        /** What [spec] downloads for one video: that format, else its nearest lower video quality. */
+        fun bytesFor(st: PreviewState, spec: String): Long {
+            st.all.firstOrNull { it.spec == spec }?.let { return it.bytes }
+            if (!spec.startsWith("video")) return 0
+            val want = heightOf(spec).takeIf { it > 0 } ?: Int.MAX_VALUE
+            val videos = st.all.filter { it.kind == KIND_VIDEO }
+            return (videos.filter { heightOf(it.spec) <= want }.maxByOrNull { heightOf(it.spec) }
+                ?: videos.minByOrNull { heightOf(it.spec) })?.bytes ?: 0
+        }
+
+        /** The formats these videos have, each with the total size ([scale] > 1: a playlist estimate). */
+        fun combine(states: List<PreviewState>, scale: Double): Pair<List<FormatChoice>, List<FormatChoice>> {
+            val ok = states.filter { it.error == null && it.all.isNotEmpty() }
+            if (ok.isEmpty()) return emptyList<FormatChoice>() to emptyList()
+            val bySpec = LinkedHashMap<String, FormatChoice>()
+            ok.forEach { st -> st.all.forEach { c -> bySpec.putIfAbsent(c.spec, c) } }
+            val all = bySpec.values.map { c ->
+                val sum = (ok.sumOf { bytesFor(it, c.spec) } * scale).toLong()
+                c.copy(size = if (sum > 0) (if (scale > 1.01) "≈ " else "") + formatSize(sum) else "", bytes = sum)
+            }.sortedWith(compareBy<FormatChoice>({ if (it.kind == KIND_AUDIO) 0 else 1 }, { heightOf(it.spec) }))
+            val videos = all.filter { it.kind == KIND_VIDEO }
+            val quickVideo = listOfNotNull(
+                videos.minByOrNull { kotlin.math.abs(heightOf(it.spec) - 360) },
+                videos.minByOrNull { kotlin.math.abs(heightOf(it.spec) - 720) },
+                videos.minByOrNull { kotlin.math.abs(heightOf(it.spec) - 1080) }
+            ).distinctBy { it.spec }.sortedBy { heightOf(it.spec) }
+            return (all.filter { it.kind == KIND_AUDIO } + quickVideo) to all
+        }
+
         fun render() {
             val p = current
-            val loading = single && (p == null || p.loading)
-            val error = if (single) p?.error else null
-            val isPlaylist = p?.playlist?.isNotEmpty() == true
-            // While the exact sizes load, the usual choices are already there: pick one and download at once
-            val presets = !single || error != null || isPlaylist || (loading && p?.quick.isNullOrEmpty() && !isPlaylistUrl(firstUrl))
-            val quick = when {
-                // playlist: show the approximate total size of every choice
+            val isPlaylist = single && p?.playlist?.isNotEmpty() == true
+            if (isPlaylist && sampled.isEmpty()) {
+                sampled = p!!.playlist.take(6)
+                lookUp(sampled.map { it.url })
+            }
+            val waiting = when {
+                !single -> urls.count { found[it] == null }
+                isPlaylist -> sampled.count { found[it.url] == null }
+                else -> 0
+            }
+            val (quick, all) = when {
+                !single -> combine(urls.mapNotNull { found[it] }, 1.0)
                 isPlaylist -> {
                     val list = p!!.playlist
                     val known = list.filter { it.seconds > 0 }
                     val avg = if (known.isNotEmpty()) known.sumOf { it.seconds } / known.size else 240L
-                    val total = list.sumOf { if (it.seconds > 0) it.seconds else avg }
-                    PRESETS.map { it.copy(size = "≈ " + formatSize(estimatePlaylistBytes(it.spec, total))) }
+                    fun len(e: PlaylistEntry) = if (e.seconds > 0) e.seconds else avg
+                    val done = sampled.filter { found[it.url]?.let { st -> st.error == null } == true }
+                    val scale = if (done.isEmpty()) 1.0
+                    else list.sumOf { len(it) }.toDouble() / done.sumOf { len(it) }.coerceAtLeast(1)
+                    combine(done.mapNotNull { found[it.url] }, scale.coerceAtLeast(1.0))
                 }
-                presets -> PRESETS
-                else -> p?.quick.orEmpty()
+                p == null || p.loading || p.error != null -> emptyList<FormatChoice>() to emptyList()
+                else -> p.quick to p.all
             }
-            val all = if (presets) emptyList() else p?.all.orEmpty()
-            val subs = if (presets) emptyList() else p?.subtitles.orEmpty()
+            val loading = (single && !isPlaylist && (p == null || p.loading)) || (waiting > 0 && quick.isEmpty()) ||
+                (single && p == null)
+            val error = when {
+                single && !isPlaylist -> p?.error
+                !single && waiting == 0 && quick.isEmpty() -> "Couldn't read these videos. Check your internet, then tap Retry."
+                isPlaylist && waiting == 0 && quick.isEmpty() -> "Couldn't read this playlist's videos. Tap Retry."
+                else -> null
+            }
+            val subs = if (single && !isPlaylist) p?.subtitles.orEmpty() else emptyList()
 
             // picked while sizes were loading, but this video has no such row: select the closest real one,
             // so what downloads is always what is shown as selected
             val sel = selectedSpec
-            if (!presets && sel != null && quick.isNotEmpty() && (quick + all).none { it.spec == sel }) {
+            if (sel != null && quick.isNotEmpty() && (quick + all).none { it.spec == sel }) {
                 selectedSpec = if (sel.startsWith("audio")) {
                     quick.firstOrNull { it.kind == KIND_AUDIO }?.spec
                 } else {
@@ -1033,17 +1099,20 @@ class MainActivity : AppCompatActivity() {
             }
             sb.backBtn.isVisible = mode != MODE_QUICK
             sb.sheetSub.text = when {
-                !single -> "They will download one after another"
+                !single && waiting > 0 -> "Getting sizes…  ${urls.size - waiting} of ${urls.size}"
+                !single -> urls.count { found[it]?.error != null }.let { bad ->
+                    if (bad > 0) "They download one after another  •  $bad couldn't be read" else "They will download one after another"
+                }
                 loading -> (knownTitle ?: p?.title)?.let { "$it  •  getting sizes…" } ?: "Fetching info…"
                 error != null -> Uri.parse(firstUrl).host.orEmpty()
-                isPlaylist -> "${p!!.title}  •  ${p.subtitle}"
+                isPlaylist -> "${p!!.title}  •  ${p.subtitle}" + if (waiting > 0) "  •  getting sizes…" else ""
                 else -> p?.title.orEmpty()
             }
-            sb.previewLoading.isVisible = loading
+            sb.previewLoading.isVisible = loading || waiting > 0
 
             sb.errorBlock.isVisible = error != null
             if (error != null) {
-                sb.errorText.text = error + "\n\nTap Retry, or pick a format below to try anyway."
+                sb.errorText.text = error
             }
             sb.playlistBtn.isVisible = false
 
@@ -1071,12 +1140,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             adapter.submitList(rows)
-            sb.downloadBtn.isEnabled = selectedSpec != null
+            // only formats that are really shown can be downloaded
+            sb.downloadBtn.isEnabled = selectedSpec != null && (quick + all).any { it.spec == selectedSpec }
 
             val fraction = if (mode == MODE_QUICK) 0.66 else 0.9
             sb.root.minimumHeight = (screenH * fraction).toInt()
         }
 
+        renderNow = { render() }
         choiceAction = { c ->
             if (mode == MODE_SUBS) {
                 selectedSub = c.spec.ifEmpty { null }
@@ -1094,7 +1165,14 @@ class MainActivity : AppCompatActivity() {
             mode = if (mode == MODE_SUBS) MODE_ALL else MODE_QUICK
             render()
         }
-        sb.retryBtn.setOnClickListener { vm.fetchInfo(firstUrl, cookies[firstUrl]) }
+        sb.retryBtn.setOnClickListener {
+            when {
+                !single -> { found.clear(); lookUp(urls) }
+                current?.playlist?.isNotEmpty() == true -> { found.clear(); sampled = emptyList() }
+                else -> vm.fetchInfo(firstUrl, cookies[firstUrl])
+            }
+            render()
+        }
         sb.playlistBtn.setOnClickListener {
             val id = Uri.parse(firstUrl).getQueryParameter("list").orEmpty()
             vm.fetchInfo("https://www.youtube.com/playlist?list=$id", cookies[firstUrl], forcePlaylist = true)
@@ -1105,7 +1183,7 @@ class MainActivity : AppCompatActivity() {
             val p = current
             val sub = if (spec.startsWith("video")) selectedSub else null
             val items = when {
-                !single -> urls.map { EnqueueItem(it, "", cookies[it], youtubeThumb(it)) }
+                !single -> urls.map { EnqueueItem(it, found[it]?.title.orEmpty(), cookies[it], found[it]?.thumbUrl ?: youtubeThumb(it)) }
                 p != null && p.playlist.isNotEmpty() ->
                     p.playlist.map { EnqueueItem(it.url, it.title, cookies[firstUrl], it.thumbUrl) }
                 // never save a status text like "Connecting…" as the title (blank = looked up by the service)
@@ -1125,6 +1203,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         var collectJob: Job? = null
+        if (!single) lookUp(urls)
         if (single) {
             vm.fetchInfo(firstUrl, cookies[firstUrl])
             collectJob = lifecycleScope.launch {
@@ -1135,6 +1214,7 @@ class MainActivity : AppCompatActivity() {
 
         dialog.setOnDismissListener {
             collectJob?.cancel()
+            lookups?.cancel()
             // A newer sheet may already be open (dismiss runs later): only clean up our own
             if (sheet === dialog) {
                 sheet = null

@@ -31,10 +31,10 @@ object InfoFetcher {
             bestAudio > 0 -> bestAudio
             else -> duration * 16_000L
         }
-        val audio = FormatChoice("audio:m4a", "Audio (M4A)", "Original quality, plays on all phones", formatSize(audioBytes), KIND_AUDIO)
+        val audio = FormatChoice("audio:m4a", "Audio (M4A)", "Original quality, plays on all phones", formatSize(audioBytes), KIND_AUDIO, bytes = audioBytes)
         // MP3 192 kbit/s = 24 KB per second
         val mp3 = FormatChoice("audio:mp3", "Audio (MP3)", "192 kbps, plays everywhere (converted on your phone)",
-            if (duration > 0) formatSize(duration * 24_000L) else "", KIND_AUDIO)
+            if (duration > 0) formatSize(duration * 24_000L) else "", KIND_AUDIO, bytes = duration * 24_000L)
 
         // ----- Video -----
         val heights = (progressive.keys + videoOnly.keys).filter { it >= 144 }.toSortedSet().toList()
@@ -45,7 +45,7 @@ object InfoFetcher {
                 ?: ((videoOnly[h] ?: 0L).let { if (it > 0) it + bestAudio else 0L })
             FormatChoice(
                 "video:$h", videoTitle(h), videoDesc(h), formatSize(total), KIND_VIDEO,
-                badge = if (h <= 144) "Low" else null
+                badge = if (h <= 144) "Low" else null, bytes = total
             )
         }
         fun heightOf(c: FormatChoice) = c.spec.substringAfter(":").toIntOrNull() ?: 0

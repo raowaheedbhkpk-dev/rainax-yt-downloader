@@ -62,7 +62,7 @@ object SocialExtractor {
         val audio = m.variants.firstOrNull { it.audioOnly }
         val choices = mutableListOf<FormatChoice>()
         if (audio != null) {
-            choices += FormatChoice("audio:${audio.ext}", "Audio (${audio.ext.uppercase()})", "Sound only", sizeText(audio.size), KIND_AUDIO)
+            choices += FormatChoice("audio:${audio.ext}", "Audio (${audio.ext.uppercase()})", "Sound only", sizeText(audio.size), KIND_AUDIO, bytes = audio.size.coerceAtLeast(0))
         }
         video.sortedByDescending { it.height }.forEachIndexed { i, v ->
             val title = when {
@@ -72,7 +72,7 @@ object SocialExtractor {
                 else -> if (i == 0) "Best quality" else "Video"
             }
             choices += FormatChoice("video:${v.height.coerceAtLeast(0)}:$i", title,
-                if (isTikTok(url)) "No watermark, MP4" else v.ext.uppercase(), sizeText(v.size), KIND_VIDEO)
+                if (isTikTok(url)) "No watermark, MP4" else v.ext.uppercase(), sizeText(v.size), KIND_VIDEO, bytes = v.size.coerceAtLeast(0))
         }
         if (choices.isEmpty()) error("No video found on this page")
         return PreviewState(

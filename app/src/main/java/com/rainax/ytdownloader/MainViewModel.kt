@@ -67,7 +67,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun remember(url: String, state: PreviewState) {
         if (state.error != null || state.loading) return
-        if (cache.size > 15) cache.clear()        // each entry holds a thumbnail: keep memory small
+        if (cache.size > 60) cache.clear()        // (picked videos are looked up ahead: room for a good number)
         cache[cacheKey(url)] = Cached(System.currentTimeMillis(), state)
     }
 
@@ -93,6 +93,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         job.invokeOnCompletion {
             if (aheadJob === job) { aheadJob = null; aheadKey = null }
         }
+    }
+
+    // ---------- several videos (picked with +, or a playlist's first ones): looked up 4 at a time ----------
+
+    private val inflight = java.util.concurrent.ConcurrentHashMap<String, Deferred<PreviewState>>()
+    private val gate = kotlinx.coroutines.sync.Semaphore(4)
+
+    /** Info for one video: from memory, from a look-up already running, or a new one (never throws). */
+    suspend fun infoFor(url: String): PreviewState {
+        cached(url)?.let { return it }
+        val key = cacheKey(url)
+        val ahead = aheadJob?.takeIf { aheadKey == key && it.isActive }
+        if (ahead != null) {
+            val r = runCatching { ahead.await() }.getOrNull()
+            if (r != null && r.error == null) return r
+        }
+        val job = inflight.computeIfAbsent(key) {
+            viewModelScope.async(Dispatchers.IO) {
+                gate.acquire()
+                try {
+                    var r = doFetch(url, false)
+                    if (r.error != null && isNetworkGlitch(r.raw)) {
+                        delay(1200)
+                        r = doFetch(url, false)
+                    }
+                    r.also { remember(url, it) }
+                } finally {
+                    gate.release()
+                }
+            }.also { d -> d.invokeOnCompletion { inflight.remove(key, d) } }
+        }
+        return try {
+            job.await()
+        } catch (e: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            PreviewState(error = "Stopped", raw = "stopped")
+        }
+    }
+
+    /** A video was picked with +: look it up now, so the download sheet has its sizes at once. */
+    fun warm(url: String) {
+        if (cached(url) != null || inflight.containsKey(cacheKey(url))) return
+        viewModelScope.launch { infoFor(url) }
     }
 
     /** Reads info with RAINAX's own extractor. Never throws: problems come back as an error state. */

@@ -325,17 +325,37 @@ class ShortsActivity : AppCompatActivity() {
         holder(current)?.b?.spPaused?.isVisible = userPaused
     }
 
+    /** Download: this Short's real formats with their sizes (looked up first, nothing made up). */
     private fun chooseDownload(item: VideoItem) {
-        val specs = listOf("video:720" to "Video (HD 720p)", "video:0" to "Video (best quality)", "audio:m4a" to "Music (M4A)", "audio:mp3" to "Music (MP3)")
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        val wait = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Download this Short")
-            .setItems(specs.map { it.second }.toTypedArray()) { _, which ->
-                val title = details[item.url]?.title ?: item.title
-                val app = applicationContext
-                Downloader.enqueueAsync(app, listOf(EnqueueItem(item.url, title, null, item.thumb)), specs[which].first, null, null)
-                Toast.makeText(this, "Added to downloads", Toast.LENGTH_SHORT).show()
-            }
+            .setMessage("Getting formats and sizes…")
+            .setNegativeButton("Cancel", null)
             .show()
+        var looked = false
+        val job = lifecycleScope.launch {
+            val st = withContext(Dispatchers.IO) {
+                runCatching { FastExtractor.fetch(item.url) }.getOrElse { PreviewState(error = friendlyError(it.message ?: "Couldn't read this Short")) }
+            }
+            if (!wait.isShowing) return@launch
+            looked = true
+            wait.dismiss()
+            val choices = st.all.ifEmpty { st.quick }
+            if (st.error != null || choices.isEmpty()) {
+                Toast.makeText(this@ShortsActivity, st.error ?: "No formats found for this Short", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val labels = choices.map { c -> if (c.size.isNotBlank()) "${c.title}   •   ${c.size}" else c.title }
+            MaterialAlertDialogBuilder(this@ShortsActivity, R.style.ThemeOverlay_Rainax_Dialog)
+                .setTitle("Download this Short")
+                .setItems(labels.toTypedArray()) { _, which ->
+                    val title = st.title?.takeIf { it.isNotBlank() } ?: details[item.url]?.title ?: item.title
+                    Downloader.enqueueAsync(applicationContext, listOf(EnqueueItem(item.url, title, null, item.thumb)), choices[which].spec, null, null)
+                    Toast.makeText(this@ShortsActivity, "Added to downloads", Toast.LENGTH_SHORT).show()
+                }
+                .show()
+        }
+        wait.setOnDismissListener { if (!looked) job.cancel() }      // Cancel tapped: stop looking
     }
 
     private fun share(item: VideoItem) {

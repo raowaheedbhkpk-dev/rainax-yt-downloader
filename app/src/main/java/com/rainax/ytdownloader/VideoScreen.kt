@@ -90,7 +90,7 @@ class VideoScreen(
         header.vSave.setOnClickListener { saveWatchLater() }
         vb.vNextBar.setOnClickListener { showUpNext() }
         // + on Up next videos: pick several and download them together (the same picks as on Home)
-        related.onPick = { Picks.toggle(it) }
+        related.onPick = { Picks.toggle(it); if (Picks.has(it.url)) vm.warm(it.url) }
         related.isPicked = { Picks.has(it) }
         Picks.listen { showPicks() }
         vb.vPickClear.setOnClickListener { Picks.clear() }
@@ -154,7 +154,7 @@ class VideoScreen(
             dialog.dismiss()
             open(it.url, it.title, it.uploader, thumb = it.thumb)
         }, { download(it.url, it.title, false) })
-        rows.onPick = { Picks.toggle(it); rows.notifyDataSetChanged() }
+        rows.onPick = { Picks.toggle(it); if (Picks.has(it.url)) vm.warm(it.url); rows.notifyDataSetChanged() }
         rows.isPicked = { Picks.has(it) }
         list.adapter = rows
         rows.submit(d.related.filter { !it.isPlaylist && !it.isChannel })
