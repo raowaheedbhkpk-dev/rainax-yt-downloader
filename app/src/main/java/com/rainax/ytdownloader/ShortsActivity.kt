@@ -392,7 +392,7 @@ class ShortsActivity : AppCompatActivity() {
             details[item.url]?.let { fill(it) }
             b.root.setOnClickListener { if (pos == current) togglePause() }
             b.spComments.setOnClickListener {
-                CommentsSheet(this@ShortsActivity, item.url) { askSignIn() }.show()
+                CommentsSheet(this@ShortsActivity, item.url, { askSignIn() }).show()
             }
             b.spDownload.setOnClickListener { chooseDownload(item) }
             b.spShare.setOnClickListener { share(item) }
