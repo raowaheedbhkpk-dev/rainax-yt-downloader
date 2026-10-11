@@ -121,6 +121,11 @@ object JsSolver {
                 val w = WebView(c.applicationContext)
                 web = w
                 w.settings.javaScriptEnabled = true
+                // it only does arithmetic on text: no internet, files or saved data of its own
+                w.settings.blockNetworkLoads = true
+                w.settings.allowFileAccess = false
+                w.settings.allowContentAccess = false
+                w.settings.domStorageEnabled = false
                 w.addJavascriptInterface(bridge, "RX")
                 w.webViewClient = object : WebViewClient() {
                     private var started = false

@@ -5,6 +5,9 @@ package com.rainax.ytdownloader
  * together. One list for the whole app, so picks made on the video page and on Home add up.
  */
 object Picks {
+    /** With more picks than this, the download sheet reads only this many videos and estimates the rest. */
+    const val SAMPLE = 12
+
     private val map = LinkedHashMap<String, VideoItem>()
     private val listeners = mutableListOf<() -> Unit>()
 

@@ -826,6 +826,7 @@ class DownloadService : Service() {
             .putStringArrayListExtra(PlayerActivity.EXTRA_TITLES, arrayListOf(t.title))
             .putExtra(PlayerActivity.EXTRA_INDEX, 0)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        PlayerActivity.sign(this, i)
         return PendingIntent.getActivity(this, 7, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 

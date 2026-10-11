@@ -202,6 +202,21 @@ class BgPlayService : MediaSessionService() {
             .setSessionActivity(open)
             .setCallback(object : MediaSession.Callback {
 
+                // Other apps (lock screen, Bluetooth, watches) can play, pause and skip, but can't put their own
+                // tracks into RAINAX's player: only RAINAX itself adds or changes the list.
+                override fun onConnect(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo
+                ): MediaSession.ConnectionResult {
+                    val base = super.onConnect(mediaSession, controller)
+                    if (controller.packageName == packageName || !base.isAccepted) return base
+                    val commands = base.availablePlayerCommands.buildUpon()
+                        .remove(androidx.media3.common.Player.COMMAND_SET_MEDIA_ITEM)
+                        .remove(androidx.media3.common.Player.COMMAND_CHANGE_MEDIA_ITEMS)
+                        .build()
+                    return MediaSession.ConnectionResult.accept(base.availableSessionCommands, commands)
+                }
+
                 // Tracks arrive from the app's screen: make sure each keeps its sound address
                 override fun onAddMediaItems(
                     mediaSession: MediaSession,

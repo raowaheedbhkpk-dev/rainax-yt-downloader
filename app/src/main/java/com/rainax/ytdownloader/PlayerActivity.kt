@@ -172,6 +172,16 @@ class PlayerActivity : AppCompatActivity() {
     /** Reads the list to play: from the app (several files) or from another app (one file). */
     private fun readIntent(i: Intent): Boolean {
         shuffleRequest = null
+        // This screen is open to other apps ("Open with"). Lists and downloads-in-progress are only taken from
+        // RAINAX itself (signed with a key only the app knows); other apps can only hand over one shared file.
+        if (!isOurs(this, i)) {
+            val data = i.data ?: return false
+            if (data.scheme != "content") return false
+            stopWatching()
+            uris = arrayListOf(data.toString())
+            titles = arrayListOf(displayName(data))
+            return true
+        }
         val partial = i.getStringExtra(EXTRA_PARTIAL)
         if (partial != null) {
             PartialFiles.watch(partial)                // its files stay until this player closes
@@ -959,13 +969,25 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_SHUFFLE = "shuffle"
         const val EXTRA_PARTIAL = "partial_task"
         const val EXTRA_PARTIAL_TITLE = "partial_title"
+        private const val EXTRA_KEY = "rx_key"
+
+        /** Marks [i] as coming from RAINAX (the key is made once and kept in the app's private settings). */
+        fun sign(context: Context, i: Intent): Intent = i.putExtra(EXTRA_KEY, AppPrefs.innerKey(context))
+
+        private fun isOurs(context: Context, i: Intent): Boolean {
+            val key = runCatching { i.getStringExtra(EXTRA_KEY) }.getOrNull() ?: return false
+            return java.security.MessageDigest.isEqual(key.toByteArray(), AppPrefs.innerKey(context).toByteArray())
+        }
 
         /** Watch a download while it is still downloading. */
         fun openPartial(context: Context, taskId: String, title: String) {
             context.startActivity(
-                Intent(context, PlayerActivity::class.java)
-                    .putExtra(EXTRA_PARTIAL, taskId)
-                    .putExtra(EXTRA_PARTIAL_TITLE, title)
+                sign(
+                    context,
+                    Intent(context, PlayerActivity::class.java)
+                        .putExtra(EXTRA_PARTIAL, taskId)
+                        .putExtra(EXTRA_PARTIAL_TITLE, title)
+                )
             )
         }
 
@@ -977,7 +999,7 @@ class PlayerActivity : AppCompatActivity() {
                 .putExtra(EXTRA_INDEX, index)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (shuffle != null) i.putExtra(EXTRA_SHUFFLE, shuffle)
-            context.startActivity(i)
+            context.startActivity(sign(context, i))
         }
     }
 }

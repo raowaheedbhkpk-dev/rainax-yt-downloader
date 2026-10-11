@@ -16,6 +16,19 @@ object AppPrefs {
     fun feedAutoplay(c: Context) = p(c).getInt("feed_autoplay", 2)
     fun setFeedAutoplay(c: Context, v: Int) = p(c).edit().putInt("feed_autoplay", v).apply()
 
+    /**
+     * A random key made on first use and kept only in the app's private settings: RAINAX adds it to the
+     * player screens it opens, so other apps can't make the player open the app's own files.
+     */
+    @Synchronized
+    fun innerKey(c: Context): String {
+        p(c).getString("inner_key", null)?.let { return it }
+        val bytes = ByteArray(24).also { java.security.SecureRandom().nextBytes(it) }
+        val key = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP or android.util.Base64.URL_SAFE)
+        p(c).edit().putString("inner_key", key).commit()
+        return key
+    }
+
     fun autoClear(c: Context) = p(c).getBoolean("auto_clear", false)
     fun setAutoClear(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_clear", v).apply()
 

@@ -115,6 +115,9 @@ object AppUpdater {
             for (i in 0 until assets.length()) {
                 val a = assets.optJSONObject(i) ?: continue
                 if (a.optString("name").endsWith(".apk", ignoreCase = true)) {
+                    // the file must come from GitHub itself, over https
+                    val link = a.optString("browser_download_url")
+                    if (!link.startsWith("https://github.com/$REPO/releases/download/", ignoreCase = true)) continue
                     return Release(tag, json.optString("body").trim(), a.optString("browser_download_url"), a.optLong("size"))
                 }
             }

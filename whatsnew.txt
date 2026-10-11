@@ -1,3 +1,7 @@
+Safer: other apps can no longer make the RAINAX player open its private files or add tracks to its player
+Safer: your YouTube sign-in is never copied to backups or a new phone
+Safer updates: only files from the official RAINAX release page are accepted
+Downloading many picked videos: sizes are estimated from 12 of them (faster, and YouTube does not block you)
 Autoplay in feed, like YouTube: the video you stop on plays silently in the list (tap the speaker for sound)
 Opening a video that was playing in the list carries on from where it was
 New setting: Autoplay in feed (Always on, Wi-Fi only or Off)

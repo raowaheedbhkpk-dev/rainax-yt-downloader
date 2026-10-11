@@ -965,7 +965,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun extractUrls(text: String): List<String> =
-        Regex("https?://\\S+").findAll(text).map { it.value }.distinct().toList()
+        Regex("https?://\\S+").findAll(text).map { it.value }.distinct().take(MAX_SHARED_LINKS).toList()
 
     /** Links shared from other apps (Share > RAINAX). */
     private fun handleIntent(intent: Intent?) {
@@ -1023,6 +1023,18 @@ class MainActivity : AppCompatActivity() {
         var lookups: Job? = null
         var sampled: List<PlaylistEntry> = emptyList()
         var renderNow: () -> Unit = {}
+        // many picked videos: sizes come from the first few and are scaled up (≈), so YouTube isn't asked
+        // about hundreds of videos at once (that can get the connection blocked for a while)
+        val sampleUrls = if (single) urls else urls.take(Picks.SAMPLE)
+        val sampledMany = sampleUrls.size < urls.size
+        // many lookups finish close together: draw once per frame, not once per video
+        var renderQueued = false
+        val renderSoon = {
+            if (!renderQueued) {
+                renderQueued = true
+                b.root.post { renderQueued = false; if (sheet === dialog) renderNow() }
+            }
+        }
 
         fun lookUp(list: List<String>) {
             lookups?.cancel()
@@ -1030,7 +1042,7 @@ class MainActivity : AppCompatActivity() {
                 list.forEach { u ->
                     launch {
                         found[u] = vm.infoFor(u)
-                        if (sheet === dialog) renderNow()
+                        renderSoon()
                     }
                 }
             }
@@ -1075,12 +1087,16 @@ class MainActivity : AppCompatActivity() {
                 lookUp(sampled.map { it.url })
             }
             val waiting = when {
-                !single -> urls.count { found[it] == null }
+                !single -> sampleUrls.count { found[it] == null }
                 isPlaylist -> sampled.count { found[it.url] == null }
                 else -> 0
             }
             val (quick, all) = when {
-                !single -> combine(urls.mapNotNull { found[it] }, 1.0)
+                !single -> {
+                    val read = sampleUrls.mapNotNull { found[it] }
+                    val good = read.count { it.error == null && it.all.isNotEmpty() }
+                    combine(read, if (sampledMany && good > 0) urls.size.toDouble() / good else 1.0)
+                }
                 isPlaylist -> {
                     val list = p!!.playlist
                     val known = list.filter { it.seconds > 0 }
@@ -1125,8 +1141,9 @@ class MainActivity : AppCompatActivity() {
             }
             sb.backBtn.isVisible = mode != MODE_QUICK
             sb.sheetSub.text = when {
-                !single && waiting > 0 -> "Getting sizes…  ${urls.size - waiting} of ${urls.size}"
-                !single -> urls.count { found[it]?.error != null }.let { bad ->
+                !single && waiting > 0 -> "Getting sizes…  ${sampleUrls.size - waiting} of ${sampleUrls.size}"
+                !single && sampledMany -> "They will download one after another  •  sizes estimated from ${sampleUrls.size} videos"
+                !single -> sampleUrls.count { found[it]?.error != null }.let { bad ->
                     if (bad > 0) "They download one after another  •  $bad couldn't be read" else "They will download one after another"
                 }
                 loading -> (knownTitle ?: p?.title)?.let { "$it  •  getting sizes…" } ?: "Fetching info…"
@@ -1193,7 +1210,7 @@ class MainActivity : AppCompatActivity() {
         }
         sb.retryBtn.setOnClickListener {
             when {
-                !single -> { found.clear(); lookUp(urls) }
+                !single -> { found.clear(); lookUp(sampleUrls) }
                 current?.playlist?.isNotEmpty() == true -> { found.clear(); sampled = emptyList() }
                 else -> vm.fetchInfo(firstUrl, cookies[firstUrl])
             }
@@ -1229,7 +1246,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         var collectJob: Job? = null
-        if (!single) lookUp(urls)
+        if (!single) lookUp(sampleUrls)
         if (single) {
             vm.fetchInfo(firstUrl, cookies[firstUrl])
             collectJob = lifecycleScope.launch {
@@ -1840,5 +1857,7 @@ class MainActivity : AppCompatActivity() {
         private const val MODE_QUICK = 0
         private const val MODE_ALL = 1
         private const val MODE_SUBS = 2
+        /** Most links taken from one shared or pasted text. */
+        private const val MAX_SHARED_LINKS = 1000
     }
 }

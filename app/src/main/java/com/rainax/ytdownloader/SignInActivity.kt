@@ -40,6 +40,9 @@ class SignInActivity : AppCompatActivity() {
         ws.allowFileAccess = false              // the sign-in page never needs the phone's files
         ws.allowContentAccess = false
         ws.javaScriptEnabled = true
+        ws.allowFileAccessFromFileURLs = false
+        ws.allowUniversalAccessFromFileURLs = false
+        ws.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         ws.domStorageEnabled = true
         ws.cacheMode = WebSettings.LOAD_DEFAULT
         // Google refuses sign-in from pages that say they are an app's web view: look like the phone's browser
@@ -50,8 +53,8 @@ class SignInActivity : AppCompatActivity() {
 
         b.signInWeb.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val scheme = request?.url?.scheme
-                return scheme != "http" && scheme != "https"      // app links (intent://...) stay out
+                // only secure pages (Google's sign-in is all https); app links (intent://...) and plain http stay out
+                return request?.url?.scheme != "https"
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
