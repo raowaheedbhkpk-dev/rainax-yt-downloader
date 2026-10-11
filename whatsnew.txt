@@ -1,3 +1,6 @@
+Autoplay in feed, like YouTube: the video you stop on plays silently in the list (tap the speaker for sound)
+Opening a video that was playing in the list carries on from where it was
+New setting: Autoplay in feed (Always on, Wi-Fi only or Off)
 Fixed: the downloads page no longer freezes with 1000+ downloads in the list
 Smoother app while big playlists download (saving the list runs in the background)
 Much faster: formats and sizes now show in about a second

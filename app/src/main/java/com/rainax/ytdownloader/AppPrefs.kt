@@ -12,6 +12,10 @@ object AppPrefs {
     fun setMaxParallel(c: Context, v: Int) = p(c).edit().putInt("max_parallel", v).apply()
 
 
+    /** Autoplay in feed: 2 = always, 1 = on Wi-Fi only, 0 = off. */
+    fun feedAutoplay(c: Context) = p(c).getInt("feed_autoplay", 2)
+    fun setFeedAutoplay(c: Context, v: Int) = p(c).edit().putInt("feed_autoplay", v).apply()
+
     fun autoClear(c: Context) = p(c).getBoolean("auto_clear", false)
     fun setAutoClear(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_clear", v).apply()
 

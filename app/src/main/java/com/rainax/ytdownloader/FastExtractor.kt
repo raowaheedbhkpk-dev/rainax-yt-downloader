@@ -249,14 +249,9 @@ object FastExtractor {
         fullPool.execute { runCatching { streamInfo(url) } }
     }
 
-    /**
-     * Blocking. Title, picture, formats with sizes and subtitles straight from YouTube's answer to the
-     * visionOS app (the same answer the full look-up uses for its streams), without the extra web,
-     * "up next" and player-code requests. Null when anything is unusual (age limits, kids videos, live,
-     * changes on YouTube's side): then the normal full look-up runs.
-     */
-    private fun quickSizes(url: String): PreviewState? = runCatching {
-        val id = Regex("(?:[?&]v=|youtu\\.be/|shorts/|/live/)([\\w-]{11})").find(url)?.groupValues?.get(1) ?: return null
+    /** Blocking. YouTube's answer to the visionOS app for video [id] (formats with their addresses), as JSON. */
+    internal fun visionOsJson(id: String): org.json.JSONObject? = runCatching {
+        init()
         val helper = Class.forName("org.schabi.newpipe.extractor.services.youtube.YoutubeStreamHelper")
         val m = helper.getMethod(
             "getVisionOsPlayerResponse",
@@ -267,12 +262,24 @@ object FastExtractor {
         val res = m.invoke(
             null, NewPipe.getPreferredContentCountry(), NewPipe.getPreferredLocalization(), id,
             org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.generateContentPlaybackNonce()
-        ) ?: return null
+        ) ?: return@runCatching null
         // (the answer is the extractor's own JSON object: written back to text with its JSON writer)
         val writer = Class.forName("com.grack.nanojson.JsonWriter").methods
             .first { it.name == "string" && it.parameterTypes.size == 1 && java.lang.reflect.Modifier.isStatic(it.modifiers) }
         val text = writer.invoke(null, res) as String
         val json = org.json.JSONObject(text)
+        json
+    }.getOrNull()
+
+    /**
+     * Blocking. Title, picture, formats with sizes and subtitles straight from YouTube's answer to the
+     * visionOS app (the same answer the full look-up uses for its streams), without the extra web,
+     * "up next" and player-code requests. Null when anything is unusual (age limits, kids videos, live,
+     * changes on YouTube's side): then the normal full look-up runs.
+     */
+    private fun quickSizes(url: String): PreviewState? = runCatching {
+        val id = Regex("(?:[?&]v=|youtu\\.be/|shorts/|/live/)([\\w-]{11})").find(url)?.groupValues?.get(1) ?: return null
+        val json = visionOsJson(id) ?: return null
         if (json.optJSONObject("playabilityStatus")?.optString("status") != "OK") return null
         val details = json.optJSONObject("videoDetails") ?: return null
         if (details.optString("videoId") != id || details.optBoolean("isLive") || details.optBoolean("isPostLiveDvr")) return null

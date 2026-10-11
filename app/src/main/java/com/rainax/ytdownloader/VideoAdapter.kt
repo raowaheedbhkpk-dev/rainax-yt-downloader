@@ -105,7 +105,8 @@ class VideoAdapter(
 
     inner class Row(v: View) : RecyclerView.ViewHolder(v) {
         private val thumb: ImageView = v.findViewById(R.id.thumb)
-        private val duration: TextView = v.findViewById(R.id.duration)
+        /** The duration badge (feed autoplay shows the time left in it). */
+        val duration: TextView = v.findViewById(R.id.duration)
         private val title: TextView = v.findViewById(R.id.title)
         private val meta: TextView = v.findViewById(R.id.meta)
         private val download: ImageButton = v.findViewById(R.id.download)
@@ -113,11 +114,20 @@ class VideoAdapter(
         private val watchBar: android.widget.ProgressBar? = v.findViewById(R.id.watchBar)
         private val pick: ImageButton? = v.findViewById(R.id.pick)
 
+        /** The picture's frame: feed autoplay puts the playing video in it. */
+        val thumbBox: ViewGroup get() = thumb.parent as ViewGroup
+        /** The video this row shows now. */
+        var item: VideoItem? = null
+            private set
+        /** Big rows of normal videos can play in the list (not playlists, channels or live streams). */
+        val canPreview get() = big && item?.let { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds > 0 } == true
+
         init {
             (thumb.parent as View).clipToOutline = true      // rounded corners from the background shape
         }
 
         fun bind(item: VideoItem) {
+            this.item = item
             Img.load(thumb, item.thumb, widthPx = if (big) 720 else 360)
             title.text = item.title
             avatar?.let { Img.load(it, item.avatar, circle = true, widthPx = 96) }

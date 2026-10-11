@@ -207,6 +207,10 @@ class MainActivity : AppCompatActivity() {
             signIn = { onAccountClick() }
         )
         subs.setup()
+        // Autoplay in feed (like YouTube): the video you stop on plays silently in the list
+        FeedAutoplay.attach(hm.feedList)
+        FeedAutoplay.attach(sb.subsList)
+        FeedAutoplay.blocked = { video.isOpen || (::music.isInitialized && music.expanded) }
         home.onMenu = { openExplore() }
         home.onVoice = { startVoiceSearch() }
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
@@ -323,6 +327,12 @@ class MainActivity : AppCompatActivity() {
         AppUpdater.resumeInstall(this)
         if (tab == 0 && ::home.isInitialized) home.onShown()
         b.root.postDelayed({ FastExtractor.warmUp() }, 800)    // sizes show faster on the first download
+        FeedAutoplay.onResume()
+    }
+
+    override fun onPause() {
+        FeedAutoplay.onPause()
+        super.onPause()
     }
 
 
@@ -334,6 +344,7 @@ class MainActivity : AppCompatActivity() {
             clipDialog?.dismiss()
             permDialog?.dismiss()
             AppUpdater.onQueued = null
+            FeedAutoplay.release()
         }
         super.onDestroy()
     }
@@ -412,7 +423,12 @@ class MainActivity : AppCompatActivity() {
                 video.minimize()                        // a video playing keeps going in the mini player (it pauses for the Short)
                 ShortsActivity.open(this, item)
             }
-            else -> video.open(item.url, item.title, item.uploader, thumb = item.thumb)
+            else -> {
+                // it was playing in the list: carry on from there
+                val start = FeedAutoplay.startFor(item.url)
+                FeedAutoplay.stop()
+                video.open(item.url, item.title, item.uploader, startMs = start, thumb = item.thumb)
+            }
         }
     }
 
@@ -562,6 +578,7 @@ class MainActivity : AppCompatActivity() {
         }
         syncVideoSurface()
         updateBack()
+        FeedAutoplay.refresh()          // a video or tab change: the list preview stops or starts
     }
 
     // ----- floating mini player -----
@@ -1672,6 +1689,17 @@ class MainActivity : AppCompatActivity() {
                 else -> R.id.par2
             }
         )
+        st.autoplayGroup.check(
+            when (AppPrefs.feedAutoplay(this)) {
+                0 -> R.id.autoplayOff
+                1 -> R.id.autoplayWifi
+                else -> R.id.autoplayAlways
+            }
+        )
+        st.autoplayGroup.setOnCheckedStateChangeListener { _, ids ->
+            AppPrefs.setFeedAutoplay(this, when (ids.firstOrNull()) { R.id.autoplayOff -> 0; R.id.autoplayWifi -> 1; else -> 2 })
+            FeedAutoplay.refresh()
+        }
         st.parallelGroup.setOnCheckedStateChangeListener { _, ids ->
             val n = when (ids.firstOrNull()) {
                 R.id.par1 -> 1

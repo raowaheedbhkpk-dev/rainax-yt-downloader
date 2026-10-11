@@ -270,6 +270,64 @@
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp">
 
+            <!-- Autoplay in feed: the video in view plays silently inside its picture -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingVertical="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Autoplay in feed"
+                    android:textColor="@color/rx_text"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="The video you stop on plays silently in the list. Tap the speaker for sound"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/autoplayGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/autoplayAlways"
+                        style="@style/Widget.Rainax.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="Always on" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/autoplayWifi"
+                        style="@style/Widget.Rainax.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="Wi-Fi only" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/autoplayOff"
+                        style="@style/Widget.Rainax.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="Off" />
+                </com.google.android.material.chip.ChipGroup>
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?attr/rxOutline" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
