@@ -74,6 +74,12 @@ class MainActivity : AppCompatActivity() {
         { toggleSelect(it) }, { startSelect(it) }
     )
 
+    private lateinit var statusSaver: StatusSaver
+    /** Android's folder screen, for the WhatsApp status folder. */
+    private val statusFolderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (::statusSaver.isInitialized) statusSaver.onFolderPicked(uri)
+    }
+
     private val activeHeader by lazy { SectionHeader(pl.activeSection) }
     private val doneHeader by lazy { SectionHeader(pl.doneSection) }
 
@@ -328,6 +334,7 @@ class MainActivity : AppCompatActivity() {
         if (tab == 0 && ::home.isInitialized) home.onShown()
         b.root.postDelayed({ FastExtractor.warmUp() }, 800)    // sizes show faster on the first download
         FeedAutoplay.onResume()
+        if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh()     // new statuses since last time
     }
 
     override fun onPause() {
@@ -554,6 +561,7 @@ class MainActivity : AppCompatActivity() {
         if (index == 0) home.onShown()
         if (index == 1) refreshYou()
         if (index == 4) subs.onShown()
+        if (index == 3 && ::statusSaver.isInitialized) statusSaver.refresh()
     }
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
@@ -882,6 +890,34 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     private fun setupSocial() {
+        // the apps it works with: round badges, four per row
+        val d = resources.displayMetrics.density
+        val cell = ((resources.displayMetrics.widthPixels - 32 * d) / 4).toInt().coerceAtMost((110 * d).toInt())
+        so.socialApps.removeAllViews()
+        SocialApps.ALL.forEach { app ->
+            val v = layoutInflater.inflate(R.layout.item_platform, so.socialApps, false)
+            v.findViewById<android.widget.TextView>(R.id.platformBadge).apply {
+                background = SocialApps.badge(app, this@MainActivity)
+                text = app.short
+            }
+            v.findViewById<android.widget.TextView>(R.id.platformName).text = app.name
+            v.contentDescription = if (app === SocialApps.WHATSAPP) "WhatsApp statuses" else "Open ${app.name}"
+            v.setOnClickListener {
+                if (app === SocialApps.WHATSAPP) {
+                    // WhatsApp: the status saver right here
+                    so.socialScroll.smoothScrollTo(0, so.statusCard.top - (12 * d).toInt())
+                    statusSaver.focus()
+                } else if (SocialApps.open(this, app)) {
+                    message("Copy a link in ${app.name}, then come back: RAINAX finds it")
+                }
+            }
+            so.socialApps.addView(v, android.widget.GridLayout.LayoutParams().apply { width = cell })
+        }
+        statusSaver = StatusSaver(this, so) { initial ->
+            try { statusFolderPicker.launch(initial) } catch (e: Exception) { message("This phone has no folder picker") }
+        }
+        statusSaver.setup()
+
         so.socialPaste.setOnClickListener {
             val text = clipText()
             val url = text?.let { extractUrls(it).firstOrNull() }
@@ -891,7 +927,10 @@ class MainActivity : AppCompatActivity() {
         so.socialInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) { so.socialClear.isVisible = !s.isNullOrEmpty() }
+            override fun afterTextChanged(s: android.text.Editable?) {
+                so.socialClear.isVisible = !s.isNullOrEmpty()
+                showDetectedApp(s?.toString().orEmpty())
+            }
         })
         val go = {
             val urls = extractUrls(so.socialInput.text.toString())
@@ -912,6 +951,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Names the app a typed or pasted link is from, with its badge in the link box. */
+    private fun showDetectedApp(text: String) {
+        val link = extractUrls(text).firstOrNull()
+        val app = link?.let { SocialApps.of(it) }
+        so.socialLinkBadge.isVisible = app != null
+        so.socialLinkIcon.isVisible = app == null
+        so.socialDetected.isVisible = link != null
+        if (app != null) {
+            so.socialLinkBadge.background = SocialApps.badge(app, this)
+            so.socialLinkBadge.text = app.short
+            so.socialDetected.text = "${app.name} link  •  ${app.what}"
+        } else if (link != null) {
+            so.socialDetected.text = "Link from ${Uri.parse(link).host?.removePrefix("www.").orEmpty()}  •  RAINAX will look for the video"
+        }
+    }
+
     private fun clipText(): String? = runCatching {
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
@@ -921,7 +976,8 @@ class MainActivity : AppCompatActivity() {
     private fun isVideoLink(url: String): Boolean {
         val u = url.lowercase()
         return FastExtractor.supports(u) || isPlaylistUrl(u) || listOf(
-            "tiktok.com", "instagram.com", "facebook.com", "fb.watch", "soundcloud.com", "bandcamp.com"
+            "tiktok.com", "instagram.com", "facebook.com", "fb.watch", "soundcloud.com", "bandcamp.com",
+            "x.com/", "twitter.com/"
         ).any { u.contains(it) }
     }
 

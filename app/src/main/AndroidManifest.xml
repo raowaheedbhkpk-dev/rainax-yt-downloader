@@ -16,6 +16,21 @@
     <!-- In-app updates: opens the Android installer for a new RAINAX version -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Social page: open these apps to copy a link (Android 11+ only shows apps an app names here) -->
+    <queries>
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.ss.android.ugc.trill" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.facebook.lite" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="com.soundcloud.android" />
+        <package android:name="com.bandcamp.android" />
+    </queries>
+
     <application
         android:name=".RainaxApp"
         android:allowBackup="false"

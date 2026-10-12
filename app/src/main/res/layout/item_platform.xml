@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One app on the Social page: a round badge in the app's colours with its short name, the name below -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingVertical="8dp">
+
+    <TextView
+        android:id="@+id/platformBadge"
+        android:layout_width="58dp"
+        android:layout_height="58dp"
+        android:elevation="2dp"
+        android:fontFamily="sans-serif-black"
+        android:gravity="center"
+        android:importantForAccessibility="no"
+        android:textColor="#FFFFFF"
+        android:textSize="17sp" />
+
+    <TextView
+        android:id="@+id/platformName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/rx_text"
+        android:textSize="12sp" />
+</LinearLayout>

@@ -53,6 +53,16 @@ object SocialExtractor {
 
     private fun isTikTok(url: String) = url.lowercase().let { it.contains("tiktok.com") }
 
+    /** An X (Twitter) post: x.com / twitter.com /…/status/<id>. */
+    private fun xPostId(url: String): String? {
+        val u = url.lowercase()
+        val host = runCatching { java.net.URI(url.trim()).host.orEmpty().lowercase() }.getOrDefault("")
+        val isX = host == "x.com" || host.endsWith(".x.com") || host == "twitter.com" || host.endsWith(".twitter.com") ||
+            host.endsWith("fxtwitter.com") || host.endsWith("vxtwitter.com") || host.endsWith("fixupx.com")
+        if (!isX) return null
+        return Regex("/status(?:es)?/(\\d{1,25})").find(u)?.groupValues?.get(1)
+    }
+
     // ---------- download sheet ----------
 
     /** Blocking. Title, picture and qualities for the download sheet. */
@@ -114,7 +124,11 @@ object SocialExtractor {
 
     private fun media(url: String): Media {
         cache[key(url)]?.let { if (System.currentTimeMillis() - it.at < 10 * 60_000) return it.media }
-        val m = if (isTikTok(url)) tiktok(url) else generic(url)
+        val m = when {
+            isTikTok(url) -> tiktok(url)
+            xPostId(url) != null -> xPost(xPostId(url)!!)
+            else -> generic(url)
+        }
         cache[key(url)] = Cached(System.currentTimeMillis(), m)
         return m
     }
@@ -298,6 +312,106 @@ object SocialExtractor {
     private fun scriptJson(html: String, id: String): JSONObject? {
         val m = Regex("<script[^>]*id=\"$id\"[^>]*>(.*?)</script>", RegexOption.DOT_MATCHES_ALL).find(html) ?: return null
         return runCatching { JSONObject(m.groupValues[1]) }.getOrNull()
+    }
+
+    // ---------- X (Twitter) ----------
+
+    /**
+     * An X post's video, from X's own public embed data (what embedded posts on websites use): every MP4
+     * quality X made, best first. Posts that need a login (age-limited, protected accounts) can't be read.
+     */
+    private fun xPost(id: String): Media {
+        val url = "https://cdn.syndication.twimg.com/tweet-result?id=$id&lang=en&token=${xToken(id)}"
+        val con = URL(url).openConnection() as HttpURLConnection
+        val text = try {
+            con.connectTimeout = 15_000
+            con.readTimeout = 20_000
+            con.setRequestProperty("User-Agent", UA)
+            con.setRequestProperty("Accept", "application/json")
+            val code = con.responseCode
+            if (code == 404) error("This post was removed, or its account is private")
+            if (code >= 400) error("X refused the request (error $code). Try again in a minute")
+            con.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        } finally {
+            con.disconnect()
+        }
+        val json = runCatching { JSONObject(text) }.getOrNull() ?: error("X sent something unexpected. Try again")
+        if (json.optString("__typename") == "TweetTombstone" || json.has("tombstone")) {
+            error("This post can't be shown without signing in to X (age limit or private account)")
+        }
+        val media = json.optJSONArray("mediaDetails")
+        var video: JSONObject? = null
+        for (i in 0 until (media?.length() ?: 0)) {
+            val m = media!!.optJSONObject(i) ?: continue
+            if (m.optString("type") == "video" || m.optString("type") == "animated_gif") { video = m; break }
+        }
+        video ?: error("This post has no video")
+        val info = video.optJSONObject("video_info")
+        val list = info?.optJSONArray("variants")
+        val files = mutableListOf<Pair<Variant, Int>>()
+        for (i in 0 until (list?.length() ?: 0)) {
+            val v = list!!.optJSONObject(i) ?: continue
+            val link = v.optString("url")
+            if (!link.startsWith("https://") || !v.optString("content_type").contains("mp4")) continue
+            // the picture size is in the address: …/vid/avc1/1280x720/…
+            val height = Regex("/(\\d{2,4})x(\\d{2,4})/").find(link)?.groupValues?.get(2)?.toIntOrNull() ?: 0
+            files += Variant(link, height, 0, "mp4") to v.optInt("bitrate")
+        }
+        if (files.isEmpty()) error("No downloadable video in this post")
+        val sorted = files.sortedWith(compareByDescending<Pair<Variant, Int>> { it.first.height }.thenByDescending { it.second })
+            .map { it.first }.distinctBy { it.height.takeIf { h -> h > 0 } ?: it.url }
+        val variants = sorted.mapIndexed { i, v -> if (i < 2) Variant(v.url, v.height, sizeOf(v.url), v.ext) else v }
+        val user = json.optJSONObject("user")
+        val words = json.optString("text").replace(Regex("https://t\\.co/\\S+"), "").replace(Regex("\\s+"), " ").trim()
+        return Media(
+            title = words.take(100).ifBlank { user?.optString("name")?.let { "Video by $it" } ?: "X video" },
+            uploader = user?.optString("screen_name")?.takeIf { it.isNotBlank() }?.let { "@$it" },
+            thumb = video.optString("media_url_https").ifBlank { null },
+            seconds = ((info?.optLong("duration_millis") ?: 0L) / 1000).toInt(),
+            variants = variants
+        )
+    }
+
+    /** The number X's embed data asks for: ((id / 1e15) × π) written in base 36 like JavaScript, without 0s and the dot. */
+    internal fun xToken(id: String): String = jsRadix(id.toDouble() / 1e15 * Math.PI, 36).replace(Regex("(0+|\\.)"), "")
+
+    /** JavaScript's Number.toString(radix) for a small positive number (the same digits and rounding as Chrome). */
+    private fun jsRadix(v0: Double, radix: Int): String {
+        val chars = "0123456789abcdefghijklmnopqrstuvwxyz"
+        val value = kotlin.math.abs(v0)
+        var integer = Math.floor(value)
+        var fraction = value - integer
+        var delta = maxOf(Double.MIN_VALUE, 0.5 * (Math.nextUp(value) - value))
+        val frac = StringBuilder()
+        if (fraction >= delta) {
+            do {
+                fraction *= radix
+                delta *= radix
+                val digit = fraction.toInt()
+                frac.append(chars[digit])
+                fraction -= digit
+                if (fraction > 0.5 || (fraction == 0.5 && (digit and 1) == 1)) {
+                    if (fraction + delta > 1) {
+                        // round up, carrying into the digits before
+                        while (true) {
+                            if (frac.isEmpty()) { integer += 1; break }
+                            val c = frac[frac.length - 1]
+                            frac.setLength(frac.length - 1)
+                            val d = if (c > '9') c - 'a' + 10 else c - '0'
+                            if (d + 1 < radix) { frac.append(chars[d + 1]); break }
+                        }
+                        break
+                    }
+                }
+            } while (fraction >= delta)
+        }
+        val whole = StringBuilder()
+        do {
+            val rem = integer % radix
+            whole.append(chars[rem.toInt()])
+            integer = (integer - rem) / radix
+        } while (integer > 0)
+        return whole.reverse().toString() + if (frac.isNotEmpty()) ".$frac" else ""
     }
 
     // ---------- other sites ----------

@@ -1,3 +1,6 @@
+New Social Downloader page: paste a link and RAINAX names the app it is from, with all supported apps as one-tap badges
+New: WhatsApp and WhatsApp Business status saver (photos and videos, Save all, and your saved statuses)
+New: X (Twitter) video downloads
 Safer: other apps can no longer make the RAINAX player open its private files or add tracks to its player
 Safer: your YouTube sign-in is never copied to backups or a new phone
 Safer updates: only files from the official RAINAX release page are accepted

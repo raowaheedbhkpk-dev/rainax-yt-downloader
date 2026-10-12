@@ -29,6 +29,23 @@ object AppPrefs {
         return key
     }
 
+    /** WhatsApp status folder RAINAX may read, per app (tree address, folder id), or null. */
+    fun statusFolder(c: Context, pkg: String): Pair<String, String>? {
+        val tree = p(c).getString("status_tree_$pkg", null) ?: return null
+        val doc = p(c).getString("status_doc_$pkg", null) ?: return null
+        return tree to doc
+    }
+    fun setStatusFolder(c: Context, pkg: String, tree: String?, doc: String?) =
+        p(c).edit().putString("status_tree_$pkg", tree).putString("status_doc_$pkg", doc).apply()
+
+    /** Names of statuses already saved (newest last, at most 1000). */
+    fun savedStatuses(c: Context): Set<String> =
+        p(c).getString("status_saved", "").orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
+    fun addSavedStatus(c: Context, name: String) {
+        val list = p(c).getString("status_saved", "").orEmpty().split('\n').filter { it.isNotBlank() && it != name } + name
+        p(c).edit().putString("status_saved", list.takeLast(1000).joinToString("\n")).apply()
+    }
+
     fun autoClear(c: Context) = p(c).getBoolean("auto_clear", false)
     fun setAutoClear(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_clear", v).apply()
 
