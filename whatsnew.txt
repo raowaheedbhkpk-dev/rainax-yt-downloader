@@ -1,3 +1,4 @@
+Background player: 10 seconds back and forward buttons, and the RAINAX logo on the media card
 Updates now come from the new RAINAX Tube releases page
 New: Clear search history button under your recent searches
 Home feed is fresh on every refresh: popular videos, more from channels you watch and your searches, without videos you already watched

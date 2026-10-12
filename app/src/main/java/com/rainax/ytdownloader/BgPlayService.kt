@@ -11,6 +11,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CommandButton
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -200,6 +203,17 @@ class BgPlayService : MediaSessionService() {
         )
         session = MediaSession.Builder(this, player)
             .setSessionActivity(open)
+            // ⏪ 10 s and 10 s ⏩ on the media card, the notification and the lock screen (next to ⏮ ⏭)
+            .setCustomLayout(listOf(
+                CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                    .setDisplayName("Back 10 seconds")
+                    .setSessionCommand(CMD_BACK_10)
+                    .build(),
+                CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                    .setDisplayName("Forward 10 seconds")
+                    .setSessionCommand(CMD_FORWARD_10)
+                    .build()
+            ))
             .setCallback(object : MediaSession.Callback {
 
                 // Other apps (lock screen, Bluetooth, watches) can play, pause and skip, but can't put their own
@@ -209,12 +223,40 @@ class BgPlayService : MediaSessionService() {
                     controller: MediaSession.ControllerInfo
                 ): MediaSession.ConnectionResult {
                     val base = super.onConnect(mediaSession, controller)
-                    if (controller.packageName == packageName || !base.isAccepted) return base
+                    if (!base.isAccepted) return base
+                    // the 10-second buttons work from everywhere the player shows
+                    val sessionCommands = base.availableSessionCommands.buildUpon()
+                        .add(CMD_BACK_10)
+                        .add(CMD_FORWARD_10)
+                        .build()
+                    if (controller.packageName == packageName) {
+                        return MediaSession.ConnectionResult.accept(sessionCommands, base.availablePlayerCommands)
+                    }
                     val commands = base.availablePlayerCommands.buildUpon()
                         .remove(androidx.media3.common.Player.COMMAND_SET_MEDIA_ITEM)
                         .remove(androidx.media3.common.Player.COMMAND_CHANGE_MEDIA_ITEMS)
                         .build()
-                    return MediaSession.ConnectionResult.accept(base.availableSessionCommands, commands)
+                    return MediaSession.ConnectionResult.accept(sessionCommands, commands)
+                }
+
+                /** ⏪ 10 s / 10 s ⏩ pressed. */
+                override fun onCustomCommand(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    customCommand: SessionCommand,
+                    args: android.os.Bundle
+                ): com.google.common.util.concurrent.ListenableFuture<SessionResult> {
+                    val p = mediaSession.player
+                    val step = when (customCommand.customAction) {
+                        CMD_BACK_10.customAction -> -10_000L
+                        CMD_FORWARD_10.customAction -> 10_000L
+                        else -> return super.onCustomCommand(mediaSession, controller, customCommand, args)
+                    }
+                    val dur = p.duration
+                    var target = (p.currentPosition + step).coerceAtLeast(0L)
+                    if (dur != androidx.media3.common.C.TIME_UNSET && dur > 0) target = target.coerceAtMost((dur - 500).coerceAtLeast(0L))
+                    p.seekTo(target)
+                    return com.google.common.util.concurrent.Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
 
                 // Tracks arrive from the app's screen: make sure each keeps its sound address
@@ -241,12 +283,16 @@ class BgPlayService : MediaSessionService() {
                 .setNotificationId(PLAYER_NOTIFICATION_ID)     // own number: downloads use 1001 (Media3's default) and replaced it
                 .setChannelId("rainax_player")
                 .setChannelName(R.string.player_channel)
-                .build().apply { setSmallIcon(R.drawable.ic_stat_download) }
+                .build().apply { setSmallIcon(R.drawable.ic_stat_logo) }     // the RAINAX logo (not the download arrow)
         )
     }
 
     companion object {
         private const val PLAYER_NOTIFICATION_ID = 2001
+
+        /** The media card's 10-second buttons. */
+        private val CMD_BACK_10 = SessionCommand("com.rainax.ytdownloader.BACK_10", android.os.Bundle.EMPTY)
+        private val CMD_FORWARD_10 = SessionCommand("com.rainax.ytdownloader.FORWARD_10", android.os.Bundle.EMPTY)
 
         /** Video page -> sound address, so a track is looked up once (addresses stay valid for hours). */
         private val resolved = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
