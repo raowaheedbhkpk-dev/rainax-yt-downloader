@@ -24,7 +24,8 @@ import java.net.URL
  * (Works when the repository / its releases are public. Offline, the app keeps working.)
  */
 object AppUpdater {
-    const val REPO = "raowaheedbhkpk-dev/rainax-yt-downloader"
+    /** The PUBLIC releases repository (APK files only): updates are read from it. The source code repository is private. */
+    const val REPO = "raowaheedbhkpk-dev/rainax-tube-releases"
 
     private class Release(val version: String, val notes: String, val apkUrl: String, val size: Long)
 

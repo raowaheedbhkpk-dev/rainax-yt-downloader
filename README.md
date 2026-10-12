@@ -20,7 +20,7 @@ Requires Android 10 (API 29) or newer.
   get their title, artist and cover picture
 - **Download manager:** 1 to 4 downloads at once, pause, resume, auto-retry, Wi-Fi only mode, and a custom download folder
 - **Themes:** System, Light, Dark and AMOLED black
-- **In-app updates** from this repository's GitHub Releases (they download in the Downloads tab, with pause and resume)
+- **In-app updates** from the public releases repository (they download in the Downloads tab, with pause and resume)
 - **No ads**
 
 ## Build
@@ -28,10 +28,16 @@ Every push to `main` builds the APK (**Actions > Build RAINAX APK > Artifacts**)
 Pushing a tag publishes a **GitHub Release** with the APK and its SHA-256 checksum. `whatsnew.txt` becomes the update notes shown in the app.
 
 ```
-git tag v8.9.45 && git push origin v8.9.45
+git tag v8.9.46 && git push origin v8.9.46
 ```
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.
+
+## Public releases repository
+This source repository can be private. Each tagged build also publishes its APK to the public repository
+`raowaheedbhkpk-dev/rainax-tube-releases` (APK files and notes only), which the app checks for updates.
+It needs the secret `RELEASES_TOKEN`: a fine-grained token with **Contents: Read and write** on that repository only.
+The token expires: make a new one before then and update the secret.
 
 ## Signing key
 Releases are signed with a private key kept only in GitHub Secrets. It is never stored in the repository.
