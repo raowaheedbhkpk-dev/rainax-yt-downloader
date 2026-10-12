@@ -30,15 +30,18 @@ import kotlinx.coroutines.withContext
 
 /**
  * WhatsApp status saver (WhatsApp and WhatsApp Business). WhatsApp keeps the statuses you viewed in a hidden
- * ".Statuses" folder for 24 hours. Android lets an app read that folder only after you pick it once on
- * Android's own folder screen, so RAINAX asks for exactly that folder (nothing else on the phone) and keeps
- * the permission. Saved statuses go to Downloads/RAINAX/Status.
+ * ".Statuses" folder for 24 hours. That folder is marked "don't index", so the normal photos/videos permission
+ * can't see it. With "All files access" (asked once on first start, like MX Player) RAINAX reads it directly;
+ * without it, you can instead pick just that folder once on Android's folder screen.
+ * Saved statuses go to Downloads/RAINAX/Status.
  */
 class StatusSaver(
     private val act: AppCompatActivity,
     private val so: PageSocialBinding,
     /** Opens Android's folder screen at [initial] (the activity owns the result). */
-    private val pickFolder: (Uri) -> Unit
+    private val pickFolder: (Uri) -> Unit,
+    /** Asks for file access (All files access on Android 11+, storage on Android 10). */
+    private val askFileAccess: () -> Unit
 ) {
     class Item(val uri: Uri, val name: String, val mime: String, val modified: Long) {
         val isVideo get() = mime.startsWith("video/") || name.endsWith(".mp4", true)
@@ -62,7 +65,8 @@ class StatusSaver(
             tab = when (ids.firstOrNull()) { R.id.statusWab -> 1; R.id.statusSaved -> 2; else -> 0 }
             refresh()
         }
-        so.statusAllow.setOnClickListener { pickFolder(initialUri(tab)) }
+        so.statusAllow.setOnClickListener { askFileAccess() }
+        so.statusPickFolder.setOnClickListener { pickFolder(initialUri(tab)) }
         so.statusRefresh.setOnClickListener { refresh() }
         so.statusSaveAll.setOnClickListener { saveAll() }
     }
@@ -80,6 +84,30 @@ class StatusSaver(
         val path = if (t == 1) "Android/media/$WAB/WhatsApp Business/Media/.Statuses" else "Android/media/$WA/WhatsApp/Media/.Statuses"
         return DocumentsContract.buildDocumentUri(STORAGE, "primary:$path")
     }
+
+    /** RAINAX may read files directly (All files access, or storage permission on Android 10). */
+    private fun fileAccess(): Boolean =
+        if (android.os.Build.VERSION.SDK_INT >= 30) Environment.isExternalStorageManager()
+        else androidx.core.content.ContextCompat.checkSelfPermission(act, android.Manifest.permission.READ_EXTERNAL_STORAGE) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    /** The app's status folder on the phone (new place first, then the old one), or null. */
+    @Suppress("DEPRECATION")
+    private fun statusDir(t: Int): java.io.File? {
+        val root = Environment.getExternalStorageDirectory()
+        val paths = if (t == 1) listOf("Android/media/$WAB/WhatsApp Business/Media/.Statuses", "WhatsApp Business/Media/.Statuses")
+        else listOf("Android/media/$WA/WhatsApp/Media/.Statuses", "WhatsApp/Media/.Statuses")
+        return paths.map { java.io.File(root, it) }.firstOrNull { it.isDirectory }
+    }
+
+    private fun fileList(dir: java.io.File): List<Item> =
+        (dir.listFiles() ?: error("Folder can't be read")).filter { f ->
+            f.isFile && !f.name.startsWith(".") && f.extension.lowercase() in listOf("jpg", "jpeg", "png", "webp", "mp4", "3gp")
+        }.map { f ->
+            val ext = f.extension.lowercase()
+            val mime = when (ext) { "mp4" -> "video/mp4"; "3gp" -> "video/3gpp"; "png" -> "image/png"; "webp" -> "image/webp"; else -> "image/jpeg" }
+            Item(Uri.fromFile(f), f.name, mime, f.lastModified())
+        }.sortedByDescending { it.modified }
 
     private fun installed(t: Int) = runCatching { act.packageManager.getPackageInfo(pkg(t), 0); true }.getOrDefault(false)
 
@@ -133,18 +161,21 @@ class StatusSaver(
     fun refresh() {
         loadJob?.cancel()
         val t = tab
-        val folder = if (t == 2) null else AppPrefs.statusFolder(act, pkg(t))
-        val granted = folder != null && act.contentResolver.persistedUriPermissions.any { it.uri.toString() == folder.first && it.isReadPermission }
+        val direct = t != 2 && fileAccess()
+        val folder = if (t == 2 || direct) null else AppPrefs.statusFolder(act, pkg(t))
+        val granted = direct || (folder != null && act.contentResolver.persistedUriPermissions.any { it.uri.toString() == folder.first && it.isReadPermission })
         so.statusAsk.isVisible = t != 2 && !granted
         so.statusRefresh.isVisible = t == 2 || granted
         if (t != 2 && !granted) {
-            so.statusAskText.text = if (!installed(t)) {
-                "${if (t == 1) "WhatsApp Business" else "WhatsApp"} isn't on this phone. If you use it, tap Allow access and pick its .Statuses folder."
+            val appName = if (t == 1) "WhatsApp Business" else "WhatsApp"
+            so.statusAskText.text = if (android.os.Build.VERSION.SDK_INT >= 30) {
+                "WhatsApp hides statuses from the normal photo permission. Tap Allow access and turn on " +
+                    "“Allow access to manage all files” for RAINAX Tube (asked only once)." +
+                    if (!installed(t)) "\n($appName isn't on this phone.)" else ""
             } else {
-                "1. Watch the statuses in ${if (t == 1) "WhatsApp Business" else "WhatsApp"} first.\n" +
-                    "2. Tap Allow access, then “Use this folder” on the next screen (don't change folders).\n" +
-                    "RAINAX only reads the status folder, nothing else on your phone."
+                "Tap Allow access and allow storage, so RAINAX can read the statuses you've seen in $appName."
             }
+            so.statusPickFolder.isVisible = true
             show(emptyList(), null)
             so.statusSub.text = "Save photos and videos from statuses you've seen"
             return
@@ -152,19 +183,29 @@ class StatusSaver(
         so.statusLoading.isVisible = items.isEmpty()
         loadJob = act.lifecycleScope.launch {
             val list = withContext(Dispatchers.IO) {
-                runCatching { if (t == 2) savedList() else statusList(Uri.parse(folder!!.first), folder.second) }.getOrNull()
+                runCatching {
+                    when {
+                        t == 2 -> savedList()
+                        direct -> statusDir(t)?.let { fileList(it) } ?: emptyList()
+                        else -> statusList(Uri.parse(folder!!.first), folder.second)
+                    }
+                }.getOrNull()
             }
             if (tab != t) return@launch
             so.statusLoading.isVisible = false
             when {
-                list == null && t != 2 -> {
+                list == null && t != 2 && !direct -> {
                     // the folder moved, or the permission was taken back in Settings: ask again
                     AppPrefs.setStatusFolder(act, pkg(t), null, null)
                     refresh()
                 }
                 list.isNullOrEmpty() -> show(
                     emptyList(),
-                    if (t == 2) "Statuses you save show up here." else "No statuses yet. Watch some statuses in WhatsApp, then tap ⟳."
+                    when {
+                        t == 2 -> "Statuses you save show up here."
+                        !installed(t) -> "${if (t == 1) "WhatsApp Business" else "WhatsApp"} isn't on this phone."
+                        else -> "No statuses yet. Watch some statuses in ${if (t == 1) "WhatsApp Business" else "WhatsApp"}, then tap ⟳."
+                    }
                 )
                 else -> show(list, null)
             }

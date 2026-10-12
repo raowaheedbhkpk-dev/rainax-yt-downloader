@@ -1,3 +1,4 @@
+WhatsApp statuses now show without picking a folder: allow "All files access" once (asked on first start, like other players)
 New Social Downloader page: paste a link and RAINAX names the app it is from, with all supported apps as one-tap badges
 New: WhatsApp and WhatsApp Business status saver (photos and videos, Save all, and your saved statuses)
 New: X (Twitter) video downloads

@@ -334,7 +334,11 @@ class MainActivity : AppCompatActivity() {
         if (tab == 0 && ::home.isInitialized) home.onShown()
         b.root.postDelayed({ FastExtractor.warmUp() }, 800)    // sizes show faster on the first download
         FeedAutoplay.onResume()
-        if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh()     // new statuses since last time
+        if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh()     // new statuses (or access just given)
+        if (installAskAfterSettings) {
+            installAskAfterSettings = false
+            b.root.post { askInstallUpdates() }
+        }
     }
 
     override fun onPause() {
@@ -913,9 +917,13 @@ class MainActivity : AppCompatActivity() {
             }
             so.socialApps.addView(v, android.widget.GridLayout.LayoutParams().apply { width = cell })
         }
-        statusSaver = StatusSaver(this, so) { initial ->
-            try { statusFolderPicker.launch(initial) } catch (e: Exception) { message("This phone has no folder picker") }
-        }
+        statusSaver = StatusSaver(
+            this, so,
+            pickFolder = { initial ->
+                try { statusFolderPicker.launch(initial) } catch (e: Exception) { message("This phone has no folder picker") }
+            },
+            askFileAccess = { requestFileAccess(thenInstallAsk = false) }
+        )
         statusSaver.setup()
 
         so.socialPaste.setOnClickListener {
@@ -1835,7 +1843,37 @@ class MainActivity : AppCompatActivity() {
     private var permDialog: AlertDialog? = null
 
     private val storagePermission =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { askInstallUpdates() }
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            // Android 11+: then All files access (WhatsApp statuses), then the updates question
+            if (needsAllFiles()) openAllFilesSettings(thenInstallAsk = true) else askInstallUpdates()
+        }
+    /** Android 10: storage asked from the status saver. */
+    private val legacyStoragePermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh() }
+    /** Came back from the All files access screen: ask about updates next (first start only). */
+    private var installAskAfterSettings = false
+
+    private fun needsAllFiles() = Build.VERSION.SDK_INT >= 30 && !android.os.Environment.isExternalStorageManager()
+
+    private fun openAllFilesSettings(thenInstallAsk: Boolean) {
+        installAskAfterSettings = thenInstallAsk
+        val opened = runCatching {
+            startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName")))
+        }.recoverCatching {
+            startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+        }.isSuccess
+        if (!opened) {
+            installAskAfterSettings = false
+            message("Open Settings > Apps > RAINAX Tube > Files and media > Allow management of all files")
+            if (thenInstallAsk) askInstallUpdates()
+        }
+    }
+
+    /** File access for the status saver (and your files): All files access on Android 11+, storage on Android 10. */
+    private fun requestFileAccess(thenInstallAsk: Boolean) {
+        if (Build.VERSION.SDK_INT >= 30) openAllFilesSettings(thenInstallAsk)
+        else legacyStoragePermission.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
 
     /** Pop-up 1: storage (with notifications on Android 13+, for download progress). */
     private fun askStorage() {
@@ -1849,15 +1887,19 @@ class MainActivity : AppCompatActivity() {
             perms += Manifest.permission.READ_EXTERNAL_STORAGE
         }
         val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
-        if (missing.isEmpty()) { askInstallUpdates(); return }
+        if (missing.isEmpty() && !needsAllFiles()) { askInstallUpdates(); return }
         permDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setIcon(R.drawable.ic_download)
             .setTitle("Allow storage access")
             .setMessage("RAINAX Tube saves your videos and music on this phone, in your Download, Movies and Music folders. " +
-                "Allow access so the app can save them and show them in your Library" +
-                (if (Build.VERSION.SDK_INT >= 33) ", and show download progress in notifications." else "."))
+                "Allow access so the app can save them, show them in your Library and save WhatsApp statuses" +
+                (if (Build.VERSION.SDK_INT >= 33) ", and show download progress in notifications." else ".") +
+                (if (Build.VERSION.SDK_INT >= 30) "\n\nOn the next screen, turn on “Allow access to manage all files”." else ""))
             .setCancelable(false)
-            .setPositiveButton("Allow") { _, _ -> storagePermission.launch(missing.toTypedArray()) }
+            .setPositiveButton("Allow") { _, _ ->
+                if (missing.isNotEmpty()) storagePermission.launch(missing.toTypedArray())
+                else openAllFilesSettings(thenInstallAsk = true)
+            }
             .setNegativeButton("Not now") { _, _ -> askInstallUpdates() }
             .show()
     }
