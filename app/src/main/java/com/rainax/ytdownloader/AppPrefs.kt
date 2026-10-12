@@ -56,6 +56,7 @@ object AppPrefs {
     /** Recent searches, newest first (max 20). */
     fun searchHistory(c: Context): List<String> =
         p(c).getString("search_history", "").orEmpty().split('\n').filter { it.isNotBlank() }
+    fun clearSearchHistory(c: Context) = p(c).edit().remove("search_history").apply()
     fun addSearch(c: Context, q: String) {
         val list = (listOf(q.trim()) + searchHistory(c).filter { !it.equals(q.trim(), true) }).take(20)
         p(c).edit().putString("search_history", list.joinToString("\n")).apply()

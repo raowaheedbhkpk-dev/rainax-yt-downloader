@@ -136,11 +136,11 @@ object YtCatalog {
     private val yt get() = ServiceList.YouTube
 
     /** Blocking. One page of a Home tab. */
-    fun kiosk(id: String, page: Page?, history: List<String> = emptyList()): FeedPage = guard {
+    fun kiosk(id: String, page: Page?, history: List<String> = emptyList(), watched: List<VideoItem> = emptyList()): FeedPage = guard {
         FastExtractor.init()
         when {
             id.startsWith("q:") -> videoSearch(id.removePrefix("q:"), page).let { p -> FeedPage(p.items.filter { !it.isPlaylist && !it.isChannel }, p.next) }
-            id == HOME -> home(history, page)
+            id == HOME -> home(history, watched, page)
             id == MUSIC -> music(page)
             else -> kioskPage(id, page, null)
         }
@@ -188,25 +188,87 @@ object YtCatalog {
         }
     }
 
+    /** Searches for popular videos, a different one on each refresh (one fixed search gave the same feed every time). */
+    private fun trendingQueries(): List<String> {
+        val country = java.util.Locale("", deviceCountry()).getDisplayCountry(java.util.Locale.ENGLISH)
+        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        return listOf(
+            trendingQuery(), "viral videos $country", "new songs $year", "popular today $country",
+            "best videos this week", "new movie trailer $year", "funny videos $year", "top videos $country $year"
+        )
+    }
+
+    /** Videos the last Home feeds showed: put after fresh ones next time. */
+    private val recentlyShown = java.util.LinkedHashSet<String>()
+    private var refreshes = 0
+    @Volatile private var homeQuery: String? = null
+
     /**
-     * YouTube tab: popular videos in the user's country mixed with videos about their recent searches
-     * (first page), then more popular videos while scrolling.
+     * The Home feed (not signed in). A mix that changes on every refresh, like YouTube's:
+     * - popular videos (a different search each time),
+     * - more from channels and topics of videos you watched,
+     * - videos about your recent searches.
+     * Videos you already watched are left out, and the ones shown last time come after new ones.
+     * More pages (scrolling) continue the popular search.
      */
-    private fun home(history: List<String>, page: Page?): FeedPage {
-        val trending = videoSearch(trendingQuery(), page)
-        if (page != null) return trending
-        val lists = mutableListOf(trending.items)
-        for (q in history.take(2)) {
-            runCatching { videoSearch(q, null).items.shuffled().take(8) }.getOrNull()?.let { lists += it }
+    private fun home(history: List<String>, watched: List<VideoItem>, page: Page?): FeedPage {
+        val queries = trendingQueries()
+        // more pages continue the search the first page used (its page token belongs to that search)
+        if (page != null) return videoSearch(homeQuery ?: queries.first(), page)
+        val trendingQ = queries[refreshes.mod(queries.size)]
+        homeQuery = trendingQ
+        refreshes++
+        val rnd = java.util.Random()
+        val recentWatched = watched.take(12).shuffled(rnd)
+        val jobs = mutableListOf<Pair<String, Int>>()          // search -> how many to take
+        jobs += trendingQ to 20
+        jobs += queries.filter { it != trendingQ }.shuffled(rnd).first() to 8
+        recentWatched.map { it.uploader }.filter { it.isNotBlank() }.distinct().take(2).forEach { jobs += it to 6 }
+        recentWatched.mapNotNull { v -> v.title.split(Regex("[|\\-–(\\[#]")).firstOrNull()?.trim()?.takeIf { it.length >= 4 } }
+            .distinct().take(2).forEach { jobs += it to 6 }
+        history.take(6).shuffled(rnd).take(2).forEach { jobs += it to 6 }
+
+        // all searches at the same time
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
+        var trendingNext: Page? = null
+        val lists = try {
+            jobs.map { (q, n) ->
+                pool.submit<Pair<List<VideoItem>, Page?>> {
+                    val r = videoSearch(q, null)
+                    (if (q == trendingQ) r.items else r.items.shuffled(rnd).take(n)) to r.next
+                }
+            }.mapIndexed { i, f ->
+                runCatching { f.get(20, java.util.concurrent.TimeUnit.SECONDS) }.getOrNull()?.let { (items, nx) ->
+                    if (i == 0) trendingNext = nx
+                    items
+                } ?: emptyList()
+            }
+        } finally {
+            pool.shutdownNow()
         }
-        val mixed = mutableListOf<VideoItem>()
+        if (lists.all { it.isEmpty() }) error("Couldn't load videos. Check your internet")
+
+        val watchedIds = watched.mapNotNull { youtubeId(it.url) }.toHashSet()
+        // popular first-page videos in a new order each time, the other lists woven in
+        val main = lists.first().let { l -> l.take(4) + l.drop(4).shuffled(rnd) }
+        val woven = mutableListOf<VideoItem>()
         val seen = HashSet<String>()
+        val all = listOf(main) + lists.drop(1)
         var i = 0
-        while (lists.any { i < it.size }) {
-            for (l in lists) if (i < l.size && seen.add(l[i].url)) mixed += l[i]
+        while (all.any { i < it.size }) {
+            for (l in all) l.getOrNull(i)?.let { v ->
+                val id = youtubeId(v.url) ?: v.url
+                if (!v.isPlaylist && !v.isChannel && id !in watchedIds && seen.add(id)) woven += v
+            }
             i++
         }
-        return FeedPage(mixed.filter { !it.isPlaylist }, trending.next)
+        val (fresh, shownBefore) = woven.partition { (youtubeId(it.url) ?: it.url) !in recentlyShown }
+        val result = fresh + shownBefore
+        synchronized(recentlyShown) {
+            result.take(24).forEach { v -> (youtubeId(v.url) ?: v.url).let { recentlyShown.remove(it); recentlyShown.add(it) } }
+            while (recentlyShown.size > 300) recentlyShown.remove(recentlyShown.first())
+        }
+        return FeedPage(result, trendingNext)
     }
 
     /** Blocking. Playlists for a Music row (YouTube Music playlists, else normal YouTube playlists). */

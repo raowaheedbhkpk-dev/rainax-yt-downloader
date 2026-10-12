@@ -1,3 +1,5 @@
+New: Clear search history button under your recent searches
+Home feed is fresh on every refresh: popular videos, more from channels you watch and your searches, without videos you already watched
 Downloads now save in Internal storage/Rainax Tube (Video, Audio and Status folders)
 Music player bar has a close button
 Mix now shows YouTube's real Mix, different from Up next

@@ -126,10 +126,28 @@ class HomeScreen(
         val bg = if (isMusic) musicGlow else null
         if (hm.feedList.background !== bg) hm.feedList.background = bg
     }
-    private val suggestAdapter = SuggestAdapter({ submit(it) }) { text ->
-        // ↖ : put the suggestion in the box to keep typing
-        hm.searchInput.setText(text)
-        hm.searchInput.setSelection(hm.searchInput.text.length)
+    private val suggestAdapter = SuggestAdapter(
+        onPick = { submit(it) },
+        onFill = { text ->
+            // ↖ : put the suggestion in the box to keep typing
+            hm.searchInput.setText(text)
+            hm.searchInput.setSelection(hm.searchInput.text.length)
+        },
+        onClear = { confirmClearHistory() }
+    )
+
+    /** "Clear search history" under the recent searches: asks once, then removes them all. */
+    private fun confirmClearHistory() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+            .setTitle("Clear search history?")
+            .setMessage("Your recent searches will be removed from this phone.")
+            .setPositiveButton("Clear") { _, _ ->
+                AppPrefs.clearSearchHistory(act)
+                suggest(hm.searchInput.text.toString())
+                android.widget.Toast.makeText(act, "Search history cleared", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     /** The ≡ button (side menu) and the mic (voice search): handled by the main screen. */
@@ -357,7 +375,7 @@ class HomeScreen(
         suggestJob?.cancel()
         val history = AppPrefs.searchHistory(act)
         if (text.isBlank()) {
-            suggestAdapter.submit(history.take(12), history.size)
+            suggestAdapter.submit(history.take(12), history.size, showClear = history.isNotEmpty())
             return
         }
         val fromHistory = history.filter { it.contains(text, true) }.take(3)
@@ -711,6 +729,7 @@ class HomeScreen(
             try {
                 var header: ChannelDetails? = null
                 val res = withContext(Dispatchers.IO) {
+                    val watched by lazy { WatchHistory.recentItems(act) }     // to leave out what you already saw
                     when {
                         sp != null && sp.startsWith("q:") -> YtCatalog.kiosk(sp, page)
                         sp == "local:history" -> FeedPage(WatchHistory.recentItems(act), null)
@@ -721,19 +740,19 @@ class HomeScreen(
                         q != null -> YtCatalog.search(q, pl, page)
                         // For you on a new account (no history yet) is empty on YouTube too: show popular videos instead
                         tabId == FOR_YOU && (page == null || key in popularFallback) -> {
-                            if (page != null) YtCatalog.kiosk(YtCatalog.HOME, page, history)
+                            if (page != null) YtCatalog.kiosk(YtCatalog.HOME, page, history, watched)
                             else {
                                 val mine = runCatching { YtAccount.browse(tabId.removePrefix("acc:"), null) }.getOrNull()
                                 if (mine != null && mine.items.size >= 6) { popularFallback.remove(key); mine }
                                 else {
                                     popularFallback.add(key)
-                                    val popular = YtCatalog.kiosk(YtCatalog.HOME, null, history)
+                                    val popular = YtCatalog.kiosk(YtCatalog.HOME, null, history, watched)
                                     FeedPage((mine?.items.orEmpty() + popular.items).distinctBy { it.url }, popular.next)
                                 }
                             }
                         }
                         tabId.startsWith("acc:") -> YtAccount.browse(tabId.removePrefix("acc:"), page)
-                        else -> YtCatalog.kiosk(tabId, page, history)
+                        else -> YtCatalog.kiosk(tabId, page, history, watched)
                     }
                 }
                 header?.let { if (channelUrl == chUrl) fillChannel(it) }
@@ -833,31 +852,64 @@ class HomeScreen(
         const val FOR_YOU = "acc:FEwhat_to_watch"
     }
 
-    /** Search suggestions: recent searches (clock icon) first, then YouTube's suggestions. */
+    /**
+     * Search suggestions: recent searches (clock icon) first, then YouTube's suggestions.
+     * Under the recent searches (empty search box): "Clear search history".
+     */
     private class SuggestAdapter(
         private val onPick: (String) -> Unit,
-        private val onFill: (String) -> Unit
-    ) : RecyclerView.Adapter<SuggestAdapter.VH>() {
+        private val onFill: (String) -> Unit,
+        private val onClear: () -> Unit
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         private var items: List<String> = emptyList()
         private var historyCount = 0
+        private var showClear = false
 
-        fun submit(list: List<String>, fromHistory: Int) {
+        fun submit(list: List<String>, fromHistory: Int, showClear: Boolean = false) {
             items = list
             historyCount = fromHistory
+            this.showClear = showClear
             notifyDataSetChanged()
         }
 
-        override fun getItemCount() = items.size
+        override fun getItemCount() = items.size + if (showClear) 1 else 0
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_suggestion, parent, false))
+        override fun getItemViewType(position: Int) = if (position >= items.size) CLEAR else ROW
 
-        override fun onBindViewHolder(holder: VH, position: Int) {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            if (viewType == CLEAR) {
+                val d = parent.resources.displayMetrics.density
+                val tv = TextView(parent.context).apply {
+                    text = "Clear search history"
+                    gravity = android.view.Gravity.CENTER
+                    textSize = 14f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(parent.context, R.color.rx_accent))
+                    val tvv = android.util.TypedValue()
+                    parent.context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tvv, true)
+                    setBackgroundResource(tvv.resourceId)
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (52 * d).toInt())
+                }
+                return object : RecyclerView.ViewHolder(tv) {}
+            }
+            return VH(LayoutInflater.from(parent.context).inflate(R.layout.item_suggestion, parent, false))
+        }
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (holder !is VH) {
+                holder.itemView.setOnClickListener { onClear() }
+                return
+            }
             val text = items[position]
             holder.text.text = text
             holder.icon.setImageResource(if (position < historyCount) R.drawable.ic_history else R.drawable.ic_search)
             holder.itemView.setOnClickListener { onPick(text) }
             holder.fill.setOnClickListener { onFill(text) }
+        }
+
+        companion object {
+            private const val ROW = 0
+            private const val CLEAR = 1
         }
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
