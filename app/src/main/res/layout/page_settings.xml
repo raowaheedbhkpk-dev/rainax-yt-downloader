@@ -502,7 +502,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="Download folder"
+                    android:text="Saved in"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
@@ -511,35 +511,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:layout_marginBottom="14dp"
                     android:textColor="@color/rx_text2"
                     android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/chooseFolderBtn"
-            style="@style/Widget.Rainax.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Choose folder" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/resetFolderBtn"
-            style="@style/Widget.Rainax.Button.Outlined"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Use default folder" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/openFolderBtn"
-            style="@style/Widget.Rainax.Button.Outlined"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Open Downloads folder" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

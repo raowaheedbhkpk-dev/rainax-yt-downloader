@@ -301,6 +301,22 @@ object YtCatalog {
         clean(FastExtractor.streamInfo(FastExtractor.videoUrl(url)).relatedItems.orEmpty().mapNotNull { item(it) }).take(30)
     }
 
+    /**
+     * Blocking. YouTube's Mix for a video (its "RD" playlist: a different list from Up next, like YouTube shows).
+     * The video itself comes first. Empty when YouTube has no Mix for it.
+     */
+    fun videoMix(url: String): List<VideoItem> = guard {
+        FastExtractor.init()
+        val id = youtubeId(url) ?: return@guard emptyList()
+        val items = runCatching {
+            org.schabi.newpipe.extractor.playlist.PlaylistInfo
+                .getInfo(yt, "https://www.youtube.com/watch?v=$id&list=RD$id")
+                .relatedItems.mapNotNull { item(it) }
+        }.getOrDefault(emptyList())
+        val list = items.filter { !it.isPlaylist && !it.isChannel && it.seconds >= 0 }.distinctBy { youtubeId(it.url) }
+        if (list.size < 3) emptyList() else list.take(50)
+    }
+
     /** A song as the Music tab shows it: plain YouTube link, artist without " - Topic", a cover that fits. */
     private fun song(v: VideoItem): VideoItem {
         val id = youtubeId(v.url) ?: return v

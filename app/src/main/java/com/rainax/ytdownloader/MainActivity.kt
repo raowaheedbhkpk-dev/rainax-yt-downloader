@@ -97,20 +97,6 @@ class MainActivity : AppCompatActivity() {
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    private val pickFolder =
-        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            if (uri == null) return@registerForActivityResult
-            try {
-                contentResolver.takePersistableUriPermission(
-                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-                AppPrefs.setSaveTree(this, uri.toString())
-                renderFolder()
-                message("New downloads will be saved in this folder")
-            } catch (e: Exception) {
-                message("That folder can't be used. Pick another one.")
-            }
-        }
 
 
     private val backCallback = object : OnBackPressedCallback(true) {
@@ -335,6 +321,7 @@ class MainActivity : AppCompatActivity() {
         b.root.postDelayed({ FastExtractor.warmUp() }, 800)    // sizes show faster on the first download
         FeedAutoplay.onResume()
         if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh()     // new statuses (or access just given)
+        renderFolder()                        // All files access may have just been given
         if (installAskAfterSettings) {
             installAskAfterSettings = false
             b.root.post { askInstallUpdates() }
@@ -1793,21 +1780,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         renderFolder()
-        st.chooseFolderBtn.setOnClickListener {
-            try { pickFolder.launch(null) } catch (e: Exception) { message("This phone has no folder picker") }
-        }
-        st.resetFolderBtn.setOnClickListener {
-            AppPrefs.setSaveTree(this, "")
-            renderFolder()
-            message("Using Downloads/${FileStore.DEFAULT_FOLDER}")
-        }
-        st.openFolderBtn.setOnClickListener {
-            try {
-                startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))
-            } catch (e: Exception) {
-                message("Can't open the Downloads folder")
-            }
-        }
         val version = try {
             packageManager.getPackageInfo(packageName, 0).versionName
         } catch (e: Exception) {
@@ -1872,7 +1844,7 @@ class MainActivity : AppCompatActivity() {
     /** File access for the status saver (and your files): All files access on Android 11+, storage on Android 10. */
     private fun requestFileAccess(thenInstallAsk: Boolean) {
         if (Build.VERSION.SDK_INT >= 30) openAllFilesSettings(thenInstallAsk)
-        else legacyStoragePermission.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        else legacyStoragePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)     // (includes reading)
     }
 
     /** Pop-up 1: storage (with notifications on Android 13+, for download progress). */
@@ -1885,6 +1857,7 @@ class MainActivity : AppCompatActivity() {
             perms += Manifest.permission.POST_NOTIFICATIONS
         } else {
             perms += Manifest.permission.READ_EXTERNAL_STORAGE
+            if (Build.VERSION.SDK_INT < 30) perms += Manifest.permission.WRITE_EXTERNAL_STORAGE    // Android 10: Rainax Tube folder
         }
         val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty() && !needsAllFiles()) { askInstallUpdates(); return }

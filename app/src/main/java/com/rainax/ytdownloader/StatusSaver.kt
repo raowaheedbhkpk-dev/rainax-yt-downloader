@@ -33,7 +33,7 @@ import kotlinx.coroutines.withContext
  * ".Statuses" folder for 24 hours. That folder is marked "don't index", so the normal photos/videos permission
  * can't see it. With "All files access" (asked once on first start, like MX Player) RAINAX reads it directly;
  * without it, you can instead pick just that folder once on Android's folder screen.
- * Saved statuses go to Downloads/RAINAX/Status.
+ * Saved statuses go to Internal storage/Rainax Tube/Status.
  */
 class StatusSaver(
     private val act: AppCompatActivity,
@@ -254,9 +254,11 @@ class StatusSaver(
         return out.sortedByDescending { it.modified }
     }
 
-    /** Statuses saved by RAINAX (its own files in Downloads/RAINAX/Status). */
+    /** Statuses saved by RAINAX (Rainax Tube/Status, or Downloads/Rainax Tube/Status without file access). */
     private fun savedList(): List<Item> {
-        val out = mutableListOf<Item>()
+        val direct = FileStore.dir(FileStore.STATUS)
+        val fromFolder = if (FileStore.canWriteDirect(act) && direct.isDirectory) runCatching { fileList(direct) }.getOrDefault(emptyList()) else emptyList()
+        val out = fromFolder.toMutableList()
         act.contentResolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.Downloads._ID, MediaStore.Downloads.DISPLAY_NAME, MediaStore.Downloads.MIME_TYPE, MediaStore.Downloads.DATE_MODIFIED),
@@ -268,7 +270,7 @@ class StatusSaver(
                 out += Item(uri, c.getString(1).orEmpty(), c.getString(2).orEmpty(), c.getLong(3) * 1000)
             }
         }
-        return out
+        return out.distinctBy { it.name }.sortedByDescending { it.modified }
     }
 
     // ---------- saving ----------
@@ -279,7 +281,7 @@ class StatusSaver(
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { copy(item) }.isSuccess }
             if (ok) AppPrefs.addSavedStatus(act, item.name)
-            if (!quiet) Toast.makeText(act, if (ok) "Saved to Downloads/RAINAX/Status" else "Couldn't save this status", Toast.LENGTH_SHORT).show()
+            if (!quiet) Toast.makeText(act, if (ok) "Saved to Rainax Tube/Status" else "Couldn't save this status", Toast.LENGTH_SHORT).show()
             adapter.notifyDataSetChanged()
             show(items, if (items.isEmpty()) so.statusEmpty.text.toString() else null)
             done()
@@ -299,29 +301,15 @@ class StatusSaver(
             so.statusSaveAll.isEnabled = true
             adapter.notifyDataSetChanged()
             show(items, null)
-            Toast.makeText(act, "Saved $ok of ${todo.size} to Downloads/RAINAX/Status", Toast.LENGTH_SHORT).show()
+            Toast.makeText(act, "Saved $ok of ${todo.size} to Rainax Tube/Status", Toast.LENGTH_SHORT).show()
         }
     }
 
-    /** Blocking. Copies a status into Downloads/RAINAX/Status (so it stays after WhatsApp deletes it). */
+    /** Blocking. Copies a status into Rainax Tube/Status (so it stays after WhatsApp deletes it). */
     private fun copy(item: Item) {
-        val r = act.contentResolver
         val mime = item.mime.ifBlank { if (item.isVideo) "video/mp4" else "image/jpeg" }
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, item.name)
-            put(MediaStore.Downloads.MIME_TYPE, mime)
-            put(MediaStore.Downloads.RELATIVE_PATH, SAVE_PATH)
-            put(MediaStore.Downloads.IS_PENDING, 1)
-        }
-        val out = r.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("Can't create the file")
-        try {
-            r.openInputStream(item.uri)!!.use { input -> r.openOutputStream(out)!!.use { input.copyTo(it, 1 shl 16) } }
-            values.clear()
-            values.put(MediaStore.Downloads.IS_PENDING, 0)
-            r.update(out, values, null, null)
-        } catch (e: Exception) {
-            runCatching { r.delete(out, null, null) }
-            throw e
+        FileStore.saveWith(act, item.name, mime, FileStore.STATUS) { out ->
+            act.contentResolver.openInputStream(item.uri)!!.use { it.copyTo(out, 1 shl 16) }
         }
     }
 
@@ -430,6 +418,6 @@ class StatusSaver(
         const val WA = "com.whatsapp"
         const val WAB = "com.whatsapp.w4b"
         private const val STORAGE = "com.android.externalstorage.documents"
-        private val SAVE_PATH = "${Environment.DIRECTORY_DOWNLOADS}/RAINAX/Status/"
+        private val SAVE_PATH = "${Environment.DIRECTORY_DOWNLOADS}/${FileStore.ROOT}/${FileStore.STATUS}/"
     }
 }

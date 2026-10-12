@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mini music bar above the bottom bar (like YouTube Music): tap to open the player, swipe sideways to close -->
+<!-- Mini music bar above the bottom bar (like YouTube Music): tap to open the player; ✕ or swipe sideways to close -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -75,6 +75,18 @@
             android:padding="12dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_p_next"
+            app:tint="@color/rx_white" />
+
+        <!-- ✕ : stop the music and close the bar (swiping it sideways does the same) -->
+        <ImageButton
+            android:id="@+id/mmClose"
+            android:layout_width="44dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Close player"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close"
             app:tint="@color/rx_white" />
     </LinearLayout>
 

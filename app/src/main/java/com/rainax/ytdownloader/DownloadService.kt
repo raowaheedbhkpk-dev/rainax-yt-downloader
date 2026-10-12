@@ -168,7 +168,19 @@ class DownloadService : Service() {
         TaskRepository.updateWhere({ it.status == Status.RUNNING && !running.containsKey(it.id) }) {
             it.copy(status = Status.QUEUED, message = "Queued")
         }
-        var slots = AppPrefs.maxParallel(this) - running.size
+        // fewer simultaneous downloads chosen in Settings: the newest extra ones go back to the queue at once
+        // (they keep what they downloaded and continue when a place frees up)
+        val max = AppPrefs.maxParallel(this)
+        val active = TaskRepository.tasks.value.filter { it.status == Status.RUNNING && running.containsKey(it.id) }
+        if (active.size > max) {
+            // newest first (the list is newest first); ones already joining or saving (99%) are left to finish
+            active.filter { it.progress < 99 }.take(active.size - max).forEach { t ->
+                TaskRepository.update(t.id, true) { it.copy(status = Status.QUEUED, message = "Queued") }
+                NativeDownloader.stop(t.id)
+                running[t.id]?.cancel()
+            }
+        }
+        var slots = max - running.size
         for (t in TaskRepository.tasks.value.asReversed()) { // oldest first
             if (slots <= 0) break
             if (t.status == Status.QUEUED && !running.containsKey(t.id)) {
@@ -561,8 +573,8 @@ class DownloadService : Service() {
             android.util.Log.w("RAINAX", "fast join not possible: ${e.message}")
             return null
         }
-        // the phone's storage holds both the parts and Downloads (a picked SD card folder is checked by writing)
-        if (FileStore.customTree(this) == null && filesDir.usableSpace < job.size + 20L * 1024 * 1024) {
+        // the phone's storage holds both the parts and the Rainax Tube folder
+        if (filesDir.usableSpace < job.size + 20L * 1024 * 1024) {
             throw java.io.IOException("Not enough storage")
         }
         return FileStore.saveWith(this, NativeDownloader.safeName(title, "mp4"), "video/mp4") { out ->

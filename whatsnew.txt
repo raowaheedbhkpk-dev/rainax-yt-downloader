@@ -1,3 +1,9 @@
+Downloads now save in Internal storage/Rainax Tube (Video, Audio and Status folders)
+Music player bar has a close button
+Mix now shows YouTube's real Mix, different from Up next
+Music tab mood chips have proper spacing
+Lowering simultaneous downloads now pauses the extra ones right away
+Removed the Copy link button (use Share)
 WhatsApp statuses now show without picking a folder: allow "All files access" once (asked on first start, like other players)
 New Social Downloader page: paste a link and RAINAX names the app it is from, with all supported apps as one-tap badges
 New: WhatsApp and WhatsApp Business status saver (photos and videos, Save all, and your saved statuses)

@@ -171,6 +171,7 @@ class MusicPlayer(
         mini.root.setOnClickListener { expand() }
         mini.mmPlay.setOnClickListener { togglePlay() }
         mini.mmNext.setOnClickListener { next() }
+        mini.mmClose.setOnClickListener { close() }
         setupMiniSwipe()
         updateModes()
     }

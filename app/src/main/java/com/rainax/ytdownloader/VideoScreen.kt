@@ -68,7 +68,6 @@ class VideoScreen(
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
         header.vDownload.setOnClickListener { url?.let { download(it, currentTitle(), false) } }
         header.vShare.setOnClickListener { share() }
-        header.vCopy.setOnClickListener { copyLink() }
         vb.videoSettings.setOnClickListener { showPlayerMenu() }
         // the top buttons (close, quality) appear and hide together with the player controls
         vb.playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v -> vb.playerTop.visibility = v })
@@ -118,9 +117,30 @@ class VideoScreen(
 
     // ---------- Next / Mix bar and the Up next list ----------
 
+    /** YouTube's Mix for the open video (its own list, not Up next), loaded in the background. */
+    private var mix: List<VideoItem>? = null
+    private var mixFor: String? = null
+    private var mixJob: Job? = null
+
+    private fun loadMix(d: VideoDetails) {
+        if (mixFor == d.url) return
+        mixFor = d.url
+        mix = null
+        mixJob?.cancel()
+        mixJob = act.lifecycleScope.launch {
+            val list = withContext(Dispatchers.IO) { runCatching { YtCatalog.videoMix(d.url) }.getOrDefault(emptyList()) }
+            if (mixFor != d.url) return@launch
+            mix = list
+            showNextBar(details)
+        }
+    }
+
     /** Bottom bar: "Next: <video>" and "Mix - <this video>" (tap for the whole list). */
     private fun showNextBar(d: VideoDetails?) {
-        val next = d?.related?.firstOrNull { it.seconds > 0 }
+        d?.let { loadMix(it) }
+        val here = youtubeId(d?.url)
+        // the Mix's next video once it's loaded (like YouTube), else the first Up next video
+        val next = mix?.firstOrNull { it.seconds >= 0 && youtubeId(it.url) != here } ?: d?.related?.firstOrNull { it.seconds > 0 }
         vb.vNextBar.isVisible = next != null && !fullscreen && Picks.size == 0
         if (next == null || d == null) return
         vb.vNextTitle.text = "Next: " + next.title
@@ -157,7 +177,17 @@ class VideoScreen(
         rows.onPick = { Picks.toggle(it); if (Picks.has(it.url) && Picks.size <= Picks.SAMPLE) vm.warm(it.url); rows.notifyDataSetChanged() }
         rows.isPicked = { Picks.has(it) }
         list.adapter = rows
-        rows.submit(d.related.filter { !it.isPlaylist && !it.isChannel })
+        // YouTube's Mix (a different list from Up next); Up next only when YouTube has no Mix for this video
+        rows.submit(mix?.takeIf { it.isNotEmpty() } ?: d.related.filter { !it.isPlaylist && !it.isChannel })
+        if (mix == null) {
+            sub.text = "Loading the Mix…"
+            act.lifecycleScope.launch {
+                mixJob?.join()
+                if (!dialog.isShowing) return@launch
+                sub.text = "Mixes are playlists made for you"
+                mix?.takeIf { it.isNotEmpty() }?.let { rows.submit(it) }
+            }
+        }
         box.addView(head)
         box.addView(sub)
         box.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (act.resources.displayMetrics.heightPixels * 0.6).toInt()))
@@ -897,7 +927,6 @@ class VideoScreen(
             Opt("Quality", qValue, R.drawable.ic_hd) { showQualityMenu() },
             Opt("Playback speed", speedLabel(speed), R.drawable.ic_speed) { showSpeedMenu() },
             Opt("Lock screen", null, R.drawable.ic_lock) { setLocked(true) },
-            Opt("Copy link", null, R.drawable.ic_link) { copyLink() },
             Opt("Share", null, R.drawable.ic_share) { share() }
         ))
     }
@@ -967,14 +996,6 @@ class VideoScreen(
             sb.optList.addView(row.root)
         }
         dialog.show()
-    }
-
-    private fun copyLink() {
-        val u = url ?: return
-        val cm = act.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        AppPrefs.setClipSeen(act, u)                        // no "link copied" popup for our own copy
-        cm.setPrimaryClip(android.content.ClipData.newPlainText("Video link", u))
-        if (android.os.Build.VERSION.SDK_INT < 33) act.toast("Link copied")
     }
 
     private fun youtubeThumb(u: String): String? =

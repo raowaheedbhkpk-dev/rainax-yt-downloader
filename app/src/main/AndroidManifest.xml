@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Android 10: write the Rainax Tube folder in internal storage -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <!-- "All files access" (Android 11+), asked once on first start: WhatsApp statuses sit in a hidden folder that
          the normal media permission can't see. With it the status saver needs no extra folder step. -->
     <uses-permission

@@ -214,10 +214,12 @@
 
     <!-- Music tab mood chips: soft rounded squares, like YouTube Music -->
     <style name="Widget.Rainax.Chip.Mood" parent="Widget.Rainax.Chip.Filter">
-        <item name="chipCornerRadius">8dp</item>
-        <item name="chipStrokeWidth">0dp</item>
-        <item name="chipStartPadding">6dp</item>
-        <item name="chipEndPadding">6dp</item>
+        <item name="chipCornerRadius">10dp</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipStrokeColor">@color/rx_mood_stroke</item>
+        <item name="chipBackgroundColor">@color/rx_mood_bg</item>
+        <item name="chipStartPadding">4dp</item>
+        <item name="chipEndPadding">4dp</item>
     </style>
 
     <!-- Cards -->
