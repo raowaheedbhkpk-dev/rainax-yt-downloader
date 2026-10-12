@@ -114,6 +114,9 @@ class LibraryScreen(
     private val shareFile: (DownloadTask) -> Unit,
     private val deleteFile: (DownloadTask) -> Unit
 ) {
+    /** ⋮ > Move to Private folder (set by the main screen). */
+    var onMoveToPrivate: (DownloadTask) -> Unit = {}
+
     private val modes = listOf("Downloads", "Music", "Videos", "Playlists")
     var mode = 0
         private set
@@ -257,13 +260,15 @@ class LibraryScreen(
         menu.menu.add(0, 1, 0, "Add to playlist")
         if (p != null) menu.menu.add(0, 2, 1, "Remove from this playlist")
         menu.menu.add(0, 3, 2, "Share")
-        menu.menu.add(0, 4, 3, "Delete file")
+        menu.menu.add(0, 5, 3, "Move to Private folder")
+        menu.menu.add(0, 4, 4, "Delete file")
         menu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> addToPlaylist(t)
                 2 -> if (p != null) { LocalPlaylists.remove(act, p, t.id); render() }
                 3 -> shareFile(t)
                 4 -> deleteFile(t)
+                5 -> onMoveToPrivate(t)
             }
             true
         }

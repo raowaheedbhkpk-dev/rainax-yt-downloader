@@ -82,6 +82,23 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
         }
     }
 
+    /** Pull to refresh on Home: new Shorts at the front of the strip (not only new videos below). */
+    fun refreshShorts() {
+        if (shortsLoading) return
+        shortsLoading = true
+        shortsTriedAt = System.currentTimeMillis()
+        act.lifecycleScope.launch {
+            val fresh = withContext(Dispatchers.IO) { runCatching { ShortsFeed.fetchMore() }.getOrDefault(emptyList()) }
+            shortsLoading = false
+            if (fresh.isEmpty()) return@launch
+            val ids = fresh.mapTo(HashSet()) { youtubeId(it.url) ?: it.url }
+            ShortsFeed.items.removeAll { (youtubeId(it.url) ?: it.url) in ids }
+            ShortsFeed.items.addAll(0, fresh)
+            showShorts()
+            b.shortsList.scrollToPosition(0)
+        }
+    }
+
     /** Signed in: the round pictures of your channels on top (loaded once, kept 30 minutes). */
     private fun refreshSubs() {
         if (!YtAccount.isSignedIn(act)) {

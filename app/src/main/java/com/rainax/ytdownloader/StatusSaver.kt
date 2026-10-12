@@ -183,6 +183,8 @@ class StatusSaver(
         so.statusLoading.isVisible = items.isEmpty()
         loadJob = act.lifecycleScope.launch {
             val list = withContext(Dispatchers.IO) {
+                // what is already in Rainax Tube/Status (also after reinstalling the app, when its memory is empty)
+                if (t != 2) savedNames = runCatching { savedOnDisk() }.getOrDefault(savedNames)
                 runCatching {
                     when {
                         t == 2 -> savedList()
@@ -270,17 +272,55 @@ class StatusSaver(
                 out += Item(uri, c.getString(1).orEmpty(), c.getString(2).orEmpty(), c.getLong(3) * 1000)
             }
         }
-        return out.distinctBy { it.name }.sortedByDescending { it.modified }
+        return out.distinctBy { baseName(it.name) }.sortedByDescending { it.modified }
     }
 
     // ---------- saving ----------
 
-    private fun isSaved(item: Item) = tab == 2 || item.name in AppPrefs.savedStatuses(act)
+    /** Status file names already in Rainax Tube/Status (a "name (2).jpg" copy counts as "name.jpg"). */
+    @Volatile private var savedNames: Set<String> = emptySet()
+
+    private fun baseName(name: String): String {
+        val ext = name.substringAfterLast('.', "")
+        val stem = name.substringBeforeLast('.').replace(Regex(" \\(\\d+\\)$"), "")
+        return if (ext.isEmpty()) stem else "$stem.$ext"
+    }
+
+    /**
+     * Blocking. Names of the statuses already saved. Exact extra copies ("name (2).mp4", same size as "name.mp4")
+     * made by saving twice are removed.
+     */
+    private fun savedOnDisk(): Set<String> {
+        val names = HashSet<String>()
+        val dir = FileStore.dir(FileStore.STATUS)
+        if (FileStore.canWriteDirect(act) && dir.isDirectory) {
+            val files = dir.listFiles().orEmpty().filter { it.isFile }
+            val byName = files.associateBy { it.name }
+            files.forEach { f ->
+                val base = baseName(f.name)
+                val original = byName[base]
+                if (base != f.name && original != null && original.length() == f.length()) {
+                    if (f.delete()) runCatching {
+                        android.media.MediaScannerConnection.scanFile(act.applicationContext, arrayOf(f.absolutePath), null, null)
+                    }
+                } else names += base
+            }
+        }
+        runCatching {
+            act.contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Downloads.DISPLAY_NAME),
+                "${MediaStore.Downloads.RELATIVE_PATH} LIKE ?", arrayOf("$SAVE_PATH%"), null
+            )?.use { c -> while (c.moveToNext()) c.getString(0)?.let { names += baseName(it) } }
+        }
+        return names
+    }
+
+    private fun isSaved(item: Item) = tab == 2 || item.name in savedNames || item.name in AppPrefs.savedStatuses(act)
 
     private fun save(item: Item, quiet: Boolean = false, done: () -> Unit = {}) {
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { copy(item) }.isSuccess }
-            if (ok) AppPrefs.addSavedStatus(act, item.name)
+            if (ok) { AppPrefs.addSavedStatus(act, item.name); savedNames = savedNames + item.name }
             if (!quiet) Toast.makeText(act, if (ok) "Saved to Rainax Tube/Status" else "Couldn't save this status", Toast.LENGTH_SHORT).show()
             adapter.notifyDataSetChanged()
             show(items, if (items.isEmpty()) so.statusEmpty.text.toString() else null)
@@ -296,7 +336,7 @@ class StatusSaver(
             var ok = 0
             for (item in todo) {
                 val saved = withContext(Dispatchers.IO) { runCatching { copy(item) }.isSuccess }
-                if (saved) { ok++; AppPrefs.addSavedStatus(act, item.name) }
+                if (saved) { ok++; AppPrefs.addSavedStatus(act, item.name); savedNames = savedNames + item.name }
             }
             so.statusSaveAll.isEnabled = true
             adapter.notifyDataSetChanged()
@@ -307,6 +347,11 @@ class StatusSaver(
 
     /** Blocking. Copies a status into Rainax Tube/Status (so it stays after WhatsApp deletes it). */
     private fun copy(item: Item) {
+        // already there (saved before, maybe before reinstalling): don't make a second copy
+        if (FileStore.canWriteDirect(act) && java.io.File(FileStore.dir(FileStore.STATUS), item.name).exists()) {
+            savedNames = savedNames + item.name
+            return
+        }
         val mime = item.mime.ifBlank { if (item.isVideo) "video/mp4" else "image/jpeg" }
         FileStore.saveWith(act, item.name, mime, FileStore.STATUS) { out ->
             act.contentResolver.openInputStream(item.uri)!!.use { it.copyTo(out, 1 shl 16) }

@@ -1,3 +1,6 @@
+Pull to refresh on Home now brings new Shorts too
+Fixed: WhatsApp statuses you already saved show as saved after reinstalling, and are never saved twice
+New: Private folder with PIN, pattern or password. Hide videos and music from your gallery and other apps
 Background player: 10 seconds back and forward buttons, and the RAINAX logo on the media card
 Updates now come from the new RAINAX Tube releases page
 New: Clear search history button under your recent searches

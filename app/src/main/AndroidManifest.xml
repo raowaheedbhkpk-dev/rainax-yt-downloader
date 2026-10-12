@@ -75,6 +75,14 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Private folder (PIN / pattern / password). Not open to other apps. -->
+        <activity
+            android:name=".PrivateActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Shorts: full-screen short videos, swipe up for the next -->
         <activity
             android:name=".ShortsActivity"

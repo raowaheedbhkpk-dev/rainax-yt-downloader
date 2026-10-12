@@ -181,6 +181,7 @@ class HomeScreen(
         hm.feedRefresh.setColorSchemeResources(R.color.rx_primary)
         hm.feedRefresh.setOnRefreshListener {
             if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
+            if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
             load(reset = true, pulled = true)
         }
         hm.titleBack.setOnClickListener { back() }

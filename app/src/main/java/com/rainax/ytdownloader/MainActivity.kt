@@ -185,6 +185,7 @@ class MainActivity : AppCompatActivity() {
         library = LibraryScreen(this, pl, { onLibraryMode() }, { shareFile(it) }) { t ->
             confirm("Delete this file?", "\"${t.title}\" will be removed from your phone.") { deleteFilesOf(listOf(t)) }
         }
+        library.onMoveToPrivate = { moveToPrivate(it) }
         library.setup()
         setupSettings()
         setupSocial()
@@ -753,6 +754,7 @@ class MainActivity : AppCompatActivity() {
         pl.youHeader.setOnClickListener { onAccountClick() }
         // shortcuts after Downloads / Music / Videos / Playlists, like YouTube's Library
         listOf(
+            "🔒 Private folder" to { PrivateActivity.open(this) },
             "History" to { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") },
             "Liked videos" to { openHomeList("Liked videos", "acc:VLLL") },
             "Watch later" to { openHomeList("Watch later", "acc:VLWL") }
@@ -1599,6 +1601,24 @@ class MainActivity : AppCompatActivity() {
         installUpdate(t)
     }
 
+    /** Hides a finished download in the Private folder (set it up first if needed). */
+    private fun moveToPrivate(t: DownloadTask) {
+        if (!PrivateVault.hasLock(this)) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+                .setTitle("Set up Private folder")
+                .setMessage("Choose a PIN, pattern or password first. Then tap “Move to Private folder” again.")
+                .setPositiveButton("Set up") { _, _ -> PrivateActivity.open(this) }
+                .setNegativeButton("Cancel", null)
+                .show()
+            return
+        }
+        message("Moving to Private folder…")
+        lifecycleScope.launch {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { PrivateVault.moveIn(this@MainActivity, t) }.isSuccess }
+            message(if (ok) "Moved to Private folder" else "Couldn't move this file")
+        }
+    }
+
     private fun onTaskClose(t: DownloadTask, anchor: View) {
         if (t.status != Status.DONE) {
             // with some progress, ask first: cancelling deletes what was downloaded
@@ -1625,6 +1645,7 @@ class MainActivity : AppCompatActivity() {
         popup.menu.add(0, 6, 1, "Open with another app")
         popup.menu.add(0, 2, 1, "Share")
         popup.menu.add(0, 3, 2, "Copy link")
+        popup.menu.add(0, 7, 3, "Move to Private folder")
         popup.menu.add(0, 4, 3, "Remove from list")
         popup.menu.add(0, 5, 4, "Delete file")
         popup.setOnMenuItemClickListener { item ->
@@ -1640,6 +1661,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 4 -> TaskRepository.remove(t.id)
                 5 -> confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") { deleteFilesOf(listOf(t)) }
+                7 -> moveToPrivate(t)
             }
             true
         }
