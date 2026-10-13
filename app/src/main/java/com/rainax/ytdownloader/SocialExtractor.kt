@@ -151,6 +151,17 @@ object SocialExtractor {
         return m
     }
 
+    /**
+     * Instagram and Facebook: the sign-in made in RAINAX's own browser for them (if any), so videos you can see
+     * there can be read too. Only ever sent back to the same site.
+     */
+    private fun browserCookies(url: String): String? = runCatching {
+        val host = java.net.URI(url).host.orEmpty().lowercase()
+        val ok = host == "instagram.com" || host.endsWith(".instagram.com") || host == "facebook.com" || host.endsWith(".facebook.com")
+        if (!ok) return null
+        android.webkit.CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }
+    }.getOrNull()
+
     private class PageResult(val html: String, val finalUrl: String, val cookies: String)
 
     private fun load(url: String, extra: Map<String, String> = emptyMap()): PageResult {
@@ -168,6 +179,7 @@ object SocialExtractor {
             con.setRequestProperty("Sec-Fetch-Site", "none")
             con.setRequestProperty("Sec-Fetch-User", "?1")
             con.setRequestProperty("Upgrade-Insecure-Requests", "1")
+            browserCookies(url)?.let { con.setRequestProperty("Cookie", it) }
             extra.forEach { (k, v) -> con.setRequestProperty(k, v) }
             val code = con.responseCode
             if (code == 404) error("This video was removed or the link is wrong")
@@ -475,7 +487,9 @@ object SocialExtractor {
     private fun instagramData(code: String): Media? {
         // a visit first: Instagram hands out the csrftoken cookie its data requests need
         val visit = runCatching { load("https://www.instagram.com/p/$code/") }.getOrNull()
-        val cookies = visit?.cookies.orEmpty()
+        // signed in to Instagram in RAINAX's browser: that sign-in too (private accounts you follow)
+        val cookies = listOfNotNull(browserCookies("https://www.instagram.com/"), visit?.cookies?.takeIf { it.isNotBlank() })
+            .joinToString("; ")
         val csrf = Regex("csrftoken=([^;\\s]+)").find(cookies)?.groupValues?.get(1)
             ?: java.util.UUID.randomUUID().toString().replace("-", "")
         val variables = JSONObject().put("shortcode", code).put("fetch_tagged_user_count", JSONObject.NULL)

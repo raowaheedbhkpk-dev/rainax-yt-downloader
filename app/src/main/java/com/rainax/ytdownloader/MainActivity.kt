@@ -75,6 +75,8 @@ class MainActivity : AppCompatActivity() {
     )
 
     private lateinit var statusSaver: StatusSaver
+    /** TikTok, Instagram and Facebook inside the app, with a Download button. */
+    private lateinit var socialBrowser: SocialBrowser
     /** Android's folder screen, for the WhatsApp status folder. */
     private val statusFolderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (::statusSaver.isInitialized) statusSaver.onFolderPicked(uri)
@@ -102,6 +104,7 @@ class MainActivity : AppCompatActivity() {
     private val backCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             when {
+                ::socialBrowser.isInitialized && socialBrowser.back() -> {}
                 exploreOpen -> closeExplore()
                 music.back() -> {}
                 video.fullscreen -> video.exitFullscreen()
@@ -321,6 +324,7 @@ class MainActivity : AppCompatActivity() {
         if (tab == 0 && ::home.isInitialized) home.onShown()
         b.root.postDelayed({ FastExtractor.warmUp() }, 800)    // sizes show faster on the first download
         FeedAutoplay.onResume()
+        if (::socialBrowser.isInitialized) socialBrowser.resume()
         if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh()     // new statuses (or access just given)
         renderFolder()                        // All files access may have just been given
         if (installAskAfterSettings) {
@@ -330,6 +334,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        if (::socialBrowser.isInitialized) socialBrowser.pause()
         FeedAutoplay.onPause()
         super.onPause()
     }
@@ -344,6 +349,7 @@ class MainActivity : AppCompatActivity() {
             permDialog?.dismiss()
             AppUpdater.onQueued = null
             FeedAutoplay.release()
+            if (::socialBrowser.isInitialized) socialBrowser.close()
         }
         super.onDestroy()
     }
@@ -883,6 +889,7 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     private fun setupSocial() {
+        socialBrowser = SocialBrowser(this, b.root as android.view.ViewGroup) { url -> showDownloadSheet(listOf(url)) }
         // the apps it works with: round badges, four per row
         val d = resources.displayMetrics.density
         val cell = ((resources.displayMetrics.widthPixels - 32 * d) / 4).toInt().coerceAtMost((110 * d).toInt())
@@ -896,7 +903,9 @@ class MainActivity : AppCompatActivity() {
             v.findViewById<android.widget.TextView>(R.id.platformName).text = app.name
             v.contentDescription = if (app === SocialApps.WHATSAPP) "WhatsApp statuses" else "Open ${app.name}"
             v.setOnClickListener {
-                if (app === SocialApps.WHATSAPP) {
+                if (socialBrowser.canBrowse(app)) {
+                    socialBrowser.open(app)                     // browse it inside RAINAX, Download on any video
+                } else if (app === SocialApps.WHATSAPP) {
                     // WhatsApp: the status saver right here
                     so.socialScroll.smoothScrollTo(0, so.statusCard.top - (12 * d).toInt())
                     statusSaver.focus()
