@@ -1,3 +1,4 @@
+No more "Photos and videos" permission question: one storage permission is enough
 Pull to refresh on Home now brings new Shorts too
 Fixed: WhatsApp statuses you already saved show as saved after reinstalling, and are never saved twice
 New: Private folder with PIN, pattern or password. Hide videos and music from your gallery and other apps

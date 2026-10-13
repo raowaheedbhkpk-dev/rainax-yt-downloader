@@ -1872,22 +1872,21 @@ class MainActivity : AppCompatActivity() {
     /** Pop-up 1: storage (with notifications on Android 13+, for download progress). */
     private fun askStorage() {
         if (isFinishing || isDestroyed) return
+        // Android 11+: "All files access" covers saving and reading everything (no "Photos and videos" question);
+        // Android 13+ also asks for notifications (download progress). Android 10: the storage permission.
         val perms = mutableListOf<String>()
-        if (Build.VERSION.SDK_INT >= 33) {
-            perms += Manifest.permission.READ_MEDIA_VIDEO
-            perms += Manifest.permission.READ_MEDIA_AUDIO
-            perms += Manifest.permission.POST_NOTIFICATIONS
-        } else {
+        if (Build.VERSION.SDK_INT >= 33) perms += Manifest.permission.POST_NOTIFICATIONS
+        if (Build.VERSION.SDK_INT < 30) {
             perms += Manifest.permission.READ_EXTERNAL_STORAGE
-            if (Build.VERSION.SDK_INT < 30) perms += Manifest.permission.WRITE_EXTERNAL_STORAGE    // Android 10: Rainax Tube folder
+            perms += Manifest.permission.WRITE_EXTERNAL_STORAGE        // Android 10: Rainax Tube folder
         }
         val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty() && !needsAllFiles()) { askInstallUpdates(); return }
         permDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setIcon(R.drawable.ic_download)
             .setTitle("Allow storage access")
-            .setMessage("RAINAX Tube saves your videos and music on this phone, in your Download, Movies and Music folders. " +
-                "Allow access so the app can save them, show them in your Library and save WhatsApp statuses" +
+            .setMessage("RAINAX Tube saves your videos, music and WhatsApp statuses in Internal storage/Rainax Tube. " +
+                "Allow access so the app can save them and show them in your Library" +
                 (if (Build.VERSION.SDK_INT >= 33) ", and show download progress in notifications." else ".") +
                 (if (Build.VERSION.SDK_INT >= 30) "\n\nOn the next screen, turn on “Allow access to manage all files”." else ""))
             .setCancelable(false)
