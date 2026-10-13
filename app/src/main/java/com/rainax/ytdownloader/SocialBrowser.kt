@@ -132,20 +132,56 @@ class SocialBrowser(
     private fun update(url: String?) {
         val v = b ?: return
         url?.let { v.browserHost.text = Uri.parse(it).host.orEmpty().removePrefix("www.") + Uri.parse(it).path.orEmpty() }
-        val ready = isVideoPage(url)
-        v.browserDownload.alpha = if (ready) 1f else 0.55f
-        v.browserDownloadText.text = if (ready) "Download" else "Open a video"
+        // Download always works: on a feed it finds the video playing on screen
+        v.browserDownload.alpha = 1f
+        v.browserDownloadText.text = "Download"
     }
 
+    /**
+     * Finds the video playing on screen (the one most in view) and returns its own link: TikTok's video number
+     * and author, Instagram's /reel/ or /p/ link, Facebook's video number. Read-only; nothing on the page changes.
+     */
+    private val findPlayingVideo = """
+        (function(){
+          function seen(el){var r=el.getBoundingClientRect();
+            var h=Math.max(0,Math.min(r.bottom,innerHeight)-Math.max(r.top,0));
+            var w=Math.max(0,Math.min(r.right,innerWidth)-Math.max(r.left,0));return h*w;}
+          var vids=[].slice.call(document.querySelectorAll('video'));
+          vids.sort(function(a,b){return seen(b)-seen(a);});
+          var v=vids[0]; if(!v||seen(v)<5000) return '';
+          var host=location.host, el=v, re=/\/video\/\d+|\/reels?\/[\w-]{5,}|\/p\/[\w-]{5,}|\/videos\/\d+|watch\/?\?v=\d+/;
+          for(var i=0;i<30&&el;i++,el=el.parentElement){
+            if(host.indexOf('tiktok')>=0){
+              var m=((el.id||'')+' '+(el.getAttribute('data-id')||'')).match(/(\d{15,22})/);
+              if(m){var up=el,a=null;
+                for(var k=0;k<12&&up&&!a;k++,up=up.parentElement){a=up.querySelector&&up.querySelector('a[href*="/@"]');}
+                var user=a?(a.getAttribute('href').match(/\/@([^/?#]+)/)||[])[1]:null;
+                return 'https://www.tiktok.com/@'+(user||'tiktok')+'/video/'+m[1];}
+            }
+            if(host.indexOf('facebook')>=0){
+              var ds=(el.getAttribute&&((el.getAttribute('data-store')||'')+(el.getAttribute('data-video-id')||'')))||'';
+              var f=ds.match(/videoID\W+(\d{6,})/)||ds.match(/^(\d{6,})$/);
+              if(f) return 'https://www.facebook.com/watch/?v='+f[1];
+            }
+            if(el.tagName==='A'&&re.test(el.href||'')) return el.href;
+            var links=el.querySelectorAll?el.querySelectorAll('a[href]'):[];
+            for(var j=0;j<links.length;j++){ if(re.test(links[j].href)) return links[j].href; }
+          }
+          return '';
+        })()
+    """.trimIndent()
+
     private fun download() {
-        val url = web?.url
-        if (!isVideoPage(url)) {
-            Toast.makeText(act, "Open a video or Reel first, then tap Download", Toast.LENGTH_SHORT).show()
-            return
+        val w = web ?: return
+        CookieManager.getInstance().flush()     // a signed-in page's cookies go with the link (see SocialExtractor)
+        val url = w.url
+        if (isVideoPage(url)) { onDownload(url!!); return }
+        // a feed (For You, Reels, Watch): the video playing on screen
+        w.evaluateJavascript(findPlayingVideo) { result ->
+            val link = runCatching { org.json.JSONTokener(result).nextValue() as? String }.getOrNull().orEmpty()
+            if (isVideoPage(link)) onDownload(link)
+            else Toast.makeText(act, "Couldn't find the video. Tap the video to open it, then Download", Toast.LENGTH_LONG).show()
         }
-        // the cookies of a signed-in page go with the link, so videos you can see here can be read
-        CookieManager.getInstance().flush()
-        onDownload(url!!)
     }
 
     private fun menu(anchor: View) {
