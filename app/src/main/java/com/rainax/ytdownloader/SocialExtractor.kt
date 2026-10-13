@@ -18,7 +18,14 @@ object SocialExtractor {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
 
     /** One downloadable file. */
-    class Variant(val url: String, val height: Int, val size: Long, val ext: String, val audioOnly: Boolean = false)
+    /**
+     * One downloadable file. [audioUrl]: the picture has no sound of its own and this sound file is joined to it
+     * (Instagram's other qualities, like YouTube's).
+     */
+    class Variant(
+        val url: String, val height: Int, val size: Long, val ext: String, val audioOnly: Boolean = false,
+        val audioUrl: String? = null, val audioSize: Long = 0
+    )
 
     class Media(
         val title: String,
@@ -81,8 +88,10 @@ object SocialExtractor {
                 v.height > 0 -> "Video (${v.height}p)"
                 else -> if (i == 0) "Best quality" else "Video"
             }
+            // a picture without its own sound: the size includes the sound joined to it
+            val bytes = if (v.size > 0) v.size + v.audioSize.coerceAtLeast(0) else 0L
             choices += FormatChoice("video:${v.height.coerceAtLeast(0)}:$i", title,
-                if (isTikTok(url)) "No watermark, MP4" else v.ext.uppercase(), sizeText(v.size), KIND_VIDEO, bytes = v.size.coerceAtLeast(0))
+                if (isTikTok(url)) "No watermark, MP4" else v.ext.uppercase(), sizeText(bytes), KIND_VIDEO, bytes = bytes)
         }
         if (choices.isEmpty()) error("No video found on this page")
         return PreviewState(
@@ -112,6 +121,13 @@ object SocialExtractor {
             // the quality you picked (by its height; the list may be ordered differently on this new read)
             video.firstOrNull { h != null && h > 0 && it.height == h }
                 ?: video.getOrNull(index) ?: video.firstOrNull() ?: error("No video found on this page")
+        }
+        pick.audioUrl?.let { a ->
+            // picture and sound come separately: downloaded side by side and joined into one MP4
+            return FastExtractor.Plan(
+                m.title, m.thumb, FastExtractor.Part(pick.url, pick.size, "mp4"), FastExtractor.Part(a, pick.audioSize, "m4a"),
+                null, false, null
+            )
         }
         return FastExtractor.Plan(
             m.title, m.thumb, null, null, FastExtractor.Part(pick.url, pick.size, pick.ext), false, null
@@ -498,12 +514,22 @@ object SocialExtractor {
         val videos = nodes.filter { it.optBoolean("is_video") && it.optString("video_url").startsWith("http") }
         if (videos.isEmpty()) return null
         val headers = mapOf("Referer" to "https://www.instagram.com/", "User-Agent" to UA)
-        val variants = videos.mapIndexed { i, v ->
+        val progressive = videos.mapIndexed { i, v ->
             val link = v.optString("video_url")
             fileHeaders[link] = headers
-            val h = v.optJSONObject("dimensions")?.optInt("height") ?: 0
+            val dim = v.optJSONObject("dimensions")
+            val h = dim?.let { d -> listOf(d.optInt("height"), d.optInt("width")).filter { it > 0 }.minOrNull() } ?: 0
             Variant(link, if (videos.size > 1) -1 - i else h, if (i < 2) sizeOf(link) else 0, "mp4")
         }
+        // one video: also every other quality Instagram made (its DASH list: picture and sound separately)
+        val variants = if (videos.size == 1) {
+            val manifest = (videos[0].optJSONObject("dash_info") ?: media.optJSONObject("dash_info"))
+                ?.optString("video_dash_manifest").orEmpty()
+            val best = progressive[0]
+            val extra = runCatching { instagramDash(manifest, headers) }.getOrDefault(emptyList())
+                .filter { it.audioOnly || it.height != best.height }
+            listOf(best) + extra
+        } else progressive
         val caption = media.optJSONObject("edge_media_to_caption")?.optJSONArray("edges")?.optJSONObject(0)
             ?.optJSONObject("node")?.optString("text").orEmpty().replace(Regex("\\s+"), " ").trim()
         val user = media.optJSONObject("owner")?.optString("username")?.takeIf { it.isNotBlank() }
@@ -514,6 +540,48 @@ object SocialExtractor {
             seconds = media.optDouble("video_duration", 0.0).toInt(),
             variants = variants
         )
+    }
+
+    /**
+     * Qualities from Instagram's DASH manifest: each picture size (sound joined from the audio file) and the sound
+     * alone. H.264 pictures are preferred (they join into MP4 on every phone).
+     */
+    private fun instagramDash(manifest: String, headers: Map<String, String>): List<Variant> {
+        if (!manifest.contains("<MPD", ignoreCase = true)) return emptyList()
+        val videos = mutableListOf<Triple<Int, String, String>>()        // height, address, codecs
+        var audio: Pair<String, Int>? = null                              // address, bandwidth
+        val sets = Regex("<AdaptationSet([^>]*)>(.*?)</AdaptationSet>", RegexOption.DOT_MATCHES_ALL).findAll(manifest)
+        for (set in sets) {
+            val setAttrs = set.groupValues[1]
+            for (r in Regex("<Representation([^>]*)>(.*?)</Representation>", RegexOption.DOT_MATCHES_ALL).findAll(set.groupValues[2])) {
+                val attrs = setAttrs + " " + r.groupValues[1]
+                val base = Regex("<BaseURL>(.*?)</BaseURL>", RegexOption.DOT_MATCHES_ALL).find(r.groupValues[2])?.groupValues?.get(1)
+                    ?.let { decodeEntities(it.trim()) } ?: continue
+                if (!base.startsWith("http")) continue
+                fun attr(name: String) = Regex("\\b$name=\"([^\"]*)\"").findAll(attrs).lastOrNull()?.groupValues?.get(1)
+                val type = (attr("contentType") ?: attr("mimeType")).orEmpty()
+                if (type.startsWith("audio")) {
+                    val bw = attr("bandwidth")?.toIntOrNull() ?: 0
+                    if (audio == null || bw > audio!!.second) audio = base to bw
+                } else if (type.startsWith("video")) {
+                    val h = attr("height")?.toIntOrNull() ?: continue
+                    val w = attr("width")?.toIntOrNull() ?: h
+                    // quality by the shorter side, like YouTube: a 720×1280 Reel is 720p
+                    videos += Triple(minOf(w, h), base, attr("codecs").orEmpty().lowercase())
+                }
+            }
+        }
+        val a = audio?.first ?: return emptyList()
+        fileHeaders[a] = headers
+        val aSize = sizeOf(a)
+        val avc = videos.filter { it.third.isEmpty() || it.third.startsWith("avc") }.ifEmpty { videos }
+        val perHeight = avc.groupBy { it.first }.map { (_, l) -> l.first() }.sortedByDescending { it.first }.take(4)
+        val out = perHeight.map { (h, u, _) ->
+            fileHeaders[u] = headers
+            Variant(u, h, sizeOf(u), "mp4", audioUrl = a, audioSize = aSize)
+        }.toMutableList()
+        out += Variant(a, 0, aSize, "m4a", audioOnly = true)
+        return out
     }
 
     /** Instagram's embed page for a post: carries the video address for public posts. */
