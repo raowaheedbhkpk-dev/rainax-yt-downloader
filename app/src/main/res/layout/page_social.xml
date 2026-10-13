@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Social downloader: a colourful hero with the link box (it names the app a pasted link is from), the apps it
-     works with as round badges, the WhatsApp status saver, and three quick steps -->
+<!-- Social downloader: a colourful hero with the link box (it names the app a pasted link is from),
+     the WhatsApp status saver, and three quick steps -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/socialScroll"
@@ -54,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:alpha="0.9"
-                android:text="Paste a link from any app below and save it in HD"
+                android:text="Paste or share a link from TikTok, Instagram, Facebook or YouTube and save it in HD"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp" />
 
@@ -199,40 +199,6 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-
-        <!-- ===== apps ===== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="26dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:fontFamily="sans-serif-medium"
-                android:text="Works with"
-                android:textColor="@color/rx_text"
-                android:textSize="19sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tap to browse inside RAINAX"
-                android:textColor="@color/rx_text2"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- filled from the code: four round badges per row -->
-        <GridLayout
-            android:id="@+id/socialApps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:columnCount="4"
-            android:useDefaultMargins="false" />
 
         <!-- ===== WhatsApp status saver ===== -->
         <LinearLayout

@@ -1,4 +1,4 @@
-New: TikTok, Instagram and Facebook open inside RAINAX. Browse, and tap Download on any video
+Social page simplified: paste or share a link (copied links are detected), plus the WhatsApp status saver
 Instagram: choose from all qualities (1080p, 720p, 480p...) and Audio only, not just one
 Facebook downloads: each quality shows once with its size, and titles show emoji and symbols properly
 Fixed: Instagram Reels and video posts (public accounts) download again
