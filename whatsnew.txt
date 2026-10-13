@@ -1,3 +1,4 @@
+Facebook downloads: each quality shows once with its size, and titles show emoji and symbols properly
 Fixed: Instagram Reels and video posts (public accounts) download again
 Fixed: Facebook videos and Reels (including share links) download again
 No more "Photos and videos" permission question: one storage permission is enough

@@ -629,17 +629,22 @@ object SocialExtractor {
         if (found.isEmpty()) {
             Regex("https?:[^\"'\\s<>]+?\\.mp4[^\"'\\s<>]*").findAll(html).take(5).forEach { add(it.value) }
         }
-        val files = found.entries.filter { (u, _) -> !u.contains(".m3u8") }.take(4)
-        if (files.isEmpty()) error("No downloadable video on this page. It may be private or need a login")
+        val candidates = found.entries.filter { (u, _) -> !u.contains(".m3u8") }.map { it.key to it.value }
+        if (candidates.isEmpty()) error("No downloadable video on this page. It may be private or need a login")
+        // one file per quality: pages like Facebook's list the same video several times (different addresses)
+        val byHeight = LinkedHashMap<Int, String>()
+        for ((u, h) in candidates) if (h > 0 && h !in byHeight) byHeight[h] = u
+        val files = if (byHeight.isNotEmpty()) byHeight.entries.map { it.value to it.key }.sortedByDescending { it.second }.take(3)
+        else candidates.take(1)                                    // quality unknown: the page's main video
         val headers = mapOf("Referer" to page.finalUrl, "User-Agent" to UA)
-        val variants = files.mapIndexed { i, (u, h) ->
+        val variants = files.map { (u, h) ->
             fileHeaders[u] = headers
             val ext = DIRECT.find(u)?.groupValues?.get(1)?.lowercase() ?: "mp4"
-            Variant(u, if (h > 0) h else (if (i == 0) 0 else -1), if (i < 2) sizeOf(u) else 0, ext)
+            Variant(u, h, sizeOf(u), ext)
         }
         val title = meta(html, "og:title") ?: Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1)
         return Media(
-            title = decodeEntities(title?.trim().orEmpty()).ifBlank { "Video" }.take(150),
+            title = cleanTitle(decodeEntities(title?.trim().orEmpty())).ifBlank { "Video" }.take(150),
             uploader = meta(html, "og:site_name"),
             thumb = meta(html, "og:image")?.let { decodeEntities(it) },
             seconds = 0,
@@ -660,8 +665,23 @@ object SocialExtractor {
         return decodeEntities(t)
     }
 
-    private fun decodeEntities(s: String) =
-        s.replace("&amp;", "&").replace("&quot;", "\"").replace("&#039;", "'").replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">")
+    /** HTML codes to text, including numbered ones (&#xb7; = ·, &#x1f602; = an emoji). */
+    private fun decodeEntities(s: String): String {
+        fun cp(n: Int?, m: MatchResult) = n?.let { runCatching { String(Character.toChars(it)) }.getOrNull() } ?: m.value
+        var t = s.replace("&quot;", "\"").replace("&#039;", "'").replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">")
+            .replace("&nbsp;", " ")
+        t = Regex("&#[xX]([0-9a-fA-F]{1,6});").replace(t) { m -> cp(m.groupValues[1].toIntOrNull(16), m) }
+        t = Regex("&#(\\d{1,7});").replace(t) { m -> cp(m.groupValues[1].toIntOrNull(), m) }
+        return t.replace("&amp;", "&")
+    }
+
+    /** A page title without what sites add around it ("221K views · 498 reactions | …", "… | Facebook"). */
+    private fun cleanTitle(t: String): String {
+        var x = t.trim()
+        x = x.replace(Regex("^[^|]{0,80}\\b(views|reactions|likes|comments|plays)\\b[^|]*\\|\\s*", RegexOption.IGNORE_CASE), "")
+        x = x.replace(Regex("\\s*[|\\-–]\\s*(Facebook|Instagram|Watch)\\s*$", RegexOption.IGNORE_CASE), "")
+        return x.trim().ifBlank { t.trim() }
+    }
 
     /** File size from the server (0 if it doesn't say). */
     private fun sizeOf(url: String): Long {
