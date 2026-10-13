@@ -126,6 +126,8 @@ object SocialExtractor {
         cache[key(url)]?.let { if (System.currentTimeMillis() - it.at < 10 * 60_000) return it.media }
         val m = when {
             isTikTok(url) -> tiktok(url)
+            isFacebook(url) -> facebook(url)
+            instagramCode(url) != null -> instagram(url, instagramCode(url)!!)
             xPostId(url) != null -> xPost(xPostId(url)!!)
             else -> generic(url)
         }
@@ -144,6 +146,12 @@ object SocialExtractor {
             con.setRequestProperty("User-Agent", UA)
             con.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
             con.setRequestProperty("Accept-Language", "en-US,en;q=0.9")
+            // what a real browser sends when opening a page (Facebook answers "400" without them)
+            con.setRequestProperty("Sec-Fetch-Mode", "navigate")
+            con.setRequestProperty("Sec-Fetch-Dest", "document")
+            con.setRequestProperty("Sec-Fetch-Site", "none")
+            con.setRequestProperty("Sec-Fetch-User", "?1")
+            con.setRequestProperty("Upgrade-Insecure-Requests", "1")
             extra.forEach { (k, v) -> con.setRequestProperty(k, v) }
             val code = con.responseCode
             if (code == 404) error("This video was removed or the link is wrong")
@@ -418,14 +426,187 @@ object SocialExtractor {
 
     private val DIRECT = Regex("\\.(mp4|webm|m4v|mov|mp3|m4a)(\\?|$)", RegexOption.IGNORE_CASE)
 
-    private fun generic(url: String): Media {
+    /** The post's short code in an Instagram link (/p/…, /reel/…, /reels/…, /tv/…), or null. */
+    private fun instagramCode(url: String): String? {
+        val host = runCatching { java.net.URI(url.trim()).host.orEmpty().lowercase() }.getOrDefault("")
+        if (host != "instagram.com" && !host.endsWith(".instagram.com") && host != "instagr.am") return null
+        return Regex("/(?:p|reel|reels|tv)/([A-Za-z0-9_-]{5,})").find(url)?.groupValues?.get(1)
+    }
+
+    /**
+     * Instagram posts and Reels (public accounts). Its normal page has no video for visitors, so the post is read
+     * like Instagram's own website reads it (its web data request), then from its embed page (what websites show).
+     */
+    private fun instagram(url: String, code: String): Media {
+        var last: Exception? = null
+        try {
+            instagramData(code)?.let { return it }
+        } catch (e: Exception) { last = e }
+        try {
+            instagramEmbed(code)?.let { return it }
+        } catch (e: Exception) { last = e }
+        try {
+            return generic(url)
+        } catch (e: Exception) { last = e }
+        throw IllegalStateException(
+            "Couldn't read this Instagram post. Only posts and Reels from public accounts can be saved.", last
+        )
+    }
+
+    private const val IG_APP_ID = "936619743392459"
+
+    /** Instagram's own web data request for a post (works for public posts without signing in). */
+    private fun instagramData(code: String): Media? {
+        // a visit first: Instagram hands out the csrftoken cookie its data requests need
+        val visit = runCatching { load("https://www.instagram.com/p/$code/") }.getOrNull()
+        val cookies = visit?.cookies.orEmpty()
+        val csrf = Regex("csrftoken=([^;\\s]+)").find(cookies)?.groupValues?.get(1)
+            ?: java.util.UUID.randomUUID().toString().replace("-", "")
+        val variables = JSONObject().put("shortcode", code).put("fetch_tagged_user_count", JSONObject.NULL)
+            .put("hoisted_comment_id", JSONObject.NULL).put("hoisted_reply_id", JSONObject.NULL).toString()
+        val body = "variables=" + java.net.URLEncoder.encode(variables, "UTF-8") + "&doc_id=8845758582119845"
+        val con = URL("https://www.instagram.com/graphql/query/").openConnection() as HttpURLConnection
+        val text = try {
+            con.requestMethod = "POST"
+            con.doOutput = true
+            con.connectTimeout = 15_000
+            con.readTimeout = 20_000
+            con.setRequestProperty("User-Agent", UA)
+            con.setRequestProperty("Accept", "*/*")
+            con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            con.setRequestProperty("X-IG-App-ID", IG_APP_ID)
+            con.setRequestProperty("X-ASBD-ID", "129477")
+            con.setRequestProperty("X-IG-WWW-Claim", "0")
+            con.setRequestProperty("X-Requested-With", "XMLHttpRequest")
+            con.setRequestProperty("X-CSRFToken", csrf)
+            con.setRequestProperty("Origin", "https://www.instagram.com")
+            con.setRequestProperty("Referer", "https://www.instagram.com/p/$code/")
+            con.setRequestProperty("Cookie", if (cookies.contains("csrftoken=")) cookies else "csrftoken=$csrf; $cookies")
+            con.outputStream.use { it.write(body.toByteArray()) }
+            if (con.responseCode != 200) return null
+            con.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        } finally {
+            con.disconnect()
+        }
+        val data = runCatching { JSONObject(text).optJSONObject("data") }.getOrNull() ?: return null
+        val media = data.optJSONObject("xdt_shortcode_media") ?: data.optJSONObject("shortcode_media") ?: return null
+        // a single video, or the videos of a multi-post (carousel)
+        val nodes = mutableListOf<JSONObject>()
+        val children = media.optJSONObject("edge_sidecar_to_children")?.optJSONArray("edges")
+        if (children != null) for (i in 0 until children.length()) children.optJSONObject(i)?.optJSONObject("node")?.let { nodes += it }
+        else nodes += media
+        val videos = nodes.filter { it.optBoolean("is_video") && it.optString("video_url").startsWith("http") }
+        if (videos.isEmpty()) return null
+        val headers = mapOf("Referer" to "https://www.instagram.com/", "User-Agent" to UA)
+        val variants = videos.mapIndexed { i, v ->
+            val link = v.optString("video_url")
+            fileHeaders[link] = headers
+            val h = v.optJSONObject("dimensions")?.optInt("height") ?: 0
+            Variant(link, if (videos.size > 1) -1 - i else h, if (i < 2) sizeOf(link) else 0, "mp4")
+        }
+        val caption = media.optJSONObject("edge_media_to_caption")?.optJSONArray("edges")?.optJSONObject(0)
+            ?.optJSONObject("node")?.optString("text").orEmpty().replace(Regex("\\s+"), " ").trim()
+        val user = media.optJSONObject("owner")?.optString("username")?.takeIf { it.isNotBlank() }
+        return Media(
+            title = caption.take(100).ifBlank { user?.let { "Instagram video by @$it" } ?: "Instagram video" },
+            uploader = user?.let { "@$it" },
+            thumb = media.optString("display_url").ifBlank { null },
+            seconds = media.optDouble("video_duration", 0.0).toInt(),
+            variants = variants
+        )
+    }
+
+    /** Instagram's embed page for a post: carries the video address for public posts. */
+    private fun instagramEmbed(code: String): Media? {
+        val page = load("https://www.instagram.com/p/$code/embed/captioned/", mapOf("Referer" to "https://www.instagram.com/"))
+        // the address sits in page data, sometimes escaped twice (\\/ and \\u0026)
+        var html = page.html
+        repeat(2) { html = html.replace("\\\\", "\\") }
+        val raw = Regex("""\\?"video_url\\?"\s*:\s*\\?"(https?:.*?)\\?"\s*[,}]""").find(html)?.groupValues?.get(1)
+            ?: return null
+        val link = unescape(unescape(raw)).replace("\\u0026", "&")
+        if (!link.startsWith("http")) return null
+        fileHeaders[link] = mapOf("Referer" to "https://www.instagram.com/", "User-Agent" to UA)
+        val user = Regex("""\\?"username\\?"\s*:\s*\\?"([A-Za-z0-9._]+)""").find(html)?.groupValues?.get(1)
+        val thumb = Regex("class=\"EmbeddedMediaImage\"[^>]*src=\"([^\"]+)\"").find(page.html)?.groupValues?.get(1)?.let { decodeEntities(it) }
+        return Media(
+            title = user?.let { "Instagram video by @$it" } ?: "Instagram video",
+            uploader = user?.let { "@$it" },
+            thumb = thumb,
+            seconds = 0,
+            variants = listOf(Variant(link, 0, sizeOf(link), "mp4"))
+        )
+    }
+
+    private fun isFacebook(url: String): Boolean {
+        val host = runCatching { java.net.URI(url.trim()).host.orEmpty().lowercase() }.getOrDefault("")
+        return host == "fb.watch" || host == "fb.com" || host.endsWith(".fb.com") ||
+            host == "facebook.com" || host.endsWith(".facebook.com")
+    }
+
+    /** Follows a link's redirects (share/v/…, fb.watch/…) to the real page address, without reading the page. */
+    private fun resolve(url: String): String {
+        var u = url.trim()
+        repeat(6) {
+            val con = URL(u).openConnection() as HttpURLConnection
+            try {
+                con.instanceFollowRedirects = false
+                con.connectTimeout = 12_000
+                con.readTimeout = 12_000
+                con.setRequestProperty("User-Agent", UA)
+                con.setRequestProperty("Accept", "text/html,application/xhtml+xml")
+                con.setRequestProperty("Sec-Fetch-Mode", "navigate")
+                val code = con.responseCode
+                val loc = con.getHeaderField("Location")
+                if (code !in 300..399 || loc.isNullOrBlank()) return u
+                u = URL(URL(u), loc).toString()
+                if (u.contains("/login") || u.contains("checkpoint")) return url    // a login page: keep the link
+            } finally {
+                con.disconnect()
+            }
+        }
+        return u
+    }
+
+    /**
+     * Facebook videos and Reels (public ones). Share links are followed to the real video first; the page is read
+     * as a computer browser, then as a phone browser, then through Facebook's own embedded player
+     * (which shows public videos without signing in).
+     */
+    private fun facebook(url: String): Media {
+        val target = runCatching { resolve(url) }.getOrDefault(url).let { u ->
+            u.replace("://m.facebook.com/", "://www.facebook.com/").replace("://web.facebook.com/", "://www.facebook.com/")
+        }
+        val id = Regex("(?:/videos/|/reel/|/watch/?\\?v=|[?&]v=|/share/v/)([A-Za-z0-9]+)").find(target)?.groupValues?.get(1)
+        val canonical = if (id != null && id.all { it.isDigit() }) "https://www.facebook.com/watch/?v=$id" else target
+        val mobileUa = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36"
+        val tries = listOf(
+            target to emptyMap(),
+            target.replace("://www.facebook.com/", "://m.facebook.com/") to mapOf("User-Agent" to mobileUa),
+            "https://www.facebook.com/plugins/video.php?href=" + java.net.URLEncoder.encode(canonical, "UTF-8") + "&show_text=false" to emptyMap()
+        )
+        var last: Exception? = null
+        for ((u, headers) in tries.distinctBy { it.first }) {
+            try {
+                return generic(u, headers)
+            } catch (e: Exception) {
+                last = e
+            }
+        }
+        throw IllegalStateException(
+            "Couldn't read this Facebook video. Only public videos can be saved: private ones, " +
+                "and ones in private groups, need signing in to Facebook.", last
+        )
+    }
+
+    private fun generic(url: String, headers: Map<String, String> = emptyMap()): Media {
         // a direct file link
         if (DIRECT.containsMatchIn(url.substringBefore('#'))) {
             val ext = DIRECT.find(url)!!.groupValues[1].lowercase()
             val name = url.substringBefore('?').substringAfterLast('/').ifBlank { "Video" }
             return Media(name, null, null, 0, listOf(Variant(url, 0, sizeOf(url), ext, ext == "mp3" || ext == "m4a")))
         }
-        val page = load(url)
+        val page = load(url, headers)
         val html = page.html
         val found = LinkedHashMap<String, Int>()       // file -> height (0 unknown)
         fun add(raw: String?, height: Int = 0) {

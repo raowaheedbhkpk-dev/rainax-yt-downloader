@@ -1,3 +1,5 @@
+Fixed: Instagram Reels and video posts (public accounts) download again
+Fixed: Facebook videos and Reels (including share links) download again
 No more "Photos and videos" permission question: one storage permission is enough
 Pull to refresh on Home now brings new Shorts too
 Fixed: WhatsApp statuses you already saved show as saved after reinstalling, and are never saved twice
