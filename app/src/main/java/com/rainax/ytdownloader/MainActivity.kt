@@ -894,7 +894,7 @@ class MainActivity : AppCompatActivity() {
         val d = resources.displayMetrics.density
         val cell = ((resources.displayMetrics.widthPixels - 32 * d) / 4).toInt().coerceAtMost((110 * d).toInt())
         so.socialApps.removeAllViews()
-        SocialApps.ALL.forEach { app ->
+        SocialApps.GRID.forEach { app ->
             val v = layoutInflater.inflate(R.layout.item_platform, so.socialApps, false)
             v.findViewById<android.widget.TextView>(R.id.platformBadge).apply {
                 background = SocialApps.badge(app, this@MainActivity)

@@ -49,6 +49,9 @@ object SocialApps {
             "https://bandcamp.com", listOf("bandcamp.com"), "Tracks and albums")
     )
 
+    /** The badges on the Social page (pasted links from the others are still recognised). */
+    val GRID: List<App> get() = ALL.filter { it.name in listOf("TikTok", "Instagram", "Facebook") } + WHATSAPP
+
     /** The app a link is from, or null. */
     fun of(link: String): App? {
         val host = runCatching { Uri.parse(link.trim()).host.orEmpty().lowercase().removePrefix("www.").removePrefix("m.") }
