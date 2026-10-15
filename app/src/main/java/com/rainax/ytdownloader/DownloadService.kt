@@ -487,11 +487,13 @@ class DownloadService : Service() {
         if (saved == null) {
             var out = output ?: error("Nothing was downloaded")
             // MP3 chosen: convert the downloaded sound on the phone
-            if (task.format == "audio:mp3" && out.extension.lowercase() != "mp3") {
+            if (task.format.startsWith("audio:mp3") && out.extension.lowercase() != "mp3") {
                 if (TaskRepository.get(id)?.status != Status.RUNNING) return
                 TaskRepository.update(id) { it.copy(progress = 99, message = "Converting to MP3…") }
                 val mp3 = File(dir, "converted.mp3")
-                AudioConverter.toMp3(out, mp3, 192, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
+                // "audio:mp3:128" / "audio:mp3:320"; plain "audio:mp3" = 192 kbit/s
+                val kbps = task.format.split(':').getOrNull(2)?.toIntOrNull()?.takeIf { it in listOf(128, 192, 256, 320) } ?: 192
+                AudioConverter.toMp3(out, mp3, kbps, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
                     TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
                 }
                 // the downloaded sound stays until the end (a pause while saving won't download it again);

@@ -1078,10 +1078,18 @@ class MainActivity : AppCompatActivity() {
             val selected = c.spec == selectedSpecNow()
             val size = c.size.ifBlank { "Size unknown" }
             if (c.kind == KIND_AUDIO) {
-                val ext = c.spec.substringAfter("audio:", "").substringBefore(':')
+                val parts = c.spec.split(':')
+                val ext = parts.getOrNull(1).orEmpty()
                 val (tag, q) = when (ext) {
-                    "m4a" -> "Original quality" to "M4A"
-                    "mp3" -> "Plays everywhere" to "MP3"
+                    "m4a" -> "Original · Instant" to "M4A"
+                    "mp3" -> {
+                        val kbps = parts.getOrNull(2)?.toIntOrNull() ?: 192
+                        (when {
+                            kbps <= 128 -> "MP3 · Small"
+                            kbps >= 320 -> "MP3 · Best"
+                            else -> "MP3 · Standard"
+                        }) to "${kbps}k"
+                    }
                     "" -> "Sound only" to "Audio"
                     else -> "Sound only" to ext.uppercase()
                 }
@@ -1273,18 +1281,17 @@ class MainActivity : AppCompatActivity() {
 
             // Video / Audio tabs
             sb.dlTabs.isVisible = mode != MODE_SUBS && ((hasVideo && hasAudio) || (single && !isPlaylist && loading))
-            fun styleTab(tv: android.widget.TextView, on: Boolean, icon: Int) {
+            // icon and word side by side in the middle of each tab
+            fun styleTab(box: View, icon: android.widget.ImageView, text: android.widget.TextView, on: Boolean) {
                 val color = if (on) android.graphics.Color.WHITE else androidx.core.content.ContextCompat.getColor(this, R.color.dl_text2)
-                tv.setBackgroundResource(if (on) R.drawable.bg_dl_tab_on else 0)
-                tv.elevation = if (on) 4 * resources.displayMetrics.density else 0f
-                tv.setTextColor(color)
-                val d = androidx.core.content.ContextCompat.getDrawable(this, icon)?.mutate()
-                d?.setTint(color)
-                tv.setCompoundDrawablesRelativeWithIntrinsicBounds(d, null, null, null)
-                tv.isSelected = on
+                box.setBackgroundResource(if (on) R.drawable.bg_dl_tab_on else 0)
+                box.elevation = if (on) 4 * resources.displayMetrics.density else 0f
+                box.isSelected = on
+                text.setTextColor(color)
+                icon.imageTintList = android.content.res.ColorStateList.valueOf(color)
             }
-            styleTab(sb.tabVideo, tabKind == KIND_VIDEO, R.drawable.ic_dl_video)
-            styleTab(sb.tabAudio, tabKind == KIND_AUDIO, R.drawable.ic_dl_audio)
+            styleTab(sb.tabVideo, sb.tabVideoIcon, sb.tabVideoText, tabKind == KIND_VIDEO)
+            styleTab(sb.tabAudio, sb.tabAudioIcon, sb.tabAudioText, tabKind == KIND_AUDIO)
 
             sb.errorBlock.isVisible = error != null
             if (error != null) {

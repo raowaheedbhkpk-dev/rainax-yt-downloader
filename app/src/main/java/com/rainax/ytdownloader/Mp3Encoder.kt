@@ -5,9 +5,11 @@ package com.rainax.ytdownloader
  * Takes interleaved 16-bit PCM and writes constant-bitrate MP3 frames ([bitrate] in kbit/s),
  * which play on every device and car stereo. Call [close] when done.
  */
-class Mp3Encoder(channels: Int, sampleRate: Int, bitrate: Int = 192) : AutoCloseable {
+class Mp3Encoder(channels: Int, sampleRate: Int, bitrate: Int = 192, independent: Boolean = false) : AutoCloseable {
 
-    private var handle: Long = nativeInit(channels, sampleRate, bitrate, QUALITY)
+    /** [independent]: every frame stands on its own (no bit reservoir) at the input's sample rate, so parts
+     *  encoded at the same time on several cores can be joined frame by frame. */
+    private var handle: Long = nativeInit(channels, sampleRate, bitrate, QUALITY, if (independent) 1 else 0)
 
     init {
         check(handle != 0L) { "MP3 encoder can't use this audio ($sampleRate Hz)" }
@@ -40,7 +42,7 @@ class Mp3Encoder(channels: Int, sampleRate: Int, bitrate: Int = 192) : AutoClose
 
         init { System.loadLibrary("rainaxlame") }
 
-        @JvmStatic private external fun nativeInit(channels: Int, sampleRate: Int, bitrate: Int, quality: Int): Long
+        @JvmStatic private external fun nativeInit(channels: Int, sampleRate: Int, bitrate: Int, quality: Int, independent: Int): Long
         @JvmStatic private external fun nativeEncode(handle: Long, pcm: ShortArray, frames: Int, inChannels: Int, out: ByteArray): Int
         @JvmStatic private external fun nativeFlush(handle: Long, out: ByteArray): Int
         @JvmStatic private external fun nativeClose(handle: Long)

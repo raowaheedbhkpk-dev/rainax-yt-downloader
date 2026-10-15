@@ -1,3 +1,6 @@
+MP3 is much faster: it is made on all of your phone's cores at once
+New MP3 choices: 128k (small), 192k and 320k (best), next to the instant M4A
+Download window: Video and Audio icons now sit next to their names
 New download window: Video and Audio tabs, big quality cards with sizes, a Recommended pick, and one DOWNLOAD button
 Voice search: tap "Search with your voice" in search, or hold the search button
 Notifications now show only your recent ones (about the last month), like YouTube

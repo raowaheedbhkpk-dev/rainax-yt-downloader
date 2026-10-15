@@ -12,7 +12,7 @@ typedef struct {
 } Enc;
 
 JNIEXPORT jlong JNICALL
-Java_com_rainax_ytdownloader_Mp3Encoder_nativeInit(JNIEnv *env, jclass cls, jint channels, jint sampleRate, jint bitrate, jint quality) {
+Java_com_rainax_ytdownloader_Mp3Encoder_nativeInit(JNIEnv *env, jclass cls, jint channels, jint sampleRate, jint bitrate, jint quality, jint independent) {
     Enc *e = (Enc *) calloc(1, sizeof(Enc));
     if (!e) return 0;
     e->channels = channels >= 2 ? 2 : 1;
@@ -26,6 +26,12 @@ Java_com_rainax_ytdownloader_Mp3Encoder_nativeInit(JNIEnv *env, jclass cls, jint
     lame_set_VBR(e->gf, vbr_off);
     lame_set_bWriteVbrTag(e->gf, 0);
     lame_set_findReplayGain(e->gf, 0);
+    if (independent) {
+        /* parts encoded side by side on several cores, then joined: every MP3 frame must stand on its own
+           (no bit reservoir) and keep the input's sample rate, so frames line up exactly between parts */
+        lame_set_disable_reservoir(e->gf, 1);
+        lame_set_out_samplerate(e->gf, sampleRate);
+    }
     if (lame_init_params(e->gf) < 0) {
         lame_close(e->gf);
         free(e);

@@ -31,10 +31,15 @@ object InfoFetcher {
             bestAudio > 0 -> bestAudio
             else -> duration * 16_000L
         }
-        val audio = FormatChoice("audio:m4a", "Audio (M4A)", "Original quality, plays on all phones", formatSize(audioBytes), KIND_AUDIO, bytes = audioBytes)
-        // MP3 192 kbit/s = 24 KB per second
-        val mp3 = FormatChoice("audio:mp3", "Audio (MP3)", "192 kbps, plays everywhere (converted on your phone)",
-            if (duration > 0) formatSize(duration * 24_000L) else "", KIND_AUDIO, bytes = duration * 24_000L)
+        val audio = FormatChoice("audio:m4a", "Audio (M4A)", "Original quality, ready at once (no converting)", formatSize(audioBytes), KIND_AUDIO, bytes = audioBytes)
+        // MP3: YouTube has none, so it is made on the phone from the original sound (128 kbit/s = 16 KB per second)
+        fun mp3(kbps: Int, spec: String, what: String) = FormatChoice(
+            spec, "Audio (MP3 $kbps kbps)", what,
+            if (duration > 0) formatSize(duration * kbps * 125L) else "", KIND_AUDIO, bytes = duration * kbps * 125L
+        )
+        val mp3Small = mp3(128, "audio:mp3:128", "Smallest MP3, made on your phone")
+        val mp3 = mp3(192, "audio:mp3", "Standard MP3, made on your phone")
+        val mp3Best = mp3(320, "audio:mp3:320", "Highest MP3 bitrate, made on your phone")
 
         // ----- Video -----
         val heights = (progressive.keys + videoOnly.keys).filter { it >= 144 }.toSortedSet().toList()
@@ -56,8 +61,8 @@ object InfoFetcher {
         ).distinctBy { it.spec }.sortedBy { heightOf(it) }
 
         return Built(
-            quick = listOf(audio, mp3) + quickVideo,
-            all = listOf(audio, mp3) + videos,
+            quick = listOf(audio, mp3Small, mp3Best) + quickVideo,
+            all = listOf(audio, mp3Small, mp3, mp3Best) + videos,
             subs = subs
         )
     }
