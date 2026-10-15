@@ -584,6 +584,35 @@
             android:layout_marginTop="8dp"
             android:text="Downloads stop when the screen is off? Fix it here" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/rateAppBtn"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="Rate us on APKPure"
+                app:icon="@drawable/ic_star"
+                app:iconSize="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/shareAppBtn"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="Share app"
+                app:icon="@drawable/ic_share"
+                app:iconSize="18dp" />
+        </LinearLayout>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/checkAppUpdateBtn"
             style="@style/Widget.Rainax.Button.Tonal"

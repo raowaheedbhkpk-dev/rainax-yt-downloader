@@ -192,7 +192,7 @@ object FastExtractor {
         // YouTube: formats and sizes from one quick question to YouTube (about a second), not the full look-up
         // (5 requests in a row + the player code). The full look-up then runs in the background for the download.
         if (supports(url) && infoCache[videoUrl(url)] == null) {
-            quickSizes(url)?.let { quick ->
+            quick(videoUrl(url))?.let { quick ->
                 warmFull(url)
                 return@guard quick
             }
@@ -238,6 +238,107 @@ object FastExtractor {
             uploader = info.uploaderName,
             related = relatedOf(info)
         )
+    }
+
+    // ---------- sizes ahead (video lists) ----------
+    // Videos that stay on screen (Home, search, Up next, channels...) get their formats and sizes quietly,
+    // a few at a time, so tapping Download shows them at once. Only one small request per video (no
+    // stream addresses), only the last few videos seen, and only after the list stops moving.
+
+    private class Quick(val at: Long, val state: PreviewState)
+    private val quickCache = java.util.concurrent.ConcurrentHashMap<String, Quick>()
+    private val quickRunning = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.CompletableFuture<PreviewState?>>()
+    private val ahead = LinkedHashSet<String>()                  // newest last
+    @Volatile private var lastAsk = 0L
+    private val aheadWorkers = java.util.concurrent.atomic.AtomicInteger(0)
+    private const val AHEAD_KEEP = 6           // only the videos on screen now
+    private const val AHEAD_WORKERS = 2        // looked up 2 at a time (YouTube stays happy)
+    private const val SETTLE_MS = 600L         // wait until scrolling stops
+    private val aheadPool = java.util.concurrent.Executors.newCachedThreadPool { r ->
+        Thread(r, "rx-sizes").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+    }
+
+    /** A video is on screen: get its sizes in the background (cheap to call on every row shown). */
+    fun lookAhead(url: String) {
+        if (!supports(url)) return
+        val key = videoUrl(url)
+        if (infoCache.containsKey(key) || quickRunning.containsKey(key)) return
+        quickCache[key]?.let { if (System.currentTimeMillis() - it.at < INFO_MS) return }
+        if (dataSaverOn()) return
+        synchronized(ahead) {
+            ahead.remove(key)
+            ahead.add(key)
+            while (ahead.size > AHEAD_KEEP) ahead.remove(ahead.first())
+        }
+        lastAsk = android.os.SystemClock.uptimeMillis()
+        startAheadWorker()
+    }
+
+    private fun startAheadWorker() {
+        while (true) {
+            val n = aheadWorkers.get()
+            if (n >= AHEAD_WORKERS) return
+            if (aheadWorkers.compareAndSet(n, n + 1)) break
+        }
+        aheadPool.execute {
+            try {
+                while (true) {
+                    val wait = lastAsk + SETTLE_MS - android.os.SystemClock.uptimeMillis()
+                    if (wait > 0) { Thread.sleep(wait); continue }
+                    val key = synchronized(ahead) { ahead.lastOrNull()?.also { ahead.remove(it) } } ?: break
+                    runCatching { quick(key) }
+                }
+            } catch (_: InterruptedException) {
+            } finally {
+                aheadWorkers.decrementAndGet()
+                if (synchronized(ahead) { ahead.isNotEmpty() }) startAheadWorker()
+            }
+        }
+    }
+
+    @Volatile private var saverAt = 0L
+    @Volatile private var saver = false
+
+    /** The phone's Data Saver is on for this app: no background look-ups. (Asked at most every 15 seconds.) */
+    private fun dataSaverOn(): Boolean {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - saverAt > 15_000) { saver = readDataSaver(); saverAt = now }
+        return saver
+    }
+
+    private fun readDataSaver(): Boolean = runCatching {
+        val c = RainaxApp.app ?: return false
+        val cm = c.getSystemService(android.net.ConnectivityManager::class.java) ?: return false
+        cm.isActiveNetworkMetered &&
+            cm.restrictBackgroundStatus == android.net.ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+    }.getOrDefault(false)
+
+    /** Blocking. Quick formats and sizes for [key] (a clean video address): from memory, a running look-up, or new. */
+    private fun quick(key: String): PreviewState? {
+        quickCache[key]?.let { if (System.currentTimeMillis() - it.at < INFO_MS) return it.state }
+        val mine = java.util.concurrent.CompletableFuture<PreviewState?>()
+        val running = quickRunning.putIfAbsent(key, mine) ?: mine
+        if (running === mine) {
+            try {
+                val r = quickSizes(key)
+                if (r != null) {
+                    if (quickCache.size > 80) quickCache.entries.minByOrNull { it.value.at }?.let { quickCache.remove(it.key) }
+                    quickCache[key] = Quick(System.currentTimeMillis(), r)
+                }
+                mine.complete(r)
+            } catch (e: Throwable) {
+                mine.complete(null)
+            } finally {
+                quickRunning.remove(key)
+            }
+        }
+        return try {
+            running.get(20, java.util.concurrent.TimeUnit.SECONDS)
+        } catch (e: java.util.concurrent.TimeoutException) {
+            null
+        } catch (e: java.util.concurrent.ExecutionException) {
+            null
+        }
     }
 
     // ---------- quick sizes (download sheet) ----------

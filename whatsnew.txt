@@ -1,3 +1,5 @@
+New: Rate us on APKPure and Share app buttons in Settings
+Download sizes are ready before you tap: videos on screen get their formats and sizes in the background, so the download sheet opens with them at once
 Social page simplified: paste or share a link (copied links are detected), plus the WhatsApp status saver
 Instagram: choose from all qualities (1080p, 720p, 480p...) and Audio only, not just one
 Facebook downloads: each quality shows once with its size, and titles show emoji and symbols properly

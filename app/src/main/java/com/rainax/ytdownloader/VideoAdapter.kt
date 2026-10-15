@@ -154,6 +154,8 @@ class VideoAdapter(
             duration.setBackgroundResource(if (item.seconds < 0) R.drawable.bg_live else R.drawable.bg_duration)
             itemView.setOnClickListener { onOpen(item) }
             download.setOnClickListener { onDownload(item) }
+            // sizes ready before Download is tapped (normal videos and Shorts; not live, playlists or channels)
+            if (!item.isPlaylist && !item.isChannel && item.seconds >= 0) FastExtractor.lookAhead(item.url)
             val picker = onPick
             pick?.isVisible = picker != null && !item.isPlaylist && !item.isChannel && item.seconds >= 0
             if (picker != null) {

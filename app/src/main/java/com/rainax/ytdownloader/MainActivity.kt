@@ -1349,6 +1349,7 @@ class MainActivity : AppCompatActivity() {
         pl.playScroll.isVisible = all.isNotEmpty() && library.showingDownloads
         library.onTasks(all)
         checkUpdateReady(all)
+        countForRating(done)
 
         activeHeader.visible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
@@ -1562,6 +1563,16 @@ class MainActivity : AppCompatActivity() {
         AppUpdater.installDownloaded(this, java.io.File(path), t.format.removePrefix(AppUpdater.TASK_PREFIX))
     }
 
+    /** Downloads that finished while the app is open (the ones already done at start don't count). */
+    private var doneSeen: HashSet<String>? = null
+
+    private fun countForRating(done: List<DownloadTask>) {
+        val ids = done.filter { !it.format.startsWith(AppUpdater.TASK_PREFIX) }.map { it.id }
+        val seen = doneSeen ?: run { doneSeen = HashSet(ids); return }
+        val fresh = ids.count { seen.add(it) }
+        if (fresh > 0) AppShare.onDownloadsDone(this, fresh, lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+    }
+
     /** The update finished downloading while the app is open: open the installer once. */
     private val updatePrompted = HashSet<String>()
 
@@ -1744,6 +1755,8 @@ class MainActivity : AppCompatActivity() {
         st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
         st.batteryBtn.setOnClickListener { openBatterySettings() }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
+        st.rateAppBtn.setOnClickListener { AppShare.rate(this) }
+        st.shareAppBtn.setOnClickListener { AppShare.share(this) }
 
         st.autoClearSwitch.isChecked = AppPrefs.autoClear(this)
         st.autoClearSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoClear(this, on) }
