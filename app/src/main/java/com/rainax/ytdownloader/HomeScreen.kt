@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -133,7 +134,8 @@ class HomeScreen(
             hm.searchInput.setText(text)
             hm.searchInput.setSelection(hm.searchInput.text.length)
         },
-        onClear = { confirmClearHistory() }
+        onClear = { confirmClearHistory() },
+        onVoice = { onVoice() }
     )
 
     /** "Clear search history" under the recent searches: asks once, then removes them all. */
@@ -197,6 +199,7 @@ class HomeScreen(
         }
 
         hm.searchOpen.setOnClickListener { startTyping() }
+        hm.searchOpen.setOnLongClickListener { onVoice(); true }          // hold Search: speak straight away
         hm.homeMenu.setOnClickListener { onMenu() }
         hm.homeBell.setOnClickListener { openNotifications() }
         hm.searchMic.setOnClickListener { onVoice() }
@@ -376,7 +379,7 @@ class HomeScreen(
         suggestJob?.cancel()
         val history = AppPrefs.searchHistory(act)
         if (text.isBlank()) {
-            suggestAdapter.submit(history.take(12), history.size, showClear = history.isNotEmpty())
+            suggestAdapter.submit(history.take(12), history.size, showClear = history.isNotEmpty(), showVoice = true)
             return
         }
         val fromHistory = history.filter { it.contains(text, true) }.take(3)
@@ -456,7 +459,7 @@ class HomeScreen(
             onAccount()
             return
         }
-        openList("Notifications", "acc:FEsubscriptions")
+        openList("Notifications", NOTIFICATIONS)
     }
 
     /** A playlist: its videos (each with Download) and "Download all" at the top. */
@@ -734,6 +737,7 @@ class HomeScreen(
                     when {
                         sp != null && sp.startsWith("q:") -> YtCatalog.kiosk(sp, page)
                         sp == "local:history" -> FeedPage(WatchHistory.recentItems(act), null)
+                        sp == NOTIFICATIONS -> YtAccount.notifications(page)
                         sp != null -> YtAccount.browse(sp.removePrefix("acc:"), page)
                         chUrl != null && page == null -> YtCatalog.channel(chUrl).let { header = it.first; it.second }
                         chUrl != null -> YtCatalog.channelMore(chUrl, page!!)
@@ -824,6 +828,7 @@ class HomeScreen(
         "acc:VLLL" -> "No liked videos yet.\nTap Like on a video to save it here."
         "acc:VLWL" -> "Watch later is empty.\nTap Save on a video to add it."
         "local:history" -> "No watch history yet.\nVideos you watch in RAINAX Tube show here."
+        NOTIFICATIONS -> "No new notifications.\nNew videos from your channels in the last days show here."
         else -> "Nothing here right now"
     }
 
@@ -851,6 +856,8 @@ class HomeScreen(
 
     private companion object {
         const val FOR_YOU = "acc:FEwhat_to_watch"
+        /** The bell's list (YouTube's notifications, recent ones only). */
+        const val NOTIFICATIONS = "acc:notifications"
     }
 
     /**
@@ -860,24 +867,74 @@ class HomeScreen(
     private class SuggestAdapter(
         private val onPick: (String) -> Unit,
         private val onFill: (String) -> Unit,
-        private val onClear: () -> Unit
+        private val onClear: () -> Unit,
+        private val onVoice: () -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         private var items: List<String> = emptyList()
         private var historyCount = 0
         private var showClear = false
+        private var showVoice = false
+        private val top get() = if (showVoice) 1 else 0
 
-        fun submit(list: List<String>, fromHistory: Int, showClear: Boolean = false) {
+        fun submit(list: List<String>, fromHistory: Int, showClear: Boolean = false, showVoice: Boolean = false) {
             items = list
             historyCount = fromHistory
             this.showClear = showClear
+            this.showVoice = showVoice
             notifyDataSetChanged()
         }
 
-        override fun getItemCount() = items.size + if (showClear) 1 else 0
+        override fun getItemCount() = top + items.size + if (showClear) 1 else 0
 
-        override fun getItemViewType(position: Int) = if (position >= items.size) CLEAR else ROW
+        override fun getItemViewType(position: Int) = when {
+            showVoice && position == 0 -> VOICE
+            position - top >= items.size -> CLEAR
+            else -> ROW
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            if (viewType == VOICE) {
+                // "Search with your voice": a big, easy row on top of the recent searches
+                val c = parent.context
+                val d = parent.resources.displayMetrics.density
+                val row = LinearLayout(c).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding((16 * d).toInt(), (10 * d).toInt(), (16 * d).toInt(), (10 * d).toInt())
+                    val tvv = android.util.TypedValue()
+                    c.theme.resolveAttribute(android.R.attr.selectableItemBackground, tvv, true)
+                    setBackgroundResource(tvv.resourceId)
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    contentDescription = "Search with your voice"
+                }
+                val circle = android.widget.FrameLayout(c).apply {
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.OVAL
+                        setColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_primary))
+                    }
+                }
+                circle.addView(ImageView(c).apply {
+                    setImageResource(R.drawable.ic_mic)
+                    imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+                }, android.widget.FrameLayout.LayoutParams((22 * d).toInt(), (22 * d).toInt(), android.view.Gravity.CENTER))
+                row.addView(circle, LinearLayout.LayoutParams((40 * d).toInt(), (40 * d).toInt()))
+                val texts = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL }
+                texts.addView(TextView(c).apply {
+                    text = "Search with your voice"
+                    textSize = 15f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
+                })
+                texts.addView(TextView(c).apply {
+                    text = "Tap and say what you want to watch"
+                    textSize = 12f
+                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text2))
+                })
+                row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = (14 * d).toInt()
+                })
+                return object : RecyclerView.ViewHolder(row) {}
+            }
             if (viewType == CLEAR) {
                 val d = parent.resources.displayMetrics.density
                 val tv = TextView(parent.context).apply {
@@ -898,12 +955,13 @@ class HomeScreen(
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             if (holder !is VH) {
-                holder.itemView.setOnClickListener { onClear() }
+                holder.itemView.setOnClickListener { if (getItemViewType(position) == VOICE) onVoice() else onClear() }
                 return
             }
-            val text = items[position]
+            val i = position - top
+            val text = items[i]
             holder.text.text = text
-            holder.icon.setImageResource(if (position < historyCount) R.drawable.ic_history else R.drawable.ic_search)
+            holder.icon.setImageResource(if (i < historyCount) R.drawable.ic_history else R.drawable.ic_search)
             holder.itemView.setOnClickListener { onPick(text) }
             holder.fill.setOnClickListener { onFill(text) }
         }
@@ -911,6 +969,7 @@ class HomeScreen(
         companion object {
             private const val ROW = 0
             private const val CLEAR = 1
+            private const val VOICE = 2
         }
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {

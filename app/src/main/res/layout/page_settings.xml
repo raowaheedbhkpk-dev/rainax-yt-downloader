@@ -353,7 +353,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="The video keeps playing as sound when you leave the app or lock the screen"
+                        android:text="The video keeps playing as sound when you press Home or lock the screen. Closing the app pauses it: press play on the notification to continue"
                         android:textColor="@color/rx_text2"
                         android:textSize="12sp" />
                 </LinearLayout>

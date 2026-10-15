@@ -1,3 +1,8 @@
+New download window: Video and Audio tabs, big quality cards with sizes, a Recommended pick, and one DOWNLOAD button
+Voice search: tap "Search with your voice" in search, or hold the search button
+Notifications now show only your recent ones (about the last month), like YouTube
+Welcome guide on first start: a quick tour of what RAINAX Tube can do
+Closing the app (swipe it away or press Back) now pauses the player. Press play on the notification to continue. Home and screen lock keep playing
 Rate us now opens the RAINAX Tube reviews page on APKPure
 Settings: new Privacy section with Private folder and Clear search history
 Settings: "Saved in" shows your real folder, with a button to allow All files access when needed

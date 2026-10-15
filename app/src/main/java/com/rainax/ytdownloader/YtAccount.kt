@@ -147,6 +147,84 @@ object YtAccount {
         return FeedPage(items.filter { seen.add(it.url) }, next[0]?.let { Page(browseId, it) })
     }
 
+    // ---------- notifications (the bell) ----------
+
+    /** Notifications older than this are left out (YouTube's own bell shows about the last month). */
+    private const val NOTIFY_MAX_DAYS = 30
+    /** Fallback (bell list not readable): new videos from subscriptions of the last week only. */
+    private const val SUBS_MAX_DAYS = 7
+
+    /**
+     * Blocking. The bell, like YouTube: your recent notifications (new uploads, likes, replies...) that open a
+     * video, newest first, only from about the last month. When YouTube's bell list can't be read, recent new
+     * videos from your subscriptions (last 7 days) are shown instead.
+     */
+    fun notifications(page: Page?): FeedPage {
+        if (page == null || page.url == NOTIFY_ID) {
+            val bell = runCatching { bellPage(page?.id) }
+                .onFailure { android.util.Log.w("RAINAX", "notifications: ${it.message}") }.getOrNull()
+            if (bell != null && (page != null || bell.items.isNotEmpty())) return bell
+        }
+        // fallback: the subscriptions feed, cut at one week
+        val subs = browse("FEsubscriptions", page?.takeIf { it.url != NOTIFY_ID })
+        val recent = subs.items.filter { (ageDays(it.uploaded) ?: 0) <= SUBS_MAX_DAYS }
+        val older = recent.size < subs.items.size          // reached older videos: no more pages
+        return FeedPage(recent, if (older) null else subs.next)
+    }
+
+    private const val NOTIFY_ID = "notifications"
+
+    private fun bellPage(token: String?): FeedPage {
+        val body = JSONObject().put("context", context())
+        if (token != null) body.put("ctoken", token)
+        else body.put("notificationsMenuRequestType", "NOTIFICATIONS_MENU_REQUEST_TYPE_INBOX")
+        val json = post("notification/get_notification_menu", body)
+        val found = mutableListOf<JSONObject>()
+        var next: String? = null
+        fun walk(n: Any?) {
+            when (n) {
+                is JSONObject -> {
+                    n.optJSONObject("notificationRenderer")?.let { found += it; return }
+                    n.optJSONObject("getNotificationMenuEndpoint")?.optString("ctoken")?.takeIf { it.isNotBlank() }?.let { next = it }
+                    val keys = n.keys()
+                    while (keys.hasNext()) walk(n.opt(keys.next()))
+                }
+                is JSONArray -> for (i in 0 until n.length()) walk(n.opt(i))
+            }
+        }
+        walk(json)
+        var tooOld = false
+        val items = found.mapNotNull { r ->
+            val when_ = text(r.optJSONObject("sentTimeText"))
+            if ((ageDays(when_) ?: 0) > NOTIFY_MAX_DAYS) { tooOld = true; return@mapNotNull null }
+            val id = (findValue(r.optJSONObject("navigationEndpoint"), "videoId") as? String)?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            val message = text(r.optJSONObject("shortMessage")) ?: return@mapNotNull null
+            VideoItem(
+                url = "https://www.youtube.com/watch?v=$id", title = message, uploader = "",
+                thumb = lastThumb(r.optJSONObject("videoThumbnail")) ?: "https://i.ytimg.com/vi/$id/hqdefault.jpg",
+                seconds = 0, views = -1, uploaded = when_, avatar = lastThumb(r.optJSONObject("thumbnail"))
+            )
+        }
+        val seen = HashSet<String>()
+        val nextPage = if (tooOld) null else next?.let { Page(NOTIFY_ID, it) }
+        return FeedPage(items.filter { seen.add(it.title + it.url) }, nextPage)
+    }
+
+    /** "3 days ago", "2 weeks ago", "Streamed 1 month ago" -> days (null when it can't be read, e.g. other languages). */
+    internal fun ageDays(text: String?): Int? {
+        val t = text?.lowercase() ?: return null
+        val m = Regex("(\\d+)\\s*(second|minute|hour|day|week|month|year)").find(t) ?: return null
+        val n = m.groupValues[1].toIntOrNull() ?: return null
+        return when (m.groupValues[2]) {
+            "second", "minute", "hour" -> 0
+            "day" -> n
+            "week" -> n * 7
+            "month" -> n * 30
+            else -> n * 365
+        }
+    }
+
     // ---------- actions (like YouTube) ----------
 
     /** What the signed-in user did on a video: subscribed to its channel? liked / disliked? */

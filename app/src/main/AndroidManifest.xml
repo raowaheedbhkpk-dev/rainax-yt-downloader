@@ -73,6 +73,14 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Welcome guide, shown once after the first install. -->
+        <activity
+            android:name=".WelcomeActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <!-- Private folder (PIN / pattern / password). Not open to other apps. -->
         <activity
             android:name=".PrivateActivity"

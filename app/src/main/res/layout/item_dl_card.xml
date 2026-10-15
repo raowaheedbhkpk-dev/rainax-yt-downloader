@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One quality card of the download sheet. The "Recommended" pill sits over its top edge. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:paddingHorizontal="6dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:id="@+id/card"
+        android:layout_width="match_parent"
+        android:layout_height="118dp"
+        android:layout_marginTop="11dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="bottom"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/cardTag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/rx_body"
+            android:textColor="@color/dl_text2"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="High Quality" />
+
+        <TextView
+            android:id="@+id/cardQuality"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/rx_body"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.02"
+            android:textColor="@color/dl_text"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            tools:text="720p" />
+
+        <TextView
+            android:id="@+id/cardSize"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="@font/rx_body"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="280.0 MB" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/cardCheck"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="23dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_dl_check"
+        android:elevation="8dp"
+        android:importantForAccessibility="no"
+        android:padding="4dp"
+        android:src="@drawable/ic_dl_check"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/cardBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:background="@drawable/bg_dl_badge"
+        android:elevation="8dp"
+        android:fontFamily="@font/rx_body"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp"
+        android:text="Recommended"
+        android:textColor="#FFFFFF"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</FrameLayout>

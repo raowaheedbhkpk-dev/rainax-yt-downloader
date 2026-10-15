@@ -44,4 +44,24 @@
     <color name="rx_amoled_card">#0F0F0F</color>
     <color name="rx_amoled_alt">#1F1F1F</color>
     <color name="rx_amoled_outline">#14FFFFFF</color>
+
+    <!-- download sheet (light) -->
+    <color name="dl_bg_top">#FFFFFF</color>
+    <color name="dl_bg_bottom">#FFF6F7</color>
+    <color name="dl_text">#1E1416</color>
+    <color name="dl_text2">#6E5A5F</color>
+    <color name="dl_accent">#D42A35</color>
+    <color name="dl_accent_text">#B0222D</color>
+    <color name="dl_handle">#E4D6D9</color>
+    <color name="dl_close_bg">#F6EDEF</color>
+    <color name="dl_close_icon">#5B4449</color>
+    <color name="dl_tabs_bg">#F3E9EB</color>
+    <color name="dl_card_bg">#FFFFFF</color>
+    <color name="dl_card_stroke">#EEE2E4</color>
+    <color name="dl_card_recommended">#EFA3A9</color>
+    <color name="dl_card_selected_bg">#FFF1F2</color>
+    <color name="dl_more_stroke">#E2CDD1</color>
+    <color name="dl_more_icon_bg">#FBE9EB</color>
+    <color name="dl_bar_bg">#FFFFFF</color>
+    <color name="dl_bar_line">#F3E6E8</color>
 </resources>

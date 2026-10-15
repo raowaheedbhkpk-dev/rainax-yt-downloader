@@ -101,4 +101,8 @@ object AppPrefs {
     /** The first-run questions (storage, app updates) were shown. */
     fun firstRunAsked(c: Context) = p(c).getBoolean("first_run_asked", false)
     fun setFirstRunAsked(c: Context) = p(c).edit().putBoolean("first_run_asked", true).apply()
+
+    /** The welcome guide (first install) was shown. */
+    fun guideSeen(c: Context) = p(c).getBoolean("guide_seen", false)
+    fun setGuideSeen(c: Context) = p(c).edit().putBoolean("guide_seen", true).apply()
 }

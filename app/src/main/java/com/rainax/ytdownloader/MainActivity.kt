@@ -112,7 +112,8 @@ class MainActivity : AppCompatActivity() {
                 video.isOpen && !video.minimized -> video.minimize()
                 home.clearPicks() -> {}
                 home.back() -> {}
-                else -> {                    // nothing to go back to: leave the app normally
+                else -> {                    // nothing to go back to: the app closes, and what plays pauses
+                    controller?.takeIf { it.playWhenReady }?.pause()   // (resume from the notification)
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                     isEnabled = true
@@ -146,7 +147,13 @@ class MainActivity : AppCompatActivity() {
         }
         if (savedInstanceState == null) {
             // first run: two short questions (storage, then app updates); later runs: notifications only
-            if (!AppPrefs.firstRunAsked(this)) b.root.post { askStorage() } else requestNotificationPermission()
+            // (a brand-new install sees the welcome guide first)
+            when {
+                !AppPrefs.firstRunAsked(this) && !AppPrefs.guideSeen(this) ->
+                    welcomeGuide.launch(Intent(this, WelcomeActivity::class.java))
+                !AppPrefs.firstRunAsked(this) -> b.root.post { askStorage() }
+                else -> requestNotificationPermission()
+            }
         }
 
         home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) }) { onAccountClick() }
@@ -860,6 +867,13 @@ class MainActivity : AppCompatActivity() {
             .withEndAction { if (!exploreOpen) e.root.isVisible = false }.start()
     }
 
+    /** The welcome guide closed: the first-run questions come next. */
+    private val welcomeGuide =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            AppPrefs.setGuideSeen(this)
+            if (!AppPrefs.firstRunAsked(this)) b.root.post { askStorage() }
+        }
+
     private val voiceSearch =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
             val text = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
@@ -870,11 +884,12 @@ class MainActivity : AppCompatActivity() {
     private fun startVoiceSearch() {
         val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Search YouTube")
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Say what you want to watch")
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         try {
             voiceSearch.launch(i)
         } catch (e: Exception) {
-            message("Voice search isn't available on this phone")
+            message("Voice search needs the Google app. Install or update it from the Play Store, then try again")
         }
     }
 
@@ -1012,7 +1027,6 @@ class MainActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         dialog.setContentView(sb.root)
         dialog.behavior.skipCollapsed = true
-        dialog.setOnShowListener { dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED }
         sheet = dialog
 
         val single = urls.size == 1
@@ -1022,28 +1036,85 @@ class MainActivity : AppCompatActivity() {
 
         var current: PreviewState? = null
         var mode = MODE_QUICK
-        var selectedSpec: String? = if (preferAudio) "audio:m4a" else null
+        // Video or Audio tab, each with its own selected format (the bar shows the one of the open tab)
+        var tabKind = if (preferAudio) KIND_AUDIO else KIND_VIDEO
+        var selVideo: String? = null
+        var selAudio: String? = if (preferAudio) "audio:m4a" else null
         var selectedSub: String? = null
+        fun selectedSpecNow(): String? = if (tabKind == KIND_AUDIO) selAudio else selVideo
+        fun select(spec: String?) { if (tabKind == KIND_AUDIO) selAudio = spec else selVideo = spec }
 
         var choiceAction: (FormatChoice) -> Unit = {}
         var navAction: (String) -> Unit = {}
         val adapter = FormatAdapter({ choiceAction(it) }, { navAction(it) })
-        sb.formatList.layoutManager = LinearLayoutManager(this)
-        sb.formatList.adapter = adapter
+        val cards = DlCardAdapter({ choiceAction(it) }, { navAction("all") })
+        val grid = androidx.recyclerview.widget.GridLayoutManager(this, 2)
+        val linear = LinearLayoutManager(this)
+        sb.formatList.layoutManager = grid
+        sb.formatList.adapter = cards
+        sb.formatList.itemAnimator = null
+        sb.closeBtn.setOnClickListener { dialog.dismiss() }
+        sb.dlThumbBox.clipToOutline = true          // rounded picture corners
+        // our own rounded, softly tinted background (not the default white sheet)
+        dialog.setOnShowListener {
+            dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        }
 
         fun group(list: List<FormatChoice>, detailed: Boolean): List<FormatRow> {
             val out = mutableListOf<FormatRow>()
-            val audio = list.filter { it.kind == KIND_AUDIO }
-            val video = list.filter { it.kind == KIND_VIDEO }
-            if (audio.isNotEmpty()) {
-                out += FormatRow.Section("Music")
-                audio.forEach { out += FormatRow.Choice(it, it.spec == selectedSpec, detailed) }
-            }
-            if (video.isNotEmpty()) {
-                out += FormatRow.Section("Video")
-                video.forEach { out += FormatRow.Choice(it, it.spec == selectedSpec, detailed) }
+            val mine = list.filter { it.kind == tabKind }
+            if (mine.isNotEmpty()) {
+                out += FormatRow.Section(if (tabKind == KIND_AUDIO) "Audio" else "Video")
+                mine.forEach { out += FormatRow.Choice(it, it.spec == selectedSpecNow(), detailed) }
             }
             return out
+        }
+
+        fun specHeight(spec: String) = spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
+
+        /** The card's words: "High Quality" / "720p" for video, "Original quality" / "M4A" for sound. */
+        fun cardOf(c: FormatChoice, recommended: Boolean): DlCard.Format {
+            val selected = c.spec == selectedSpecNow()
+            val size = c.size.ifBlank { "Size unknown" }
+            if (c.kind == KIND_AUDIO) {
+                val ext = c.spec.substringAfter("audio:", "").substringBefore(':')
+                val (tag, q) = when (ext) {
+                    "m4a" -> "Original quality" to "M4A"
+                    "mp3" -> "Plays everywhere" to "MP3"
+                    "" -> "Sound only" to "Audio"
+                    else -> "Sound only" to ext.uppercase()
+                }
+                return DlCard.Format(c, tag, q, size, recommended, selected)
+            }
+            val h = specHeight(c.spec)
+            val q = when {
+                h >= 4320 -> "8K"
+                h >= 2160 -> "4K"
+                h >= 1440 -> "2K"
+                h > 0 -> "${h}p"
+                else -> "Best"
+            }
+            val tag = when {
+                h == 0 -> "MP4"
+                h < 720 -> "Fast"
+                h < 1440 -> "High Quality"
+                else -> "Ultra HD"
+            }
+            return DlCard.Format(c, tag, q, size, recommended, selected)
+        }
+
+        /** The suggested card of a list: 720p (or nearest) for video, M4A for sound. */
+        fun recommendedOf(list: List<FormatChoice>): FormatChoice? {
+            if (list.size < 2) return list.firstOrNull()
+            return if (tabKind == KIND_AUDIO) list.firstOrNull { it.spec == "audio:m4a" } ?: list.first()
+            else list.filter { specHeight(it.spec) > 0 }.minByOrNull { kotlin.math.abs(specHeight(it.spec) - 720) } ?: list.first()
+        }
+
+        /** "720p (280.0 MB)" for the bar. */
+        fun shortLabel(c: FormatChoice): String {
+            val card = cardOf(c, false)
+            return if (c.size.isBlank()) card.quality else "${card.quality} (${c.size})"
         }
 
         // Several videos (picked with +) and playlists: each video's own formats are looked up (4 at a time),
@@ -1150,44 +1221,97 @@ class MainActivity : AppCompatActivity() {
             }
             val subs = if (single && !isPlaylist) p?.subtitles.orEmpty() else emptyList()
 
-            // picked while sizes were loading, but this video has no such row: select the closest real one,
-            // so what downloads is always what is shown as selected
-            val sel = selectedSpec
-            if (sel != null && quick.isNotEmpty() && (quick + all).none { it.spec == sel }) {
-                selectedSpec = if (sel.startsWith("audio")) {
-                    quick.firstOrNull { it.kind == KIND_AUDIO }?.spec
-                } else {
-                    val want = sel.split(':').getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
-                    val videos = quick.filter { it.kind == KIND_VIDEO }
-                    fun h(c: FormatChoice) = c.spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
-                    (videos.filter { h(it) <= want }.maxByOrNull { h(it) } ?: videos.firstOrNull())?.spec
-                }
-            }
+            // a link with only sound (or only video): that tab, and no tab switch
+            val hasVideo = (quick + all).any { it.kind == KIND_VIDEO }
+            val hasAudio = (quick + all).any { it.kind == KIND_AUDIO }
+            if (!hasVideo && hasAudio) tabKind = KIND_AUDIO
+            if (!hasAudio && hasVideo) tabKind = KIND_VIDEO
+            val tabQuick = quick.filter { it.kind == tabKind }
+            val tabAll = all.filter { it.kind == tabKind }
 
+            // picked while sizes were loading, but this video has no such format: select the closest real one,
+            // and nothing picked yet: the recommended one (so DOWNLOAD works at once)
+            val sel = selectedSpecNow()
+            if (tabQuick.isNotEmpty() && (sel == null || (tabQuick + tabAll).none { it.spec == sel })) {
+                select(if (sel == null || tabKind == KIND_AUDIO) recommendedOf(tabQuick)?.spec else {
+                    val want = specHeight(sel).takeIf { it > 0 } ?: Int.MAX_VALUE
+                    (tabQuick.filter { specHeight(it.spec) <= want }.maxByOrNull { specHeight(it.spec) } ?: recommendedOf(tabQuick))?.spec
+                })
+            }
+            val selectedSpec = selectedSpecNow()
+
+            // header: picture, title, a short line under it
+            val title = when {
+                !single -> "Download ${urls.size} videos"
+                else -> (p?.takeIf { !it.loading }?.title ?: knownTitle)?.takeIf { it.isNotBlank() } ?: "Download"
+            }
             sb.sheetHeading.text = when (mode) {
                 MODE_ALL -> "More formats"
                 MODE_SUBS -> "Subtitles/CC"
-                else -> if (single) "Download video as" else "Download ${urls.size} videos as"
+                else -> title
             }
             sb.backBtn.isVisible = mode != MODE_QUICK
+            sb.dlThumbBox.isVisible = mode == MODE_QUICK
+            val thumb = p?.thumbUrl ?: youtubeThumb(firstUrl) ?: found[firstUrl]?.thumbUrl
+            if (sb.dlThumb.getTag(R.id.img_url) != thumb) Img.load(sb.dlThumb, thumb, widthPx = 320)
+            val duration = if (single && !isPlaylist) p?.subtitle?.let { Regex("(\\d+:)?\\d{1,2}:\\d{2}$").find(it.trim())?.value } else null
+            sb.dlDuration.isVisible = duration != null
+            sb.dlDuration.text = duration
             sb.sheetSub.text = when {
+                mode != MODE_QUICK -> title
                 !single && waiting > 0 -> "Getting sizes…  ${sampleUrls.size - waiting} of ${sampleUrls.size}"
-                !single && sampledMany -> "They will download one after another  •  sizes estimated from ${sampleUrls.size} videos"
+                !single && sampledMany -> "They download one after another  •  sizes estimated from ${sampleUrls.size} videos"
                 !single -> sampleUrls.count { found[it]?.error != null }.let { bad ->
-                    if (bad > 0) "They download one after another  •  $bad couldn't be read" else "They will download one after another"
+                    if (bad > 0) "They download one after another  •  $bad couldn't be read" else "They download one after another"
                 }
-                loading -> (knownTitle ?: p?.title)?.let { "$it  •  getting sizes…" } ?: "Fetching info…"
+                loading -> if (p?.title != null || knownTitle != null) "Getting sizes…" else "Fetching info…"
                 error != null -> Uri.parse(firstUrl).host.orEmpty()
-                isPlaylist -> "${p!!.title}  •  ${p.subtitle}" + if (waiting > 0) "  •  getting sizes…" else ""
-                else -> p?.title.orEmpty()
+                isPlaylist -> "${p!!.subtitle.orEmpty()}  •  whole playlist".trimStart(' ', '•') + if (waiting > 0) "  •  getting sizes…" else ""
+                else -> "Choose a format to download"
             }
             sb.previewLoading.isVisible = loading || waiting > 0
+
+            // Video / Audio tabs
+            sb.dlTabs.isVisible = mode != MODE_SUBS && ((hasVideo && hasAudio) || (single && !isPlaylist && loading))
+            fun styleTab(tv: android.widget.TextView, on: Boolean, icon: Int) {
+                val color = if (on) android.graphics.Color.WHITE else androidx.core.content.ContextCompat.getColor(this, R.color.dl_text2)
+                tv.setBackgroundResource(if (on) R.drawable.bg_dl_tab_on else 0)
+                tv.elevation = if (on) 4 * resources.displayMetrics.density else 0f
+                tv.setTextColor(color)
+                val d = androidx.core.content.ContextCompat.getDrawable(this, icon)?.mutate()
+                d?.setTint(color)
+                tv.setCompoundDrawablesRelativeWithIntrinsicBounds(d, null, null, null)
+                tv.isSelected = on
+            }
+            styleTab(sb.tabVideo, tabKind == KIND_VIDEO, R.drawable.ic_dl_video)
+            styleTab(sb.tabAudio, tabKind == KIND_AUDIO, R.drawable.ic_dl_audio)
 
             sb.errorBlock.isVisible = error != null
             if (error != null) {
                 sb.errorText.text = error
             }
             sb.playlistBtn.isVisible = false
+
+            if (mode == MODE_QUICK) {
+                // the cards: this tab's main formats, then "More Formats"
+                val rec = recommendedOf(tabQuick)?.spec
+                val list = tabQuick.map { cardOf(it, it.spec == rec && tabQuick.size > 1) }.toMutableList<DlCard>()
+                val moreCount = tabAll.count { a -> tabQuick.none { it.spec == a.spec } }
+                if (tabAll.isNotEmpty() && (moreCount > 0 || (tabKind == KIND_VIDEO && subs.isNotEmpty()))) {
+                    list += DlCard.More(if (moreCount > 0) "View all ${tabAll.size}" else "Subtitles")
+                }
+                if (sb.formatList.adapter !== cards) { sb.formatList.layoutManager = grid; sb.formatList.adapter = cards }
+                cards.submit(if (loading || error != null) emptyList() else list)
+            } else if (sb.formatList.adapter !== adapter) {
+                sb.formatList.layoutManager = linear
+                sb.formatList.adapter = adapter
+            }
+            val selChoice = (quick + all).firstOrNull { it.spec == selectedSpec }
+            sb.selectedLabel.text = when {
+                selChoice != null -> shortLabel(selChoice) + if (tabKind == KIND_VIDEO && selectedSub != null) "  •  CC" else ""
+                loading || waiting > 0 -> "Getting sizes…"
+                else -> "Nothing selected"
+            }
 
             val rows: List<FormatRow> = when (mode) {
                 MODE_SUBS -> {
@@ -1200,23 +1324,20 @@ class MainActivity : AppCompatActivity() {
                 }
                 MODE_ALL -> {
                     val list = group(all, true).toMutableList()
-                    if (subs.isNotEmpty()) {
+                    if (subs.isNotEmpty() && tabKind == KIND_VIDEO) {
                         val label = subs.firstOrNull { it.code == selectedSub }?.label ?: "Off"
                         list += FormatRow.Nav("subs", "Subtitles/CC", label, R.drawable.ic_cc)
                     }
                     list
                 }
-                else -> {
-                    val list = group(quick, false).toMutableList()
-                    if (all.isNotEmpty()) list += FormatRow.Nav("all", "More formats", "All", null)
-                    list
-                }
+                else -> emptyList()
             }
-            adapter.submitList(rows)
+            if (mode != MODE_QUICK) adapter.submitList(rows)
             // only formats that are really shown can be downloaded
             sb.downloadBtn.isEnabled = selectedSpec != null && (quick + all).any { it.spec == selectedSpec }
+            sb.downloadBtn.alpha = if (sb.downloadBtn.isEnabled) 1f else 0.5f
 
-            val fraction = if (mode == MODE_QUICK) 0.66 else 0.9
+            val fraction = if (mode == MODE_QUICK) 0.72 else 0.9
             sb.root.minimumHeight = (screenH * fraction).toInt()
         }
 
@@ -1226,10 +1347,12 @@ class MainActivity : AppCompatActivity() {
                 selectedSub = c.spec.ifEmpty { null }
                 mode = MODE_ALL
             } else {
-                selectedSpec = c.spec
+                select(c.spec)
             }
             render()
         }
+        sb.tabVideo.setOnClickListener { if (tabKind != KIND_VIDEO) { tabKind = KIND_VIDEO; render() } }
+        sb.tabAudio.setOnClickListener { if (tabKind != KIND_AUDIO) { tabKind = KIND_AUDIO; render() } }
         navAction = { id ->
             mode = if (id == "all") MODE_ALL else MODE_SUBS
             render()
@@ -1252,7 +1375,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         sb.downloadBtn.setOnClickListener {
-            val spec = selectedSpec ?: return@setOnClickListener
+            val spec = selectedSpecNow() ?: return@setOnClickListener
             val p = current
             val sub = if (spec.startsWith("video")) selectedSub else null
             val items = when {

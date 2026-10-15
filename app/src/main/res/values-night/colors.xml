@@ -24,4 +24,24 @@
     <color name="rx_glow_coral">#00000000</color>
     <color name="rx_glow_blue">#00000000</color>
     <color name="rx_glass_nav">#0F0F0F</color>
+
+    <!-- download sheet (dark) -->
+    <color name="dl_bg_top">#1E1719</color>
+    <color name="dl_bg_bottom">#241A1D</color>
+    <color name="dl_text">#F6EEF0</color>
+    <color name="dl_text2">#BBA7AC</color>
+    <color name="dl_accent">#E0434E</color>
+    <color name="dl_accent_text">#FF8A93</color>
+    <color name="dl_handle">#4A3A3E</color>
+    <color name="dl_close_bg">#2F2427</color>
+    <color name="dl_close_icon">#D8C4C9</color>
+    <color name="dl_tabs_bg">#2F2427</color>
+    <color name="dl_card_bg">#271D20</color>
+    <color name="dl_card_stroke">#3A2C30</color>
+    <color name="dl_card_recommended">#8A3B42</color>
+    <color name="dl_card_selected_bg">#3A1D22</color>
+    <color name="dl_more_stroke">#4A383C</color>
+    <color name="dl_more_icon_bg">#3A2226</color>
+    <color name="dl_bar_bg">#1E1719</color>
+    <color name="dl_bar_line">#33262A</color>
 </resources>

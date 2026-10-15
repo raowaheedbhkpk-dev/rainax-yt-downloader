@@ -323,10 +323,18 @@ class BgPlayService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
-    /** Swiped away from recent apps while paused: stop completely. While playing it keeps going. */
+    /**
+     * The app was closed (swiped away from recent apps): playback pauses, and the player notification stays
+     * so it can be resumed from there (or the lock screen / headphones). Nothing loaded: stop completely.
+     */
     override fun onTaskRemoved(rootIntent: Intent?) {
         val p = session?.player
-        if (p == null || !p.playWhenReady || p.mediaItemCount == 0) stopSelf()
+        if (p == null || p.mediaItemCount == 0) {
+            stopSelf()
+            return
+        }
+        if (p.playWhenReady) p.pause()
+        saveProgress(p, true)
     }
 
     override fun onDestroy() {
