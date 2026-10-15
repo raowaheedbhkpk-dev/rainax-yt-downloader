@@ -1,3 +1,5 @@
+Settings: new Privacy section with Private folder and Clear search history
+Settings: "Saved in" shows your real folder, with a button to allow All files access when needed
 New: Rate us on APKPure and Share app buttons in Settings
 Download sizes are ready before you tap: videos on screen get their formats and sizes in the background, so the download sheet opens with them at once
 Social page simplified: paste or share a link (copied links are detected), plus the WhatsApp status saver

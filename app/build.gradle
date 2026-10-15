@@ -3,12 +3,12 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-// The version comes from the git tag (v8.1.5 -> versionName 8.1.5, versionCode 80105), so the app
-// always knows exactly which release it is and never asks to update to itself.
+// The version comes from the git tag (v8.1.5 -> versionName 8.1.5, versionCode 80105; v9.0 -> 9.0, 90000),
+// so the app always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
-def isTag = tagVersion ==~ /\d+\.\d+\.\d+/
-def rxVersionName = isTag ? tagVersion : "8.9.61"
-def rxParts = rxVersionName.tokenize('.').collect { it.toInteger() }
+def isTag = tagVersion ==~ /\d+\.\d+(\.\d+)?/
+def rxVersionName = isTag ? tagVersion : "9.0"
+def rxParts = (rxVersionName.tokenize('.').collect { it.toInteger() } + [0, 0, 0]).take(3)
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
 // Fingerprint (SHA-256) of the signing key, read from the private key in GitHub Secrets at build time.

@@ -236,7 +236,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Remove finished items after 7 days (files stay in Downloads)"
+                        android:text="Remove finished items from the list after 7 days (the files stay in the Rainax Tube folder)"
                         android:textColor="@color/rx_text2"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -513,8 +513,61 @@
                     android:layout_marginTop="2dp"
                     android:textColor="@color/rx_text2"
                     android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="Video, Audio and Status folders"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/allFilesBtn"
+                    style="@style/Widget.Rainax.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="Allow All files access"
+                    android:visibility="gone" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:letterSpacing="0.08"
+            android:text="PRIVACY"
+            android:textColor="@color/rx_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/privateFolderBtn"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="Private folder" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clearSearchBtn"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="Clear search history" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

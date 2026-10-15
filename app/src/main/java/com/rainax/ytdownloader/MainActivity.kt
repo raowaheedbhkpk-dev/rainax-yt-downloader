@@ -1755,6 +1755,19 @@ class MainActivity : AppCompatActivity() {
         st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
         st.batteryBtn.setOnClickListener { openBatterySettings() }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
+        st.allFilesBtn.setOnClickListener { openAllFilesSettings(thenInstallAsk = false) }
+        st.privateFolderBtn.setOnClickListener { PrivateActivity.open(this) }
+        st.clearSearchBtn.setOnClickListener {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+                .setTitle("Clear search history?")
+                .setMessage("Your recent searches will be removed from this phone.")
+                .setPositiveButton("Clear") { _, _ ->
+                    AppPrefs.clearSearchHistory(this)
+                    Toast.makeText(this, "Search history cleared", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
         st.rateAppBtn.setOnClickListener { AppShare.rate(this) }
         st.shareAppBtn.setOnClickListener { AppShare.share(this) }
 
@@ -1802,6 +1815,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderFolder() {
         st.folderPath.text = FileStore.describe(this)
+        st.allFilesBtn.isVisible = needsAllFiles()
     }
 
     private fun nudgeService() {
