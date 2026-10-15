@@ -11,8 +11,10 @@ import android.net.Uri
  */
 object AppShare {
 
-    /** RAINAX Tube's page on APKPure. If the page address ever changes, change it here only. */
+    /** RAINAX Tube's page on APKPure (shared with friends). If the address ever changes, change it here only. */
     const val APKPURE_URL = "https://apkpure.com/p/com.rainax.ytdownloader"
+    /** The reviews page on APKPure (Rate us opens it). */
+    const val APKPURE_REVIEWS_URL = "https://apkpure.com/reviews/com.rainax.ytdownloader"
     private const val APKPURE_APP = "com.apkpure.aegon"
 
     private const val FIRST_ASK = 8        // downloads finished before the first question
@@ -23,12 +25,12 @@ object AppShare {
     /** Opens the app's APKPure page (in the APKPure app when installed, else the browser). */
     fun rate(c: Context) {
         prefs(c).edit().putBoolean("done", true).apply()
-        val uri = Uri.parse(APKPURE_URL)
+        val uri = Uri.parse(APKPURE_REVIEWS_URL)
         val inApp = Intent(Intent.ACTION_VIEW, uri).setPackage(APKPURE_APP).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (runCatching { c.startActivity(inApp) }.isSuccess) return
         runCatching {
             c.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }.onFailure { android.widget.Toast.makeText(c, "Open $APKPURE_URL in your browser", android.widget.Toast.LENGTH_LONG).show() }
+        }.onFailure { android.widget.Toast.makeText(c, "Open $APKPURE_REVIEWS_URL in your browser", android.widget.Toast.LENGTH_LONG).show() }
     }
 
     /** The phone's share menu with a short message and the download link. */
