@@ -318,8 +318,85 @@ object AudioConverter {
     private fun isFloat(f: MediaFormat) = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
         f.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
 
+    /**
+     * Blocking. Opus sound (YouTube's WebM audio) decoded inside the app with libopus: hundreds of times faster than
+     * real time. Null when this isn't plain mono/stereo Opus (then Android's decoder is used).
+     */
+    private fun decodeOpusToPcm(src: Source, pcmFile: File, stop: () -> Boolean, report: Report, progress: (Int, String) -> Unit): Pcm? {
+        if (!src.mime.equals("audio/opus", true)) return null
+        // "OpusHead": byte 9 = channels, 10-11 = samples to skip at the start (encoder delay), 18 = channel mapping
+        val head = runCatching { src.format.getByteBuffer("csd-0") }.getOrNull() ?: return null
+        val h = ByteArray(head.remaining()).also { head.duplicate().get(it) }
+        if (h.size < 19 || String(h, 0, 8, Charsets.US_ASCII) != "OpusHead") return null
+        val channels = h[9].toInt() and 0xFF
+        if (channels !in 1..2 || (h[18].toInt() and 0xFF) != 0) return null
+        var skip = (h[10].toInt() and 0xFF) or ((h[11].toInt() and 0xFF) shl 8)
+        if (src.durationUs > 0) {
+            val need = src.durationUs / 1_000_000 * 48_000 * 4 + (64L shl 20)
+            require((pcmFile.absoluteFile.parentFile?.usableSpace ?: 0L) > need) { "not enough free space" }
+        }
+        report.decoder = "libopus (in the app)"
+        OpusDecoder(channels).use { dec ->
+            val packet = java.nio.ByteBuffer.allocateDirect(1 shl 16)
+            val pcm = ShortArray(OpusDecoder.MAX_FRAMES * channels)
+            val bytes = ByteArray(pcm.size * 2)
+            val asShorts = java.nio.ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+            var written = 0L
+            var lastPct = -1
+            var count = 0
+            val t0 = System.nanoTime()
+            BufferedOutputStream(FileOutputStream(pcmFile), 1 shl 18).use { out ->
+                while (true) {
+                    if (++count % 64 == 0 && stop()) throw NativeDownloader.Stopped()
+                    packet.clear()
+                    val n = src.ex.readSampleData(packet, 0)
+                    if (n < 0) break
+                    val time = src.ex.sampleTime
+                    var frames = dec.decode(packet, n, pcm)
+                    var from = 0
+                    if (skip > 0) {                      // the encoder's start-up samples are not part of the sound
+                        val drop = minOf(skip, frames)
+                        skip -= drop
+                        from = drop
+                        frames -= drop
+                    }
+                    if (frames > 0) {
+                        asShorts.clear()
+                        asShorts.put(pcm, from * channels, frames * channels)
+                        out.write(bytes, 0, frames * channels * 2)
+                        written += frames
+                    }
+                    src.ex.advance()
+                    if (src.durationUs > 0 && time >= 0) {
+                        val pct = (time * 100 / src.durationUs).toInt().coerceIn(0, 100)
+                        if (pct != lastPct) {
+                            lastPct = pct
+                            val secs = (System.nanoTime() - t0) / 1e9
+                            val x = if (secs > 0.5) time / 1e6 / secs else 0.0
+                            progress(pct, "Reading sound" + if (x > 0) " · ${"%.0f".format(x)}×" else "")
+                        }
+                    }
+                }
+            }
+            check(written > 0) { "No sound came out" }
+            return Pcm(pcmFile, 48_000, channels, written)
+        }
+    }
+
     /** Blocking. The whole sound as 16-bit stereo (or mono) samples in [pcmFile]. */
     private fun decodeToPcm(input: File, pcmFile: File, stop: () -> Boolean, report: Report, progress: (Int, String) -> Unit): Pcm {
+        // YouTube's Opus sound: decoded inside the app (fast); anything else: Android's decoder
+        openSource(input).let { src ->
+            try {
+                decodeOpusToPcm(src, pcmFile, stop, report, progress)?.let { return it }
+            } catch (e: NativeDownloader.Stopped) {
+                throw e
+            } catch (e: Throwable) {
+                android.util.Log.w("RAINAX", "MP3: in-app Opus decoding failed, using Android's: ${e.message}")
+            } finally {
+                runCatching { src.ex.release() }
+            }
+        }
         val src = openSource(input)
         var codecRef: MediaCodec? = null
         try {

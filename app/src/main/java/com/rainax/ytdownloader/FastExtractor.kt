@@ -567,7 +567,9 @@ object FastExtractor {
             .ifEmpty { audios }
 
         if (spec.startsWith("audio")) {
-            val ranked = rankAudio(original, preferM4a = true)
+            // MP3 is made from the Opus sound (better than M4A, and the app decodes it itself, many times faster)
+            val forMp3 = spec.startsWith("audio:mp3")
+            val ranked = rankAudio(original, preferM4a = !forMp3, preferOpus = forMp3)
             val a = ranked.firstOrNull()
             if (a != null) {
                 // backups: the same kind first (M4A), then any other sound stream (other formats and languages)
@@ -677,9 +679,10 @@ object FastExtractor {
      * Sound streams best first: normal sound before YouTube's "stable volume" (DRC) copies, M4A before WebM
      * when [preferM4a], then the highest bitrate.
      */
-    private fun rankAudio(list: List<AudioStream>, preferM4a: Boolean): List<AudioStream> = list.sortedWith(
+    private fun rankAudio(list: List<AudioStream>, preferM4a: Boolean, preferOpus: Boolean = false): List<AudioStream> = list.sortedWith(
         compareBy<AudioStream> { if (it.itagItem?.isDrc() == true) 1 else 0 }
             .thenBy { if (preferM4a && it.format?.suffix != "m4a") 1 else 0 }
+            .thenBy { if (preferOpus && it.format != org.schabi.newpipe.extractor.MediaFormat.WEBMA_OPUS) 1 else 0 }
             .thenByDescending { audioRate(it) }
     )
 
