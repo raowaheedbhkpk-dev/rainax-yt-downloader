@@ -178,10 +178,84 @@ object AudioConverter {
         return copied
     }
 
-    /** Blocking. The whole sound as 16-bit stereo (or mono) samples in [pcmFile]. */
-    private fun decodeToPcm(input: File, pcmFile: File, stop: () -> Boolean, progress: (Int) -> Unit): Pcm {
+    /**
+     * The decoder for [mime], Android's own software one first: phone makers' hardware sound decoders are made for
+     * playing music in real time and can be about as slow as real time when converting; the software one is many
+     * times faster for this. Any other decoder if that one can't take this sound.
+     */
+    private fun openDecoder(mime: String, format: MediaFormat): MediaCodec {
+        val names = runCatching {
+            android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { !it.isEncoder && it.supportedTypes.any { t -> t.equals(mime, true) } }
+                .sortedBy { if (it.isSoftwareOnly || it.name.startsWith("c2.android.") || it.name.startsWith("OMX.google.")) 0 else 1 }
+                .map { it.name }
+        }.getOrDefault(emptyList())
+        for (name in names) {
+            val codec = runCatching { MediaCodec.createByCodecName(name) }.getOrNull() ?: continue
+            try {
+                codec.configure(format, null, null, 0)
+                codec.start()
+                android.util.Log.i("RAINAX", "MP3: decoding with $name")
+                return codec
+            } catch (e: Exception) {
+                runCatching { codec.release() }
+            }
+        }
+        return MediaCodec.createDecoderByType(mime).apply { configure(format, null, null, 0); start() }
+    }
+
+    /**
+     * Runs the whole sound through [codec] as fast as it goes: every free input slot is filled at once and every
+     * ready output is taken at once (it only waits when nothing moved). [onFormat] gets output format changes,
+     * [onPcm] each piece of decoded sound.
+     */
+    private fun pump(
+        ex: MediaExtractor, codec: MediaCodec, stop: () -> Boolean,
+        onFormat: (MediaFormat) -> Unit, onPcm: (java.nio.ByteBuffer, MediaCodec.BufferInfo) -> Unit
+    ) {
+        val info = MediaCodec.BufferInfo()
+        var inputDone = false
+        var outputDone = false
+        while (!outputDone) {
+            if (stop()) throw NativeDownloader.Stopped()
+            var moved = false
+            while (!inputDone) {
+                val i = codec.dequeueInputBuffer(0)
+                if (i < 0) break
+                val buf = codec.getInputBuffer(i)!!
+                val n = ex.readSampleData(buf, 0)
+                if (n < 0) {
+                    codec.queueInputBuffer(i, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                    inputDone = true
+                } else {
+                    codec.queueInputBuffer(i, 0, n, ex.sampleTime, 0)
+                    ex.advance()
+                }
+                moved = true
+            }
+            while (true) {
+                val o = codec.dequeueOutputBuffer(info, if (moved) 0 else 5_000)
+                if (o == MediaCodec.INFO_TRY_AGAIN_LATER) break
+                if (o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) { onFormat(codec.outputFormat); moved = true; continue }
+                if (o < 0) continue
+                moved = true
+                if (info.size > 0) {
+                    val buf = codec.getOutputBuffer(o)!!
+                    buf.position(info.offset)
+                    buf.limit(info.offset + info.size)
+                    buf.order(ByteOrder.nativeOrder())
+                    onPcm(buf, info)
+                }
+                codec.releaseOutputBuffer(o, false)
+                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) { outputDone = true; break }
+            }
+        }
+    }
+
+    private class Source(val ex: MediaExtractor, val format: MediaFormat, val mime: String, val durationUs: Long)
+
+    private fun openSource(input: File): Source {
         val ex = MediaExtractor()
-        var codecRef: MediaCodec? = null
         try {
             ex.setDataSource(input.path)
             val track = (0 until ex.trackCount).firstOrNull {
@@ -191,87 +265,69 @@ object AudioConverter {
             val format = ex.getTrackFormat(track)
             val mime = format.getString(MediaFormat.KEY_MIME)!!
             val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
-            var rate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-            var inCh = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            return Source(ex, format, mime, durationUs)
+        } catch (e: Exception) {
+            ex.release()
+            throw e
+        }
+    }
+
+    private fun isFloat(f: MediaFormat) = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
+        f.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
+
+    /** Blocking. The whole sound as 16-bit stereo (or mono) samples in [pcmFile]. */
+    private fun decodeToPcm(input: File, pcmFile: File, stop: () -> Boolean, progress: (Int) -> Unit): Pcm {
+        val src = openSource(input)
+        var codecRef: MediaCodec? = null
+        try {
+            var rate = src.format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+            var inCh = src.format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             // room for the work file (plus the MP3 parts): otherwise the one-core way, which needs none
-            if (durationUs > 0) {
-                val need = durationUs / 1_000_000 * rate * 4 + (64L shl 20)
+            if (src.durationUs > 0) {
+                val need = src.durationUs / 1_000_000 * rate * 4 + (64L shl 20)
                 val free = pcmFile.absoluteFile.parentFile?.usableSpace ?: 0L
                 require(free > need) { "not enough free space" }
             }
-            var isFloat = false
-            val codec = MediaCodec.createDecoderByType(mime).also { codecRef = it }
-            codec.configure(format, null, null, 0)
-            codec.start()
+            var float = false
+            val codec = openDecoder(src.mime, src.format).also { codecRef = it }
             var outCh = -1                          // fixed by the first sound that comes out
             var written = 0L
             var bytes = ByteArray(0)
-            val info = MediaCodec.BufferInfo()
-            var inputDone = false
-            var outputDone = false
             var lastPct = -1
-            BufferedOutputStream(FileOutputStream(pcmFile), 1 shl 17).use { out ->
-                while (!outputDone) {
-                    if (stop()) throw NativeDownloader.Stopped()
-                    if (!inputDone) {
-                        val i = codec.dequeueInputBuffer(0)
-                        if (i >= 0) {
-                            val buf = codec.getInputBuffer(i)!!
-                            val n = ex.readSampleData(buf, 0)
-                            if (n < 0) {
-                                codec.queueInputBuffer(i, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                                inputDone = true
-                            } else {
-                                codec.queueInputBuffer(i, 0, n, ex.sampleTime, 0)
-                                ex.advance()
-                            }
+            BufferedOutputStream(FileOutputStream(pcmFile), 1 shl 18).use { out ->
+                pump(src.ex, codec, stop, { f ->
+                    rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                    inCh = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                    float = isFloat(f)
+                }) { buf, info ->
+                    if (outCh < 0) outCh = inCh.coerceIn(1, 2)
+                    check(inCh.coerceIn(1, 2) == outCh) { "channels changed" }
+                    if (!float && inCh <= 2 && ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+                        // already what we want: copy as it is
+                        if (bytes.size < info.size) bytes = ByteArray(info.size)
+                        buf.get(bytes, 0, info.size)
+                        out.write(bytes, 0, info.size)
+                        written += info.size
+                    } else {
+                        // float sound, or more than 2 channels (keep the first two)
+                        val frames = if (float) info.size / 4 / inCh else info.size / 2 / inCh
+                        val need = frames * outCh * 2
+                        if (bytes.size < need) bytes = ByteArray(need)
+                        var w = 0
+                        val floats = if (float) buf.asFloatBuffer() else null
+                        val shorts = if (!float) buf.asShortBuffer() else null
+                        for (fr in 0 until frames) for (c in 0 until outCh) {
+                            val v: Int = if (floats != null) (floats.get(fr * inCh + c).coerceIn(-1f, 1f) * 32767f).toInt()
+                            else shorts!!.get(fr * inCh + c).toInt()
+                            bytes[w++] = (v and 0xFF).toByte()
+                            bytes[w++] = ((v shr 8) and 0xFF).toByte()
                         }
+                        out.write(bytes, 0, w)
+                        written += w
                     }
-                    val o = codec.dequeueOutputBuffer(info, if (inputDone) 10_000 else 2_000)
-                    if (o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        val f = codec.outputFormat
-                        rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-                        inCh = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                        isFloat = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
-                            f.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
-                    } else if (o >= 0) {
-                        if (info.size > 0) {
-                            if (outCh < 0) outCh = inCh.coerceIn(1, 2)
-                            check(inCh.coerceIn(1, 2) == outCh) { "channels changed" }
-                            val buf = codec.getOutputBuffer(o)!!
-                            buf.position(info.offset)
-                            buf.limit(info.offset + info.size)
-                            buf.order(ByteOrder.nativeOrder())
-                            if (!isFloat && inCh <= 2 && ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
-                                // already what we want: copy as it is
-                                if (bytes.size < info.size) bytes = ByteArray(info.size)
-                                buf.get(bytes, 0, info.size)
-                                out.write(bytes, 0, info.size)
-                                written += info.size
-                            } else {
-                                // float sound, or more than 2 channels (keep the first two)
-                                val frames = if (isFloat) info.size / 4 / inCh else info.size / 2 / inCh
-                                val need = frames * outCh * 2
-                                if (bytes.size < need) bytes = ByteArray(need)
-                                var w = 0
-                                val floats = if (isFloat) buf.asFloatBuffer() else null
-                                val shorts = if (!isFloat) buf.asShortBuffer() else null
-                                for (fr in 0 until frames) for (c in 0 until outCh) {
-                                    val v: Int = if (floats != null) (floats.get(fr * inCh + c).coerceIn(-1f, 1f) * 32767f).toInt()
-                                    else shorts!!.get(fr * inCh + c).toInt()
-                                    bytes[w++] = (v and 0xFF).toByte()
-                                    bytes[w++] = ((v shr 8) and 0xFF).toByte()
-                                }
-                                out.write(bytes, 0, w)
-                                written += w
-                            }
-                            if (durationUs > 0) {
-                                val pct = (info.presentationTimeUs * 100 / durationUs).toInt().coerceIn(0, 100)
-                                if (pct != lastPct) { lastPct = pct; progress(pct) }
-                            }
-                        }
-                        codec.releaseOutputBuffer(o, false)
-                        if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
+                    if (src.durationUs > 0) {
+                        val pct = (info.presentationTimeUs * 100 / src.durationUs).toInt().coerceIn(0, 100)
+                        if (pct != lastPct) { lastPct = pct; progress(pct) }
                     }
                 }
             }
@@ -280,108 +336,61 @@ object AudioConverter {
         } finally {
             runCatching { codecRef?.stop() }
             runCatching { codecRef?.release() }
-            runCatching { ex.release() }
+            runCatching { src.ex.release() }
         }
     }
 
     /** The one-core way: decode and encode in one go (any sample rate). */
     private fun toMp3Serial(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int) -> Unit) {
-        val ex = MediaExtractor()
+        val src = openSource(input)
         var codecRef: MediaCodec? = null
-        var outRef: BufferedOutputStream? = null
         var encoder: Mp3Encoder? = null
-        // everything is released at the end, also when setting up fails (bad file, no decoder...)
         try {
-        ex.setDataSource(input.path)
-        val track = (0 until ex.trackCount).firstOrNull {
-            ex.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
-        } ?: error("No sound in this file")
-        ex.selectTrack(track)
-        val format = ex.getTrackFormat(track)
-        val mime = format.getString(MediaFormat.KEY_MIME)!!
-        val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
-        var sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-        var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-        var isFloat = false
-
-        val codec = MediaCodec.createDecoderByType(mime).also { codecRef = it }
-        codec.configure(format, null, null, 0)
-        codec.start()
-        val out = BufferedOutputStream(FileOutputStream(output), 1 shl 16).also { outRef = it }
-        var pcm = ShortArray(0)
-        var mp3 = ByteArray(16 * 1024)
-        val info = MediaCodec.BufferInfo()
-        var inputDone = false
-        var outputDone = false
-        var lastPct = -1
-            while (!outputDone) {
-                if (stop()) throw NativeDownloader.Stopped()
-                if (!inputDone) {
-                    val i = codec.dequeueInputBuffer(0)          // never wait here: the decoder is busy, so output is coming
-                    if (i >= 0) {
-                        val buf = codec.getInputBuffer(i)!!
-                        val n = ex.readSampleData(buf, 0)
-                        if (n < 0) {
-                            codec.queueInputBuffer(i, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                            inputDone = true
-                        } else {
-                            codec.queueInputBuffer(i, 0, n, ex.sampleTime, 0)
-                            ex.advance()
-                        }
-                    }
-                }
-                val o = codec.dequeueOutputBuffer(info, if (inputDone) 10_000 else 2_000)
-                if (o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    val f = codec.outputFormat
+            var sampleRate = src.format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+            var channels = src.format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            var float = false
+            val codec = openDecoder(src.mime, src.format).also { codecRef = it }
+            var pcm = ShortArray(0)
+            var mp3 = ByteArray(16 * 1024)
+            var lastPct = -1
+            BufferedOutputStream(FileOutputStream(output), 1 shl 16).use { out ->
+                pump(src.ex, codec, stop, { f ->
                     sampleRate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
                     channels = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                    isFloat = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
-                        f.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
-                } else if (o >= 0) {
-                    if (info.size > 0) {
-                        val buf = codec.getOutputBuffer(o)!!
-                        buf.position(info.offset)
-                        buf.limit(info.offset + info.size)
-                        buf.order(ByteOrder.nativeOrder())
-                        val count: Int
-                        if (isFloat) {
-                            val floats = buf.asFloatBuffer()
-                            count = floats.remaining()
-                            if (pcm.size < count) pcm = ShortArray(count)
-                            for (k in 0 until count) pcm[k] = (floats.get(k).coerceIn(-1f, 1f) * 32767f).toInt().toShort()
-                        } else {
-                            val shorts = buf.asShortBuffer()
-                            count = shorts.remaining()
-                            if (pcm.size < count) pcm = ShortArray(count)
-                            shorts.get(pcm, 0, count)
-                        }
-                        val enc = encoder ?: Mp3Encoder(channels.coerceAtMost(2), sampleRate, bitrate).also { encoder = it }
-                        val frames = count / channels.coerceAtLeast(1)
-                        val need = enc.outSize(frames)
-                        if (mp3.size < need) mp3 = ByteArray(need)
-                        val n = enc.encode(pcm, frames, channels.coerceAtLeast(1), mp3)
-                        out.write(mp3, 0, n)
-                        if (durationUs > 0) {
-                            val pct = (info.presentationTimeUs * 100 / durationUs).toInt().coerceIn(0, 100)
-                            if (pct != lastPct) { lastPct = pct; progress(pct) }
-                        }
+                    float = isFloat(f)
+                }) { buf, info ->
+                    val count: Int
+                    if (float) {
+                        val floats = buf.asFloatBuffer()
+                        count = floats.remaining()
+                        if (pcm.size < count) pcm = ShortArray(count)
+                        for (k in 0 until count) pcm[k] = (floats.get(k).coerceIn(-1f, 1f) * 32767f).toInt().toShort()
+                    } else {
+                        val shorts = buf.asShortBuffer()
+                        count = shorts.remaining()
+                        if (pcm.size < count) pcm = ShortArray(count)
+                        shorts.get(pcm, 0, count)
                     }
-                    codec.releaseOutputBuffer(o, false)
-                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
+                    val enc = encoder ?: Mp3Encoder(channels.coerceAtMost(2), sampleRate, bitrate).also { encoder = it }
+                    val frames = count / channels.coerceAtLeast(1)
+                    val need = enc.outSize(frames)
+                    if (mp3.size < need) mp3 = ByteArray(need)
+                    out.write(mp3, 0, enc.encode(pcm, frames, channels.coerceAtLeast(1), mp3))
+                    if (src.durationUs > 0) {
+                        val pct = (info.presentationTimeUs * 100 / src.durationUs).toInt().coerceIn(0, 100)
+                        if (pct != lastPct) { lastPct = pct; progress(pct) }
+                    }
+                }
+                encoder?.let { enc ->
+                    if (mp3.size < 7200) mp3 = ByteArray(7200)
+                    out.write(mp3, 0, enc.finish(mp3))
                 }
             }
-            encoder?.let { enc ->
-                if (mp3.size < 7200) mp3 = ByteArray(7200)
-                val n = enc.finish(mp3)
-                out.write(mp3, 0, n)
-            }
-            out.flush()
         } finally {
-            runCatching { outRef?.close() }
             runCatching { encoder?.close() }
             runCatching { codecRef?.stop() }
             runCatching { codecRef?.release() }
-            runCatching { ex.release() }
+            runCatching { src.ex.release() }
         }
         check(output.length() > 0) { "MP3 conversion failed" }
     }

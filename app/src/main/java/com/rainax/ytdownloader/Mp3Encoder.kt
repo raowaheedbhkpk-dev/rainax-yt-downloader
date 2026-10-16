@@ -7,9 +7,12 @@ package com.rainax.ytdownloader
  */
 class Mp3Encoder(channels: Int, sampleRate: Int, bitrate: Int = 192, independent: Boolean = false) : AutoCloseable {
 
+    /** 256k and up: LAME's fast setting (twice the speed; at these bitrates it sounds the same). Lower: its standard one. */
+    private val quality = if (bitrate >= 256) FAST_QUALITY else QUALITY
+
     /** [independent]: every frame stands on its own (no bit reservoir) at the input's sample rate, so parts
      *  encoded at the same time on several cores can be joined frame by frame. */
-    private var handle: Long = nativeInit(channels, sampleRate, bitrate, QUALITY, if (independent) 1 else 0)
+    private var handle: Long = nativeInit(channels, sampleRate, bitrate, quality, if (independent) 1 else 0)
 
     init {
         check(handle != 0L) { "MP3 encoder can't use this audio ($sampleRate Hz)" }
@@ -39,6 +42,7 @@ class Mp3Encoder(channels: Int, sampleRate: Int, bitrate: Int = 192, independent
     companion object {
         /** LAME quality 5: its standard speed/quality balance (0 = slowest, 9 = fastest). */
         private const val QUALITY = 5
+        private const val FAST_QUALITY = 7
 
         init { System.loadLibrary("rainaxlame") }
 
