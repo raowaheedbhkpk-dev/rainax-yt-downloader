@@ -102,6 +102,10 @@ object AppPrefs {
     fun firstRunAsked(c: Context) = p(c).getBoolean("first_run_asked", false)
     fun setFirstRunAsked(c: Context) = p(c).edit().putBoolean("first_run_asked", true).apply()
 
+    /** What happened in the last MP3 conversion (shown in Settings). */
+    fun lastMp3Report(c: Context) = p(c).getString("last_mp3_report", "").orEmpty()
+    fun setLastMp3Report(c: Context, v: String) = p(c).edit().putString("last_mp3_report", v).apply()
+
     /** The welcome guide (first install) was shown. */
     fun guideSeen(c: Context) = p(c).getBoolean("guide_seen", false)
     fun setGuideSeen(c: Context) = p(c).edit().putBoolean("guide_seen", true).apply()

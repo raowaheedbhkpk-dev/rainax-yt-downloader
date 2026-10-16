@@ -24,32 +24,68 @@ object AudioConverter {
     private const val TAIL = 4 * FRAME             // extra samples after each part, so its last frames are complete
     private const val MIN_PART_SECONDS = 15        // shorter songs use fewer cores
 
-    /** Blocking. [stop] ends early (pause/cancel); [progress] gets 0-100. */
-    fun toMp3(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int) -> Unit) {
+    /** What happened in one conversion (shown after an MP3 is made, so slow phones can be understood). */
+    class Report {
+        var way = ""                 // "fast, 8 cores" or "one core (why)"
+        var decoder = ""
+        var rate = 0
+        var channels = 0
+        var seconds = 0.0            // length of the sound
+        var readMs = 0L
+        var encodeMs = 0L
+        var bitrate = 0
+        val totalMs get() = readMs + encodeMs
+        fun speed(ms: Long) = if (ms > 0) seconds * 1000 / ms else 0.0
+        /** One line for the downloads list. */
+        fun short() = "MP3 made in ${fmt(totalMs)} (${"%.0f".format(speed(totalMs))}× faster than playing)"
+        /** Everything, for Settings. */
+        fun details() = "${bitrate}k MP3 of ${fmt((seconds * 1000).toLong())} sound: ${fmt(totalMs)} in all. " +
+            "Reading ${fmt(readMs)} (${"%.0f".format(speed(readMs))}×), making MP3 ${fmt(encodeMs)} (${"%.0f".format(speed(encodeMs))}×). " +
+            "Way: $way. Decoder: $decoder. $rate Hz, $channels ch."
+        private fun fmt(ms: Long) = if (ms < 60_000) "%.1f s".format(ms / 1000.0) else "${ms / 60_000} min ${(ms % 60_000) / 1000} s"
+    }
+
+    /**
+     * Blocking. [stop] ends early (pause/cancel); [progress] gets 0-100 and what is happening now
+     * ("Reading sound · 120×", "Making MP3 · 8 cores · 60×"). Returns what happened.
+     */
+    fun toMp3(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int, String) -> Unit): Report {
+        val report = Report().also { it.bitrate = bitrate }
         try {
-            toMp3Parallel(input, output, bitrate, stop, progress)
-            return
+            toMp3Parallel(input, output, bitrate, stop, progress, report)
+            return report
         } catch (e: NativeDownloader.Stopped) {
             throw e
         } catch (e: Throwable) {
             android.util.Log.w("RAINAX", "fast MP3 not possible, one core: ${e.message}")
             output.delete()
+            report.way = "one core (" + (e.message ?: e.javaClass.simpleName).take(60) + ")"
+            report.readMs = 0
+            report.encodeMs = 0
         }
-        toMp3Serial(input, output, bitrate, stop, progress)
+        toMp3Serial(input, output, bitrate, stop, progress, report)
+        return report
     }
 
     private class Pcm(val file: File, val rate: Int, val channels: Int, val frames: Long)
 
-    private fun toMp3Parallel(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int) -> Unit) {
+    private fun toMp3Parallel(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int, String) -> Unit, report: Report) {
         val dir = output.absoluteFile.parentFile ?: error("No folder")
         val pcmFile = File(dir, "mp3work.pcm")
         val parts = mutableListOf<File>()
         try {
-            val pcm = decodeToPcm(input, pcmFile, stop) { progress(it * 25 / 100) }
+            val readStart = System.nanoTime()
+            val pcm = decodeToPcm(input, pcmFile, stop, report) { pct, label -> progress(pct * 25 / 100, label) }
+            report.readMs = (System.nanoTime() - readStart) / 1_000_000
+            report.rate = pcm.rate
+            report.channels = pcm.channels
+            report.seconds = pcm.frames.toDouble() / pcm.rate
             require(pcm.rate == 44100 || pcm.rate == 48000 || pcm.rate == 32000) { "sample rate ${pcm.rate}" }
             require(pcm.frames > 0) { "no sound" }
             val cores = Runtime.getRuntime().availableProcessors().coerceIn(1, 8)
             val n = minOf(cores.toLong(), pcm.frames / (pcm.rate.toLong() * MIN_PART_SECONDS)).toInt().coerceAtLeast(1)
+            report.way = "fast, $n of $cores cores"
+            val encStart = System.nanoTime()
             val bounds = LongArray(n + 1) { k -> if (k == n) pcm.frames else (pcm.frames * k / n) / FRAME * FRAME }
             repeat(n) { parts += File(dir, "mp3part$it.mp3") }
             // encoders made one after another (LAME fills shared tables the first time)
@@ -66,7 +102,12 @@ object AudioConverter {
                 while (jobs.any { !it.isDone }) {
                     if (stop()) cancelled.set(true)
                     val pct = 25 + (done.get() * 75 / pcm.frames).toInt().coerceIn(0, 74)
-                    if (pct != last) { last = pct; progress(pct) }
+                    if (pct != last) {
+                        last = pct
+                        val secs = (System.nanoTime() - encStart) / 1e9
+                        val x = if (secs > 0.5) (done.get().toDouble() / pcm.rate / secs) else 0.0
+                        progress(pct, "Making MP3 · $n cores" + if (x > 0) " · ${"%.0f".format(x)}×" else "")
+                    }
                     Thread.sleep(120)
                 }
                 jobs.forEach { it.get() }                 // a failed part fails the fast way (then: one core)
@@ -86,7 +127,8 @@ object AudioConverter {
                     check(take < 0 || copied == take) { "MP3 part $k has $copied of $take frames" }
                 }
             }
-            progress(100)
+            report.encodeMs = (System.nanoTime() - encStart) / 1_000_000
+            progress(100, "Making MP3")
         } finally {
             pcmFile.delete()
             parts.forEach { it.delete() }
@@ -183,7 +225,7 @@ object AudioConverter {
      * playing music in real time and can be about as slow as real time when converting; the software one is many
      * times faster for this. Any other decoder if that one can't take this sound.
      */
-    private fun openDecoder(mime: String, format: MediaFormat): MediaCodec {
+    private fun openDecoder(mime: String, format: MediaFormat, report: Report): MediaCodec {
         val names = runCatching {
             android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
                 .filter { !it.isEncoder && it.supportedTypes.any { t -> t.equals(mime, true) } }
@@ -196,12 +238,13 @@ object AudioConverter {
                 codec.configure(format, null, null, 0)
                 codec.start()
                 android.util.Log.i("RAINAX", "MP3: decoding with $name")
+                report.decoder = name
                 return codec
             } catch (e: Exception) {
                 runCatching { codec.release() }
             }
         }
-        return MediaCodec.createDecoderByType(mime).apply { configure(format, null, null, 0); start() }
+        return MediaCodec.createDecoderByType(mime).apply { configure(format, null, null, 0); start(); report.decoder = name }
     }
 
     /**
@@ -276,7 +319,7 @@ object AudioConverter {
         f.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
 
     /** Blocking. The whole sound as 16-bit stereo (or mono) samples in [pcmFile]. */
-    private fun decodeToPcm(input: File, pcmFile: File, stop: () -> Boolean, progress: (Int) -> Unit): Pcm {
+    private fun decodeToPcm(input: File, pcmFile: File, stop: () -> Boolean, report: Report, progress: (Int, String) -> Unit): Pcm {
         val src = openSource(input)
         var codecRef: MediaCodec? = null
         try {
@@ -289,7 +332,8 @@ object AudioConverter {
                 require(free > need) { "not enough free space" }
             }
             var float = false
-            val codec = openDecoder(src.mime, src.format).also { codecRef = it }
+            val codec = openDecoder(src.mime, src.format, report).also { codecRef = it }
+            val t0 = System.nanoTime()
             var outCh = -1                          // fixed by the first sound that comes out
             var written = 0L
             var bytes = ByteArray(0)
@@ -327,7 +371,12 @@ object AudioConverter {
                     }
                     if (src.durationUs > 0) {
                         val pct = (info.presentationTimeUs * 100 / src.durationUs).toInt().coerceIn(0, 100)
-                        if (pct != lastPct) { lastPct = pct; progress(pct) }
+                        if (pct != lastPct) {
+                            lastPct = pct
+                            val secs = (System.nanoTime() - t0) / 1e9
+                            val x = if (secs > 0.5) info.presentationTimeUs / 1e6 / secs else 0.0
+                            progress(pct, "Reading sound" + if (x > 0) " · ${"%.0f".format(x)}×" else "")
+                        }
                     }
                 }
             }
@@ -341,7 +390,8 @@ object AudioConverter {
     }
 
     /** The one-core way: decode and encode in one go (any sample rate). */
-    private fun toMp3Serial(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int) -> Unit) {
+    private fun toMp3Serial(input: File, output: File, bitrate: Int, stop: () -> Boolean, progress: (Int, String) -> Unit, report: Report) {
+        val serialStart = System.nanoTime()
         val src = openSource(input)
         var codecRef: MediaCodec? = null
         var encoder: Mp3Encoder? = null
@@ -349,7 +399,11 @@ object AudioConverter {
             var sampleRate = src.format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = src.format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             var float = false
-            val codec = openDecoder(src.mime, src.format).also { codecRef = it }
+            val codec = openDecoder(src.mime, src.format, report).also { codecRef = it }
+            val t0 = System.nanoTime()
+            report.rate = sampleRate
+            report.channels = channels
+            report.seconds = src.durationUs / 1e6
             var pcm = ShortArray(0)
             var mp3 = ByteArray(16 * 1024)
             var lastPct = -1
@@ -378,7 +432,12 @@ object AudioConverter {
                     out.write(mp3, 0, enc.encode(pcm, frames, channels.coerceAtLeast(1), mp3))
                     if (src.durationUs > 0) {
                         val pct = (info.presentationTimeUs * 100 / src.durationUs).toInt().coerceIn(0, 100)
-                        if (pct != lastPct) { lastPct = pct; progress(pct) }
+                        if (pct != lastPct) {
+                            lastPct = pct
+                            val secs = (System.nanoTime() - t0) / 1e9
+                            val x = if (secs > 0.5) info.presentationTimeUs / 1e6 / secs else 0.0
+                            progress(pct, "Making MP3 · 1 core" + if (x > 0) " · ${"%.0f".format(x)}×" else "")
+                        }
                     }
                 }
                 encoder?.let { enc ->
@@ -392,6 +451,8 @@ object AudioConverter {
             runCatching { codecRef?.release() }
             runCatching { src.ex.release() }
         }
+        report.readMs = 0                                   // (one core: reading and making happen together)
+        report.encodeMs = (System.nanoTime() - serialStart) / 1_000_000
         check(output.length() > 0) { "MP3 conversion failed" }
     }
 }

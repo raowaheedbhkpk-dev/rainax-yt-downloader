@@ -442,6 +442,7 @@ class DownloadService : Service() {
         }
 
         var output: File? = null
+        var mp3Note: String? = null            // "MP3 made in 42 s (85× ...)" for the finished row
         var saved: FileStore.Saved? = null
         val s = plan.single
         if (s != null) {
@@ -493,9 +494,13 @@ class DownloadService : Service() {
                 val mp3 = File(dir, "converted.mp3")
                 // "audio:mp3:128" / "audio:mp3:320"; plain "audio:mp3" = 192 kbit/s
                 val kbps = task.format.split(':').getOrNull(2)?.toIntOrNull()?.takeIf { it in listOf(128, 192, 256, 320) } ?: 192
-                AudioConverter.toMp3(out, mp3, kbps, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct ->
-                    TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "Converting to MP3 $pct%") }
+                val report = AudioConverter.toMp3(out, mp3, kbps, { TaskRepository.get(id)?.status != Status.RUNNING }) { pct, stage ->
+                    // e.g. "Reading sound · 120× · 12%" / "Making MP3 · 8 cores · 60× · 40%"
+                    TaskRepository.update(id) { t -> if (t.status != Status.RUNNING) t else t.copy(message = "$stage · $pct%") }
                 }
+                mp3Note = report.short()
+                AppPrefs.setLastMp3Report(this, report.details())
+                android.util.Log.i("RAINAX", "MP3: " + report.details())
                 // the downloaded sound stays until the end (a pause while saving won't download it again);
                 // the whole folder is removed when the download is done
                 out = mp3
@@ -552,7 +557,7 @@ class DownloadService : Service() {
 
         TaskRepository.update(id, true) {
             it.copy(
-                status = Status.DONE, progress = 100, message = "Completed",
+                status = Status.DONE, progress = 100, message = mp3Note ?: "Completed",
                 fileUri = result.uri, mime = result.mime, title = it.title.ifBlank { result.name }
             )
         }

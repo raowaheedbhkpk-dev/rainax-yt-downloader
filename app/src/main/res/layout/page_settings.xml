@@ -683,6 +683,17 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
+        <!-- the last MP3 conversion: how long each step took (long-press to copy) -->
+        <TextView
+            android:id="@+id/mp3Report"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/rx_text2"
+            android:textIsSelectable="true"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

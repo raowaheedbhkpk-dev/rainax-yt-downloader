@@ -1,3 +1,4 @@
+MP3 shows what it is doing and how fast (Reading sound / Making MP3), and how long it took when done
 MP3 converting is many times faster: the phone's fast software decoder is used, sound is read in big pieces, and 256k-320k use the fast encoder setting
 MP3 is much faster: it is made on all of your phone's cores at once
 New MP3 choices: 128k (small), 192k and 320k (best), next to the instant M4A

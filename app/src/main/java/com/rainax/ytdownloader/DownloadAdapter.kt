@@ -56,7 +56,9 @@ class DownloadAdapter(
                     t.isAudio -> "Audio"
                     else -> "Video"
                 }
-                "$kind  •  ${DateUtils.getRelativeTimeSpanString(t.createdAt)}"
+                // a freshly made MP3 also says how long making it took
+                val note = if (t.message.startsWith("MP3 made")) "  •  ${t.message}" else ""
+                "$kind  •  ${DateUtils.getRelativeTimeSpanString(t.createdAt)}$note"
             }
             else -> t.message.ifBlank { t.status.name.lowercase().replaceFirstChar { it.uppercase() } }
         }

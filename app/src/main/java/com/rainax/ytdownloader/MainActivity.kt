@@ -1946,6 +1946,9 @@ class MainActivity : AppCompatActivity() {
     private fun renderFolder() {
         st.folderPath.text = FileStore.describe(this)
         st.allFilesBtn.isVisible = needsAllFiles()
+        val mp3 = AppPrefs.lastMp3Report(this)
+        st.mp3Report.isVisible = mp3.isNotBlank()
+        st.mp3Report.text = "Last MP3: $mp3"
     }
 
     private fun nudgeService() {
