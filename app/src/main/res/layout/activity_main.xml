@@ -68,9 +68,13 @@
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottomNav"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
+                android:layout_height="64dp"
                 android:background="@android:color/transparent"
-                app:labelVisibilityMode="unlabeled"
+                app:itemPaddingBottom="8dp"
+                app:itemPaddingTop="9dp"
+                app:itemTextAppearanceActive="@style/TextAppearance.Rainax.Nav"
+                app:itemTextAppearanceInactive="@style/TextAppearance.Rainax.Nav"
+                app:labelVisibilityMode="labeled"
                 app:menu="@menu/bottom_nav" />
 
             <!-- the raised "+" (Add: download from a link); placed on the bar's top edge by RxNavBar -->

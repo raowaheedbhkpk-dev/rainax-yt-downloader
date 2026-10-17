@@ -224,6 +224,16 @@ object WatchHistory {
         return entries.values.filter { it.unfinished }.sortedByDescending { it.at }.take(20)
     }
 
+    /** Settings > Clear watch history: forgets every video watched in RAINAX (Continue watching, resume points). */
+    @Synchronized
+    fun clear(c: Context) {
+        load(c)
+        entries.clear()
+        dirty = true
+        version++
+        flush(c)
+    }
+
     @Synchronized
     fun remove(c: Context, url: String) {
         load(c)

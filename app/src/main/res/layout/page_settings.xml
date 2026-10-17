@@ -611,7 +611,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/clearSearchBtn"
-                app:icon="@drawable/ic_history"
+                app:icon="@drawable/ic_search"
                 style="@style/Widget.Rainax.Button.Tonal"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -619,6 +619,16 @@
                 android:layout_weight="1"
                 android:text="Clear search history" />
         </LinearLayout>
+
+        <!-- forgets what you watched (Continue watching, resume points; and YouTube's history when signed in) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clearWatchBtn"
+            style="@style/Widget.Rainax.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Clear watch history"
+            app:icon="@drawable/ic_history" />
 
         <TextView
             android:layout_width="wrap_content"

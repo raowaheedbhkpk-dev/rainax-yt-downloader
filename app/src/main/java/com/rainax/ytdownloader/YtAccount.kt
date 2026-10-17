@@ -319,6 +319,35 @@ object YtAccount {
         }
     }
 
+    /**
+     * Blocking. Clears the signed-in account's YouTube watch history, the same as "Clear all watch history" on
+     * YouTube's History page. Returns false when YouTube didn't offer the button (nothing was changed).
+     */
+    fun clearYouTubeHistory(): Boolean {
+        val page = post("browse", JSONObject().put("context", context()).put("browseId", "FEhistory"))
+        val tokens = mutableListOf<String>()
+        // the "Clear all watch history" button: its confirm dialog holds the feedback token
+        fun walk(n: Any?, inClear: Boolean) {
+            when (n) {
+                is JSONObject -> {
+                    val label = (text(n.optJSONObject("text")) ?: n.optString("title")).lowercase()
+                    val here = inClear || (label.contains("clear") && label.contains("history"))
+                    if (here) n.optJSONObject("feedbackEndpoint")?.optString("feedbackToken")?.takeIf { it.isNotBlank() }?.let { tokens += it }
+                    val keys = n.keys()
+                    while (keys.hasNext()) walk(n.opt(keys.next()), here)
+                }
+                is JSONArray -> for (i in 0 until n.length()) walk(n.opt(i), inClear)
+            }
+        }
+        walk(page, false)
+        if (tokens.isEmpty()) return false
+        val body = JSONObject().put("context", context()).put("feedbackTokens", JSONArray().apply { tokens.distinct().forEach { put(it) } })
+            .put("isFeedbackTokenUnencrypted", false).put("shouldMerge", false)
+        val r = post("feedback", body)
+        val ok = r.optJSONArray("feedbackResponses")?.let { arr -> (0 until arr.length()).any { arr.optJSONObject(it)?.optBoolean("isProcessed") == true } }
+        return ok ?: true
+    }
+
     // ---------- actions (like YouTube) ----------
 
     /** What the signed-in user did on a video: subscribed to its channel? liked / disliked? */
@@ -434,7 +463,7 @@ object YtAccount {
         val title = text(r.optJSONObject("title")) ?: text(r.optJSONObject("headline")) ?: return null
         val owner = text(r.optJSONObject("ownerText")) ?: text(r.optJSONObject("shortBylineText"))
             ?: text(r.optJSONObject("longBylineText")) ?: ""
-        val length = text(r.optJSONObject("lengthText"))
+        val length = text(r.optJSONObject("lengthText")) ?: badgeTime(r.opt("thumbnailOverlays"))
         val details = listOfNotNull(
             text(r.optJSONObject("shortViewCountText")) ?: text(r.optJSONObject("viewCountText")),
             text(r.optJSONObject("publishedTimeText"))
@@ -466,12 +495,8 @@ object YtAccount {
             ?: r.optJSONObject("contentImage")?.optJSONObject("collectionThumbnailViewModel")?.optJSONObject("primaryThumbnail")?.optJSONObject("thumbnailViewModel")
         val sources = thumbVm?.optJSONObject("image")?.optJSONArray("sources")
         val thumb = sources?.optJSONObject(sources.length() - 1)?.optString("url")
-        var badge: String? = null
-        val overlays = thumbVm?.optJSONArray("overlays")
-        if (overlays != null) for (i in 0 until overlays.length()) {
-            val badges = overlays.optJSONObject(i)?.optJSONObject("thumbnailOverlayBadgeViewModel")?.optJSONArray("thumbnailBadges") ?: continue
-            if (badges.length() > 0) badge = badges.optJSONObject(0)?.optJSONObject("thumbnailBadgeViewModel")?.optString("text")
-        }
+        // the time badge ("19:10"): YouTube moves it between overlay kinds, so look in all of them
+        val badge = badgeTime(thumbVm?.opt("overlays")) ?: badgeTime(r.optJSONObject("contentImage"))
         val avatar = meta.optJSONObject("image")?.optJSONObject("decoratedAvatarViewModel")?.optJSONObject("avatar")
             ?.optJSONObject("avatarViewModel")?.optJSONObject("image")?.optJSONArray("sources")?.optJSONObject(0)?.optString("url")
         val playlist = type.contains("PLAYLIST") || type.contains("ALBUM")
@@ -486,6 +511,25 @@ object YtAccount {
             isPlaylist = playlist,
             avatar = avatar
         )
+    }
+
+    private val TIME = Regex("^\\d{1,2}(:\\d{2}){1,2}$")
+
+    /** The video length shown on a thumbnail ("19:10", "1:02:03" or "LIVE"), wherever it sits in [node]. */
+    private fun badgeTime(node: Any?): String? {
+        when (node) {
+            is JSONObject -> {
+                for (k in listOf("thumbnailBadgeViewModel", "thumbnailOverlayTimeStatusRenderer")) {
+                    val o = node.optJSONObject(k) ?: continue
+                    val t = (o.optString("text").takeIf { it.isNotBlank() } ?: text(o.optJSONObject("text")))?.trim()
+                    if (t != null && (TIME.matches(t) || t.equals("LIVE", true))) return t
+                }
+                val keys = node.keys()
+                while (keys.hasNext()) badgeTime(node.opt(keys.next()))?.let { return it }
+            }
+            is JSONArray -> for (i in 0 until node.length()) badgeTime(node.opt(i))?.let { return it }
+        }
+        return null
     }
 
     /** "4:01" / "1:02:03" -> seconds (0 when unknown, -1 for LIVE). */

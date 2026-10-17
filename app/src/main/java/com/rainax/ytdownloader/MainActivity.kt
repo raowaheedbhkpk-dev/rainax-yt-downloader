@@ -379,15 +379,53 @@ class MainActivity : AppCompatActivity() {
         Img.load(sb.accAvatar, p?.avatar, circle = true, widthPx = 200)
         sb.accSignOut.setOnClickListener {
             dialog.dismiss()
-            YtAccount.signOut(this)
-            android.webkit.CookieManager.getInstance().removeAllCookies(null)
-            home.onAccountChanged()
-            subs.onAccountChanged()
-            if (tab == 4) subs.onShown()
-            refreshYou()
-            message("Signed out of YouTube")
+            signOut()
         }
         dialog.show()
+    }
+
+    private fun askSignOut() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setTitle("Sign out of YouTube?")
+            .setMessage("Your subscriptions, likes and history won't show in RAINAX until you sign in again. Your downloads stay.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Sign out") { _, _ -> signOut() }
+            .show()
+    }
+
+    private fun signOut() {
+        YtAccount.signOut(this)
+        android.webkit.CookieManager.getInstance().removeAllCookies(null)
+        home.onAccountChanged()
+        subs.onAccountChanged()
+        if (tab == 4) subs.onShown()
+        refreshYou()
+        message("Signed out of YouTube")
+    }
+
+    /** Settings > Clear watch history: RAINAX's own history, and (signed in, if ticked) YouTube's too. */
+    private fun askClearWatchHistory() {
+        val signedIn = YtAccount.isSignedIn(this)
+        val also = booleanArrayOf(signedIn)
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setTitle("Clear watch history?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Clear") { _, _ ->
+                WatchHistory.clear(this)
+                home.onHistoryCleared()
+                if (!(signedIn && also[0])) { message("Watch history cleared"); return@setPositiveButton }
+                lifecycleScope.launch {
+                    val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { YtAccount.clearYouTubeHistory() } }
+                    message(when {
+                        r.getOrNull() == true -> "Watch history cleared, here and on your YouTube account"
+                        r.isSuccess -> "Cleared here. YouTube didn't allow clearing your account history from the app"
+                        else -> "Cleared here. Couldn't reach YouTube to clear your account history"
+                    })
+                }
+            }
+        if (signedIn) builder.setMultiChoiceItems(arrayOf("Also clear my YouTube account history"), also) { _, _, on -> also[0] = on }
+        else builder.setMessage("Continue watching and the places where you stopped will be forgotten.")
+        builder.show()
     }
 
     /** Name and picture of the signed-in account (top bar). */
@@ -780,7 +818,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupYou() {
         pl.youSettings.setOnClickListener { showTab(2) }
-        pl.youHeader.setOnClickListener { onAccountClick() }
+        pl.youAccounts.setOnClickListener { onAccountClick() }
+        pl.youProfile.setOnClickListener { onAccountClick() }
+        pl.youBell.setOnClickListener { home.openNotifications() }
+        pl.youSearch.setOnClickListener {
+            goHome()
+            b.root.post { home.openSearch() }
+        }
+        pl.youMainBtn.setOnClickListener {
+            if (!YtAccount.isSignedIn(this)) { signIn.launch(Intent(this, SignInActivity::class.java)); return@setOnClickListener }
+            val p = YtAccount.profile(this)
+            val handle = p?.handle?.trim()?.takeIf { it.isNotBlank() }
+            if (handle == null) { message("Your channel's address isn't known yet. Try again in a moment"); refreshAccount(); return@setOnClickListener }
+            goHome()
+            home.openChannel("https://www.youtube.com/" + (if (handle.startsWith("@")) handle else "@$handle"), p.name, p.avatar)
+        }
+        pl.youSecondBtn.setOnClickListener { askSignOut() }
         // shortcuts after Downloads / Music / Videos / Playlists, like YouTube's Library
         listOf(
             "🔒 Private folder" to { PrivateActivity.open(this) },
@@ -801,6 +854,13 @@ class MainActivity : AppCompatActivity() {
     /** You header: your YouTube picture and name, or Sign in. */
     private fun refreshYou() {
         val signedIn = YtAccount.isSignedIn(this)
+        // signed in: View channel + Sign out; signed out: one red Sign in button
+        pl.youMainBtn.text = if (signedIn) "View channel" else "Sign in to YouTube"
+        pl.youSecondBtn.isVisible = signedIn
+        pl.youAccounts.isVisible = signedIn
+        pl.youMainBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            if (signedIn) ContextCompat.getColor(this, R.color.rx_text) else ContextCompat.getColor(this, R.color.rx_primary))
+        pl.youMainBtn.setTextColor(if (signedIn) pageBgColor() else android.graphics.Color.WHITE)
         val p = if (signedIn) YtAccount.profile(this) else null
         if (p != null && !p.avatar.isNullOrBlank()) {
             pl.youName.text = p.name.ifBlank { "You" }
@@ -818,6 +878,13 @@ class MainActivity : AppCompatActivity() {
             pl.youAvatar.setPadding(pad, pad, pad, pad)
             pl.youAvatar.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text2))
         }
+    }
+
+    /** The page colour (text on the light "View channel" button). */
+    private fun pageBgColor(): Int {
+        val tv = android.util.TypedValue()
+        theme.resolveAttribute(R.attr.rxBg, tv, true)
+        return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
     }
 
     private var exploreOpen = false
@@ -1973,6 +2040,7 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton("Cancel", null)
                 .show()
         }
+        st.clearWatchBtn.setOnClickListener { askClearWatchHistory() }
         st.rateAppBtn.setOnClickListener { AppShare.rate(this) }
         st.shareAppBtn.setOnClickListener { AppShare.share(this) }
 

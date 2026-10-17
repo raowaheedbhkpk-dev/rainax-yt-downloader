@@ -5,65 +5,166 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- You (like YouTube): your picture and name (or Sign in), and Settings -->
+    <!-- You (like YouTube): Accounts, bell, search, settings; your picture, name and @handle; View channel / Sign out -->
     <LinearLayout
         android:id="@+id/youHeader"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:background="?attr/selectableItemBackground"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="4dp">
-
-        <ImageView
-            android:id="@+id/youAvatar"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_avatar"
-            android:importantForAccessibility="no"
-            android:padding="0dp"
-            android:scaleType="centerCrop" />
+        android:layout_height="196dp"
+        android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp">
 
-            <TextView
-                android:id="@+id/youName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="sans-serif-medium"
-                android:maxLines="1"
-                android:text="You"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/youAccounts"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:fontFamily="@font/rx_body"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="Accounts"
+                android:textAllCaps="false"
                 android:textColor="@color/rx_text"
-                android:textSize="20sp" />
+                android:textSize="15sp"
+                app:cornerRadius="22dp"
+                app:icon="@drawable/ic_chevron_down"
+                app:iconGravity="textEnd"
+                app:iconSize="18dp"
+                app:iconTint="@color/rx_text"
+                app:strokeColor="@color/rx_outline" />
 
-            <TextView
-                android:id="@+id/youHandle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Sign in to YouTube"
-                android:textColor="@color/rx_text2"
-                android:textSize="13sp" />
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/youBell"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Notifications"
+                android:src="@drawable/ic_bell"
+                app:tint="@color/rx_text" />
+
+            <ImageButton
+                android:id="@+id/youSearch"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Search"
+                android:src="@drawable/ic_search"
+                app:tint="@color/rx_text" />
+
+            <ImageButton
+                android:id="@+id/youSettings"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_gear"
+                app:tint="@color/rx_text" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/youSettings"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Settings"
-            android:padding="12dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_gear"
-            app:tint="@color/rx_text" />
+        <LinearLayout
+            android:id="@+id/youProfile"
+            android:layout_width="match_parent"
+            android:layout_height="88dp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+
+            <ImageView
+                android:id="@+id/youAvatar"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_avatar"
+                android:importantForAccessibility="no"
+                android:padding="0dp"
+                android:scaleType="centerCrop" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/youName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/rx_display"
+                    android:maxLines="1"
+                    android:text="You"
+                    android:textColor="@color/rx_text"
+                    android:textSize="25sp" />
+
+                <TextView
+                    android:id="@+id/youHandle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/rx_body"
+                    android:maxLines="1"
+                    android:text="Sign in to YouTube"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/youMainBtn"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/rx_text"
+                android:fontFamily="@font/rx_body"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:stateListAnimator="@animator/rx_press"
+                android:text="View channel"
+                android:textAllCaps="false"
+                android:textColor="?attr/rxBg"
+                android:textSize="15sp"
+                app:cornerRadius="21dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/youSecondBtn"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:fontFamily="@font/rx_body"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="Sign out"
+                android:textAllCaps="false"
+                android:textColor="@color/rx_text"
+                android:textSize="15sp"
+                app:cornerRadius="21dp"
+                app:strokeColor="@color/rx_outline" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Downloads / Music / Videos / Playlists -->
@@ -71,7 +172,7 @@
         android:id="@+id/libChipsScroll"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:layout_marginTop="68dp"
+        android:layout_marginTop="196dp"
         android:clipToPadding="false"
         android:paddingHorizontal="16dp"
         android:scrollbars="none">
@@ -92,7 +193,7 @@
         android:id="@+id/libraryBox"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="120dp"
+        android:layout_marginTop="248dp"
         android:orientation="vertical"
         android:visibility="gone">
 
@@ -262,7 +363,7 @@
         android:id="@+id/playScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="116dp">
+        android:layout_marginTop="244dp">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/playList"
@@ -404,6 +505,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="196dp"
         android:gravity="center_horizontal"
         android:orientation="vertical">
 

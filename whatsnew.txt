@@ -1,3 +1,6 @@
+Feed videos show their length on the picture again, like YouTube
+You tab like YouTube: Accounts, big profile picture, View channel and Sign out (the top-bar profile icon is gone)
+Search shows "You may like" with pictures; bottom bar has labels; Settings can clear your watch history
 New Notifications page like YouTube: your real YouTube notifications with channel picture, unread dot, All and Mentions
 Polished look: new update window, rounded dialogs, message bars, shimmering loading cards and Settings icons
 Downloads page: coloured status labels, a check mark when a download finishes, and a new empty page

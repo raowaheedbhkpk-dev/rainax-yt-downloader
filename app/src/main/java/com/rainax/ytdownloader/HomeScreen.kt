@@ -134,8 +134,7 @@ class HomeScreen(
             hm.searchInput.setText(text)
             hm.searchInput.setSelection(hm.searchInput.text.length)
         },
-        onClear = { confirmClearHistory() },
-        onVoice = { onVoice() }
+        onClear = { confirmClearHistory() }
     )
 
     /** "Clear search history" under the recent searches: asks once, then removes them all. */
@@ -357,6 +356,15 @@ class HomeScreen(
         if (hm.feedList.adapter === bigAdapter || hm.feedList.adapter === smallAdapter) hm.feedList.adapter?.notifyDataSetChanged()
     }
 
+    /** Open the search box (the You page's search button). */
+    fun openSearch() = startTyping()
+
+    /** Watch history was cleared: Continue watching and progress bars go. */
+    fun onHistoryCleared() {
+        vm.feedCache.remove("sp:local:history")
+        onShown()
+    }
+
     /** Search for [text] (used by the search box and for links that are not videos). */
     fun search(text: String) = submit(text)
 
@@ -390,16 +398,52 @@ class HomeScreen(
         suggestJob?.cancel()
         val history = AppPrefs.searchHistory(act)
         if (text.isBlank()) {
-            suggestAdapter.submit(history.take(12), history.size, showClear = history.isNotEmpty(), showVoice = true)
+            // like YouTube: your recent searches, then "You may like" (channels you watch, popular videos) with pictures
+            val recent = history.take(6).map { Sug(it, icon = R.drawable.ic_history) }
+            suggestAdapter.submit(recent, mayLike(history), showClear = history.isNotEmpty())
             return
         }
-        val fromHistory = history.filter { it.contains(text, true) }.take(3)
-        suggestAdapter.submit(fromHistory, fromHistory.size)
+        val fromHistory = history.filter { it.contains(text, true) }.take(3).map { Sug(it, icon = R.drawable.ic_history) }
+        suggestAdapter.submit(fromHistory)
         suggestJob = act.lifecycleScope.launch {
             delay(220)                           // wait for a pause in typing
             val list = withContext(Dispatchers.IO) { YtCatalog.suggestions(text) }
-            suggestAdapter.submit(fromHistory + list.filter { s -> fromHistory.none { it.equals(s, true) } }, fromHistory.size)
+            suggestAdapter.submit(fromHistory + list.filter { s -> fromHistory.none { it.text.equals(s, true) } }.map { Sug(it) })
         }
+    }
+
+    /**
+     * "You may like" under an empty search box: channels you watched lately ("Channel that you watch") and
+     * short searches made from popular videos in your feed, each with the video's picture.
+     */
+    private fun mayLike(history: List<String>): List<Sug> {
+        val out = mutableListOf<Sug>()
+        val used = HashSet<String>()
+        history.forEach { used += it.lowercase() }
+        WatchHistory.recentItems(act).asSequence()
+            .filter { it.uploader.isNotBlank() && used.add(it.uploader.lowercase()) }
+            .take(2)
+            .forEach { out += Sug(it.uploader.lowercase(), "Channel that you watch", it.thumb, R.drawable.ic_search) }
+        val feed = (bigAdapter.all() + vm.feedCache.values.flatMap { it.first })
+            .filter { !it.isChannel && !it.isPlaylist && !it.isShort && it.title.isNotBlank() }
+        for (v in feed) {
+            if (out.size >= 7) break
+            val q = shortQuery(v.title) ?: continue
+            if (!used.add(q)) continue
+            out += Sug(q, null, v.thumb, R.drawable.ic_trending)
+        }
+        return out
+    }
+
+    /** "Tere Darwaze Peh Chilman | Nusrat Fateh Ali Khan | OSA" -> "tere darwaze peh chilman". */
+    private fun shortQuery(title: String): String? {
+        val first = title.split('|', '(', '[', '#', '•', '｜').first()
+            .replace(Regex("\\s+[-–—:]\\s+.*$"), "")
+            .replace(Regex("[^\\p{L}\\p{N}' ]"), " ")
+            .replace(Regex("\\s+"), " ").trim().lowercase()
+        if (first.length < 4) return null
+        val words = first.split(' ')
+        return words.take(6).joinToString(" ")
     }
 
     private fun submit(text: String) {
@@ -868,121 +912,106 @@ class HomeScreen(
         const val NOTIFICATIONS = "acc:notifications"
     }
 
+    /** One search suggestion: text, an optional small line and picture, and its icon (clock, search, trending). */
+    class Sug(val text: String, val sub: String? = null, val thumb: String? = null, val icon: Int = R.drawable.ic_search)
+
     /**
-     * Search suggestions: recent searches (clock icon) first, then YouTube's suggestions.
-     * Under the recent searches (empty search box): "Clear search history".
+     * Search suggestions, like YouTube. Empty box: recent searches, "Clear search history", then "You may like".
+     * Typing: matching recent searches first, then YouTube's suggestions.
      */
     private class SuggestAdapter(
         private val onPick: (String) -> Unit,
         private val onFill: (String) -> Unit,
-        private val onClear: () -> Unit,
-        private val onVoice: () -> Unit
+        private val onClear: () -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        private var items: List<String> = emptyList()
-        private var historyCount = 0
-        private var showClear = false
-        private var showVoice = false
-        private val top get() = if (showVoice) 1 else 0
+        private sealed class Row {
+            class Item(val s: Sug) : Row()
+            class Header(val title: String) : Row()
+            object Clear : Row()
+        }
+        private var rows: List<Row> = emptyList()
 
-        fun submit(list: List<String>, fromHistory: Int, showClear: Boolean = false, showVoice: Boolean = false) {
-            items = list
-            historyCount = fromHistory
-            this.showClear = showClear
-            this.showVoice = showVoice
+        fun submit(list: List<Sug>, mayLike: List<Sug> = emptyList(), showClear: Boolean = false) {
+            val r = mutableListOf<Row>()
+            list.forEach { r += Row.Item(it) }
+            if (showClear) r += Row.Clear
+            if (mayLike.isNotEmpty()) {
+                r += Row.Header("You may like")
+                mayLike.forEach { r += Row.Item(it) }
+            }
+            rows = r
             notifyDataSetChanged()
         }
 
-        override fun getItemCount() = top + items.size + if (showClear) 1 else 0
+        override fun getItemCount() = rows.size
 
-        override fun getItemViewType(position: Int) = when {
-            showVoice && position == 0 -> VOICE
-            position - top >= items.size -> CLEAR
-            else -> ROW
+        override fun getItemViewType(position: Int) = when (rows[position]) {
+            is Row.Item -> ROW
+            is Row.Header -> HEADER
+            Row.Clear -> CLEAR
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            if (viewType == VOICE) {
-                // "Search with your voice": a big, easy row on top of the recent searches
-                val c = parent.context
-                val d = parent.resources.displayMetrics.density
-                val row = LinearLayout(c).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    setPadding((16 * d).toInt(), (10 * d).toInt(), (16 * d).toInt(), (10 * d).toInt())
-                    val tvv = android.util.TypedValue()
-                    c.theme.resolveAttribute(android.R.attr.selectableItemBackground, tvv, true)
-                    setBackgroundResource(tvv.resourceId)
-                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    contentDescription = "Search with your voice"
-                }
-                val circle = android.widget.FrameLayout(c).apply {
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        shape = android.graphics.drawable.GradientDrawable.OVAL
-                        setColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_primary))
-                    }
-                }
-                circle.addView(ImageView(c).apply {
-                    setImageResource(R.drawable.ic_mic)
-                    imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
-                }, android.widget.FrameLayout.LayoutParams((22 * d).toInt(), (22 * d).toInt(), android.view.Gravity.CENTER))
-                row.addView(circle, LinearLayout.LayoutParams((40 * d).toInt(), (40 * d).toInt()))
-                val texts = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL }
-                texts.addView(TextView(c).apply {
-                    text = "Search with your voice"
-                    textSize = 15f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+            val c = parent.context
+            val d = parent.resources.displayMetrics.density
+            if (viewType == HEADER) {
+                val tv = TextView(c).apply {
+                    textSize = 20f
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(c, R.font.rx_display)
                     setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
-                })
-                texts.addView(TextView(c).apply {
-                    text = "Tap and say what you want to watch"
-                    textSize = 12f
-                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text2))
-                })
-                row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (14 * d).toInt()
-                })
-                return object : RecyclerView.ViewHolder(row) {}
-            }
-            if (viewType == CLEAR) {
-                val d = parent.resources.displayMetrics.density
-                val tv = TextView(parent.context).apply {
-                    text = "Clear search history"
-                    gravity = android.view.Gravity.CENTER
-                    textSize = 14f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(androidx.core.content.ContextCompat.getColor(parent.context, R.color.rx_accent))
-                    val tvv = android.util.TypedValue()
-                    parent.context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tvv, true)
-                    setBackgroundResource(tvv.resourceId)
-                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (52 * d).toInt())
+                    setPadding((16 * d).toInt(), (18 * d).toInt(), (16 * d).toInt(), (8 * d).toInt())
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 }
                 return object : RecyclerView.ViewHolder(tv) {}
             }
-            return VH(LayoutInflater.from(parent.context).inflate(R.layout.item_suggestion, parent, false))
+            if (viewType == CLEAR) {
+                val tv = TextView(c).apply {
+                    text = "Clear search history"
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    textSize = 14f
+                    setPadding((60 * d).toInt(), 0, (16 * d).toInt(), 0)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_accent))
+                    val tvv = android.util.TypedValue()
+                    c.theme.resolveAttribute(android.R.attr.selectableItemBackground, tvv, true)
+                    setBackgroundResource(tvv.resourceId)
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (44 * d).toInt())
+                }
+                return object : RecyclerView.ViewHolder(tv) {}
+            }
+            return VH(LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false))
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            if (holder !is VH) {
-                holder.itemView.setOnClickListener { if (getItemViewType(position) == VOICE) onVoice() else onClear() }
-                return
+            when (val row = rows[position]) {
+                is Row.Header -> (holder.itemView as TextView).text = row.title
+                Row.Clear -> holder.itemView.setOnClickListener { onClear() }
+                is Row.Item -> {
+                    val h = holder as VH
+                    val s = row.s
+                    h.text.text = s.text
+                    h.sub.text = s.sub
+                    h.sub.isVisible = !s.sub.isNullOrBlank()
+                    h.icon.setImageResource(s.icon)
+                    h.thumb.isVisible = s.thumb != null
+                    if (s.thumb != null) Img.load(h.thumb, s.thumb, widthPx = 240)
+                    h.itemView.setOnClickListener { onPick(s.text) }
+                    h.fill.setOnClickListener { onFill(s.text) }
+                }
             }
-            val i = position - top
-            val text = items[i]
-            holder.text.text = text
-            holder.icon.setImageResource(if (i < historyCount) R.drawable.ic_history else R.drawable.ic_search)
-            holder.itemView.setOnClickListener { onPick(text) }
-            holder.fill.setOnClickListener { onFill(text) }
         }
 
         companion object {
             private const val ROW = 0
             private const val CLEAR = 1
-            private const val VOICE = 2
+            private const val HEADER = 2
         }
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
             val icon: ImageView = v.findViewById(R.id.icon)
             val text: TextView = v.findViewById(R.id.text)
+            val sub: TextView = v.findViewById(R.id.sub)
+            val thumb: ImageView = v.findViewById(R.id.thumb)
             val fill: ImageView = v.findViewById(R.id.fill)
         }
     }

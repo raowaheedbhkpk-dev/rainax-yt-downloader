@@ -92,8 +92,10 @@
                 android:src="@drawable/ic_search"
                 app:tint="@color/rx_text" />
 
+            <!-- (account lives on the You tab now, like YouTube) -->
             <FrameLayout
                 android:id="@+id/accountBtn"
+                android:visibility="gone"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
