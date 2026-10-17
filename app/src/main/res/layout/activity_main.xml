@@ -53,21 +53,47 @@
             layout="@layout/layout_music_mini"
             android:visibility="gone" />
 
-        <!-- bottom bar: flat, full width, thin line on top (like YouTube) -->
-        <FrameLayout
+        <!-- bottom bar: a floating rounded bar, the raised "+" button in its middle, and a dot that jumps to the chosen tab -->
+        <com.rainax.ytdownloader.RxNavBar
             android:id="@+id/navCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_nav_bar">
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingStart="14dp"
+            android:paddingTop="28dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp">
 
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottomNav"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="60dp"
                 android:background="@android:color/transparent"
-                app:labelVisibilityMode="labeled"
+                app:labelVisibilityMode="unlabeled"
                 app:menu="@menu/bottom_nav" />
-        </FrameLayout>
+
+            <!-- the raised "+" (Add: download from a link); placed on the bar's top edge by RxNavBar -->
+            <FrameLayout
+                android:id="@+id/navFab"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_nav_fab"
+                android:clickable="true"
+                android:contentDescription="Add: download from a link"
+                android:elevation="8dp"
+                android:focusable="true"
+                android:outlineAmbientShadowColor="@color/rx_primary"
+                android:outlineSpotShadowColor="@color/rx_primary">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_plus" />
+            </FrameLayout>
+        </com.rainax.ytdownloader.RxNavBar>
     </LinearLayout>
 
     <!-- floating mini player (placed and dragged in code) -->

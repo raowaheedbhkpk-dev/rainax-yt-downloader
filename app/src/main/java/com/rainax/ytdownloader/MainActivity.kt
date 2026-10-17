@@ -216,8 +216,10 @@ class MainActivity : AppCompatActivity() {
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
-            b.bottomNav.findViewById<View>(it.itemId)?.let { item -> Motion.bounce(item) }      // a little bounce on the tapped tab
-            when (it.itemId) {
+            // a little bounce on the tapped tab (the middle one is the raised "+" button)
+            if (it.itemId == R.id.nav_social) b.navCard.fab?.let { f -> Motion.bounce(f) }
+            else b.bottomNav.findViewById<View>(it.itemId)?.let { item -> Motion.bounce(item) }
+            val chosen = when (it.itemId) {
                 R.id.nav_home -> { showTab(0); true }
                 R.id.nav_shorts -> {
                     // Shorts open full screen (the tab you were on stays selected), like YouTube
@@ -231,7 +233,11 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_subs -> { showTab(4); true }
                 else -> false
             }
+            if (chosen) b.navCard.select(it.itemId)      // the dot jumps over to it
+            chosen
         }
+        // the raised "+" in the middle of the bar: Add (download from a link)
+        b.navCard.fab?.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_social }
 
         // Anything left in the queue (app or service was killed) continues automatically
         val pending = TaskRepository.tasks.value.any {
