@@ -151,26 +151,13 @@ object YtAccount {
 
     /** Notifications older than this are left out (YouTube's own bell shows about the last month). */
     private const val NOTIFY_MAX_DAYS = 30
-    /** Fallback (bell list not readable): new videos from subscriptions of the last week only. */
-    private const val SUBS_MAX_DAYS = 7
 
     /**
      * Blocking. The bell, like YouTube: your recent notifications (new uploads, likes, replies...) that open a
      * video, newest first, only from about the last month. When YouTube's bell list can't be read, recent new
      * videos from your subscriptions (last 7 days) are shown instead.
      */
-    fun notifications(page: Page?): FeedPage {
-        if (page == null || page.url == NOTIFY_ID) {
-            val bell = runCatching { bellPage(page?.id) }
-                .onFailure { android.util.Log.w("RAINAX", "notifications: ${it.message}") }.getOrNull()
-            if (bell != null && (page != null || bell.items.isNotEmpty())) return bell
-        }
-        // fallback: the subscriptions feed, cut at one week
-        val subs = browse("FEsubscriptions", page?.takeIf { it.url != NOTIFY_ID })
-        val recent = subs.items.filter { (ageDays(it.uploaded) ?: 0) <= SUBS_MAX_DAYS }
-        val older = recent.size < subs.items.size          // reached older videos: no more pages
-        return FeedPage(recent, if (older) null else subs.next)
-    }
+    fun notifications(page: Page?): FeedPage = bellPage(page?.id)      // no feed videos in place of notifications
 
     private const val NOTIFY_ID = "notifications"
 
@@ -209,6 +196,113 @@ object YtAccount {
         val seen = HashSet<String>()
         val nextPage = if (tooOld) null else next?.let { Page(NOTIFY_ID, it) }
         return FeedPage(items.filter { seen.add(it.title + it.url) }, nextPage)
+    }
+
+    // ---------- the Notifications page (YouTube's inbox, as the YouTube app shows it) ----------
+
+    /** One notification row: "For you" / video title / "2 weeks ago", channel picture left, video picture right. */
+    class Notif(
+        val id: String,
+        val heading: String,
+        val body: String,
+        val time: String,
+        val avatar: String?,
+        val thumb: String?,
+        /** Video ("watch?v=") or channel link it opens; null when it opens nothing in the app. */
+        val url: String?,
+        val videoId: String?,
+        val read: Boolean,
+        /** A reply to you or an @mention (the Mentions chip). */
+        val mention: Boolean
+    )
+
+    class NotifPage(val items: List<Notif>, val next: String?)
+
+    /**
+     * Blocking. Your YouTube notifications, newest first, exactly the inbox the bell shows ([token] = next page).
+     * Throws a readable error when YouTube's list can't be read (no fake list of feed videos instead).
+     */
+    fun inbox(token: String?): NotifPage {
+        // 1) the bell menu (web), as YouTube's bell does
+        val menu = runCatching {
+            val body = JSONObject().put("context", context())
+            if (token != null) body.put("ctoken", token)
+            else body.put("notificationsMenuRequestType", "NOTIFICATIONS_MENU_REQUEST_TYPE_INBOX")
+            parseInbox(post("notification/get_notification_menu", body))
+        }.onFailure { android.util.Log.w("RAINAX", "inbox menu: ${it.message}") }
+        menu.getOrNull()?.let { if (it.items.isNotEmpty() || token != null) return it }
+        if (token != null) throw menu.exceptionOrNull()!!
+        // 2) the inbox page the YouTube app opens
+        val inbox = runCatching {
+            parseInbox(post("browse", JSONObject().put("context", context()).put("browseId", "FEnotifications_inbox")))
+        }.onFailure { android.util.Log.w("RAINAX", "inbox browse: ${it.message}") }
+        inbox.getOrNull()?.let { if (it.items.isNotEmpty()) return it }
+        // nothing anywhere: really empty when the bell answered; otherwise say why
+        menu.getOrNull()?.let { return it }
+        throw menu.exceptionOrNull() ?: inbox.exceptionOrNull() ?: IllegalStateException("Couldn't read your notifications")
+    }
+
+    private fun parseInbox(json: JSONObject): NotifPage {
+        val found = mutableListOf<JSONObject>()
+        var next: String? = null
+        fun walk(n: Any?) {
+            when (n) {
+                is JSONObject -> {
+                    n.optJSONObject("notificationRenderer")?.let { found += it; return }
+                    n.optJSONObject("getNotificationMenuEndpoint")?.optString("ctoken")?.takeIf { it.isNotBlank() }?.let { next = it }
+                    n.optJSONObject("continuationCommand")?.optString("token")?.takeIf { it.isNotBlank() }?.let { if (next == null) next = it }
+                    val keys = n.keys()
+                    while (keys.hasNext()) walk(n.opt(keys.next()))
+                }
+                is JSONArray -> for (i in 0 until n.length()) walk(n.opt(i))
+            }
+        }
+        walk(json)
+        val seen = HashSet<String>()
+        val items = found.mapNotNull { r ->
+            val message = text(r.optJSONObject("shortMessage"))?.trim() ?: return@mapNotNull null
+            val nav = r.optJSONObject("navigationEndpoint")
+            val videoId = (findValue(nav, "videoId") as? String)?.takeIf { it.isNotBlank() }
+            val browseId = (findValue(nav, "browseId") as? String)?.takeIf { it.startsWith("UC") }
+            val url = when {
+                videoId != null -> "https://www.youtube.com/watch?v=$videoId"
+                browseId != null -> "https://www.youtube.com/channel/$browseId"
+                else -> null
+            }
+            val (heading, body) = splitMessage(message)
+            val id = r.optString("notificationId").ifBlank { message + url }
+            if (!seen.add(id)) return@mapNotNull null
+            val low = message.lowercase()
+            Notif(
+                id = id, heading = heading, body = body,
+                time = text(r.optJSONObject("sentTimeText")).orEmpty(),
+                avatar = lastThumb(r.optJSONObject("thumbnail")),
+                thumb = lastThumb(r.optJSONObject("videoThumbnail")) ?: videoId?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" },
+                url = url, videoId = videoId,
+                read = r.optBoolean("read", true),
+                mention = low.contains("replied") || low.contains("mentioned") || low.contains("tagged you")
+            )
+        }
+        return NotifPage(items, next)
+    }
+
+    /**
+     * "Recommended: Title" -> ("For you", "Title"); "Channel uploaded: Title" -> ("Channel", "Uploaded: Title");
+     * "Channel uploaded 6 videos" -> ("Channel", "Uploaded 6 videos"); "Your comment got 1 like: \"Jobs\"" ->
+     * ("Your comment got 1 like", "\"Jobs\""). Anything else stays one line.
+     */
+    internal fun splitMessage(m: String): Pair<String, String> {
+        Regex("^(?:Recommended|For you|Suggested)\\s*:\\s*(.+)$", RegexOption.IGNORE_CASE).find(m)?.let {
+            return "For you" to it.groupValues[1].trim()
+        }
+        Regex("^(.+?)\\s+(uploaded|is live|premieres?|premiering|posted|shared|replied|mentioned you|commented)(.*)$", RegexOption.IGNORE_CASE).find(m)?.let {
+            val who = it.groupValues[1].trim()
+            val rest = (it.groupValues[2] + it.groupValues[3]).trim()
+            return who to rest.replaceFirstChar { c -> c.uppercase() }
+        }
+        val colon = m.indexOf(": ")
+        if (colon in 1..60) return m.substring(0, colon).trim() to m.substring(colon + 2).trim()
+        return m to ""
     }
 
     /** "3 days ago", "2 weeks ago", "Streamed 1 month ago" -> days (null when it can't be read, e.g. other languages). */

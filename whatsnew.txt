@@ -1,3 +1,4 @@
+New Notifications page like YouTube: your real YouTube notifications with channel picture, unread dot, All and Mentions
 Polished look: new update window, rounded dialogs, message bars, shimmering loading cards and Settings icons
 Downloads page: coloured status labels, a check mark when a download finishes, and a new empty page
 Shorts use the new download sheet, and the Social page offers to download a link you just copied

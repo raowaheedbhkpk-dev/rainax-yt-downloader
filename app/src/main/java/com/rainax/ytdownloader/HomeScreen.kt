@@ -463,14 +463,15 @@ class HomeScreen(
         (hm.homeChips.getChildAt(i) as? Chip)?.isChecked = true
     }
 
-    /** The bell: new videos from your channels (YouTube's notifications are about those). */
+    /** The bell: YouTube's own notifications, on their own page laid out like the YouTube app. */
     fun openNotifications() {
         if (!YtAccount.isSignedIn(act)) {
-            Notify.show(act, "Sign in to YouTube to see new videos from your channels", long = true)
+            Notify.show(act, "Sign in to YouTube to see your notifications", long = true)
             onAccount()
             return
         }
-        openList("Notifications", NOTIFICATIONS)
+        if (hm.suggestList.isVisible) stopTyping()
+        NotificationsPage(act, { open(it) }, { download(it) }).show()
     }
 
     /** A playlist: its videos (each with Download) and "Download all" at the top. */
