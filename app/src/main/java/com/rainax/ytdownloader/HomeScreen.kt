@@ -200,14 +200,10 @@ class HomeScreen(
 
         hm.searchOpen.setOnClickListener { startTyping() }
         hm.searchOpen.setOnLongClickListener { onVoice(); true }          // hold Search: speak straight away
-        // the Home search pill: tap to search, its mic to speak; shown whenever the brand bar is
-        hm.homeSearchPill.setOnClickListener { startTyping() }
-        hm.homeSearchPill.setOnLongClickListener { onVoice(); true }
+        // like YouTube: a search icon in the top bar opens the glowing search box (the old pill stays hidden;
+        // notifications live on the You tab)
+        hm.homeSearchPill.isVisible = false
         hm.homeSearchMic.setOnClickListener { onVoice() }
-        hm.brandBar.viewTreeObserver.addOnGlobalLayoutListener {
-            val show = hm.brandBar.isVisible
-            if (hm.homeSearchPill.isVisible != show) hm.homeSearchPill.isVisible = show
-        }
         hm.homeMenu.setOnClickListener { onMenu() }
         hm.homeBell.setOnClickListener { openNotifications() }
         hm.searchMic.setOnClickListener { onVoice() }

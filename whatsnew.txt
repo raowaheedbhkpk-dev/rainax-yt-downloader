@@ -1,3 +1,5 @@
+Your YouTube profile picture shows on the You tab in the bottom bar when you're signed in
+Home top bar like YouTube: a search icon that opens the search box (notifications are on the You tab)
 Feed videos show their length on the picture again, like YouTube
 You tab like YouTube: Accounts, big profile picture, View channel and Sign out (the top-bar profile icon is gone)
 Search shows "You may like" with pictures; bottom bar has labels; Settings can clear your watch history

@@ -74,6 +74,7 @@
 
             <ImageButton
                 android:id="@+id/homeBell"
+                android:visibility="gone"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -81,10 +82,9 @@
                 android:src="@drawable/ic_bell"
                 app:tint="@color/rx_text" />
 
-            <!-- (the search pill below the bar replaces this button; kept for hold-to-speak and old code) -->
+            <!-- Search (hold it to speak): opens the glowing search box -->
             <ImageButton
                 android:id="@+id/searchOpen"
-                android:visibility="gone"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -253,6 +253,7 @@
     <!-- Home search pill (at rest): tap to search, mic to speak -->
     <LinearLayout
         android:id="@+id/homeSearchPill"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginHorizontal="14dp"

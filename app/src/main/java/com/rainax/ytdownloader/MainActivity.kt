@@ -854,6 +854,7 @@ class MainActivity : AppCompatActivity() {
     /** You header: your YouTube picture and name, or Sign in. */
     private fun refreshYou() {
         val signedIn = YtAccount.isSignedIn(this)
+        updateNavAvatar()
         // signed in: View channel + Sign out; signed out: one red Sign in button
         pl.youMainBtn.text = if (signedIn) "View channel" else "Sign in to YouTube"
         pl.youSecondBtn.isVisible = signedIn
@@ -877,6 +878,28 @@ class MainActivity : AppCompatActivity() {
             val pad = (10 * resources.displayMetrics.density).toInt()
             pl.youAvatar.setPadding(pad, pad, pad, pad)
             pl.youAvatar.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text2))
+        }
+    }
+
+    private var navAvatarUrl: String? = null
+
+    /** The bottom bar's You icon: your profile picture when signed in (like YouTube), the person icon otherwise. */
+    private fun updateNavAvatar() {
+        val item = b.bottomNav.menu.findItem(R.id.nav_downloads) ?: return
+        val url = if (YtAccount.isSignedIn(this)) YtAccount.profile(this)?.avatar?.takeIf { it.isNotBlank() } else null
+        if (url == null) {
+            if (navAvatarUrl != null) item.setIcon(R.drawable.ic_nav_you)
+            navAvatarUrl = null
+            return
+        }
+        if (url == navAvatarUrl) return
+        lifecycleScope.launch {
+            val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Img.bitmap(url, 160) }.getOrNull() }
+                ?: return@launch
+            if (isDestroyed) return@launch
+            val size = (26 * resources.displayMetrics.density).toInt()
+            item.icon = NavAvatarDrawable(bmp, size, ContextCompat.getColor(this@MainActivity, R.color.rx_text))
+            navAvatarUrl = url
         }
     }
 
