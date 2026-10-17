@@ -992,8 +992,25 @@ class MainActivity : AppCompatActivity() {
             if (r.resultCode == RESULT_OK && !text.isNullOrBlank()) home.search(text)
         }
 
-    /** Mic in the search box: speak, then the words are searched. */
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+            if (ok) VoicePage(this) { home.search(it) }.show() else startSystemVoiceSearch()
+        }
+
+    /**
+     * Mic in the search box: RAINAX's own listening screen (glowing orb, your words as you speak). Without the
+     * microphone permission or a speech recognizer, Android's voice search window is used instead.
+     */
     private fun startVoiceSearch() {
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { startSystemVoiceSearch(); return }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            VoicePage(this) { home.search(it) }.show()
+        } else {
+            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    private fun startSystemVoiceSearch() {
         val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Say what you want to watch")

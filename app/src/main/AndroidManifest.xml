@@ -21,6 +21,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- In-app updates: opens the Android installer for a new RAINAX version -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Voice search (RAINAX's own listening screen): the mic is used only while that screen is open -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Social page: open these apps to copy a link (Android 11+ only shows apps an app names here) -->
     <queries>
@@ -35,6 +37,10 @@
         <package android:name="com.whatsapp.w4b" />
         <package android:name="com.soundcloud.android" />
         <package android:name="com.bandcamp.android" />
+        <!-- voice search: find the phone's speech recognizer (Google) -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <application

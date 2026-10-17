@@ -1,3 +1,4 @@
+New voice search screen: a glowing orb that moves with your voice and your words appearing as you speak
 Your YouTube profile picture shows on the You tab in the bottom bar when you're signed in
 Home top bar like YouTube: a search icon that opens the search box (notifications are on the You tab)
 Feed videos show their length on the picture again, like YouTube
