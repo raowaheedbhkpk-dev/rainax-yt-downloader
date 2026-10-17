@@ -31,6 +31,12 @@ class VoiceOrb @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val blobPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SCREEN
     }
+    /** one soft gradient per colour, made once (radius 1 at 0,0) and moved/scaled each frame: no garbage */
+    private val shaders = colors.map { c ->
+        RadialGradient(0f, 0f, 1f, intArrayOf(c, (c and 0x00FFFFFF) or 0x66000000, 0x00000000),
+            floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val shaderMatrix = android.graphics.Matrix()
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val ripples = ArrayList<FloatArray>()   // [progress 0..1]
     private var lastRipple = 0L
@@ -108,11 +114,10 @@ class VoiceOrb @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             val bx = cx + cos(a) * drift
             val by = cy + sin(a * 1.3f) * drift
             val rad = base * shrink * (1f + breath + level * 0.38f + 0.05f * sin(t * 3f + i))
-            blobPaint.shader = RadialGradient(
-                bx, by, rad * 1.35f,
-                intArrayOf(colors[i], (colors[i] and 0x00FFFFFF) or 0x66000000, 0x00000000),
-                floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP
-            )
+            shaderMatrix.setScale(rad * 1.35f, rad * 1.35f)
+            shaderMatrix.postTranslate(bx, by)
+            shaders[i].setLocalMatrix(shaderMatrix)
+            blobPaint.shader = shaders[i]
             canvas.drawCircle(bx, by, rad * 1.35f, blobPaint)
         }
     }

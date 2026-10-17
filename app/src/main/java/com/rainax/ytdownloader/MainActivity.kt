@@ -834,9 +834,10 @@ class MainActivity : AppCompatActivity() {
             home.openChannel("https://www.youtube.com/" + (if (handle.startsWith("@")) handle else "@$handle"), p.name, p.avatar)
         }
         pl.youSecondBtn.setOnClickListener { askSignOut() }
+        pl.youSignInBtn.setOnClickListener { signIn.launch(Intent(this, SignInActivity::class.java)) }
         // shortcuts after Downloads / Music / Videos / Playlists, like YouTube's Library
         listOf(
-            "🔒 Private folder" to { PrivateActivity.open(this) },
+            "Private folder" to { PrivateActivity.open(this) },
             "History" to { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") },
             "Liked videos" to { openHomeList("Liked videos", "acc:VLLL") },
             "Watch later" to { openHomeList("Watch later", "acc:VLWL") }
@@ -845,9 +846,16 @@ class MainActivity : AppCompatActivity() {
             chip.id = View.generateViewId()
             chip.text = title
             chip.isCheckable = false
+            if (title == "Private folder") {
+                chip.chipIcon = ContextCompat.getDrawable(this, R.drawable.ic_lock)
+                chip.isChipIconVisible = true
+                chip.chipIconTint = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text))
+            }
             chip.setOnClickListener { action() }
             pl.libChips.addView(chip)
         }
+        // the row starts at Downloads (it used to open scrolled to the end, hiding Downloads / Music / Videos)
+        pl.libChipsScroll.post { pl.libChipsScroll.scrollTo(0, 0) }
         refreshYou()
     }
 
@@ -856,12 +864,10 @@ class MainActivity : AppCompatActivity() {
         val signedIn = YtAccount.isSignedIn(this)
         updateNavAvatar()
         // signed in: View channel + Sign out; signed out: one red Sign in button
-        pl.youMainBtn.text = if (signedIn) "View channel" else "Sign in to YouTube"
+        pl.youMainBtn.isVisible = signedIn
         pl.youSecondBtn.isVisible = signedIn
+        pl.youSignInBtn.isVisible = !signedIn
         pl.youAccounts.isVisible = signedIn
-        pl.youMainBtn.backgroundTintList = android.content.res.ColorStateList.valueOf(
-            if (signedIn) ContextCompat.getColor(this, R.color.rx_text) else ContextCompat.getColor(this, R.color.rx_primary))
-        pl.youMainBtn.setTextColor(if (signedIn) pageBgColor() else android.graphics.Color.WHITE)
         val p = if (signedIn) YtAccount.profile(this) else null
         if (p != null && !p.avatar.isNullOrBlank()) {
             pl.youName.text = p.name.ifBlank { "You" }
@@ -872,7 +878,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             pl.youName.text = p?.name?.takeIf { it.isNotBlank() } ?: "You"
             pl.youHandle.text = if (signedIn) (p?.handle?.takeIf { it.isNotBlank() } ?: "Signed in to YouTube")
-            else "Sign in to YouTube for subscriptions, likes and history"
+            else "Not signed in"
             Img.load(pl.youAvatar, null)
             pl.youAvatar.setImageResource(R.drawable.ic_person)
             val pad = (10 * resources.displayMetrics.density).toInt()
@@ -901,13 +907,6 @@ class MainActivity : AppCompatActivity() {
             item.icon = NavAvatarDrawable(bmp, size, ContextCompat.getColor(this@MainActivity, R.color.rx_text))
             navAvatarUrl = url
         }
-    }
-
-    /** The page colour (text on the light "View channel" button). */
-    private fun pageBgColor(): Int {
-        val tv = android.util.TypedValue()
-        theme.resolveAttribute(R.attr.rxBg, tv, true)
-        return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
     }
 
     private var exploreOpen = false

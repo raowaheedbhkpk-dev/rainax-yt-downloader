@@ -84,7 +84,7 @@ class NotificationsPage(
                 render()
             }.onFailure { e ->
                 if (all.isEmpty()) showMessage("Couldn't load notifications", friendlyError(e.message ?: "Check your internet and try again"), retry = true)
-                else Notify.show(act, "Couldn't load more notifications")
+                else say("Couldn't load more notifications")
             }
         }
     }
@@ -99,6 +99,10 @@ class NotificationsPage(
             else -> showMessage("No notifications yet", "New videos from your channels, replies and likes show here.", retry = false)
         }
     }
+
+    /** A short message on this page (the app's message bar would sit behind it). */
+    private fun say(text: String) =
+        com.google.android.material.snackbar.Snackbar.make(b.root, text, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
 
     private fun showMessage(title: String, sub: String, retry: Boolean) {
         b.notifEmpty.isVisible = true
@@ -122,7 +126,7 @@ class NotificationsPage(
         markRead(act, n.id)
         adapter.notifyDataSetChanged()
         val item = itemOf(n)
-        if (item == null) { Notify.show(act, "This notification can't be opened in RAINAX"); return }
+        if (item == null) { say("This notification can't be opened in RAINAX"); return }
         dialog.dismiss()
         open(item)
     }

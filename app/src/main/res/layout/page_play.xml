@@ -132,12 +132,34 @@
             android:orientation="horizontal"
             android:paddingHorizontal="16dp">
 
+            <!-- signed out: one red "Sign in" button (fixed colours, right in light and dark) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/youSignInBtn"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:fontFamily="@font/rx_body"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:stateListAnimator="@animator/rx_press"
+                android:text="Sign in to YouTube"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:backgroundTint="@color/rx_primary"
+                app:cornerRadius="21dp"
+                app:icon="@drawable/ic_person"
+                app:iconGravity="textStart"
+                app:iconTint="#FFFFFF" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/youMainBtn"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
                 android:layout_weight="1"
-                android:backgroundTint="@color/rx_text"
+                app:backgroundTint="@color/rx_text"
                 android:fontFamily="@font/rx_body"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
@@ -170,6 +192,9 @@
     <!-- Downloads / Music / Videos / Playlists -->
     <HorizontalScrollView
         android:id="@+id/libChipsScroll"
+        android:descendantFocusability="beforeDescendants"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="196dp"

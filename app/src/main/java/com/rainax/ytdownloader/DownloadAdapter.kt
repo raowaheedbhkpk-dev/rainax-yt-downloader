@@ -26,11 +26,14 @@ class DownloadAdapter(
     private val cache = LruCache<String, Bitmap>(80)
 
     private companion object {
+        /**
+         * Last status seen per download, shared by the "downloading" and "finished" lists (a finished item
+         * moves from one to the other), so the check mark pops exactly when a download finishes.
+         */
+        val lastStatus = HashMap<String, Status>()
         val decoder: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(2)
     }
 
-    /** Last status seen per download, so the check mark pops only at the moment one finishes. */
-    private val lastStatus = HashMap<String, Status>()
 
     private var selecting = false
     private var selectedIds: Set<String> = emptySet()
