@@ -1,3 +1,6 @@
+Polished look: new update window, rounded dialogs, message bars, shimmering loading cards and Settings icons
+Downloads page: coloured status labels, a check mark when a download finishes, and a new empty page
+Shorts use the new download sheet, and the Social page offers to download a link you just copied
 New search: a rounded search pill on Home with a voice button, and a glowing red search box while you type
 Feed videos get their sizes much faster: one request per video instead of two, looked up sooner and 3 at a time
 New bottom bar: a floating rounded bar with a raised + button, and a dot that jumps to the tab you choose

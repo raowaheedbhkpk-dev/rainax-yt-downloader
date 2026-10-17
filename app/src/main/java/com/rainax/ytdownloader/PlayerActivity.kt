@@ -372,7 +372,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showError(code: String) {
         if (isFinishing) return
-        AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Can't play this file")
             .setMessage("This file could not be played here ($code).")
             .setPositiveButton("Open with another app") { _, _ -> openExternally() }
@@ -394,7 +394,7 @@ class PlayerActivity : AppCompatActivity() {
                 )
             )
         } catch (e: Exception) {
-            Toast.makeText(this, "No other player found", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "No other player found")
         }
     }
 
@@ -497,7 +497,7 @@ class PlayerActivity : AppCompatActivity() {
         val labels = speeds.map { speedLabel(it) }.toTypedArray()
         val cur = player?.playbackParameters?.speed ?: 1f
         val checked = speeds.indexOfFirst { abs(it - cur) < 0.01f }
-        AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Playback speed")
             .setSingleChoiceItems(labels, checked) { d, which ->
                 player?.setPlaybackSpeed(speeds[which])
@@ -518,7 +518,7 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         val has = p.currentTracks.groups.any { it.type == type }
         if (!has) {
-            Toast.makeText(this, if (type == C.TRACK_TYPE_AUDIO) "Only one audio track" else "No subtitles in this file", Toast.LENGTH_SHORT).show()
+            Notify.show(this, if (type == C.TRACK_TYPE_AUDIO) "Only one audio track" else "No subtitles in this file")
             return
         }
         try {
@@ -528,7 +528,7 @@ class PlayerActivity : AppCompatActivity() {
                 .build()
                 .show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Can't change tracks here", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "Can't change tracks here")
         }
     }
 
@@ -537,7 +537,7 @@ class PlayerActivity : AppCompatActivity() {
         val has = p.currentTracks.groups.any { it.type == C.TRACK_TYPE_TEXT }
         val options = if (has) arrayOf("Choose subtitle track", "Load subtitle file (.srt / .vtt)")
         else arrayOf("Load subtitle file (.srt / .vtt)")
-        AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Subtitles")
             .setItems(options) { _, which ->
                 if (has && which == 0) chooseTrack(C.TRACK_TYPE_TEXT, "Subtitles") else loadSubtitleFile()
@@ -550,7 +550,7 @@ class PlayerActivity : AppCompatActivity() {
             internalNav = true
             pickSubtitle.launch(arrayOf("application/x-subrip", "text/*", "application/octet-stream", "*/*"))
         } catch (e: Exception) {
-            Toast.makeText(this, "This phone has no file picker", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "This phone has no file picker")
         }
     }
 
@@ -575,7 +575,7 @@ class PlayerActivity : AppCompatActivity() {
             else -> "Repeat: off"
         }
         val items = arrayOf(repeatLabel, if (p.shuffleModeEnabled) "Shuffle: on" else "Shuffle: off", "Open with another app", "Share")
-        AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> {
@@ -848,7 +848,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun enterPip() {
         if (!pipSupported()) {
-            Toast.makeText(this, "Picture-in-picture is not available on this phone", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "Picture-in-picture is not available on this phone")
             return
         }
         try { enterPictureInPictureMode(pipParams()) } catch (e: Exception) { }

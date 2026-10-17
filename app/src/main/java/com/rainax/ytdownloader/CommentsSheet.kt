@@ -332,7 +332,7 @@ class CommentsSheet(
         } else {
             if (before == "DISLIKE") c.undislikeAction else c.dislikeAction
         } ?: run {
-            Toast.makeText(act, "YouTube doesn't allow rating this comment", Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(act, "YouTube doesn't allow rating this comment", android.widget.Toast.LENGTH_SHORT).show()
             return
         }
         val now = if (like) (if (before == "LIKE") "NONE" else "LIKE") else (if (before == "DISLIKE") "NONE" else "DISLIKE")
@@ -345,7 +345,7 @@ class CommentsSheet(
                 c.likeState = before
                 c.likeCount = beforeCount
                 rows.indexOf(c).takeIf { it >= 0 }?.let { adapter.notifyItemChanged(it) }
-                Toast.makeText(act, "Couldn't save that. Try again", Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(act, "Couldn't save that. Try again", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -368,7 +368,7 @@ class CommentsSheet(
         val target = replyTo
         val params = target?.replyParams
         if (target != null && params == null) {
-            Toast.makeText(act, "Replies can't be sent to this comment", Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(act, "Replies can't be sent to this comment", android.widget.Toast.LENGTH_SHORT).show()
             return
         }
         sb.commentSend.isEnabled = false
@@ -378,7 +378,7 @@ class CommentsSheet(
             }
             sb.commentSend.isEnabled = true
             if (error != null) {
-                Toast.makeText(act, error.message ?: "Couldn't post", Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(act, error.message ?: "Couldn't post", android.widget.Toast.LENGTH_SHORT).show()
                 return@launch
             }
             sb.commentInput.setText("")
@@ -398,7 +398,7 @@ class CommentsSheet(
                     adapter.notifyItemInserted(at + 1)
                 }
                 setReplyTo(null)
-                Toast.makeText(act, "Reply posted", Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(act, "Reply posted", android.widget.Toast.LENGTH_SHORT).show()
             } else {
                 MyComments.add(act, id, text)
                 rows.add(0, YtComments.Item(
@@ -408,7 +408,7 @@ class CommentsSheet(
                 adapter.notifyItemInserted(0)
                 sb.commentEmpty.isVisible = false
                 sb.commentList.scrollToPosition(0)
-                Toast.makeText(act, "Comment posted", Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(act, "Comment posted", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -146,7 +146,7 @@ class HomeScreen(
             .setPositiveButton("Clear") { _, _ ->
                 AppPrefs.clearSearchHistory(act)
                 suggest(hm.searchInput.text.toString())
-                android.widget.Toast.makeText(act, "Search history cleared", android.widget.Toast.LENGTH_SHORT).show()
+                Notify.show(act, "Search history cleared")
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -466,7 +466,7 @@ class HomeScreen(
     /** The bell: new videos from your channels (YouTube's notifications are about those). */
     fun openNotifications() {
         if (!YtAccount.isSignedIn(act)) {
-            android.widget.Toast.makeText(act, "Sign in to YouTube to see new videos from your channels", android.widget.Toast.LENGTH_LONG).show()
+            Notify.show(act, "Sign in to YouTube to see new videos from your channels", long = true)
             onAccount()
             return
         }
@@ -553,7 +553,7 @@ class HomeScreen(
             if (!ok) {
                 channelSubscribed = now
                 Ui.subscribeButton(channelHeader.chSubscribe, now)
-                android.widget.Toast.makeText(act, "Couldn't change the subscription. Try again", android.widget.Toast.LENGTH_SHORT).show()
+                Notify.show(act, "Couldn't change the subscription. Try again")
             }
             vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
         }
@@ -853,18 +853,12 @@ class HomeScreen(
         hm.feedError.isVisible = true
     }
 
-    /** Five grey rows that gently pulse. */
+    /** Five grey rows with a band of light sweeping across them (the row root is an RxShimmer). */
     private class SkeletonAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         override fun getItemCount() = 5
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
             object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_skeleton, parent, false)) {}
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            holder.itemView.startAnimation(android.view.animation.AlphaAnimation(1f, 0.45f).apply {
-                duration = 750
-                repeatMode = android.view.animation.Animation.REVERSE
-                repeatCount = android.view.animation.Animation.INFINITE
-            })
-        }
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = Unit
     }
 
     private companion object {

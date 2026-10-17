@@ -248,7 +248,7 @@ class LibraryScreen(
         try {
             PlayerActivity.open(act, files.map { it.fileUri!! }, files.map { it.title }, index, shuffle)
         } catch (e: Exception) {
-            Toast.makeText(act, "Can't play these files", Toast.LENGTH_SHORT).show()
+            Notify.show(act, "Can't play these files")
         }
     }
 
@@ -285,13 +285,13 @@ class LibraryScreen(
                     askName("New playlist", "") { name ->
                         val p = LocalPlaylists.create(act, name)
                         LocalPlaylists.add(act, p, t.id)
-                        Toast.makeText(act, "Added to ${p.name}", Toast.LENGTH_SHORT).show()
+                        Notify.show(act, "Added to ${p.name}")
                         render()
                     }
                 } else {
                     val p = lists[which - 1]
                     val added = LocalPlaylists.add(act, p, t.id)
-                    Toast.makeText(act, if (added) "Added to ${p.name}" else "Already in ${p.name}", Toast.LENGTH_SHORT).show()
+                    Notify.show(act, if (added) "Added to ${p.name}" else "Already in ${p.name}")
                     render()
                 }
             }

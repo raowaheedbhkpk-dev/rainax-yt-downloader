@@ -119,7 +119,7 @@ class StatusSaver(
         act.lifecycleScope.launch {
             val doc = withContext(Dispatchers.IO) { findStatuses(tree) }
             if (doc == null) {
-                Toast.makeText(act, "That isn't the status folder. Tap Allow access, then tap “Use this folder” without changing folders.", Toast.LENGTH_LONG).show()
+                Notify.show(act, "That isn't the status folder. Tap Allow access, then tap “Use this folder” without changing folders.", long = true)
                 return@launch
             }
             runCatching { act.contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -321,7 +321,7 @@ class StatusSaver(
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { copy(item) }.isSuccess }
             if (ok) { AppPrefs.addSavedStatus(act, item.name); savedNames = savedNames + item.name }
-            if (!quiet) Toast.makeText(act, if (ok) "Saved to Rainax Tube/Status" else "Couldn't save this status", Toast.LENGTH_SHORT).show()
+            if (!quiet) Notify.show(act, if (ok) "Saved to Rainax Tube/Status" else "Couldn't save this status")
             adapter.notifyDataSetChanged()
             show(items, if (items.isEmpty()) so.statusEmpty.text.toString() else null)
             done()
@@ -341,7 +341,7 @@ class StatusSaver(
             so.statusSaveAll.isEnabled = true
             adapter.notifyDataSetChanged()
             show(items, null)
-            Toast.makeText(act, "Saved $ok of ${todo.size} to Rainax Tube/Status", Toast.LENGTH_SHORT).show()
+            Notify.show(act, "Saved $ok of ${todo.size} to Rainax Tube/Status")
         }
     }
 

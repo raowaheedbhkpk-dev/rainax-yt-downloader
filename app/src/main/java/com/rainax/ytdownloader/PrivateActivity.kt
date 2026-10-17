@@ -204,7 +204,7 @@ class PrivateActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     withContext(Dispatchers.Default) { PrivateVault.setLock(this@PrivateActivity, type, secret) }
                     setBusy(false)
-                    Toast.makeText(this@PrivateActivity, "Private folder is ready", Toast.LENGTH_SHORT).show()
+                    Notify.show(this@PrivateActivity, "Private folder is ready")
                     openVault()
                 }
             }
@@ -259,7 +259,7 @@ class PrivateActivity : AppCompatActivity() {
             .setMessage("For your privacy it can't be recovered. You can reset the Private folder, but everything in it is deleted for good.")
             .setPositiveButton("Delete all and reset") { _, _ ->
                 PrivateVault.reset(this)
-                Toast.makeText(this, "Private folder reset", Toast.LENGTH_SHORT).show()
+                Notify.show(this, "Private folder reset")
                 startCreate()
             }
             .setNegativeButton("Cancel", null)
@@ -327,7 +327,7 @@ class PrivateActivity : AppCompatActivity() {
                 1 -> play(adapter.items.indexOf(item).coerceAtLeast(0))
                 2 -> lifecycleScope.launch {
                     val ok = withContext(Dispatchers.IO) { runCatching { PrivateVault.moveOut(this@PrivateActivity, item) }.isSuccess }
-                    Toast.makeText(this@PrivateActivity, if (ok) "Moved back to Rainax Tube" else "Couldn't move it back", Toast.LENGTH_SHORT).show()
+                    Notify.show(this@PrivateActivity, if (ok) "Moved back to Rainax Tube" else "Couldn't move it back")
                     refresh()
                 }
                 3 -> MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)

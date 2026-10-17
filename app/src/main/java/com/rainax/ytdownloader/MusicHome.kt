@@ -121,11 +121,7 @@ class MusicHome(
             val rows: LinearLayout = v.findViewById(R.id.skRows)
             val inf = LayoutInflater.from(v.context)
             repeat(4) { rows.addView(inf.inflate(R.layout.item_music_skeleton_row, rows, false)) }
-            v.startAnimation(android.view.animation.AlphaAnimation(1f, 0.45f).apply {
-                duration = 750
-                repeatMode = android.view.animation.Animation.REVERSE
-                repeatCount = android.view.animation.Animation.INFINITE
-            })
+            // the root is an RxShimmer: a band of light sweeps across while it loads
         }
     }
 

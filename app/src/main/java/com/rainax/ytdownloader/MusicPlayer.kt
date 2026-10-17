@@ -1078,7 +1078,7 @@ class MusicPlayer(
 
     private fun currentUrl(): String? = player()?.currentMediaItem?.mediaId
 
-    private fun toast(text: String) = Toast.makeText(act, text, Toast.LENGTH_SHORT).show()
+    private fun toast(text: String) = Notify.show(act, text)
 
     companion object {
         /** Marks player entries that belong to the Music player. */

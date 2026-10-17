@@ -106,13 +106,13 @@ class ShortsActivity : AppCompatActivity() {
 
     private val signIn = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode == RESULT_OK) {
-            Toast.makeText(this, "Signed in to YouTube", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "Signed in to YouTube")
             holder(current)?.let { h -> items.getOrNull(current)?.let { h.loadState(it.url) } }
         }
     }
 
     private fun askSignIn() {
-        Toast.makeText(this, "Sign in to YouTube to like and comment", Toast.LENGTH_SHORT).show()
+        Notify.show(this, "Sign in to YouTube to like and comment")
         signIn.launch(Intent(this, SignInActivity::class.java))
     }
 
@@ -140,7 +140,7 @@ class ShortsActivity : AppCompatActivity() {
             val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.rate(id, now) }.isSuccess }
             if (!ok) {
                 move(now, before)
-                Toast.makeText(this@ShortsActivity, "Couldn't save that. Try again", Toast.LENGTH_SHORT).show()
+                Notify.show(this@ShortsActivity, "Couldn't save that. Try again")
             }
         }
     }
@@ -301,7 +301,7 @@ class ShortsActivity : AppCompatActivity() {
             if (fresh.isEmpty()) {
                 if (items.isEmpty()) {
                     val text = if (!Net.online(this@ShortsActivity)) NO_INTERNET else "Couldn't load Shorts. Try again in a moment"
-                    Toast.makeText(this@ShortsActivity, text, Toast.LENGTH_LONG).show()
+                    Notify.show(this@ShortsActivity, text, long = true)
                 }
                 return@launch
             }
@@ -325,37 +325,10 @@ class ShortsActivity : AppCompatActivity() {
         holder(current)?.b?.spPaused?.isVisible = userPaused
     }
 
-    /** Download: this Short's real formats with their sizes (looked up first, nothing made up). */
+    /** Download: the same download sheet as everywhere (Video / Audio tabs, quality cards, real sizes). */
     private fun chooseDownload(item: VideoItem) {
-        val wait = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
-            .setTitle("Download this Short")
-            .setMessage("Getting formats and sizes…")
-            .setNegativeButton("Cancel", null)
-            .show()
-        var looked = false
-        val job = lifecycleScope.launch {
-            val st = withContext(Dispatchers.IO) {
-                runCatching { FastExtractor.fetch(item.url) }.getOrElse { PreviewState(error = friendlyError(it.message ?: "Couldn't read this Short")) }
-            }
-            if (!wait.isShowing) return@launch
-            looked = true
-            wait.dismiss()
-            val choices = st.all.ifEmpty { st.quick }
-            if (st.error != null || choices.isEmpty()) {
-                Toast.makeText(this@ShortsActivity, st.error ?: "No formats found for this Short", Toast.LENGTH_LONG).show()
-                return@launch
-            }
-            val labels = choices.map { c -> if (c.size.isNotBlank()) "${c.title}   •   ${c.size}" else c.title }
-            MaterialAlertDialogBuilder(this@ShortsActivity, R.style.ThemeOverlay_Rainax_Dialog)
-                .setTitle("Download this Short")
-                .setItems(labels.toTypedArray()) { _, which ->
-                    val title = st.title?.takeIf { it.isNotBlank() } ?: details[item.url]?.title ?: item.title
-                    Downloader.enqueueAsync(applicationContext, listOf(EnqueueItem(item.url, title, null, item.thumb)), choices[which].spec, null, null)
-                    Toast.makeText(this@ShortsActivity, "Added to downloads", Toast.LENGTH_SHORT).show()
-                }
-                .show()
-        }
-        wait.setOnDismissListener { if (!looked) job.cancel() }      // Cancel tapped: stop looking
+        val title = details[item.url]?.title ?: item.title
+        QuickSheet.show(this, item.url, title, item.thumb) { Notify.show(this, "Added to downloads") }
     }
 
     private fun share(item: VideoItem) {

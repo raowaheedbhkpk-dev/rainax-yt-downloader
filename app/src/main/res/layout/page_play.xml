@@ -407,24 +407,42 @@
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
-        <ImageView
-            android:layout_width="88dp"
-            android:layout_height="88dp"
-            android:background="@drawable/bg_ring"
-            android:contentDescription="@null"
-            android:padding="24dp"
-            android:src="@drawable/ic_download"
-            android:tint="?attr/colorOnSurface" />
+        <!-- a soft red circle with the download arrow, a title, and one line of help -->
+        <FrameLayout
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:background="@drawable/bg_welcome_circle">
+
+            <ImageView
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_download"
+                app:tint="@color/rx_primary" />
+        </FrameLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:fontFamily="@font/rx_display"
             android:gravity="center"
-            android:paddingHorizontal="32dp"
-            android:text="No downloads yet. Open a video on YouTube and tap the red Download button."
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:text="No downloads yet"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="22sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/rx_body"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.2"
+            android:paddingHorizontal="40dp"
+            android:text="Tap Download under any video, or share a TikTok, Instagram or Facebook link to RAINAX."
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/emptySearchBtn"
@@ -433,7 +451,7 @@
             android:layout_height="48dp"
             android:layout_marginTop="24dp"
             android:minWidth="200dp"
-            android:text="Browse YouTube"
+            android:text="Explore videos"
             app:cornerRadius="24dp"
             app:icon="@drawable/ic_play"
             app:iconTint="@color/rx_on_primary" />

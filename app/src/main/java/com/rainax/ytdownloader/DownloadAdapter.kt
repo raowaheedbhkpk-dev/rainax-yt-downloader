@@ -29,6 +29,9 @@ class DownloadAdapter(
         val decoder: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(2)
     }
 
+    /** Last status seen per download, so the check mark pops only at the moment one finishes. */
+    private val lastStatus = HashMap<String, Status>()
+
     private var selecting = false
     private var selectedIds: Set<String> = emptySet()
 
@@ -67,6 +70,43 @@ class DownloadAdapter(
         else
             com.google.android.material.R.attr.colorOnSurfaceVariant
         b.status.setTextColor(MaterialColors.getColor(b.status, colorAttr))
+
+        // small coloured pill: what the download is doing right now (finished ones need none)
+        val pill: Pair<String, Int>? = when (t.status) {
+            Status.RUNNING -> "Downloading" to 0xFFE5203A.toInt()
+            Status.QUEUED -> "Queued" to 0xFF6E6E79.toInt()
+            Status.PAUSED -> "Paused" to 0xFFE08A00.toInt()
+            Status.WAITING -> "Waiting" to 0xFF3D7BE0.toInt()
+            Status.FAILED -> "Failed" to 0xFFD32F2F.toInt()
+            Status.DONE -> null
+        }
+        b.statusPill.isVisible = pill != null
+        if (pill != null) {
+            val d = b.root.resources.displayMetrics.density
+            b.statusPill.text = pill.first
+            b.statusPill.setTextColor(pill.second)
+            b.statusPill.background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 10 * d
+                setColor((pill.second and 0x00FFFFFF) or 0x24000000)
+            }
+        }
+
+        // the moment a download finishes: a red check pops over the picture, then fades away
+        val before = lastStatus.put(t.id, t.status)
+        b.doneCheck.animate().cancel()
+        if (t.status == Status.DONE && before != null && before != Status.DONE) {
+            val v = b.doneCheck
+            v.isVisible = true
+            v.alpha = 0f; v.scaleX = 0.4f; v.scaleY = 0.4f
+            v.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(320)
+                .setInterpolator(android.view.animation.OvershootInterpolator(2.2f))
+                .withEndAction {
+                    v.animate().alpha(0f).setStartDelay(1300).setDuration(400)
+                        .withEndAction { v.isVisible = false; v.alpha = 1f }.start()
+                }.start()
+        } else {
+            b.doneCheck.isVisible = false
+        }
 
         bindThumb(b.thumb, t)
 

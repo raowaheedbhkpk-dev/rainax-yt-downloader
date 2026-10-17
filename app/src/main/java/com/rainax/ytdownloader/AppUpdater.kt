@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
@@ -32,7 +32,7 @@ object AppUpdater {
     private var pendingApk: File? = null
     private var job: Job? = null
     private var required: Release? = null          // newer version found: must be installed
-    private var dialog: AlertDialog? = null
+    private var dialog: android.app.Dialog? = null
     private var installAsked = false               // the installer was opened once this time
     private var readyApk: File? = null              // downloaded and complete: no need to download again
     private val dialogShowing get() = dialog?.isShowing == true
@@ -51,7 +51,7 @@ object AppUpdater {
             val current = currentVersion(activity)
             when {
                 rel == null -> if (manual) {
-                    AlertDialog.Builder(activity)
+                    MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
                         .setTitle("Couldn't check for updates")
                         .setMessage("Check your internet connection. Updates are read from the app's GitHub Releases page, which must be public.")
                         .setPositiveButton("OK", null)
@@ -146,19 +146,47 @@ object AppUpdater {
     /** Required update: no "Later". The only ways out are Update or closing the app. */
     private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
         if (dialogShowing || activity.isFinishing || downloading(rel)) return
-        val notes = friendlyNotes(rel.notes)
-        val size = if (rel.size > 0) "\n\nDownload size: ${formatSize(rel.size)}" else ""
-        dialog = AlertDialog.Builder(activity)
-            .setTitle("Update required: v${rel.version}")
-            .setMessage("A new version of RAINAX Tube is available. Please update to keep using the app. It downloads in the Downloads tab, and you can keep using the app meanwhile.\n\nYou have v$current.\n\nWhat's new:\n$notes$size")
-            .setCancelable(false)
-            .setPositiveButton("Update now") { _, _ ->
-                val ready = readyApk?.takeIf { it.exists() && it.name.contains(rel.version) }
-                if (ready != null) install(activity, ready) else download(activity, rel)
-                installAsked = false
+        val sb = com.rainax.ytdownloader.databinding.SheetUpdateBinding.inflate(activity.layoutInflater)
+        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(activity)
+        sheet.setContentView(sb.root)
+        sheet.setCancelable(false)                      // required: no swipe-away, no back
+        sheet.behavior.isDraggable = false
+        sheet.behavior.skipCollapsed = true
+        sheet.setOnShowListener {
+            sheet.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            sheet.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
+                ?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            Motion.popIn(sb.updLogo)
+        }
+        sb.updVersion.text = "v$current  →  v${rel.version}"
+        val d = activity.resources.displayMetrics.density
+        friendlyNotes(rel.notes).lines().filter { it.isNotBlank() }.forEachIndexed { i, line ->
+            val row = android.widget.TextView(activity).apply {
+                text = line.removePrefix("•").trim()
+                textSize = 14f
+                setTextColor(androidx.core.content.ContextCompat.getColor(activity, R.color.dl_text))
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(activity, R.font.rx_body)
+                setLineSpacing(0f, 1.15f)
+                setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_dl_check_small, 0, 0, 0)
+                compoundDrawablePadding = (10 * d).toInt()
+                if (i > 0) setPadding(0, (10 * d).toInt(), 0, 0)
             }
-            .setNegativeButton("Close app") { _, _ -> activity.finishAffinity() }
-            .show()
+            sb.updNotes.addView(row)
+        }
+        sb.updInfo.text = buildString {
+            append("Required to keep using the app")
+            if (rel.size > 0) append("  •  ${formatSize(rel.size)}")
+            append("\nIt downloads in the background — keep watching meanwhile.")
+        }
+        sb.updNow.setOnClickListener {
+            sheet.dismiss()
+            val ready = readyApk?.takeIf { it.exists() && it.name.contains(rel.version) }
+            if (ready != null) install(activity, ready) else download(activity, rel)
+            installAsked = false
+        }
+        sb.updClose.setOnClickListener { activity.finishAffinity() }
+        dialog = sheet
+        sheet.show()
         // Screen rebuilt (theme change, rotation): close this dialog cleanly; the new screen asks again
         val shown = dialog
         activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
@@ -272,7 +300,7 @@ object AppUpdater {
                 required = null
                 file.delete()
                 updateTask(version)?.let { TaskRepository.remove(it.id) }
-                AlertDialog.Builder(activity)
+                MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
                     .setTitle("New version needs a fresh install")
                     .setMessage(
                         "This update is signed with a new key, so it can't install over this version. " +
@@ -325,7 +353,7 @@ object AppUpdater {
     private fun install(activity: AppCompatActivity, file: File) {
         if (!activity.packageManager.canRequestPackageInstalls()) {
             pendingApk = file
-            AlertDialog.Builder(activity)
+            MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
                 .setTitle("Allow app updates")
                 .setMessage("To install the update, allow RAINAX to install apps. Turn on \"Allow from this source\", then come back.")
                 .setPositiveButton("Open settings") { _, _ ->
@@ -355,5 +383,5 @@ object AppUpdater {
     }
 
     private fun toast(activity: AppCompatActivity, msg: String) =
-        Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
+        Notify.show(activity, msg)
 }

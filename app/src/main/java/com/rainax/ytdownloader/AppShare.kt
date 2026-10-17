@@ -30,7 +30,7 @@ object AppShare {
         if (runCatching { c.startActivity(inApp) }.isSuccess) return
         runCatching {
             c.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }.onFailure { android.widget.Toast.makeText(c, "Open $APKPURE_REVIEWS_URL in your browser", android.widget.Toast.LENGTH_LONG).show() }
+        }.onFailure { Notify.show(c, "Open $APKPURE_REVIEWS_URL in your browser", long = true) }
     }
 
     /** The phone's share menu with a short message and the download link. */

@@ -14,8 +14,31 @@
         <item name="android:activityCloseExitAnimation">@anim/rx_close_exit</item>
     </style>
 
+    <!-- message bars: rounded, near-black, with a soft red action -->
+    <style name="Widget.Rainax.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="backgroundTint">#F01E1E24</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Snackbar</item>
+        <item name="android:layout_margin">12dp</item>
+        <item name="elevation">6dp</item>
+    </style>
+    <style name="ShapeAppearance.Rainax.Snackbar" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+    <style name="Widget.Rainax.SnackbarButton" parent="Widget.Material3.Button.TextButton.Snackbar">
+        <item name="android:textColor">#FF6B81</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Widget.Rainax.SnackbarText" parent="Widget.Material3.Snackbar.TextView">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+    </style>
+
     <style name="Theme.Rainax" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowAnimationStyle">@style/Animation.Rainax.Activity</item>
+        <item name="snackbarStyle">@style/Widget.Rainax.Snackbar</item>
+        <item name="snackbarButtonStyle">@style/Widget.Rainax.SnackbarButton</item>
+        <item name="snackbarTextViewStyle">@style/Widget.Rainax.SnackbarText</item>
         <!-- Surface colours as theme attributes, so the AMOLED theme can turn them pure black -->
         <item name="rxBg">@color/rx_bg</item>
         <item name="rxSurface">@color/rx_surface</item>

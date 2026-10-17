@@ -1051,7 +1051,7 @@ class VideoScreen(
     }
 
     private fun AppCompatActivity.toast(text: String) =
-        android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_SHORT).show()
+        Notify.show(this, text)
 
     companion object {
         /** Marks queue entries that carry the picture (the "Up next" ones are sound only until opened). */

@@ -573,6 +573,7 @@ class MainActivity : AppCompatActivity() {
         if (index == 1) refreshYou()
         if (index == 4) subs.onShown()
         if (index == 3 && ::statusSaver.isInitialized) statusSaver.refresh()
+        if (index == 3) refreshClipStrip()
     }
 
     /** Where each page's tab sits in the bottom bar (Settings counts as after You), for the slide direction. */
@@ -940,6 +941,7 @@ class MainActivity : AppCompatActivity() {
             override fun afterTextChanged(s: android.text.Editable?) {
                 so.socialClear.isVisible = !s.isNullOrEmpty()
                 showDetectedApp(s?.toString().orEmpty())
+                if (so.socialClipStrip.isVisible) refreshClipStrip()      // pasted the copied link: the strip goes
             }
         })
         val go = {
@@ -958,6 +960,41 @@ class MainActivity : AppCompatActivity() {
                 event?.action == android.view.KeyEvent.ACTION_UP
             ) go()
             true
+        }
+    }
+
+    /** The link the copied-link strip was used for (it hides for that link afterwards). */
+    private var clipStripDone: String? = null
+
+    /** Social page: a video link is on the clipboard → a strip "TikTok link copied · Download". */
+    private fun refreshClipStrip() {
+        if (isFinishing || isDestroyed) return
+        val url = clipText()?.let { extractUrls(it).firstOrNull() }
+        val typed = extractUrls(so.socialInput.text.toString()).firstOrNull()
+        val show = url != null && url != clipStripDone && url != typed
+        if (!show) { so.socialClipStrip.isVisible = false; return }
+        val app = SocialApps.of(url!!)
+        if (app != null) {
+            so.socialClipBadge.background = SocialApps.badge(app, this)
+            so.socialClipBadge.text = app.short
+        } else {
+            so.socialClipBadge.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(0x33FFFFFF)
+            }
+            so.socialClipBadge.text = "\u2193"
+        }
+        so.socialClipText.text = "${app?.name ?: "Video"} link copied"
+        so.socialClipGo.setOnClickListener {
+            clipStripDone = url
+            AppPrefs.setClipSeen(this, url)
+            so.socialClipStrip.animate().alpha(0f).setDuration(180).withEndAction {
+                so.socialClipStrip.isVisible = false; so.socialClipStrip.alpha = 1f
+            }.start()
+            showDownloadSheet(listOf(url))
+        }
+        if (!so.socialClipStrip.isVisible) {
+            so.socialClipStrip.isVisible = true
+            Motion.popIn(so.socialClipStrip)
         }
     }
 
@@ -998,6 +1035,7 @@ class MainActivity : AppCompatActivity() {
         super.onWindowFocusChanged(hasFocus)
         // Android lets apps read what was copied only while they are on screen with focus
         if (hasFocus && !blocked) b.root.postDelayed({ checkClipboard() }, 400)
+        if (hasFocus && tab == 3) b.root.postDelayed({ refreshClipStrip() }, 250)
     }
 
     /** A video link was copied in another app: offer to download it (once per link). */
@@ -1697,7 +1735,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun confirm(title: String, text: String, onYes: () -> Unit) {
-        AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle(title)
             .setMessage(text)
             .setPositiveButton("Yes") { _, _ -> onYes() }
@@ -1849,7 +1887,7 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Can't open this file", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "Can't open this file")
         }
     }
 
@@ -1862,7 +1900,7 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(Intent.createChooser(send, "Share"))
         } catch (e: Exception) {
-            Toast.makeText(this, "Can't share this file", Toast.LENGTH_SHORT).show()
+            Notify.show(this, "Can't share this file")
         }
     }
 
@@ -1910,6 +1948,16 @@ class MainActivity : AppCompatActivity() {
         st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
         st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
         st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
+        // the whole row is tappable (ripple + a slight press), not only the small switch
+        listOf(st.wifiSwitch, st.autoClearSwitch, st.bgPlaySwitch, st.sponsorSwitch, st.resumeSwitch, st.clipSwitch, st.autoRetrySwitch)
+            .forEach { sw ->
+                val row = sw.parent as? View ?: return@forEach
+                val tv = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+                row.setBackgroundResource(tv.resourceId)
+                row.stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(this, R.animator.rx_press)
+                row.setOnClickListener { sw.toggle() }
+            }
         st.batteryBtn.setOnClickListener { openBatterySettings() }
         st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
         st.allFilesBtn.setOnClickListener { openAllFilesSettings(thenInstallAsk = false) }
@@ -1920,7 +1968,7 @@ class MainActivity : AppCompatActivity() {
                 .setMessage("Your recent searches will be removed from this phone.")
                 .setPositiveButton("Clear") { _, _ ->
                     AppPrefs.clearSearchHistory(this)
-                    Toast.makeText(this, "Search history cleared", Toast.LENGTH_SHORT).show()
+                    Notify.show(this, "Search history cleared")
                 }
                 .setNegativeButton("Cancel", null)
                 .show()

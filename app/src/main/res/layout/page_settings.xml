@@ -46,10 +46,15 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="Theme"
+                        android:drawableStart="@drawable/ic_set_palette"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
                 <TextView
+                        android:paddingStart="38dp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -134,10 +139,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Wi-Fi only"
+                        android:drawableStart="@drawable/ic_set_wifi"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -161,10 +171,15 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="Simultaneous downloads"
+                        android:drawableStart="@drawable/ic_set_layers"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
                 <TextView
+                        android:paddingStart="38dp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -229,10 +244,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Auto-clear finished list"
+                        android:drawableStart="@drawable/ic_delete"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -281,10 +301,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Autoplay in feed"
+                        android:drawableStart="@drawable/ic_play_box"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
                 <TextView
+                        android:paddingStart="38dp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -346,10 +371,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Background play"
+                        android:drawableStart="@drawable/ic_headphones"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -383,10 +413,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Skip sponsors (SponsorBlock)"
+                        android:drawableStart="@drawable/ic_set_skip"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -420,10 +455,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Continue where you left off"
+                        android:drawableStart="@drawable/ic_history"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -457,10 +497,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Detect copied links"
+                        android:drawableStart="@drawable/ic_link"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -503,6 +548,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
                     android:text="Saved in"
+                        android:drawableStart="@drawable/ic_set_folder"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
@@ -552,6 +601,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/privateFolderBtn"
+                app:icon="@drawable/ic_lock"
                 style="@style/Widget.Rainax.Button.Tonal"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -561,6 +611,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/clearSearchBtn"
+                app:icon="@drawable/ic_history"
                 style="@style/Widget.Rainax.Button.Tonal"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -608,10 +659,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Auto-retry failed downloads"
+                        android:drawableStart="@drawable/ic_refresh"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
                         android:textColor="@color/rx_text"
                         android:textSize="16sp" />
 
                     <TextView
+                        android:paddingStart="38dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -631,6 +687,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/batteryBtn"
+                app:icon="@drawable/ic_set_battery"
             style="@style/Widget.Rainax.Button.Text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -668,6 +725,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/checkAppUpdateBtn"
+                app:icon="@drawable/ic_refresh"
             style="@style/Widget.Rainax.Button.Tonal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
