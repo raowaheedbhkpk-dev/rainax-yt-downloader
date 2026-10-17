@@ -201,6 +201,14 @@ class HomeScreen(
 
         hm.searchOpen.setOnClickListener { startTyping() }
         hm.searchOpen.setOnLongClickListener { onVoice(); true }          // hold Search: speak straight away
+        // the Home search pill: tap to search, its mic to speak; shown whenever the brand bar is
+        hm.homeSearchPill.setOnClickListener { startTyping() }
+        hm.homeSearchPill.setOnLongClickListener { onVoice(); true }
+        hm.homeSearchMic.setOnClickListener { onVoice() }
+        hm.brandBar.viewTreeObserver.addOnGlobalLayoutListener {
+            val show = hm.brandBar.isVisible
+            if (hm.homeSearchPill.isVisible != show) hm.homeSearchPill.isVisible = show
+        }
         hm.homeMenu.setOnClickListener { onMenu() }
         hm.homeBell.setOnClickListener { openNotifications() }
         hm.searchMic.setOnClickListener { onVoice() }
@@ -362,7 +370,9 @@ class HomeScreen(
     }
 
     private fun startTyping() {
+        val opening = !hm.searchBar.isVisible
         showSearchBox(true)
+        if (opening) Motion.focusIn(hm.searchBox)          // the glowing box eases in
         hm.suggestList.isVisible = true
         suggest(hm.searchInput.text.toString())
         if (!hm.searchInput.hasFocus()) hm.searchInput.requestFocus()

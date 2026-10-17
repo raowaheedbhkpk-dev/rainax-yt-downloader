@@ -9,7 +9,7 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp">
+        android:layout_height="60dp">
 
         <!-- Brand bar -->
         <LinearLayout
@@ -81,8 +81,10 @@
                 android:src="@drawable/ic_bell"
                 app:tint="@color/rx_text" />
 
+            <!-- (the search pill below the bar replaces this button; kept for hold-to-speak and old code) -->
             <ImageButton
                 android:id="@+id/searchOpen"
+                android:visibility="gone"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -179,16 +181,26 @@
                 android:src="@drawable/ic_back"
                 app:tint="@color/rx_text" />
 
+            <!-- the box while typing: red border, soft red glow, red search icon, round clear, red mic -->
             <LinearLayout
+                android:id="@+id/searchBox"
                 android:layout_width="0dp"
-                android:layout_height="42dp"
-                android:layout_marginEnd="12dp"
+                android:layout_height="54dp"
+                android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:background="@drawable/bg_search"
+                android:background="@drawable/bg_search_focus"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="4dp">
+                android:paddingStart="18dp"
+                android:paddingEnd="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="10dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_search"
+                    app:tint="@color/rx_primary" />
 
                 <EditText
                     android:id="@+id/searchInput"
@@ -196,21 +208,25 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="@null"
-                    android:hint="Search or paste a link"
+                    android:fontFamily="@font/rx_body"
+                    android:hint="Search YouTube or paste a link"
                     android:imeOptions="actionSearch"
                     android:importantForAutofill="no"
                     android:inputType="text"
                     android:maxLines="1"
                     android:textColor="@color/rx_text"
                     android:textColorHint="@color/rx_text2"
-                    android:textSize="16sp" />
+                    android:textSize="15sp" />
 
                 <ImageButton
                     android:id="@+id/searchClear"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_clear_circle"
                     android:contentDescription="Clear"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
                     android:src="@drawable/ic_close"
                     android:visibility="gone"
                     app:tint="@color/rx_text2" />
@@ -218,17 +234,68 @@
                 <!-- voice search -->
                 <ImageButton
                     android:id="@+id/searchMic"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_mic_red"
                     android:contentDescription="Search with your voice"
-                    android:padding="7dp"
+                    android:elevation="3dp"
+                    android:padding="9dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_mic"
-                    app:tint="@color/rx_text" />
+                    app:tint="#FFFFFF" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
+
+    <!-- Home search pill (at rest): tap to search, mic to speak -->
+    <LinearLayout
+        android:id="@+id/homeSearchPill"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginHorizontal="14dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_search_rest"
+        android:clickable="true"
+        android:contentDescription="Search"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="5dp"
+        android:stateListAnimator="@animator/rx_press">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_search"
+            app:tint="@color/rx_text2" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="@font/rx_body"
+            android:importantForAccessibility="no"
+            android:maxLines="1"
+            android:text="Search YouTube or paste a link"
+            android:textColor="@color/rx_text2"
+            android:textSize="15sp" />
+
+        <ImageButton
+            android:id="@+id/homeSearchMic"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_mic_soft"
+            android:contentDescription="Search with your voice"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_mic"
+            app:tint="@color/rx_primary" />
+    </LinearLayout>
 
     <!-- filter chips: their own row with space above and below, so the list never touches them -->
     <HorizontalScrollView

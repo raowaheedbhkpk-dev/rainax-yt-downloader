@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the Home search pill at rest: soft grey, fully rounded, with a touch ripple -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#1A000000">
+    <item>
+        <shape>
+            <solid android:color="?attr/rxSurfaceAlt" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+</ripple>

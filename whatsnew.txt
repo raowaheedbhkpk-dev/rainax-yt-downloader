@@ -1,3 +1,4 @@
+New search: a rounded search pill on Home with a voice button, and a glowing red search box while you type
 Feed videos get their sizes much faster: one request per video instead of two, looked up sooner and 3 at a time
 New bottom bar: a floating rounded bar with a raised + button, and a dot that jumps to the tab you choose
 Smooth animations: tabs slide in, the video page rises up, screens slide open and closed, lists and cards fade up, cards respond to your touch
