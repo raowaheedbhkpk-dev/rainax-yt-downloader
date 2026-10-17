@@ -6,6 +6,7 @@
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
     android:orientation="horizontal"
+    android:stateListAnimator="@animator/rx_press"
     android:paddingHorizontal="12dp"
     android:paddingVertical="7dp">
 

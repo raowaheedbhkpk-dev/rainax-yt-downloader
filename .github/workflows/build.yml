@@ -1,11 +1,17 @@
 name: Build RAINAX APK
 
+# Every push to main builds the APK: download it from the run's "Artifacts" (no GitHub release is made).
+# A release is only published when you start this workflow by hand (Actions > Run workflow) with "release" ticked.
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Also publish a GitHub release (needs the version tag, e.g. v9.3, to exist)"
+        type: boolean
+        default: false
 
 # Read-only by default; only the build job (it publishes the release) gets write access.
 permissions:
@@ -61,20 +67,28 @@ jobs:
 
       - name: Name the APK
         run: |
-          NAME="RAINAX-YT-DOWNLOADER-${{ github.ref_name }}"
+          # named after the app version (e.g. RAINAX-YT-DOWNLOADER-v9.3.apk), also for builds without a tag
+          VER=$(grep -oP 'isTag \? tagVersion : "\K[^"]+' app/build.gradle)
+          NAME="RAINAX-YT-DOWNLOADER-v$VER"
+          case "${{ github.ref }}" in refs/tags/v*) NAME="RAINAX-YT-DOWNLOADER-${{ github.ref_name }}";; esac
           NAME="${NAME//\//-}"
           cp app/build/outputs/apk/release/app-release.apk "$NAME.apk"
           sha256sum "$NAME.apk" > "$NAME.apk.sha256"
           # same file with a fixed name: .../releases/latest/download/RAINAX.apk always gives the newest version
           cp "$NAME.apk" RAINAX.apk
 
+      - name: Version for the download name
+        run: |
+          echo "RX_VERSION=$(grep -oP 'isTag \? tagVersion : "\K[^"]+' app/build.gradle)" >> "$GITHUB_ENV"
+
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: RAINAX-YT-DOWNLOADER
+          name: RAINAX-Tube-v${{ env.RX_VERSION }}-APK
           path: RAINAX-YT-DOWNLOADER-*
+          retention-days: 30
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'workflow_dispatch' && inputs.release && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
@@ -88,7 +102,7 @@ jobs:
       # The app checks that repository for updates, so this repository can stay private.
       # Needs the secret RELEASES_TOKEN: a token that can write to raowaheedbhkpk-dev/rainax-tube-releases.
       - name: Publish to the public releases repository
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'workflow_dispatch' && inputs.release && startsWith(github.ref, 'refs/tags/v')
         env:
           HAS_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
         run: |
@@ -98,7 +112,7 @@ jobs:
           fi
 
       - name: Upload the release there
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'workflow_dispatch' && inputs.release && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           repository: raowaheedbhkpk-dev/rainax-tube-releases

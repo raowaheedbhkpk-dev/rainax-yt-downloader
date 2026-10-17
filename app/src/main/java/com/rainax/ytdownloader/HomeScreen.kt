@@ -168,6 +168,7 @@ class HomeScreen(
         hm.root.isFocusableInTouchMode = true
         applyColumns()
         hm.feedList.adapter = bigAdapter
+        hm.feedList.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(act, R.anim.rx_list_rise)
         hm.feedList.setHasFixedSize(true)
         hm.feedList.setItemViewCacheSize(8)
         hm.feedList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -761,6 +762,8 @@ class HomeScreen(
                     }
                 }
                 header?.let { if (channelUrl == chUrl) fillChannel(it) }
+                // a fresh list: its first videos rise in one after another
+                if (reset && res.items.isNotEmpty()) hm.feedList.scheduleLayoutAnimation()
                 val added = if (reset) { a.submit(res.items); res.items.size } else a.append(res.items)
                 next = if (added == 0 && !reset) null else res.next      // a page with nothing new: stop (mixes repeat)
                 a.loadingMore = next != null

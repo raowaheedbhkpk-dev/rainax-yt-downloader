@@ -45,6 +45,16 @@ class WelcomeActivity : AppCompatActivity() {
         setContentView(b.root)
 
         b.welcomePager.adapter = PagesAdapter()
+        // swiping: the page going away shrinks and fades a little, the picture moves slower than the text
+        b.welcomePager.setPageTransformer { page, pos ->
+            val p = pos.coerceIn(-1f, 1f)
+            val a = kotlin.math.abs(p)
+            page.alpha = 1f - a * 0.6f
+            val scale = 1f - a * 0.08f
+            page.scaleX = scale
+            page.scaleY = scale
+            page.findViewById<View>(R.id.pageIcon)?.let { (it.parent as View).translationX = -p * page.width * 0.25f }
+        }
         val d = resources.displayMetrics.density
         val dots = pages.indices.map {
             View(this).also { v ->

@@ -24,12 +24,12 @@ Requires Android 10 (API 29) or newer.
 - **No ads**
 
 ## Build
-Every push to `main` builds the APK (**Actions > Build RAINAX APK > Artifacts**).
-Pushing a tag publishes a **GitHub Release** with the APK and its SHA-256 checksum. `whatsnew.txt` becomes the update notes shown in the app.
+Every push to `main` builds the APK: open **Actions > Build RAINAX APK >** the newest run **> Artifacts** and download
+`RAINAX-Tube-v<version>-APK` (a zip with the APK inside). No GitHub release is made, and tags no longer publish one.
+The version comes from `rxVersionName` in `app/build.gradle`.
 
-```
-git tag v9.2 && git push origin v9.2
-```
+To publish a release anyway (not needed normally): push the version tag, then **Actions > Build RAINAX APK > Run workflow**,
+pick that tag and tick **release**.
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.
 

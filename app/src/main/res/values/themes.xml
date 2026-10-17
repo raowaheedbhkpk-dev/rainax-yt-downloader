@@ -6,7 +6,16 @@
          One theme for light and dark. Colours come from values/colors.xml and values-night/colors.xml,
          so every screen follows the same palette. forceDarkAllowed=false stops phone makers
          (Xiaomi/MIUI, Oppo, ...) from re-colouring the app on their own. -->
+    <!-- how screens open and close (slide + fade), the same everywhere in the app -->
+    <style name="Animation.Rainax.Activity" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/rx_open_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/rx_open_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/rx_close_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/rx_close_exit</item>
+    </style>
+
     <style name="Theme.Rainax" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowAnimationStyle">@style/Animation.Rainax.Activity</item>
         <!-- Surface colours as theme attributes, so the AMOLED theme can turn them pure black -->
         <item name="rxBg">@color/rx_bg</item>
         <item name="rxSurface">@color/rx_surface</item>

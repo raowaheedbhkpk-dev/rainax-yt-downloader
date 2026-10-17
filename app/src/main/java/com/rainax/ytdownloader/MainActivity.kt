@@ -216,6 +216,7 @@ class MainActivity : AppCompatActivity() {
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
+            b.bottomNav.findViewById<View>(it.itemId)?.let { item -> Motion.bounce(item) }      // a little bounce on the tapped tab
             when (it.itemId) {
                 R.id.nav_home -> { showTab(0); true }
                 R.id.nav_shorts -> {
@@ -550,18 +551,29 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTab(index: Int) {
         if (index != 1 && selecting) exitSelection()
+        val old = tab
         tab = index
-        hm.root.isVisible = index == 0
-        pl.root.isVisible = index == 1
-        st.root.isVisible = index == 2
-        so.root.isVisible = index == 3
-        sb.root.isVisible = index == 4
+        val pages = listOf(hm.root, pl.root, st.root, so.root, sb.root)
+        pages.forEachIndexed { i, page ->
+            page.animate().cancel()
+            page.alpha = 1f
+            page.translationX = 0f
+            page.isVisible = i == index
+        }
+        // the new page slides in from the side of the tab that was tapped, and fades in
+        if (old != index) pages.getOrNull(index)?.let { Motion.slideIn(it, fromRight = tabOrder(index) > tabOrder(old)) }
         updateChrome()
         if (index == 0) home.onShown()
         if (index == 1) refreshYou()
         if (index == 4) subs.onShown()
         if (index == 3 && ::statusSaver.isInitialized) statusSaver.refresh()
     }
+
+    /** Where each page's tab sits in the bottom bar (Settings counts as after You), for the slide direction. */
+    private fun tabOrder(index: Int) = when (index) { 0 -> 0; 3 -> 2; 4 -> 3; 1 -> 4; else -> 5 }
+
+    /** The tab the chrome was last laid out for (the video page only animates when it opens on the same tab). */
+    private var chromeTab = 0
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
     private fun updateChrome() {
@@ -570,6 +582,9 @@ class MainActivity : AppCompatActivity() {
         if (video.isOpen && !video.minimized && music.expanded) music.collapse()
         val wasShown = vp.root.isVisible
         vp.root.isVisible = video.isOpen && !video.minimized && tab == 0
+        // a video opened (or expanded from the mini player): the page rises up
+        if (vp.root.isVisible && !wasShown && chromeTab == tab) Motion.riseUp(vp.root)
+        chromeTab = tab
         if (wasShown && !vp.root.isVisible && tab == 0) home.onShown()      // back on Home: fresh watched bars
         val full = video.fullscreen
         b.navCard.isVisible = !full                    // the bottom bar (hidden in full screen)
@@ -581,7 +596,7 @@ class MainActivity : AppCompatActivity() {
         b.miniPlayer.root.isVisible = mini
         if (mini) {
             updateMiniPlayer()
-            if (!wasMini) placeMiniPlayer()
+            if (!wasMini) { placeMiniPlayer(); Motion.popIn(b.miniPlayer.root) }
         }
         syncVideoSurface()
         updateBack()
@@ -1053,6 +1068,8 @@ class MainActivity : AppCompatActivity() {
         sb.formatList.layoutManager = grid
         sb.formatList.adapter = cards
         sb.formatList.itemAnimator = null
+        sb.formatList.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(this, R.anim.rx_list_rise)
+        var cardsShown = false
         sb.closeBtn.setOnClickListener { dialog.dismiss() }
         sb.dlThumbBox.clipToOutline = true          // rounded picture corners
         // our own rounded, softly tinted background (not the default white sheet)
@@ -1308,7 +1325,10 @@ class MainActivity : AppCompatActivity() {
                     list += DlCard.More(if (moreCount > 0) "View all ${tabAll.size}" else "Subtitles")
                 }
                 if (sb.formatList.adapter !== cards) { sb.formatList.layoutManager = grid; sb.formatList.adapter = cards }
-                cards.submit(if (loading || error != null) emptyList() else list)
+                val showing = if (loading || error != null) emptyList() else list
+                // the cards rise in when they first appear
+                if (showing.isNotEmpty() && !cardsShown) { cardsShown = true; sb.formatList.scheduleLayoutAnimation() }
+                cards.submit(showing)
             } else if (sb.formatList.adapter !== adapter) {
                 sb.formatList.layoutManager = linear
                 sb.formatList.adapter = adapter
@@ -1358,8 +1378,9 @@ class MainActivity : AppCompatActivity() {
             }
             render()
         }
-        sb.tabVideo.setOnClickListener { if (tabKind != KIND_VIDEO) { tabKind = KIND_VIDEO; render() } }
-        sb.tabAudio.setOnClickListener { if (tabKind != KIND_AUDIO) { tabKind = KIND_AUDIO; render() } }
+        // switching Video / Audio: the other cards rise in
+        sb.tabVideo.setOnClickListener { if (tabKind != KIND_VIDEO) { tabKind = KIND_VIDEO; sb.formatList.scheduleLayoutAnimation(); render() } }
+        sb.tabAudio.setOnClickListener { if (tabKind != KIND_AUDIO) { tabKind = KIND_AUDIO; sb.formatList.scheduleLayoutAnimation(); render() } }
         navAction = { id ->
             mode = if (id == "all") MODE_ALL else MODE_SUBS
             render()

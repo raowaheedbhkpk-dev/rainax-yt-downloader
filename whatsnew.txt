@@ -1,3 +1,4 @@
+Smooth animations: tabs slide in, the video page rises up, screens slide open and closed, lists and cards fade up, cards respond to your touch
 MP3 much faster: made from YouTube's better Opus sound, decoded inside RAINAX (no slow trip through Android's media system)
 MP3 shows what it is doing and how fast (Reading sound / Making MP3), and how long it took when done
 MP3 converting is many times faster: the phone's fast software decoder is used, sound is read in big pieces, and 256k-320k use the fast encoder setting
