@@ -1,3 +1,4 @@
+Feed videos get their sizes much faster: one request per video instead of two, looked up sooner and 3 at a time
 New bottom bar: a floating rounded bar with a raised + button, and a dot that jumps to the tab you choose
 Smooth animations: tabs slide in, the video page rises up, screens slide open and closed, lists and cards fade up, cards respond to your touch
 MP3 much faster: made from YouTube's better Opus sound, decoded inside RAINAX (no slow trip through Android's media system)

@@ -251,9 +251,9 @@ object FastExtractor {
     private val ahead = LinkedHashSet<String>()                  // newest last
     @Volatile private var lastAsk = 0L
     private val aheadWorkers = java.util.concurrent.atomic.AtomicInteger(0)
-    private const val AHEAD_KEEP = 6           // only the videos on screen now
-    private const val AHEAD_WORKERS = 2        // looked up 2 at a time (YouTube stays happy)
-    private const val SETTLE_MS = 600L         // wait until scrolling stops
+    private const val AHEAD_KEEP = 8           // only the videos on screen now
+    private const val AHEAD_WORKERS = 3        // looked up 3 at a time (one request each, YouTube stays happy)
+    private const val SETTLE_MS = 250L         // wait until scrolling stops
     private val aheadPool = java.util.concurrent.Executors.newCachedThreadPool { r ->
         Thread(r, "rx-sizes").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
     }
@@ -286,7 +286,8 @@ object FastExtractor {
                     val wait = lastAsk + SETTLE_MS - android.os.SystemClock.uptimeMillis()
                     if (wait > 0) { Thread.sleep(wait); continue }
                     val key = synchronized(ahead) { ahead.lastOrNull()?.also { ahead.remove(it) } } ?: break
-                    runCatching { quick(key) }
+                    // no quick answer for this video (some refuse it): its full details, so Download is instant anyway
+                    if (runCatching { quick(key) }.getOrNull() == null && !infoCache.containsKey(key)) runCatching { streamInfo(key) }
                 }
             } catch (_: InterruptedException) {
             } finally {
@@ -350,8 +351,76 @@ object FastExtractor {
         fullPool.execute { runCatching { streamInfo(url) } }
     }
 
+    // ---------- one request per video (instead of two) ----------
+    // The extractor asks YouTube for a fresh "visitor id" before every video (two requests in a row). The id can be
+    // reused for a while, so the quick look-up keeps it for 30 minutes: one request per video, about half the wait.
+
+    @Volatile private var visitor: String? = null
+    @Volatile private var visitorAt = 0L
+    private const val VISITOR_MS = 30 * 60 * 1000L
+
+    private fun visionOsHeaders(loc: org.schabi.newpipe.extractor.localization.Localization) = mapOf(
+        "User-Agent" to listOf(org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getVisionOsUserAgent(loc)),
+        "X-Goog-Api-Format-Version" to listOf("2")
+    )
+
+    /** Blocking. The visionOS player answer in one request (reusing the visitor id), or null to use the extractor's way. */
+    private fun visionOsJsonFast(id: String): org.json.JSONObject? {
+        init()
+        val h = org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper::class.java
+        val loc = NewPipe.getPreferredLocalization()
+        val country = NewPipe.getPreferredContentCountry()
+        val headers = visionOsHeaders(loc)
+        fun ask(fresh: Boolean): Pair<org.json.JSONObject, Boolean> {
+            val info = org.schabi.newpipe.extractor.services.youtube.InnertubeClientRequestInfo.ofVisionOsClient()
+            val now = System.currentTimeMillis()
+            var reused = false
+            val v = visitor?.takeIf { !fresh && now - visitorAt < VISITOR_MS }?.also { reused = true }
+                ?: org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getVisitorDataFromInnertube(
+                    info, loc, country, headers, org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.YOUTUBEI_V1_URL, null, false
+                ).also { visitor = it; visitorAt = now }
+            info.clientInfo.visitorData = v
+            // the request body: the extractor's own "context" (its JSON library is only reachable at run time)
+            val builder = h.getMethod(
+                "prepareJsonBuilder",
+                org.schabi.newpipe.extractor.localization.Localization::class.java,
+                org.schabi.newpipe.extractor.localization.ContentCountry::class.java,
+                org.schabi.newpipe.extractor.services.youtube.InnertubeClientRequestInfo::class.java,
+                String::class.java
+            ).invoke(null, loc, country, info, null) ?: error("no request")
+            val done = builder.javaClass.getMethod("done").invoke(builder)
+            val writer = Class.forName("com.grack.nanojson.JsonWriter").methods
+                .first { it.name == "string" && it.parameterTypes.size == 1 && java.lang.reflect.Modifier.isStatic(it.modifiers) }
+            val body = org.json.JSONObject(writer.invoke(null, done) as String)
+                .put("videoId", id)
+                .put("cpn", org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.generateContentPlaybackNonce())
+                .put("contentCheckOk", true)
+                .put("racyCheckOk", true)
+                .toString().toByteArray(Charsets.UTF_8)
+            val url = org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.YOUTUBEI_V1_GAPIS_URL + "player?" +
+                org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.DISABLE_PRETTY_PRINT_PARAMETER +
+                "&t=" + org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.generateTParameter() + "&id=" + id
+            val text = org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getValidJsonResponseBody(
+                NewPipe.getDownloader().postWithContentTypeJson(url, headers, body, loc)
+            )
+            return org.json.JSONObject(text) to reused
+        }
+        val (json, reused) = ask(false)
+        val ok = json.optJSONObject("playabilityStatus")?.optString("status") == "OK"
+        // YouTube no longer takes the saved visitor id: once more with a fresh one
+        return if (!ok && reused) ask(true).first else json
+    }
+
     /** Blocking. YouTube's answer to the visionOS app for video [id] (formats with their addresses), as JSON. */
-    internal fun visionOsJson(id: String): org.json.JSONObject? = runCatching {
+    internal fun visionOsJson(id: String): org.json.JSONObject? {
+        runCatching { visionOsJsonFast(id) }
+            .onFailure { android.util.Log.w("RAINAX", "quick look-up (1 request) failed: ${it.message}") }
+            .getOrNull()?.let { return it }
+        return visionOsJsonExtractor(id)
+    }
+
+    /** The extractor's own way (two requests: a new visitor id, then the video). */
+    private fun visionOsJsonExtractor(id: String): org.json.JSONObject? = runCatching {
         init()
         val helper = Class.forName("org.schabi.newpipe.extractor.services.youtube.YoutubeStreamHelper")
         val m = helper.getMethod(
