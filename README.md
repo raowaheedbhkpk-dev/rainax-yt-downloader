@@ -28,8 +28,8 @@ Every push to `main` builds the APK: open **Actions > Build RAINAX APK >** the n
 `RAINAX-Tube-v<version>-APK` (a zip with the APK inside). No GitHub release is made, and tags no longer publish one.
 The version comes from `rxVersionName` in `app/build.gradle`.
 
-To publish a release anyway (not needed normally): push the version tag, then **Actions > Build RAINAX APK > Run workflow**,
-pick that tag and tick **release**.
+To publish a release (the app then offers the update): push a version tag, e.g. `git tag v9.7.1 && git push origin v9.7.1`.
+That build publishes the release here and in rainax-tube-releases automatically.
 
 The MP3 encoder is native code (`app/src/main/cpp`). GitHub's build machines build it with the NDK and CMake they already have installed.
 

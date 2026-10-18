@@ -1,10 +1,13 @@
 name: Build RAINAX APK
 
 # Every push to main builds the APK: download it from the run's "Artifacts" (no GitHub release is made).
-# A release is only published when you start this workflow by hand (Actions > Run workflow) with "release" ticked.
+# Pushing a version tag (git tag v9.7.1 && git push origin v9.7.1) builds AND publishes the release
+# (here and in rainax-tube-releases, where the app looks for updates).
+# Starting it by hand (Actions > Run workflow) from a tag with "release" ticked does the same.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -88,7 +91,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: github.event_name == 'workflow_dispatch' && inputs.release && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || inputs.release)
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
@@ -102,7 +105,7 @@ jobs:
       # The app checks that repository for updates, so this repository can stay private.
       # Needs the secret RELEASES_TOKEN: a token that can write to raowaheedbhkpk-dev/rainax-tube-releases.
       - name: Publish to the public releases repository
-        if: github.event_name == 'workflow_dispatch' && inputs.release && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || inputs.release)
         env:
           HAS_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
         run: |
@@ -112,7 +115,7 @@ jobs:
           fi
 
       - name: Upload the release there
-        if: github.event_name == 'workflow_dispatch' && inputs.release && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || inputs.release)
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           repository: raowaheedbhkpk-dev/rainax-tube-releases

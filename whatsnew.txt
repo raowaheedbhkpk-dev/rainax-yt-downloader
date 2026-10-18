@@ -1,3 +1,4 @@
+Version 9.8: new Notifications page, You tab like YouTube, new voice search screen and many fixes
 Fixes: Sign in button readable in dark mode, Library chips start at Downloads, finish check mark shows, smoother voice screen
 New voice search screen: a glowing orb that moves with your voice and your words appearing as you speak
 Your YouTube profile picture shows on the You tab in the bottom bar when you're signed in
