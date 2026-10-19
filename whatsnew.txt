@@ -1,3 +1,5 @@
+Browser: TikTok's "Open app" popups are hidden, and Download gets the video playing in the feed
+Channels have Videos, Shorts, Live and Playlists tabs, like YouTube; your own channel shows properly
 New social row on Home: open Instagram, Facebook, TikTok and X inside RAINAX and download with one tap
 WhatsApp button opens the Status saver
 Save to playlist: tap Save or ⋮ to add videos to your YouTube playlists, or make a new one

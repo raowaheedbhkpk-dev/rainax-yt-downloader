@@ -83,13 +83,22 @@
         android:textStyle="bold"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Rainax.Pill" />
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Videos / Shorts / Live / Playlists, like YouTube's channel tabs -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="18dp"
-        android:text="Videos"
-        android:textColor="@color/rx_text"
-        android:textSize="17sp"
-        android:textStyle="bold" />
+        android:layout_marginTop="14dp"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chTabs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:chipSpacingHorizontal="8dp"
+            app:selectionRequired="true"
+            app:singleLine="true"
+            app:singleSelection="true" />
+    </HorizontalScrollView>
 </LinearLayout>

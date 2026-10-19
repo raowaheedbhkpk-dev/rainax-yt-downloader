@@ -69,6 +69,8 @@ class HomeScreen(
     private var channelUrl: String? = null     // showing this channel
     private var channel: ChannelDetails? = null
     private var channelSubscribed: Boolean? = null
+    /** The channel tab shown ("Videos", "Shorts"…); null until the channel's first page came. */
+    private var channelTab: String? = null
     private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
     private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
@@ -571,6 +573,9 @@ class HomeScreen(
         channelUrl = url
         channel = null
         channelSubscribed = null
+        channelTab = null
+        channelHeader.chTabs.removeAllViews()
+        channelHeader.chSubscribe.isVisible = true
         hm.titleText.text = name.orEmpty()
         hm.titleDownload.isVisible = false
         hm.brandBar.isVisible = false
@@ -583,7 +588,7 @@ class HomeScreen(
         Img.load(channelHeader.chHeadAvatar, avatar, circle = true, widthPx = 200)
         Img.load(channelHeader.chBanner, null)
         Ui.subscribeButton(channelHeader.chSubscribe, false)
-        vm.feedCache.remove("ch:$url")                 // the header comes with the first page
+        vm.feedCache.keys.removeAll { it.startsWith("ch:$url:") }      // the header comes with the first page
         applyListAdapter()
         load(reset = true)
     }
@@ -595,8 +600,34 @@ class HomeScreen(
         channelHeader.chHeadMeta.text = if (d.subscribers >= 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
         channelHeader.chHeadDesc.text = d.description
         channelHeader.chHeadDesc.isVisible = d.description.isNotBlank()
-        Img.load(channelHeader.chHeadAvatar, d.avatar, circle = true, widthPx = 200)
+        // (keep the picture already shown when YouTube's answer has none)
+        if (d.avatar != null) Img.load(channelHeader.chHeadAvatar, d.avatar, circle = true, widthPx = 200)
         Img.load(channelHeader.chBanner, d.banner, widthPx = 1080)
+        // your own channel: no Subscribe button (like YouTube)
+        val me = if (YtAccount.isSignedIn(act)) YtAccount.profile(act) else null
+        val handle = me?.handle?.trim()?.removePrefix("@")?.takeIf { it.isNotBlank() }
+        val own = me != null && ((handle != null && d.url.contains("@$handle", true)) || me.name.equals(d.name, true))
+        channelHeader.chSubscribe.isVisible = !own
+        // Videos / Shorts / Live / Playlists
+        channelTab = d.tab
+        channelHeader.chTabs.setOnCheckedStateChangeListener(null)
+        channelHeader.chTabs.removeAllViews()
+        d.tabs.forEach { label ->
+            val chip = act.layoutInflater.inflate(R.layout.item_chip, channelHeader.chTabs, false) as Chip
+            chip.id = View.generateViewId()
+            chip.text = label
+            chip.tag = label
+            channelHeader.chTabs.addView(chip)
+            if (label == d.tab) chip.isChecked = true
+        }
+        channelHeader.chTabs.isVisible = d.tabs.size > 1
+        channelHeader.chTabs.setOnCheckedStateChangeListener { group, ids ->
+            val label = ids.firstOrNull()?.let { group.findViewById<View>(it)?.tag as? String } ?: return@setOnCheckedStateChangeListener
+            if (label == channelTab || channelUrl != d.url) return@setOnCheckedStateChangeListener
+            channelTab = label
+            load(reset = true)
+        }
+        if (own) return
         val id = d.id
         if (id != null && YtAccount.isSignedIn(act)) {
             act.lifecycleScope.launch {
@@ -656,7 +687,7 @@ class HomeScreen(
         scrollMemory[cacheKey()] = hm.feedList.layoutManager?.onSaveInstanceState()
     }
 
-    private fun cacheKey(): String = special?.let { "sp:$it" } ?: channelUrl?.let { "ch:$it" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
+    private fun cacheKey(): String = special?.let { "sp:$it" } ?: channelUrl?.let { "ch:$it:${channelTab.orEmpty()}" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
         ?: "tab:${tabs[tabIndex].second}"
 
     private fun open(item: VideoItem) = when {
@@ -803,6 +834,7 @@ class HomeScreen(
         val q = query
         val plUrl = playlistUrl
         val chUrl = channelUrl
+        val chTab = channelTab
         val pl = searchKind
         val tabId = tabs[tabIndex].second
         val sp = special
@@ -819,6 +851,7 @@ class HomeScreen(
                         sp == "local:history" -> FeedPage(WatchHistory.recentItems(act), null)
                         sp == NOTIFICATIONS -> YtAccount.notifications(page)
                         sp != null -> YtAccount.browse(sp.removePrefix("acc:"), page)
+                        chUrl != null && page == null && chTab != null && channel?.url == chUrl -> YtCatalog.channelTab(chUrl, chTab)
                         chUrl != null && page == null -> YtCatalog.channel(chUrl).let { header = it.first; it.second }
                         chUrl != null -> YtCatalog.channelMore(chUrl, page!!)
                         plUrl != null -> YtCatalog.playlist(plUrl, page)

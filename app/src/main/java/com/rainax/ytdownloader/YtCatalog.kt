@@ -41,7 +41,10 @@ class ChannelDetails(
     val avatar: String?,
     val banner: String?,
     val subscribers: Long,
-    val description: String
+    val description: String,
+    /** The channel's tabs that RAINAX shows ("Videos", "Shorts", "Live", "Playlists") and the one opened first. */
+    val tabs: List<String> = emptyList(),
+    val tab: String = "Videos"
 )
 
 class FeedPage(val items: List<VideoItem>, val next: Page?)
@@ -423,12 +426,57 @@ object YtCatalog {
             subscribers = info.subscriberCount,
             description = info.description.orEmpty()
         )
-        val tab = info.tabs.firstOrNull { it.contentFilters.contains(org.schabi.newpipe.extractor.channel.tabs.ChannelTabs.VIDEOS) }
-            ?: info.tabs.firstOrNull()
-            ?: return@guard details to FeedPage(emptyList(), null)
-        channelTabs[url] = tab
+        // like YouTube: Videos, Shorts, Live and Playlists; the first one with something in it opens
+        val names = listOf("Videos" to "videos", "Shorts" to "shorts", "Live" to "livestreams", "Playlists" to "playlists")
+        val found = LinkedHashMap<String, org.schabi.newpipe.extractor.linkhandler.ListLinkHandler>()
+        for ((label, filter) in names) {
+            info.tabs.firstOrNull { it.contentFilters.contains(filter) }?.let { found[label] = it }
+        }
+        if (found.isEmpty()) info.tabs.firstOrNull()?.let { found["Videos"] = it }
+        if (found.isEmpty()) return@guard details to FeedPage(emptyList(), null)
+        channelAllTabs[url] = found
+        var firstPage: FeedPage? = null
+        var opened = found.keys.first()
+        for ((label, tab) in found) {
+            val page = runCatching { tabPage(url, tab) }.getOrNull() ?: continue
+            if (firstPage == null) { firstPage = page; opened = label }
+            if (page.items.isNotEmpty()) { firstPage = page; opened = label; break }
+        }
+        channelTabs[url] = found[opened]!!
+        val withAvatar = if (details.avatar == null) runCatching { avatarFromPage(url) }.getOrNull() else null
+        ChannelDetails(details.url, details.id, details.name, details.avatar ?: withAvatar, details.banner, details.subscribers,
+            details.description, found.keys.toList(), opened) to (firstPage ?: FeedPage(emptyList(), null))
+    }
+
+    /** The channels' tabs found by [channel] (by its address). */
+    private val channelAllTabs = java.util.concurrent.ConcurrentHashMap<String, Map<String, org.schabi.newpipe.extractor.linkhandler.ListLinkHandler>>()
+
+    private fun tabPage(url: String, tab: org.schabi.newpipe.extractor.linkhandler.ListLinkHandler): FeedPage {
         val tabInfo = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(yt, tab)
-        details to FeedPage(tabInfo.relatedItems.mapNotNull { item(it) }, if (tabInfo.hasNextPage()) tabInfo.nextPage else null)
+        return FeedPage(tabInfo.relatedItems.mapNotNull { item(it) }, if (tabInfo.hasNextPage()) tabInfo.nextPage else null)
+    }
+
+    /** Blocking. Another tab of a channel opened with [channel] ("Shorts", "Live"…). */
+    fun channelTab(url: String, label: String): FeedPage = guard {
+        val tab = channelAllTabs[url]?.get(label) ?: error("Open the channel again")
+        channelTabs[url] = tab
+        tabPage(url, tab)
+    }
+
+    /** The channel's picture from its page, when YouTube's data left it out. */
+    private fun avatarFromPage(url: String): String? {
+        val con = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+        return try {
+            con.connectTimeout = 10_000
+            con.readTimeout = 10_000
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+            con.setRequestProperty("Accept-Language", "en")
+            val html = con.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+            Regex("<meta property=\"og:image\" content=\"([^\"]+)\"").find(html)?.groupValues?.get(1)
+                ?.replace("&amp;", "&")
+        } finally {
+            con.disconnect()
+        }
     }
 
     /** Blocking. More videos of a channel opened with [channel]. */
