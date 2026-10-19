@@ -27,7 +27,10 @@ data class VideoItem(
     val count: Long = -1,       // playlist size
     val avatar: String? = null, // channel picture
     val isChannel: Boolean = false,
-    val isShort: Boolean = false
+    val isShort: Boolean = false,
+    /** From your YouTube feed's ⋯ menu (signed in): tell YouTube "Not interested" / "Don't recommend channel". */
+    val notInterestedToken: String? = null,
+    val noChannelToken: String? = null
 )
 
 /** A channel page: header and the id needed to subscribe. */

@@ -47,16 +47,35 @@ class VideoAdapter(
     /** Header, loading row and channels take the whole width in a grid (tablets); videos one column. */
     fun isFullWidth(position: Int): Boolean = getItemViewType(position) != ITEM
 
+    /** ⋮ on every video (Save to playlist, Share, Not interested…); null = no ⋮ button. */
+    var onMore: ((VideoItem, View) -> Unit)? = null
+
+    /** Home and Up next: leave out videos and channels you said "Not interested" to. */
+    var filterHidden = false
+
+    private fun keep(list: List<VideoItem>) = if (filterHidden) list.filter { HiddenFeed.allowed(it) } else list
+
     fun submit(list: List<VideoItem>) {
         items.clear()
-        items.addAll(list)
+        items.addAll(keep(list))
         notifyDataSetChanged()
+    }
+
+    /** "Not interested": the video (or a whole channel's videos) leaves the list at once. */
+    fun removeWhere(test: (VideoItem) -> Boolean) {
+        var i = 0
+        while (i < items.size) {
+            if (test(items[i])) {
+                items.removeAt(i)
+                notifyItemRemoved(i + headerCount)
+            } else i++
+        }
     }
 
     /** Adds the next page (skipping videos already shown). Returns how many were new. */
     fun append(list: List<VideoItem>): Int {
         val known = items.mapTo(HashSet()) { it.url }
-        val fresh = list.filter { known.add(it.url) }
+        val fresh = keep(list).filter { known.add(it.url) }
         items.addAll(fresh)
         notifyDataSetChanged()
         return fresh.size
@@ -113,6 +132,7 @@ class VideoAdapter(
         private val avatar: ImageView? = v.findViewById(R.id.avatar)      // big rows only
         private val watchBar: android.widget.ProgressBar? = v.findViewById(R.id.watchBar)
         private val pick: ImageButton? = v.findViewById(R.id.pick)
+        private val more: ImageButton? = v.findViewById(R.id.more)
 
         /** The picture's frame: feed autoplay puts the playing video in it. */
         val thumbBox: ViewGroup get() = thumb.parent as ViewGroup
@@ -153,6 +173,10 @@ class VideoAdapter(
             duration.isVisible = badge.isNotEmpty()
             duration.setBackgroundResource(if (item.seconds < 0) R.drawable.bg_live else R.drawable.bg_duration)
             itemView.setOnClickListener { onOpen(item) }
+            val menu = onMore
+            more?.isVisible = menu != null && !item.isChannel
+            more?.setOnClickListener { v -> menu?.invoke(item, v) }
+            itemView.setOnLongClickListener { v -> if (menu != null && !item.isChannel) { menu(item, v); true } else false }
             download.setOnClickListener { onDownload(item) }
             // sizes ready before Download is tapped (normal videos and Shorts; not live, playlists or channels)
             if (!item.isPlaylist && !item.isChannel && item.seconds >= 0) FastExtractor.lookAhead(item.url)

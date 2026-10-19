@@ -63,6 +63,13 @@ class VideoScreen(
     fun setup() {
         vb.videoList.layoutManager = LinearLayoutManager(act)
         related.header = header.root
+        // Up next: ⋮ menu like YouTube (and Not interested leaves the list)
+        related.filterHidden = true
+        related.onMore = { item, _ ->
+            VideoMenu.show(act, item, { download(it.url, it.title, false) }, signIn) { hidden, channel ->
+                related.removeWhere { v -> if (channel) v.uploader.equals(hidden.uploader, true) else v.url == hidden.url }
+            }
+        }
         vb.videoList.adapter = related
         vb.videoClose.setOnClickListener { minimize() }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
@@ -86,7 +93,8 @@ class VideoScreen(
             if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE")
         }
         header.vChapters.setOnClickListener { showChapters() }
-        header.vSave.setOnClickListener { saveWatchLater() }
+        header.vSave.setOnClickListener { videoId(url)?.let { VideoMenu.saveSheet(act, it, signIn) } }
+        header.vSave.setOnLongClickListener { saveWatchLater(); true }      // hold: straight to Watch later
         vb.vNextBar.setOnClickListener { showUpNext() }
         // + on Up next videos: pick several and download them together (the same picks as on Home)
         related.onPick = { Picks.toggle(it); if (Picks.has(it.url) && Picks.size <= Picks.SAMPLE) vm.warm(it.url) }
@@ -402,6 +410,8 @@ class VideoScreen(
         if (locked && !resume) setLocked(false)          // the next song/video keeps the lock
         listOf(header.vSubscribe, header.vLike, header.vDislike, header.vSave, header.vChapters).forEach { it.isVisible = false }
         vb.playerView.setExtraAdGroupMarkers(null, null)
+        if (!resume && player()?.repeatMode == Player.REPEAT_MODE_ONE) player()?.repeatMode = Player.REPEAT_MODE_OFF
+        vb.root.postDelayed(ambientTick, 1500)
         related.submit(emptyList())
         vb.videoList.scrollToPosition(0)
         vm.prefetch(clean)                    // the download sheet then has the sizes at once
@@ -514,6 +524,8 @@ class VideoScreen(
         if (minimized) setMinimized(false)
         job?.cancel()
         commentsJob?.cancel()
+        showStats(false)
+        vb.root.removeCallbacks(ambientTick)
         url = null
         details = null
         player()?.run {
@@ -923,9 +935,13 @@ class VideoScreen(
             else -> qualityLabel(chosen.height, chosen.fps).trim()
         }
         val speed = p?.playbackParameters?.speed ?: 1f
+        val looping = p?.repeatMode == Player.REPEAT_MODE_ONE
         optionsSheet("Settings", listOf(
             Opt("Quality", qValue, R.drawable.ic_hd) { showQualityMenu() },
             Opt("Playback speed", speedLabel(speed), R.drawable.ic_speed) { showSpeedMenu() },
+            Opt("Loop video", if (looping) "On" else "Off", R.drawable.ic_repeat_one) { setLoop(!looping) },
+            Opt("Ambient mode", if (AppPrefs.ambientMode(act)) "On" else "Off", R.drawable.ic_set_palette) { setAmbient(!AppPrefs.ambientMode(act)) },
+            Opt("Stats for nerds", if (vb.statsText.isVisible) "On" else null, R.drawable.ic_equalizer) { showStats(!vb.statsText.isVisible) },
             Opt("Lock screen", null, R.drawable.ic_lock) { setLocked(true) },
             Opt("Share", null, R.drawable.ic_share) { share() }
         ))
@@ -964,6 +980,146 @@ class VideoScreen(
             Opt(speedLabel(x), null, checked = x == now) { player()?.setPlaybackSpeed(x) }
         }
         optionsSheet("Playback speed", opts)
+    }
+
+    // ---------- Loop video ----------
+
+    private fun setLoop(on: Boolean) {
+        player()?.repeatMode = if (on) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        act.toast(if (on) "Loop video on" else "Loop video off")
+    }
+
+    // ---------- Stats for nerds ----------
+
+    private val statsTick = object : Runnable {
+        override fun run() {
+            if (!vb.statsText.isVisible) return
+            vb.statsText.text = statsText()
+            vb.statsText.postDelayed(this, 1000)
+        }
+    }
+
+    private fun showStats(on: Boolean) {
+        vb.statsText.removeCallbacks(statsTick)
+        vb.statsText.isVisible = on
+        vb.statsText.setOnClickListener { showStats(false) }
+        if (on) statsTick.run()
+    }
+
+    private fun statsText(): String {
+        val p = player() ?: return "No player"
+        var video: androidx.media3.common.Format? = null
+        var audio: androidx.media3.common.Format? = null
+        for (g in p.currentTracks.groups) {
+            if (!g.isSelected) continue
+            for (i in 0 until g.length) if (g.isTrackSelected(i)) {
+                when (g.type) {
+                    androidx.media3.common.C.TRACK_TYPE_VIDEO -> video = g.getTrackFormat(i)
+                    androidx.media3.common.C.TRACK_TYPE_AUDIO -> audio = g.getTrackFormat(i)
+                }
+            }
+        }
+        fun kbps(b: Int) = if (b > 0) "${b / 1000} kbps" else "?"
+        val vs = p.videoSize
+        val fps = video?.frameRate?.takeIf { it > 0 }?.let { " @ ${"%.0f".format(it)}" }.orEmpty()
+        val buffer = (p.bufferedPosition - p.currentPosition).coerceAtLeast(0) / 1000.0
+        return buildString {
+            appendLine("Video ID      ${videoId(url) ?: "?"}")
+            appendLine("Viewport      ${vb.playerView.width}x${vb.playerView.height}")
+            appendLine("Resolution    ${vs.width}x${vs.height}$fps" + if (autoMode) "  (auto)" else "")
+            appendLine("Video codec   ${video?.codecs ?: video?.sampleMimeType ?: "?"}  ${kbps(video?.bitrate ?: 0)}")
+            appendLine("Audio codec   ${audio?.codecs ?: audio?.sampleMimeType ?: "?"}  ${kbps(audio?.bitrate ?: 0)}" +
+                (audio?.sampleRate?.takeIf { it > 0 }?.let { "  ${it} Hz" } ?: ""))
+            appendLine("Speed         ${p.playbackParameters.speed}x")
+            appendLine("Buffer health ${"%.1f".format(buffer)} s")
+            appendLine("Volume        ${(p.volume * 100).toInt()}%")
+            append("Position      ${p.currentPosition / 1000} / ${p.duration.coerceAtLeast(0) / 1000} s")
+        }
+    }
+
+    // ---------- Ambient mode ----------
+    // A soft glow in the video's colours spreads below the player (dark theme), like YouTube. The colour is
+    // read from the picture every few seconds and fades from one to the next.
+
+    private val ambientGlow = android.graphics.drawable.GradientDrawable().apply {
+        orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM
+    }
+    private var ambientColor = 0
+    private var ambientAnim: android.animation.ValueAnimator? = null
+    private var ambientBase: android.graphics.drawable.Drawable? = null
+
+    private fun isNight() = (act.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+        android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    private val ambientTick = object : Runnable {
+        override fun run() {
+            vb.root.removeCallbacks(this)
+            if (!isOpen || !AppPrefs.ambientMode(act) || !isNight()) { paintAmbient(0); return }
+            sampleFrame { c -> if (c != null) paintAmbient(c) }
+            vb.root.postDelayed(this, 2500)
+        }
+    }
+
+    private fun setAmbient(on: Boolean) {
+        AppPrefs.setAmbientMode(act, on)
+        if (on && !isNight()) act.toast("Ambient mode shows in the dark theme")
+        else act.toast(if (on) "Ambient mode on" else "Ambient mode off")
+        ambientTick.run()
+    }
+
+    /** The picture's average colour (brightened), or null when it can't be read yet. */
+    private fun sampleFrame(done: (Int?) -> Unit) {
+        val target = vb.playerView.videoSurfaceView
+        val bmp = android.graphics.Bitmap.createBitmap(16, 9, android.graphics.Bitmap.Config.ARGB_8888)
+        fun average(b: android.graphics.Bitmap): Int? {
+            var r = 0L; var g = 0L; var bl = 0L; var n = 0
+            for (y in 0 until b.height) for (x in 0 until b.width) {
+                val c = b.getPixel(x, y)
+                r += (c shr 16) and 0xFF; g += (c shr 8) and 0xFF; bl += c and 0xFF; n++
+            }
+            if (n == 0) return null
+            val hsv = FloatArray(3)
+            android.graphics.Color.RGBToHSV((r / n).toInt(), (g / n).toInt(), (bl / n).toInt(), hsv)
+            if (hsv[2] < 0.04f) return null                       // black screen: keep the last glow
+            hsv[1] = (hsv[1] * 1.3f).coerceAtMost(0.9f)
+            hsv[2] = hsv[2].coerceIn(0.45f, 0.9f)
+            return android.graphics.Color.HSVToColor(hsv)
+        }
+        when (target) {
+            is android.view.SurfaceView -> {
+                if (target.holder.surface?.isValid != true || target.width == 0) { done(null); return }
+                runCatching {
+                    android.view.PixelCopy.request(target, bmp, android.view.PixelCopy.OnPixelCopyFinishedListener { res ->
+                        done(if (res == android.view.PixelCopy.SUCCESS) average(bmp) else null)
+                    }, android.os.Handler(android.os.Looper.getMainLooper()))
+                }.onFailure { done(null) }
+            }
+            is android.view.TextureView -> done(target.getBitmap(16, 9)?.let { average(it) })
+            else -> done(null)
+        }
+    }
+
+    private fun paintAmbient(color: Int) {
+        if (ambientBase == null) ambientBase = vb.root.background
+        if (vb.root.background !is android.graphics.drawable.LayerDrawable || ambientBase === vb.root.background) {
+            vb.root.background = android.graphics.drawable.LayerDrawable(arrayOf(ambientBase ?: android.graphics.drawable.ColorDrawable(0), ambientGlow))
+        }
+        ambientAnim?.cancel()
+        val from = ambientColor
+        ambientAnim = android.animation.ValueAnimator.ofObject(android.animation.ArgbEvaluator(), from, color).apply {
+            duration = 900
+            addUpdateListener {
+                val c = it.animatedValue as Int
+                ambientColor = c
+                fun a(alpha: Int) = (c and 0x00FFFFFF) or (alpha shl 24)
+                val strength = (c ushr 24) / 255f
+                ambientGlow.setColors(
+                    intArrayOf(a((0x8C * strength).toInt()), a((0x55 * strength).toInt()), a((0x22 * strength).toInt()), 0),
+                    floatArrayOf(0f, 0.32f, 0.5f, 0.78f)
+                )
+            }
+            start()
+        }
     }
 
     private class Opt(

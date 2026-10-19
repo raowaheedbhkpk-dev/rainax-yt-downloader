@@ -620,6 +620,56 @@
                 android:text="Clear search history" />
         </LinearLayout>
 
+        <!-- Pause watch history (like YouTube): nothing watched is saved, here or on your YouTube account -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="64dp"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_history"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/rx_primary"
+                        android:gravity="center_vertical"
+                        android:text="Pause watch history"
+                        android:textColor="@color/rx_text"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:paddingStart="38dp"
+                        android:text="Videos you watch aren't saved in RAINAX or on your YouTube account. When it's off and you're signed in, they show in your YouTube history"
+                        android:textColor="@color/rx_text2"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/historyPauseSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- forgets what you watched (Continue watching, resume points; and YouTube's history when signed in) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/clearWatchBtn"
@@ -629,6 +679,16 @@
             android:layout_marginTop="8dp"
             android:text="Clear watch history"
             app:icon="@drawable/ic_history" />
+
+        <!-- "Not interested" / "Don't recommend channel": bring them back -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/unhideBtn"
+            style="@style/Widget.Rainax.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Bring back hidden videos and channels"
+            app:icon="@drawable/ic_not_interested" />
 
         <TextView
             android:layout_width="wrap_content"

@@ -213,6 +213,18 @@ class MainActivity : AppCompatActivity() {
         FeedAutoplay.blocked = { video.isOpen || (::music.isInitialized && music.expanded) }
         home.onMenu = { openExplore() }
         home.onVoice = { startVoiceSearch() }
+        home.onSite = { app ->
+            var page: WebPage? = null
+            page = WebPage(this, app,
+                download = { url -> showDownloadSheet(listOf(url), onAdded = { what -> page?.added(what) }) },
+                openDownloads = { b.bottomNav.selectedItemId = R.id.nav_downloads })
+            page.show()
+        }
+        home.onWhatsApp = {
+            // the Social tab's WhatsApp Status saver, scrolled into view
+            b.bottomNav.selectedItemId = R.id.nav_social
+            so.socialScroll.post { so.socialScroll.smoothScrollTo(0, so.statusCard.top) }
+        }
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
@@ -1186,7 +1198,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDownloadSheet(urls: List<String>, preferAudio: Boolean = false, knownTitle: String? = null) {
+    private fun showDownloadSheet(
+        urls: List<String>, preferAudio: Boolean = false, knownTitle: String? = null,
+        /** shown by a page over the app (the browser) instead of the message bar, which would sit behind it */
+        onAdded: ((String) -> Unit)? = null
+    ) {
         sheet?.dismiss()
         val sb = SheetDownloadBinding.inflate(layoutInflater)
         val dialog = BottomSheetDialog(this)
@@ -1570,6 +1586,7 @@ class MainActivity : AppCompatActivity() {
             // (no battery question: downloads run as a foreground service with a notification, which
             // Android keeps running; the optional setting is in Settings for phones that still stop them)
             val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
+            if (onAdded != null) { onAdded(what); return@setOnClickListener }
             Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
                 .setAnchorView(snackAnchor())
                 .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
@@ -2080,6 +2097,17 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
         st.clearWatchBtn.setOnClickListener { askClearWatchHistory() }
+        st.historyPauseSwitch.isChecked = AppPrefs.historyPaused(this)
+        st.historyPauseSwitch.setOnCheckedChangeListener { _, on ->
+            AppPrefs.setHistoryPaused(this, on)
+            message(if (on) "Watch history paused" else "Watch history is on")
+        }
+        (st.historyPauseSwitch.parent as? View)?.setOnClickListener { st.historyPauseSwitch.toggle() }
+        st.unhideBtn.setOnClickListener {
+            val n = HiddenFeed.count()
+            HiddenFeed.clear(this)
+            message(if (n > 0) "Hidden videos and channels can show again" else "Nothing is hidden")
+        }
         st.rateAppBtn.setOnClickListener { AppShare.rate(this) }
         st.shareAppBtn.setOnClickListener { AppShare.share(this) }
 

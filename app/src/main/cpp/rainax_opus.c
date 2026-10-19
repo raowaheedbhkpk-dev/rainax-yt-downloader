@@ -59,6 +59,32 @@ Java_com_rainax_ytdownloader_OpusDecoder_nativeDecode(JNIEnv *env, jclass cls, j
     return frames;
 }
 
+/* Same as nativeDecode, but the packet starts at byte [offset] of the direct buffer (a memory-mapped file of
+   all packets, shared by several decoders working on different parts at the same time). */
+JNIEXPORT jint JNICALL
+Java_com_rainax_ytdownloader_OpusDecoder_nativeDecodeAt(JNIEnv *env, jclass cls, jlong handle, jobject packets, jlong offset, jint len, jshortArray out) {
+    RxOpus *o = (RxOpus *) (intptr_t) handle;
+    if (!o) return -1;
+    unsigned char *base = (unsigned char *) (*env)->GetDirectBufferAddress(env, packets);
+    jlong cap = (*env)->GetDirectBufferCapacity(env, packets);
+    if (!base || offset < 0 || len < 0 || offset + len > cap) return -2;
+    jsize outLen = (*env)->GetArrayLength(env, out);
+    jshort *pcm = (*env)->GetPrimitiveArrayCritical(env, out, NULL);
+    if (!pcm) return -3;
+    int frames = rx_opus_decode(o, base + offset, len, pcm, outLen / o->channels);
+    (*env)->ReleasePrimitiveArrayCritical(env, out, pcm, 0);
+    return frames;
+}
+
+/* How many samples (per channel, at 48 kHz) a packet holds, without decoding it; < 0 when it isn't valid Opus. */
+JNIEXPORT jint JNICALL
+Java_com_rainax_ytdownloader_OpusDecoder_nativePacketSamples(JNIEnv *env, jclass cls, jobject packets, jlong offset, jint len) {
+    unsigned char *base = (unsigned char *) (*env)->GetDirectBufferAddress(env, packets);
+    jlong cap = (*env)->GetDirectBufferCapacity(env, packets);
+    if (!base || offset < 0 || len <= 0 || offset + len > cap) return -1;
+    return opus_packet_get_nb_samples(base + offset, len, 48000);
+}
+
 JNIEXPORT void JNICALL
 Java_com_rainax_ytdownloader_OpusDecoder_nativeClose(JNIEnv *env, jclass cls, jlong handle) {
     rx_opus_close((void *) (intptr_t) handle);

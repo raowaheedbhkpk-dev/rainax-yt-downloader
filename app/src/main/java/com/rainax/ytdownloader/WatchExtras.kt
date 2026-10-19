@@ -152,6 +152,11 @@ object WatchHistory {
     fun save(c: Context, url: String, title: String, uploader: String, thumb: String?, posMs: Long, durMs: Long, force: Boolean = false) {
         val id = youtubeId(url) ?: return
         if (durMs <= 0 || posMs < 0) return
+        if (AppPrefs.historyPaused(c)) return                 // Pause watch history: nothing is kept
+        // signed in: the video also goes into your YouTube history (once it has played a few seconds), like YouTube
+        if (posMs >= 5_000 && reported.add(id) && YtAccount.isSignedIn(c)) {
+            Thread { runCatching { YtAccount.addToHistory(id) }.onFailure { reported.remove(id) } }.start()
+        }
         load(c)
         val old = entries.remove(id)
         entries[id] = Entry(
@@ -223,6 +228,9 @@ object WatchHistory {
         load(c)
         return entries.values.filter { it.unfinished }.sortedByDescending { it.at }.take(20)
     }
+
+    /** Videos already sent to your YouTube history while the app is open (each once). */
+    private val reported: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
 
     /** Settings > Clear watch history: forgets every video watched in RAINAX (Continue watching, resume points). */
     @Synchronized

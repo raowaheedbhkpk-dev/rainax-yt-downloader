@@ -105,6 +105,23 @@ class HomeScreen(
     private var special: String? = null
     private val specialAdapter = VideoAdapter(true, { open(it) }, { download(it) })
 
+    init {
+        // ⋮ on every video, like YouTube. Home's own lists also get Not interested / Don't recommend channel.
+        val feed = listOf(bigAdapter, smallAdapter)
+        feed.forEach { ad ->
+            ad.filterHidden = true
+            ad.onMore = { item, _ ->
+                VideoMenu.show(act, item, { download(it) }, { onAccount() }) { hidden, channel ->
+                    // (saved lists are filtered again when shown, so nothing has to reload)
+                    feed.forEach { a -> a.removeWhere { v -> if (channel) v.uploader.equals(hidden.uploader, true) else v.url == hidden.url } }
+                }
+            }
+        }
+        listOf(channelAdapter, playlistAdapter, specialAdapter).forEach { ad ->
+            ad.onMore = { item, _ -> VideoMenu.show(act, item, { download(it) }, { onAccount() }) }
+        }
+    }
+
     private val adapter get() = when {
         special != null -> specialAdapter
         channelUrl != null -> channelAdapter
@@ -154,6 +171,9 @@ class HomeScreen(
     /** The ≡ button (side menu) and the mic (voice search): handled by the main screen. */
     var onMenu: () -> Unit = {}
     var onVoice: () -> Unit = {}
+    /** Social row: open a site in RAINAX's browser / the WhatsApp Status saver (set by the main screen). */
+    var onSite: (SocialApps.App) -> Unit = {}
+    var onWhatsApp: () -> Unit = {}
 
     /** All on the channels row: the Subscriptions tab (set by the main screen). */
     var onAllSubs: () -> Unit = {}
@@ -161,6 +181,14 @@ class HomeScreen(
     fun setup() {
         shelf.openChannel = { openChannel(it.url, it.title, it.thumb) }
         shelf.openAllSubs = { onAllSubs() }
+        // top row of social apps: YouTube = search here, WhatsApp = Status saver, the others open in RAINAX's browser
+        shelf.openSocial = { app ->
+            when (app.name) {
+                "YouTube" -> startTyping()
+                "WhatsApp" -> onWhatsApp()
+                else -> onSite(app)
+            }
+        }
         tabs = computeTabs()
         hm.accountBtn.setOnClickListener { onAccount() }
         updateAccountIcon()

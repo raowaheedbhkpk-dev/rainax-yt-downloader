@@ -1,3 +1,10 @@
+New social row on Home: open Instagram, Facebook, TikTok and X inside RAINAX and download with one tap
+WhatsApp button opens the Status saver
+Save to playlist: tap Save or ⋮ to add videos to your YouTube playlists, or make a new one
+⋮ menu on every video: Download, Watch later, Save, Share, Not interested, Don't recommend channel
+Videos you watch now also show in your YouTube history, and you can pause watch history in Settings
+Player: Loop video, Ambient mode glow and Stats for nerds in the ⚙ menu
+MP3 converting much faster: the sound is now read on all phone cores at once
 Version 9.8: new Notifications page, You tab like YouTube, new voice search screen and many fixes
 Fixes: Sign in button readable in dark mode, Library chips start at Downloads, finish check mark shows, smoother voice screen
 New voice search screen: a glowing orb that moves with your voice and your words appearing as you speak

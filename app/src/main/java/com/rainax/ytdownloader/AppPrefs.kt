@@ -91,6 +91,14 @@ object AppPrefs {
     fun setResumeVideos(c: Context, v: Boolean) = p(c).edit().putBoolean("resume_videos", v).apply()
 
     /** Offer to download video links copied in other apps (on by default). */
+    /** Video page: soft glow in the video's colours below the player (dark theme), like YouTube. */
+    fun ambientMode(c: Context) = p(c).getBoolean("ambient_mode", true)
+    fun setAmbientMode(c: Context, v: Boolean) = p(c).edit().putBoolean("ambient_mode", v).apply()
+
+    /** Settings > Pause watch history: nothing watched is saved, here or on your YouTube account (like YouTube). */
+    fun historyPaused(c: Context) = p(c).getBoolean("history_paused", false)
+    fun setHistoryPaused(c: Context, v: Boolean) = p(c).edit().putBoolean("history_paused", v).apply()
+
     fun clipDetect(c: Context) = p(c).getBoolean("clip_detect", true)
     fun setClipDetect(c: Context, v: Boolean) = p(c).edit().putBoolean("clip_detect", v).apply()
 

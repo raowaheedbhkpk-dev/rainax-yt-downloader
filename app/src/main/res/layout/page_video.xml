@@ -102,6 +102,22 @@
                 app:tint="@color/rx_white" />
         </LinearLayout>
 
+        <!-- Stats for nerds (gear menu): live player details; tap to close -->
+        <TextView
+            android:id="@+id/statsText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="52dp"
+            android:background="#B3000000"
+            android:fontFamily="monospace"
+            android:lineSpacingExtra="1dp"
+            android:padding="8dp"
+            android:textColor="#FFFFFF"
+            android:textSize="10.5sp"
+            android:visibility="gone" />
+
         <!-- Lock screen (from the gear menu): touches do nothing until Unlock -->
         <FrameLayout
             android:id="@+id/playerLock"

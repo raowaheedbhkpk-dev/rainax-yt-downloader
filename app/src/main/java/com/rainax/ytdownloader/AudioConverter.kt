@@ -32,6 +32,7 @@ object AudioConverter {
         var channels = 0
         var seconds = 0.0            // length of the sound
         var readMs = 0L
+        var collectMs = 0L           // multi-core Opus: copying the packets out of the file (part of readMs)
         var encodeMs = 0L
         var bitrate = 0
         val totalMs get() = readMs + encodeMs
@@ -40,7 +41,8 @@ object AudioConverter {
         fun short() = "MP3 made in ${fmt(totalMs)} (${"%.0f".format(speed(totalMs))}× faster than playing)"
         /** Everything, for Settings. */
         fun details() = "${bitrate}k MP3 of ${fmt((seconds * 1000).toLong())} sound: ${fmt(totalMs)} in all. " +
-            "Reading ${fmt(readMs)} (${"%.0f".format(speed(readMs))}×), making MP3 ${fmt(encodeMs)} (${"%.0f".format(speed(encodeMs))}×). " +
+            "Reading ${fmt(readMs)} (${"%.0f".format(speed(readMs))}×" +
+            (if (collectMs > 0) ", of it unpacking ${fmt(collectMs)}" else "") + "), making MP3 ${fmt(encodeMs)} (${"%.0f".format(speed(encodeMs))}×). " +
             "Way: $way. Decoder: $decoder. $rate Hz, $channels ch."
         private fun fmt(ms: Long) = if (ms < 60_000) "%.1f s".format(ms / 1000.0) else "${ms / 60_000} min ${(ms % 60_000) / 1000} s"
     }
@@ -383,9 +385,186 @@ object AudioConverter {
         }
     }
 
+    /** Warm-up before each part when Opus is decoded on several cores: at least this much sound is decoded and dropped. */
+    private const val OPUS_WARMUP = 9600            // 200 ms at 48 kHz (the Opus spec asks for at least 80 ms)
+    private const val OPUS_MIN_PART = 48_000 * 20   // parts of at least 20 s
+
+    /**
+     * Blocking. Opus decoded on all cores at once. First every packet is copied (fast, a few MB) into a work file,
+     * which is mapped into memory; each packet's length in samples tells exactly where its sound goes in [pcmFile].
+     * Then each core decodes one part with its own decoder, starting 200 ms early (dropped) so it sounds exactly
+     * like one long decode, and writes straight to its place in the file. Null when this isn't plain Opus.
+     */
+    private fun decodeOpusParallel(src: Source, pcmFile: File, stop: () -> Boolean, report: Report, progress: (Int, String) -> Unit): Pcm? {
+        if (!src.mime.equals("audio/opus", true)) return null
+        val head = runCatching { src.format.getByteBuffer("csd-0") }.getOrNull() ?: return null
+        val h = ByteArray(head.remaining()).also { head.duplicate().get(it) }
+        if (h.size < 19 || String(h, 0, 8, Charsets.US_ASCII) != "OpusHead") return null
+        val channels = h[9].toInt() and 0xFF
+        if (channels !in 1..2 || (h[18].toInt() and 0xFF) != 0) return null
+        val preSkip = ((h[10].toInt() and 0xFF) or ((h[11].toInt() and 0xFF) shl 8)).toLong()
+        val cores = Runtime.getRuntime().availableProcessors().coerceIn(1, 8)
+        if (cores < 2) return null
+        if (src.durationUs > 0) {
+            val need = src.durationUs / 1_000_000 * 48_000 * 4 + (64L shl 20)
+            require((pcmFile.absoluteFile.parentFile?.usableSpace ?: 0L) > need) { "not enough free space" }
+        }
+        val pkFile = File(pcmFile.absoluteFile.parentFile, "mp3work.opk")
+        val t0 = System.nanoTime()
+        try {
+            // 1) all packets into one file (with their places)
+            var offsets = LongArray(1 shl 14)
+            var lengths = IntArray(1 shl 14)
+            var count = 0
+            var total = 0L
+            val packet = java.nio.ByteBuffer.allocateDirect(1 shl 16)
+            val copy = ByteArray(1 shl 16)
+            BufferedOutputStream(FileOutputStream(pkFile), 1 shl 18).use { out ->
+                var lastPct = -1
+                while (true) {
+                    if (count % 256 == 0 && stop()) throw NativeDownloader.Stopped()
+                    packet.clear()
+                    val n = src.ex.readSampleData(packet, 0)
+                    if (n < 0) break
+                    if (count == offsets.size) {
+                        offsets = offsets.copyOf(count * 2)
+                        lengths = lengths.copyOf(count * 2)
+                    }
+                    packet.position(0).limit(n)
+                    packet.get(copy, 0, n)
+                    out.write(copy, 0, n)
+                    offsets[count] = total
+                    lengths[count] = n
+                    total += n
+                    count++
+                    val time = src.ex.sampleTime
+                    src.ex.advance()
+                    if (src.durationUs > 0 && time >= 0) {
+                        val pct = (time * 20 / src.durationUs).toInt().coerceIn(0, 20)
+                        if (pct != lastPct) { lastPct = pct; progress(pct, "Reading sound") }
+                    }
+                }
+            }
+            if (count == 0) return null
+            report.collectMs = (System.nanoTime() - t0) / 1_000_000
+            val map = java.io.RandomAccessFile(pkFile, "r").use { raf ->
+                raf.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, raf.length())
+            }
+            // 2) where each packet's sound starts (in samples, before the start-up samples are dropped)
+            val starts = LongArray(count + 1)
+            for (i in 0 until count) {
+                val ns = OpusDecoder.packetSamples(map, offsets[i], lengths[i])
+                require(ns >= 0) { "bad Opus packet $i" }
+                starts[i + 1] = starts[i] + ns
+            }
+            val frames = starts[count] - preSkip
+            require(frames > 0) { "no sound" }
+            val n = minOf(cores.toLong(), frames / OPUS_MIN_PART).toInt()
+            if (n < 2) return null                       // short sound: one decoder is quick enough
+            // part k: packets [firstPkt[k], firstPkt[k+1]) — cut on packet borders, about equal sound each
+            val firstPkt = IntArray(n + 1)
+            firstPkt[n] = count
+            for (k in 1 until n) {
+                val want = starts[count] * k / n
+                var i = java.util.Arrays.binarySearch(starts, 0, count, want)
+                if (i < 0) i = -i - 1
+                firstPkt[k] = i.coerceIn(firstPkt[k - 1] + 1, count - 1)
+            }
+            report.decoder = "libopus (in the app, $n cores)"
+            java.io.RandomAccessFile(pcmFile, "rw").use { raf ->
+                raf.setLength(frames * channels * 2)
+                val ch = raf.channel
+                val done = java.util.concurrent.atomic.AtomicLong(0)
+                val cancelled = java.util.concurrent.atomic.AtomicBoolean(false)
+                val pool = java.util.concurrent.Executors.newFixedThreadPool(n)
+                try {
+                    val jobs = (0 until n).map { k ->
+                        pool.submit(java.util.concurrent.Callable {
+                            OpusDecoder(channels).use { dec ->
+                                val pcm = ShortArray(OpusDecoder.MAX_FRAMES * channels)
+                                val outBuf = java.nio.ByteBuffer.allocateDirect(1 shl 20).order(ByteOrder.LITTLE_ENDIAN)
+                                val shorts = outBuf.asShortBuffer()
+                                var bufStart = -1L                       // file position of the bytes in outBuf
+                                fun flush() {
+                                    if (shorts.position() == 0) return
+                                    outBuf.position(0).limit(shorts.position() * 2)
+                                    var pos = bufStart
+                                    while (outBuf.hasRemaining()) pos += ch.write(outBuf, pos)
+                                    outBuf.clear()
+                                    shorts.clear()
+                                    bufStart = -1L
+                                }
+                                // warm-up: start a few packets early (none for the first part)
+                                var i = firstPkt[k]
+                                if (k > 0) while (i > 0 && starts[firstPkt[k]] - starts[i] < OPUS_WARMUP) i--
+                                val end = firstPkt[k + 1]
+                                var c = 0
+                                while (i < end) {
+                                    if (++c % 64 == 0 && (cancelled.get() || stop())) { cancelled.set(true); return@Callable }
+                                    val got = dec.decodeAt(map, offsets[i], lengths[i], pcm)
+                                    if (i >= firstPkt[k]) {
+                                        // keep what lies after the start-up samples
+                                        var from = 0
+                                        var take = got
+                                        val s0 = starts[i]
+                                        if (s0 < preSkip) { from = (preSkip - s0).toInt().coerceAtMost(got); take = got - from }
+                                        if (take > 0) {
+                                            val outFrame = s0 + from - preSkip
+                                            if (bufStart < 0) bufStart = outFrame * channels * 2
+                                            if (shorts.remaining() < take * channels) {
+                                                flush()
+                                                bufStart = outFrame * channels * 2
+                                            }
+                                            shorts.put(pcm, from * channels, take * channels)
+                                            done.addAndGet(take.toLong())
+                                        }
+                                    }
+                                    i++
+                                }
+                                flush()
+                            }
+                        })
+                    }
+                    var last = -1
+                    while (jobs.any { !it.isDone }) {
+                        if (stop()) cancelled.set(true)
+                        val pct = 20 + (done.get() * 80 / frames).toInt().coerceIn(0, 80)
+                        if (pct != last) {
+                            last = pct
+                            val secs = (System.nanoTime() - t0) / 1e9
+                            val x = if (secs > 0.5) done.get().toDouble() / 48_000 / secs else 0.0
+                            progress(pct, "Reading sound · $n cores" + if (x > 0) " · ${"%.0f".format(x)}×" else "")
+                        }
+                        Thread.sleep(60)
+                    }
+                    jobs.forEach { it.get() }
+                    if (cancelled.get() || stop()) throw NativeDownloader.Stopped()
+                } finally {
+                    pool.shutdownNow()
+                }
+                check(done.get() == frames) { "decoded ${done.get()} of $frames samples" }
+            }
+            return Pcm(pcmFile, 48_000, channels, frames)
+        } finally {
+            pkFile.delete()
+        }
+    }
+
     /** Blocking. The whole sound as 16-bit stereo (or mono) samples in [pcmFile]. */
     private fun decodeToPcm(input: File, pcmFile: File, stop: () -> Boolean, report: Report, progress: (Int, String) -> Unit): Pcm {
-        // YouTube's Opus sound: decoded inside the app (fast); anything else: Android's decoder
+        // YouTube's Opus sound: decoded inside the app on all cores (fastest)
+        openSource(input).let { src ->
+            try {
+                decodeOpusParallel(src, pcmFile, stop, report, progress)?.let { return it }
+            } catch (e: NativeDownloader.Stopped) {
+                throw e
+            } catch (e: Throwable) {
+                android.util.Log.w("RAINAX", "MP3: multi-core Opus decoding failed, using one core: ${e.message}")
+            } finally {
+                runCatching { src.ex.release() }
+            }
+        }
+        // Opus on one core (fast); anything else: Android's decoder
         openSource(input).let { src ->
             try {
                 decodeOpusToPcm(src, pcmFile, stop, report, progress)?.let { return it }

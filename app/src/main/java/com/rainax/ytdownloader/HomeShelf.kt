@@ -35,7 +35,57 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     private var subsLoading = false
     private var subsTriedAt = 0L
 
+    /** A social app's round button was tapped (YouTube = search, WhatsApp = Status saver, others = its site). */
+    var openSocial: (SocialApps.App) -> Unit = {}
+
+    /** The apps in the top row, in this order (all of them download in RAINAX). */
+    private val socialRowApps = listOf("YouTube", "Instagram", "Facebook", "TikTok", "X", "WhatsApp")
+
+    /** The row of social apps at the top: round badges in each app's colours, name below. */
+    private fun buildSocialRow() {
+        val d = act.resources.displayMetrics.density
+        val apps = SocialApps.ALL.filter { it.name in socialRowApps }.sortedBy { socialRowApps.indexOf(it.name) }
+        apps.forEach { app ->
+            val tile = android.widget.LinearLayout(act).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
+                val tv = android.util.TypedValue()
+                act.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true)
+                setBackgroundResource(tv.resourceId)
+                isClickable = true
+                isFocusable = true
+                contentDescription = "Open ${app.name}"
+                stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(act, R.animator.rx_press)
+                setOnClickListener { openSocial(app) }
+            }
+            val badge = android.widget.TextView(act).apply {
+                background = SocialApps.badge(app, act)
+                text = app.short
+                gravity = android.view.Gravity.CENTER
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 15f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                elevation = 3 * d
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            tile.addView(badge, android.widget.LinearLayout.LayoutParams((50 * d).toInt(), (50 * d).toInt()))
+            tile.addView(android.widget.TextView(act).apply {
+                text = app.name
+                textSize = 11.5f
+                gravity = android.view.Gravity.CENTER
+                maxLines = 1
+                setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, android.widget.LinearLayout.LayoutParams((64 * d).toInt(), android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = (6 * d).toInt()
+            })
+            b.socialRow.addView(tile)
+        }
+    }
+
     init {
+        buildSocialRow()
         b.subsRow.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
         b.subsRow.adapter = subsAdapter
         b.subsRowAll.setOnClickListener { openAllSubs() }

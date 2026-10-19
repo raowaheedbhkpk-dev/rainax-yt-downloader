@@ -395,6 +395,119 @@ object YtAccount {
         post("browse/edit_playlist", body)
     }
 
+    // ---------- Save to playlist (like YouTube's "Save video to…") ----------
+
+    /** One of your playlists in the Save sheet: [has] = this video is already in it. */
+    class PlaylistOption(val id: String, val title: String, var has: Boolean, val privacy: String)
+
+    /** Blocking. Your playlists (Watch later first), each saying whether [videoId] is in it. */
+    fun saveOptions(videoId: String): List<PlaylistOption> {
+        val json = post("playlist/get_add_to_playlist", JSONObject().put("context", context())
+            .put("videoIds", JSONArray().put(videoId)).put("excludeWatchLater", false))
+        val out = mutableListOf<PlaylistOption>()
+        fun walk(n: Any?) {
+            when (n) {
+                is JSONObject -> {
+                    n.optJSONObject("playlistAddToOptionRenderer")?.let { r ->
+                        val id = r.optString("playlistId")
+                        val title = text(r.optJSONObject("title")) ?: return@let
+                        if (id.isNotBlank()) out += PlaylistOption(
+                            id, title, r.optString("containsSelectedVideos") == "ALL",
+                            text(r.optJSONObject("privacy"))?.takeIf { it.isNotBlank() } ?: r.optString("privacy")
+                        )
+                        return
+                    }
+                    val keys = n.keys()
+                    while (keys.hasNext()) walk(n.opt(keys.next()))
+                }
+                is JSONArray -> for (i in 0 until n.length()) walk(n.opt(i))
+            }
+        }
+        walk(json)
+        return out.sortedByDescending { it.id == "WL" }
+    }
+
+    /** Blocking. Adds [videoId] to (or removes it from) the playlist [playlistId]. */
+    fun setInPlaylist(playlistId: String, videoId: String, add: Boolean) {
+        val action = if (add) JSONObject().put("action", "ACTION_ADD_VIDEO").put("addedVideoId", videoId)
+        else JSONObject().put("action", "ACTION_REMOVE_VIDEO_BY_VIDEO_ID").put("removedVideoId", videoId)
+        post("browse/edit_playlist", JSONObject().put("context", context()).put("playlistId", playlistId)
+            .put("actions", JSONArray().put(action)))
+    }
+
+    /** Blocking. A new playlist ("PRIVATE", "UNLISTED" or "PUBLIC") with [videoId] in it. Returns its id. */
+    fun createPlaylist(title: String, privacy: String, videoId: String): String? {
+        val json = post("playlist/create", JSONObject().put("context", context()).put("title", title)
+            .put("privacyStatus", privacy).put("videoIds", JSONArray().put(videoId)))
+        return json.optString("playlistId").takeIf { it.isNotBlank() }
+    }
+
+    // ---------- Not interested / Don't recommend channel ----------
+
+    /** Blocking. Tells YouTube (a token from the video's ⋯ menu in your feed). */
+    fun sendFeedback(token: String) {
+        post("feedback", JSONObject().put("context", context()).put("feedbackTokens", JSONArray().put(token))
+            .put("isFeedbackTokenUnencrypted", false).put("shouldMerge", false))
+    }
+
+    /** The feed menu's "Not interested" and "Don't recommend channel" tokens of one video ([r] = its renderer). */
+    private fun feedbackTokens(r: JSONObject): Pair<String?, String?> {
+        var notInterested: String? = null
+        var noChannel: String? = null
+        fun label(o: JSONObject): String? =
+            text(o.optJSONObject("text")) ?: o.optJSONObject("title")?.let { t -> t.optString("content").takeIf { it.isNotBlank() } ?: text(t) }
+        fun walk(n: Any?, lab: String?) {
+            when (n) {
+                is JSONObject -> {
+                    val here = label(n)?.lowercase() ?: lab
+                    n.optJSONObject("feedbackEndpoint")?.optString("feedbackToken")?.takeIf { it.isNotBlank() }?.let { tok ->
+                        when {
+                            here == null -> {}
+                            here.contains("not interested") && notInterested == null -> notInterested = tok
+                            here.contains("recommend") && here.contains("channel") && noChannel == null -> noChannel = tok
+                        }
+                    }
+                    val keys = n.keys()
+                    while (keys.hasNext()) walk(n.opt(keys.next()), here)
+                }
+                is JSONArray -> for (i in 0 until n.length()) walk(n.opt(i), lab)
+            }
+        }
+        walk(r, null)
+        return notInterested to noChannel
+    }
+
+    // ---------- watch history on your YouTube account ----------
+
+    /**
+     * Blocking. Adds a video to the signed-in account's YouTube watch history, the way YouTube's own player does
+     * (it reports that playback started). Best effort: false when YouTube didn't take it.
+     */
+    fun addToHistory(videoId: String): Boolean {
+        val cookie = cookies ?: return false
+        val sid = sapisid(cookie) ?: return false
+        val json = post("player", JSONObject().put("context", context()).put("videoId", videoId))
+        val base = (findValue(json.optJSONObject("playbackTracking"), "videostatsPlaybackUrl") as? JSONObject)
+            ?.optString("baseUrl")?.takeIf { it.startsWith("http") } ?: return false
+        val abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        val cpn = (1..16).map { abc[java.util.concurrent.ThreadLocalRandom.current().nextInt(abc.length)] }.joinToString("")
+        val url = base + (if (base.contains('?')) "&" else "?") + "ver=2&c=WEB&cpn=$cpn"
+        val ts = System.currentTimeMillis() / 1000
+        val con = URL(url).openConnection() as HttpURLConnection
+        return try {
+            con.connectTimeout = 15_000
+            con.readTimeout = 15_000
+            con.setRequestProperty("User-Agent", UA)
+            con.setRequestProperty("Cookie", cookie)
+            con.setRequestProperty("Authorization", "SAPISIDHASH ${ts}_" + sha1("$ts $sid $ORIGIN"))
+            con.setRequestProperty("Origin", ORIGIN)
+            con.setRequestProperty("X-Goog-AuthUser", "0")
+            con.responseCode in 200..299
+        } finally {
+            con.disconnect()
+        }
+    }
+
     /** Blocking. Posts a comment on a video as the signed-in user. */
     fun postComment(videoId: String, text: String) {
         // 1) the video's comment section (its first page carries the "add a comment" key)
@@ -472,10 +585,12 @@ object YtAccount {
             r.optJSONObject("channelThumbnailSupportedRenderers")?.optJSONObject("channelThumbnailWithLinkRenderer")?.optJSONObject("thumbnail")
                 ?: r.optJSONObject("channelThumbnail")
         )
+        val (ni, nc) = feedbackTokens(r)
         return VideoItem(
             url = "https://www.youtube.com/watch?v=$id", title = title, uploader = owner,
             thumb = "https://i.ytimg.com/vi/$id/hqdefault.jpg", seconds = seconds(length),
-            views = -1, uploaded = details.ifBlank { null }, avatar = avatar
+            views = -1, uploaded = details.ifBlank { null }, avatar = avatar,
+            notInterestedToken = ni, noChannelToken = nc
         )
     }
 
@@ -500,6 +615,7 @@ object YtAccount {
         val avatar = meta.optJSONObject("image")?.optJSONObject("decoratedAvatarViewModel")?.optJSONObject("avatar")
             ?.optJSONObject("avatarViewModel")?.optJSONObject("image")?.optJSONArray("sources")?.optJSONObject(0)?.optString("url")
         val playlist = type.contains("PLAYLIST") || type.contains("ALBUM")
+        val (ni, nc) = feedbackTokens(r)
         return VideoItem(
             url = if (playlist) "https://www.youtube.com/playlist?list=$id" else "https://www.youtube.com/watch?v=$id",
             title = title,
@@ -509,7 +625,8 @@ object YtAccount {
             views = -1,
             uploaded = lines.drop(1).joinToString(" • ").ifBlank { null },
             isPlaylist = playlist,
-            avatar = avatar
+            avatar = avatar,
+            notInterestedToken = ni, noChannelToken = nc
         )
     }
 

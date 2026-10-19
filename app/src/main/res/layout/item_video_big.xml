@@ -117,5 +117,17 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_download"
             app:tint="@color/rx_primary" />
+        <!-- ⋮ : Save to playlist, Share, Not interested… (like YouTube) -->
+        <ImageButton
+            android:id="@+id/more"
+            android:layout_width="28dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="2dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="More"
+            android:scaleType="center"
+            android:src="@drawable/ic_more"
+            android:visibility="gone"
+            app:tint="@color/rx_text2" />
     </LinearLayout>
 </LinearLayout>

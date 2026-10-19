@@ -14,7 +14,7 @@ class RainaxApp : Application() {
         Net.init(this)
         // read the small saved lists early, so the first screens don't wait for the disk
         val app = this
-        Thread { runCatching { WatchHistory.preload(app); LocalPlaylists.all(app) } }.start()
+        Thread { runCatching { WatchHistory.preload(app); LocalPlaylists.all(app); HiddenFeed.load(app) } }.start()
     }
 
     companion object {
