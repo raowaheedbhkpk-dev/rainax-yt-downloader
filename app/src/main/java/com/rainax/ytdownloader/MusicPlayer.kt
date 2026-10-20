@@ -304,6 +304,7 @@ class MusicPlayer(
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             updatePlayState()
+            spinVinyl(isPlaying)
             if (isPlaying) startTicker()
         }
 
@@ -571,6 +572,27 @@ class MusicPlayer(
         if (p.playbackState == Player.STATE_IDLE) p.prepare()
     }
 
+    private val vinylOutline = object : android.view.ViewOutlineProvider() {
+        override fun getOutline(view: View, outline: android.graphics.Outline) = outline.setOval(0, 0, view.width, view.height)
+    }
+    private var vinylSpin: android.animation.ObjectAnimator? = null
+
+    /** The record turns (one turn in 8 s) while the song plays, and stops where it is when paused. */
+    private fun spinVinyl(playing: Boolean) {
+        if (videoMode || !android.animation.ValueAnimator.areAnimatorsEnabled()) { vinylSpin?.pause(); return }
+        val a = vinylSpin ?: android.animation.ObjectAnimator.ofFloat(pg.mpArt, View.ROTATION, 0f, 360f).apply {
+            duration = 8000
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            vinylSpin = this
+        }
+        when {
+            playing && !a.isStarted -> a.start()
+            playing && a.isPaused -> a.resume()
+            !playing && a.isRunning -> a.pause()
+        }
+    }
+
     private fun updateModes() {
         pg.mpModeSong.setBackgroundResource(if (!videoMode) R.drawable.bg_mp_toggle_on else 0)
         pg.mpModeVideo.setBackgroundResource(if (videoMode) R.drawable.bg_mp_toggle_on else 0)
@@ -579,6 +601,12 @@ class MusicPlayer(
         pg.mpArtBox.ratio = if (videoMode) 9f / 16f else 1f
         pg.mpVideo.isVisible = videoMode
         pg.mpArt.isVisible = !videoMode
+        // song mode: a round record (the cover spins while it plays); video mode: the normal picture box
+        pg.mpVinylGrooves.isVisible = !videoMode
+        pg.mpVinylHole.isVisible = !videoMode
+        pg.mpArtBox.outlineProvider = if (videoMode) android.view.ViewOutlineProvider.BACKGROUND else vinylOutline
+        pg.mpArtBox.invalidateOutline()
+        if (videoMode) { vinylSpin?.cancel(); pg.mpArt.rotation = 0f } else spinVinyl(player()?.isPlaying == true)
         if (!videoMode) pg.mpArtLoading.isVisible = false
         val p = player()
         pg.mpShuffle.alpha = if (p?.shuffleModeEnabled == true) 1f else 0.5f
@@ -1003,7 +1031,7 @@ class MusicPlayer(
             val p = player() ?: return
             sb.qFrom.text = queueName.ifBlank { "Your music" }
             val text = ContextCompat.getColor(act, R.color.rx_text)
-            val on = ContextCompat.getColor(act, R.color.rx_primary)
+            val on = Ui.accent(act)
             sb.qShuffle.imageTintList = android.content.res.ColorStateList.valueOf(if (p.shuffleModeEnabled) on else text)
             sb.qRepeat.imageTintList = android.content.res.ColorStateList.valueOf(if (p.repeatMode != Player.REPEAT_MODE_OFF) on else text)
             sb.qRepeat.setImageResource(if (p.repeatMode == Player.REPEAT_MODE_ONE) R.drawable.ic_repeat_one else R.drawable.ic_repeat)
@@ -1052,7 +1080,7 @@ class MusicPlayer(
             val s = songOf(item)
             Img.loadSquare(art, MusicArt.small(item.mediaId, s?.thumb), widthPx = 200)
             title.text = s?.title.orEmpty()
-            title.setTextColor(ContextCompat.getColor(act, if (playing) R.color.rx_primary else R.color.rx_text))
+            title.setTextColor(if (playing) Ui.accent(act) else androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
             sub.text = s?.let { MusicHome.songLine(it) }.orEmpty()
             nowIcon.isVisible = playing
             remove.isVisible = !playing

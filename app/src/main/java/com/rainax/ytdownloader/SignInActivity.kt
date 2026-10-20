@@ -31,6 +31,7 @@ class SignInActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
+        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
         b = ActivitySignInBinding.inflate(layoutInflater)
         setContentView(b.root)

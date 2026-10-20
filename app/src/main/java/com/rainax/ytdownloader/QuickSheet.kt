@@ -178,8 +178,12 @@ object QuickSheet {
             val st = state
             val title = st?.title?.takeIf { it.isNotBlank() } ?: knownTitle.orEmpty()
             Downloader.enqueueAsync(act.applicationContext, listOf(EnqueueItem(url, title, null, st?.thumbUrl ?: thumb)), spec, null, st)
-            dialog.dismiss()
-            onAdded()
+            sb.downloadBtn.isEnabled = false
+            DlCardAdapter.tear(sb.formatList) {
+                if (act.isFinishing || act.isDestroyed) return@tear
+                dialog.dismiss()
+                onAdded()
+            }
         }
         dialog.show()
         load()

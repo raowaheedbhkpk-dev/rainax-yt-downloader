@@ -149,7 +149,7 @@
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:visibility="gone"
-                app:backgroundTint="@color/rx_primary"
+                app:backgroundTint="?attr/rxAccent"
                 app:cornerRadius="2dp"
                 app:icon="@drawable/ic_person"
                 app:iconGravity="textStart"
@@ -391,6 +391,146 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <!-- Your storage (a film strip meter) and the collection shelf (newest downloads as DVD cases) -->
+            <LinearLayout
+                android:id="@+id/collectionSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="8dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:letterSpacing="0.25"
+                        android:text="Your storage"
+                        android:textAllCaps="true"
+                        android:textColor="@color/rx_gold"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/meterTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/rx_display"
+                        android:textColor="@color/rx_text"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <!-- the strip: sprocket holes above and below, the bar in the middle -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#141414"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="4dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="5dp"
+                        android:background="@drawable/bg_sprockets"
+                        android:layerType="software" />
+
+                    <LinearLayout
+                        android:id="@+id/meterBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="14dp"
+                        android:layout_marginVertical="4dp"
+                        android:background="#2A2A2A"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:id="@+id/meterVideo"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0"
+                            android:background="?attr/rxAccent" />
+
+                        <View
+                            android:id="@+id/meterAudio"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0"
+                            android:background="#E8B44A" />
+
+                        <View
+                            android:id="@+id/meterFree"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="5dp"
+                        android:background="@drawable/bg_sprockets"
+                        android:layerType="software" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/meterText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="11.5sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/rx_display"
+                        android:text="My collection"
+                        android:textAllCaps="true"
+                        android:textColor="@color/rx_text"
+                        android:textSize="20sp" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:background="@color/rx_divider" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/shelfList"
+                    android:layout_width="match_parent"
+                    android:layout_height="168dp"
+                    android:layout_marginTop="12dp"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="11dp" />
+
+                <!-- the shelf board -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginHorizontal="12dp"
+                    android:background="#5A4320"
+                    android:elevation="2dp" />
+            </LinearLayout>
+
             <!-- Downloading -->
             <LinearLayout
                 android:id="@+id/activeSection"
@@ -518,25 +658,29 @@
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
-        <!-- a soft red circle with the download arrow, a title, and one line of help -->
-        <FrameLayout
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:background="@drawable/bg_welcome_circle">
-
-            <ImageView
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:layout_gravity="center"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_download"
-                app:tint="@color/rx_primary" />
-        </FrameLayout>
+        <!-- an empty film reel, a title, and one line of help -->
+        <ImageView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_film_reel"
+            app:tint="?attr/rxAccent" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="18dp"
+            android:letterSpacing="0.25"
+            android:text="Coming soon"
+            android:textAllCaps="true"
+            android:textColor="@color/rx_gold"
+            android:textSize="10.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:textAllCaps="true"
             android:fontFamily="@font/rx_display"
             android:gravity="center"
@@ -552,7 +696,7 @@
             android:gravity="center"
             android:lineSpacingMultiplier="1.2"
             android:paddingHorizontal="40dp"
-            android:text="Tap Download under any video, or share a TikTok, Instagram or Facebook link to RAINAX."
+            android:text="The show starts when you tap Download. You can also share a TikTok, Instagram or Facebook link to RAINAX."
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="14sp" />
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- a film reel (empty states) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M2.00,12.00a10,10 0 1,0 20,0a10,10 0 1,0 -20,0zM10.40,12.00a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0zM9.80,6.40a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0zM15.13,10.27a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0zM13.09,16.53a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0zM6.51,16.53a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0zM4.47,10.27a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,22h10v-1.6h-10z" />
+</vector>

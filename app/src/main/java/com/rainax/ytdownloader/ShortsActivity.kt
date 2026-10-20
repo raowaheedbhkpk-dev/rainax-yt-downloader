@@ -146,6 +146,7 @@ class ShortsActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
         items.addAll(ShortsFeed.items)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -440,7 +441,7 @@ class ShortsActivity : AppCompatActivity() {
             b.spLikeText.text = if (likes > 0) YtCatalog.count(likes) else "Like"
             b.spDislikeText.text = if (dislikes > 0) YtCatalog.count(dislikes) else "Dislike"
             val mine = rating[id]
-            val on = androidx.core.content.ContextCompat.getColor(this@ShortsActivity, R.color.rx_primary)
+            val on = Ui.accent(this@ShortsActivity)
             val off = androidx.core.content.ContextCompat.getColor(this@ShortsActivity, R.color.rx_white)
             b.spLike.imageTintList = android.content.res.ColorStateList.valueOf(if (mine == "LIKE") on else off)
             b.spDislike.imageTintList = android.content.res.ColorStateList.valueOf(if (mine == "DISLIKE") on else off)

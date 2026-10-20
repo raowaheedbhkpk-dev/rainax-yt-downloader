@@ -40,6 +40,7 @@ class WelcomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
+        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
         b = ActivityWelcomeBinding.inflate(layoutInflater)
         setContentView(b.root)
@@ -112,7 +113,7 @@ class WelcomeActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val p = pages[position]
             holder.icon.setImageResource(p.icon)
-            holder.icon.imageTintList = if (p.tint) ColorStateList.valueOf(ContextCompat.getColor(this@WelcomeActivity, R.color.rx_primary)) else null
+            holder.icon.imageTintList = if (p.tint) ColorStateList.valueOf(Ui.accent(this@WelcomeActivity)) else null
             holder.title.text = p.title
             holder.text.text = p.text
         }

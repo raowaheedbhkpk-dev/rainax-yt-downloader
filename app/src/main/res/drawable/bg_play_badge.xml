@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- red rounded square behind a white play mark (sign-in page) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#D7263D" />
+    <solid android:color="?attr/rxAccent" />
     <corners android:radius="2dp" />
 </shape>

@@ -30,7 +30,7 @@ class PatternView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var wrong = false
 
     private val idle = androidx.core.content.ContextCompat.getColor(context, R.color.rx_text2)
-    private val accent = androidx.core.content.ContextCompat.getColor(context, R.color.rx_primary)
+    private val accent = Ui.accent(context)
     private val error = androidx.core.content.ContextCompat.getColor(context, R.color.rx_error)
 
     private fun cell() = min(width, height) / 3f

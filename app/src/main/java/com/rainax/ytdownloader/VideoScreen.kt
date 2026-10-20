@@ -71,6 +71,7 @@ class VideoScreen(
             }
         }
         vb.videoList.adapter = related
+        vb.videoList.addOnItemTouchListener(cinemaTouch)
         vb.videoClose.setOnClickListener { minimize() }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
         header.vDownload.setOnClickListener { url?.let { download(it, currentTitle(), false) } }
@@ -350,6 +351,7 @@ class VideoScreen(
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) showPlaceholder(false)
+            if (isPlaying) wakeCinema() else lightsOn()
         }
 
         override fun onRenderedFirstFrame() = showPlaceholder(false)
@@ -412,6 +414,7 @@ class VideoScreen(
         vb.playerView.setExtraAdGroupMarkers(null, null)
         if (!resume && player()?.repeatMode == Player.REPEAT_MODE_ONE) player()?.repeatMode = Player.REPEAT_MODE_OFF
         vb.root.postDelayed(ambientTick, 1500)
+        lightsOn()
         related.submit(emptyList())
         vb.videoList.scrollToPosition(0)
         vm.prefetch(clean)                    // the download sheet then has the sizes at once
@@ -512,6 +515,7 @@ class VideoScreen(
 
     private fun setMinimized(on: Boolean) {
         minimized = on
+        if (on) lightsOn() else wakeCinema()
         onChanged()                            // the picture moves to the floating player and keeps playing
     }
 
@@ -526,6 +530,7 @@ class VideoScreen(
         commentsJob?.cancel()
         showStats(false)
         vb.root.removeCallbacks(ambientTick)
+        lightsOn()
         url = null
         details = null
         player()?.run {
@@ -654,11 +659,67 @@ class VideoScreen(
     private fun showChapterMarks(d: VideoDetails) {
         val list = d.chapters.filter { it.startMs > 0 }
         header.vChapters.isVisible = d.chapters.size >= 2
+        fillChapterStrip(d)
         if (list.isEmpty()) {
             vb.playerView.setExtraAdGroupMarkers(null, null)
             return
         }
         vb.playerView.setExtraAdGroupMarkers(list.map { it.startMs }.toLongArray(), BooleanArray(list.size))
+    }
+
+    /** The film strip of chapters under the buttons: a frame per chapter; tap one to jump there. */
+    private fun fillChapterStrip(d: VideoDetails) {
+        val box = header.vChapterFrames
+        box.removeAllViews()
+        header.vChapterStrip.isVisible = d.chapters.size >= 2
+        if (d.chapters.size < 2) return
+        val dp = act.resources.displayMetrics.density
+        val display = runCatching { androidx.core.content.res.ResourcesCompat.getFont(act, R.font.rx_display) }.getOrNull()
+        d.chapters.forEachIndexed { i, c ->
+            val frame = android.widget.LinearLayout(act).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_film_frame)
+                setPadding((10 * dp).toInt(), (14 * dp).toInt(), (10 * dp).toInt(), (14 * dp).toInt())
+                isClickable = true
+                isFocusable = true
+                tag = c.startMs
+                val name = c.title.ifBlank { "Chapter ${i + 1}" }
+                contentDescription = "Chapter ${i + 1}: $name"
+                addView(android.widget.TextView(act).apply {
+                    text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
+                    textSize = 15f
+                    typeface = display
+                    setTextColor(0xFFE8B44A.toInt())
+                })
+                addView(android.widget.TextView(act).apply {
+                    text = name
+                    textSize = 12.5f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setTextColor(0xFFFFFFFF.toInt())
+                }, android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (2 * dp).toInt() })
+                setOnClickListener {
+                    player()?.takeIf { p -> p.currentMediaItem?.mediaId == d.url }?.let { p ->
+                        p.seekTo(c.startMs)
+                        p.play()
+                    }
+                    markChapterFrame(i)
+                }
+            }
+            box.addView(frame, android.widget.LinearLayout.LayoutParams((140 * dp).toInt(), (86 * dp).toInt()).apply {
+                marginStart = (2 * dp).toInt(); marginEnd = (2 * dp).toInt()
+            })
+        }
+        val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: 0L
+        markChapterFrame(d.chapters.indexOfLast { it.startMs <= pos }.coerceAtLeast(0))
+    }
+
+    /** Puts the red edge on the chapter frame [index]. */
+    private fun markChapterFrame(index: Int) {
+        val box = header.vChapterFrames
+        for (k in 0 until box.childCount) {
+            box.getChildAt(k).setBackgroundResource(if (k == index) R.drawable.bg_film_frame_on else R.drawable.bg_film_frame)
+        }
     }
 
     private fun showChapters() {
@@ -779,7 +840,7 @@ class VideoScreen(
                 text.setSpan(android.text.style.URLSpan("rxseek:$sec"), m.range.first, m.range.last + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        val primary = androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary)
+        val primary = Ui.accent(act)
         for (span in text.getSpans(0, text.length, android.text.style.URLSpan::class.java)) {
             val start = text.getSpanStart(span)
             val end = text.getSpanEnd(span)
@@ -941,6 +1002,7 @@ class VideoScreen(
             Opt("Playback speed", speedLabel(speed), R.drawable.ic_speed) { showSpeedMenu() },
             Opt("Loop video", if (looping) "On" else "Off", R.drawable.ic_repeat_one) { setLoop(!looping) },
             Opt("Ambient mode", if (AppPrefs.ambientMode(act)) "On" else "Off", R.drawable.ic_set_palette) { setAmbient(!AppPrefs.ambientMode(act)) },
+            Opt("Cinema mode", if (AppPrefs.cinemaMode(act)) "On" else "Off", R.drawable.ic_film_reel) { setCinema(!AppPrefs.cinemaMode(act)) },
             Opt("Stats for nerds", if (vb.statsText.isVisible) "On" else null, R.drawable.ic_equalizer) { showStats(!vb.statsText.isVisible) },
             Opt("Lock screen", null, R.drawable.ic_lock) { setLocked(true) },
             Opt("Share", null, R.drawable.ic_share) { share() }
@@ -1058,6 +1120,40 @@ class VideoScreen(
             sampleFrame { c -> if (c != null) paintAmbient(c) }
             vb.root.postDelayed(this, 2500)
         }
+    }
+
+    // ---------- cinema mode: the lights go down while the video plays ----------
+
+    /** After a few quiet seconds of playing (dark theme), everything under the player fades almost to black. */
+    private val lightsDown = Runnable {
+        if (isOpen && !minimized && AppPrefs.cinemaMode(act) && isNight() && player()?.isPlaying == true) {
+            vb.videoList.animate().alpha(0.06f).setDuration(1400).start()
+        }
+    }
+
+    /** Lights back up (a touch, pause, another video) and, while playing, down again after 5 s. */
+    private fun wakeCinema() {
+        lightsOn()
+        if (player()?.isPlaying == true) vb.root.postDelayed(lightsDown, 5000)
+    }
+
+    private fun lightsOn() {
+        vb.root.removeCallbacks(lightsDown)
+        if (vb.videoList.alpha < 1f) vb.videoList.animate().alpha(1f).setDuration(300).start()
+    }
+
+    private val cinemaTouch = object : androidx.recyclerview.widget.RecyclerView.SimpleOnItemTouchListener() {
+        override fun onInterceptTouchEvent(rv: androidx.recyclerview.widget.RecyclerView, e: android.view.MotionEvent): Boolean {
+            if (e.actionMasked == android.view.MotionEvent.ACTION_DOWN) wakeCinema()
+            return false
+        }
+    }
+
+    private fun setCinema(on: Boolean) {
+        AppPrefs.setCinemaMode(act, on)
+        if (on && !isNight()) act.toast("Cinema mode works in the dark theme")
+        else act.toast(if (on) "Cinema mode on: the lights go down while you watch" else "Cinema mode off")
+        wakeCinema()
     }
 
     private fun setAmbient(on: Boolean) {

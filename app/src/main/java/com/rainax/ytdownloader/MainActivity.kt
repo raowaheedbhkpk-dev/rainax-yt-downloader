@@ -84,6 +84,9 @@ class MainActivity : AppCompatActivity() {
         if (::statusSaver.isInitialized) statusSaver.onFolderPicked(uri)
     }
 
+    private val collectionHeader by lazy { SectionHeader(pl.collectionSection) }
+    private val shelf = ShelfAdapter { openFile(it) }
+    private var meterKey = ""
     private val activeHeader by lazy { SectionHeader(pl.activeSection) }
     private val doneHeader by lazy { SectionHeader(pl.doneSection) }
 
@@ -131,6 +134,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)   // pure black
+        Ui.applyAccent(this)
         if (!Integrity.isOfficial(this)) {
             blocked = true
             super.onCreate(null)
@@ -140,6 +144,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+        if (savedInstanceState == null && AppPrefs.openingTitle(this)) OpeningCredits.show(b.root)
         // Phone makers (MIUI, ColorOS, ...) must not re-colour our screens: the app owns its light and dark themes
         b.root.isForceDarkAllowed = false
         onBackPressedDispatcher.addCallback(this, backCallback)
@@ -955,7 +960,7 @@ class MainActivity : AppCompatActivity() {
         e.menuBrand.text = android.text.SpannableStringBuilder("RAINAX ").apply {
             val start = length
             append("Tube")
-            setSpan(android.text.style.ForegroundColorSpan(ContextCompat.getColor(this@MainActivity, R.color.rx_primary)), start, length, 0)
+            setSpan(android.text.style.ForegroundColorSpan(Ui.accent(this@MainActivity)), start, length, 0)
         }
         // width: 300dp, or less on small phones (always leaves room to tap outside)
         e.explorePanel.layoutParams = e.explorePanel.layoutParams.apply {
@@ -1322,7 +1327,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             so.socialClipBadge.background = android.graphics.drawable.GradientDrawable().apply {
                 cornerRadius = 4 * resources.displayMetrics.density
-                setColor(ContextCompat.getColor(this@MainActivity, R.color.rx_primary))
+                setColor(Ui.accent(this@MainActivity))
             }
             so.socialClipBadge.text = "\u2193"
         }
@@ -1806,15 +1811,19 @@ class MainActivity : AppCompatActivity() {
                 )
             }
             vm.enqueue(items, spec, sub)
-            dialog.dismiss()
+            sb.downloadBtn.isEnabled = false                 // (one tap: the ticket is being torn off)
             // (no battery question: downloads run as a foreground service with a notification, which
             // Android keeps running; the optional setting is in Settings for phones that still stop them)
             val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
-            if (onAdded != null) { onAdded(what); return@setOnClickListener }
-            Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
-                .setAnchorView(snackAnchor())
-                .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
-                .show()
+            DlCardAdapter.tear(sb.formatList) {
+                if (isFinishing || isDestroyed) return@tear
+                dialog.dismiss()
+                if (onAdded != null) { onAdded(what); return@tear }
+                Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
+                    .setAnchorView(snackAnchor())
+                    .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
+                    .show()
+            }
         }
 
         var collectJob: Job? = null
@@ -1847,7 +1856,10 @@ class MainActivity : AppCompatActivity() {
         // both sections in one recycling list: only the rows on screen are made, however many downloads there are
         pl.playList.layoutManager = LinearLayoutManager(this)
         (pl.playList.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
-        pl.playList.adapter = androidx.recyclerview.widget.ConcatAdapter(activeHeader, activeAdapter, doneHeader, doneAdapter)
+        pl.playList.adapter = androidx.recyclerview.widget.ConcatAdapter(collectionHeader, activeHeader, activeAdapter, doneHeader, doneAdapter)
+        pl.shelfList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        pl.shelfList.adapter = shelf
+        pl.shelfList.isNestedScrollingEnabled = false
 
         pl.emptySearchBtn.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_home }
         pl.selectActiveBtn.setOnClickListener { selectAll(done = false) }
@@ -1893,6 +1905,7 @@ class MainActivity : AppCompatActivity() {
         checkUpdateReady(all)
         countForRating(done)
 
+        renderCollection(done)
         activeHeader.visible = active.isNotEmpty()
         pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
         pl.activeTitle.text = "Downloading (${active.size})"
@@ -2203,6 +2216,32 @@ class MainActivity : AppCompatActivity() {
         if (!FastExtractor.supports(url)) null else Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1)
             ?.let { "https://i.ytimg.com/vi/$it/mqdefault.jpg" }
 
+    /** You page: the storage strip and the shelf of the newest downloads (updated when the finished list changes). */
+    private fun renderCollection(done: List<DownloadTask>) {
+        val playable = done.filter { it.fileUri != null && isPlayable(it) && !it.format.startsWith(AppUpdater.TASK_PREFIX) }
+        collectionHeader.visible = playable.isNotEmpty()
+        if (playable.isEmpty()) return
+        shelf.submit(playable.sortedByDescending { it.createdAt }.take(12))
+        val key = playable.joinToString(",") { it.id }
+        if (key == meterKey) return
+        meterKey = key
+        lifecycleScope.launch {
+            val u = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { StorageMeter.measure(applicationContext, playable) }
+            if (isFinishing || isDestroyed) return@launch
+            val all = (u.videoBytes + u.audioBytes + u.freeBytes).coerceAtLeast(1L)
+            fun weight(v: View, bytes: Long) {
+                (v.layoutParams as LinearLayout.LayoutParams).weight = bytes.toFloat() / all
+            }
+            weight(pl.meterVideo, u.videoBytes)
+            weight(pl.meterAudio, u.audioBytes)
+            weight(pl.meterFree, u.freeBytes)
+            pl.meterBar.requestLayout()
+            pl.meterTotal.text = "${StorageMeter.short(u.videoBytes + u.audioBytes)} USED"
+            pl.meterText.text = "Videos ${StorageMeter.short(u.videoBytes)}  ·  MP3 ${StorageMeter.short(u.audioBytes)}  ·  Free ${StorageMeter.short(u.freeBytes)}"
+            pl.meterBar.contentDescription = pl.meterText.text
+        }
+    }
+
     private fun isPlayable(t: DownloadTask): Boolean {
         val m = t.mime.orEmpty()
         if (m.startsWith("video/") || m.startsWith("audio/")) return true
@@ -2285,6 +2324,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        st.accentGroup.check(
+            when (AppPrefs.accent(this)) {
+                1 -> R.id.accentGold
+                2 -> R.id.accentTeal
+                3 -> R.id.accentPurple
+                else -> R.id.accentRed
+            }
+        )
+        st.accentGroup.setOnCheckedStateChangeListener { _, ids ->
+            val v = when (ids.firstOrNull()) {
+                R.id.accentGold -> 1
+                R.id.accentTeal -> 2
+                R.id.accentPurple -> 3
+                else -> 0
+            }
+            if (v != AppPrefs.accent(this)) {
+                AppPrefs.setAccent(this, v)
+                window.decorView.post { if (!isDestroyed) recreate() }      // every screen in the new colour
+            }
+        }
+
         st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
         st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
         st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
@@ -2295,8 +2355,10 @@ class MainActivity : AppCompatActivity() {
         st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
         st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
         st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
+        st.openingSwitch.isChecked = AppPrefs.openingTitle(this)
+        st.openingSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setOpeningTitle(this, on) }
         // the whole row is tappable (ripple + a slight press), not only the small switch
-        listOf(st.wifiSwitch, st.autoClearSwitch, st.bgPlaySwitch, st.sponsorSwitch, st.resumeSwitch, st.clipSwitch, st.autoRetrySwitch)
+        listOf(st.wifiSwitch, st.autoClearSwitch, st.bgPlaySwitch, st.sponsorSwitch, st.resumeSwitch, st.clipSwitch, st.autoRetrySwitch, st.openingSwitch)
             .forEach { sw ->
                 val row = sw.parent as? View ?: return@forEach
                 val tv = android.util.TypedValue()

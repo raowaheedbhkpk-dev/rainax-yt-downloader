@@ -44,7 +44,7 @@ class NotificationsPage(
         b.notifBack.setOnClickListener { dialog.dismiss() }
         b.notifRefresh.setOnClickListener { load(reset = true) }
         b.notifRetry.setOnClickListener { load(reset = true) }
-        b.notifSwipe.setColorSchemeColors(androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary))
+        b.notifSwipe.setColorSchemeColors(Ui.accent(act))
         b.notifSwipe.setOnRefreshListener { load(reset = true) }
         b.notifChips.setOnCheckedStateChangeListener { _, ids ->
             mentionsOnly = ids.firstOrNull() == R.id.notifMentions

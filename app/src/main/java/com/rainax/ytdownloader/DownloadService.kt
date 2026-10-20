@@ -823,14 +823,24 @@ class DownloadService : Service() {
             return
         }
         val count = doneCount.incrementAndGet()
-        val n = NotificationCompat.Builder(this, CH_DONE)
+        // Cinema Pro: "Now showing" with the video's picture (large icon, and big when the notification is opened)
+        val pic = if (count == 1) (TaskRepository.get(task.id) ?: task).thumbPath?.let { path ->
+            runCatching { android.graphics.BitmapFactory.decodeFile(path) }.getOrNull()
+        } else null
+        val b = NotificationCompat.Builder(this, CH_DONE)
             .setSmallIcon(R.drawable.ic_stat_download)
-            .setContentTitle(if (count == 1) "Download complete" else "$count downloads complete")
+            .setColor(Ui.accent(this))
+            .setContentTitle(if (count == 1) "Now showing · download complete" else "Now showing · $count downloads complete")
             .setContentText(label(task).take(60))
+            .setSubText("RAINAX Tube")
             .setAutoCancel(true)
             .setContentIntent(if (count == 1) playIntent(task) ?: openAppIntent() else openAppIntent())
-            .build()
-        nm.notify(DONE_ID, n)
+        if (pic != null) {
+            b.setLargeIcon(pic)
+            b.setStyle(NotificationCompat.BigPictureStyle().bigPicture(pic).bigLargeIcon(null as android.graphics.Bitmap?)
+                .setSummaryText(label(task).take(80)))
+        }
+        nm.notify(DONE_ID, b.build())
     }
 
     /** Tapping "Download complete" plays the file in the RAINAX player. */

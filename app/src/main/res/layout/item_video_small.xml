@@ -97,7 +97,7 @@
         android:padding="8dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_download"
-        app:tint="@color/rx_primary" />
+        app:tint="?attr/rxAccent" />
     <!-- ⋮ : Save to playlist, Share, Not interested… (like YouTube) -->
     <ImageButton
         android:id="@+id/more"

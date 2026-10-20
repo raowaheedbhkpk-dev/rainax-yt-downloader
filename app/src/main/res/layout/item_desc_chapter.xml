@@ -19,7 +19,7 @@
         android:gravity="center"
         android:paddingHorizontal="8dp"
         android:paddingVertical="4dp"
-        android:textColor="@color/rx_primary"
+        android:textColor="?attr/rxAccent"
         android:textSize="13sp"
         android:textStyle="bold" />
 
@@ -42,5 +42,5 @@
         android:importantForAccessibility="no"
         android:src="@drawable/ic_play"
         android:visibility="gone"
-        android:tint="@color/rx_primary" />
+        android:tint="?attr/rxAccent" />
 </LinearLayout>

@@ -536,20 +536,43 @@ object YtCatalog {
     val SEARCH_KINDS = listOf(
         "Videos" to YoutubeSearchQueryHandlerFactory.VIDEOS,
         "Channels" to YoutubeSearchQueryHandlerFactory.CHANNELS,
-        "Playlists" to YoutubeSearchQueryHandlerFactory.PLAYLISTS
+        "Playlists" to YoutubeSearchQueryHandlerFactory.PLAYLISTS,
+        "Under 4 min" to YoutubeSearchQueryHandlerFactory.VIDEOS,
+        "Over 20 min" to YoutubeSearchQueryHandlerFactory.VIDEOS
     )
+
+    /** Search chips 3 and 4 keep only short or long videos (YouTube's own length filter isn't available here). */
+    private fun lengthOk(kind: Int, v: VideoItem): Boolean = when (kind) {
+        3 -> v.seconds in 1..239
+        4 -> v.seconds >= 1200
+        else -> true
+    }
 
     fun search(query: String, kind: Int, page: Page?): FeedPage = guard {
         FastExtractor.init()
         val filter = SEARCH_KINDS.getOrNull(kind)?.second ?: YoutubeSearchQueryHandlerFactory.VIDEOS
         val handler = yt.searchQHFactory.fromQuery(query, listOf(filter), "")
-        if (page == null) {
+        fun fetch(p: Page?): FeedPage = if (p == null) {
             val info = SearchInfo.getInfo(yt, handler)
             FeedPage(info.relatedItems.mapNotNull { item(it) }, if (info.hasNextPage()) info.nextPage else null)
         } else {
-            val p = SearchInfo.getMoreItems(yt, handler, page)
-            FeedPage(p.items.mapNotNull { item(it) }, if (p.hasNextPage()) p.nextPage else null)
+            val more = SearchInfo.getMoreItems(yt, handler, p)
+            FeedPage(more.items.mapNotNull { item(it) }, if (more.hasNextPage()) more.nextPage else null)
         }
+        if (kind < 3) return@guard fetch(page)
+        // a length chip: read a few pages until enough videos of that length are found
+        val found = mutableListOf<VideoItem>()
+        var next = page
+        var first = true
+        var tries = 0
+        while ((first || next != null) && found.size < 8 && tries < 4) {
+            val r = fetch(next)
+            found += r.items.filter { !it.isChannel && !it.isPlaylist && lengthOk(kind, it) }
+            next = r.next
+            first = false
+            tries++
+        }
+        FeedPage(found, next)
     }
 
     /** Blocking. Search suggestions while typing. */

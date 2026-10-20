@@ -102,8 +102,8 @@
                 android:contentDescription="Microphone"
                 android:elevation="10dp"
                 android:focusable="true"
-                android:outlineAmbientShadowColor="@color/rx_primary"
-                android:outlineSpotShadowColor="@color/rx_primary"
+                android:outlineAmbientShadowColor="?attr/rxAccent"
+                android:outlineSpotShadowColor="?attr/rxAccent"
                 android:stateListAnimator="@animator/rx_press">
 
                 <ImageView

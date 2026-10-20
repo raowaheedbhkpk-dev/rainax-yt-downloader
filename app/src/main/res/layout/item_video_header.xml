@@ -37,7 +37,7 @@
         android:layout_marginTop="12dp"
         android:indeterminate="true"
         android:visibility="gone"
-        app:indicatorColor="@color/rx_primary" />
+        app:indicatorColor="?attr/rxAccent" />
 
     <TextView
         android:id="@+id/vError"
@@ -140,9 +140,9 @@
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:elevation="6dp"
-                android:outlineAmbientShadowColor="@color/rx_primary"
-                android:outlineSpotShadowColor="@color/rx_primary"
-                app:backgroundTint="@color/rx_primary"
+                android:outlineAmbientShadowColor="?attr/rxAccent"
+                android:outlineSpotShadowColor="?attr/rxAccent"
+                app:backgroundTint="?attr/rxAccent"
                 app:icon="@drawable/ic_download"
                 app:iconPadding="8dp"
                 app:iconSize="20dp"
@@ -269,6 +269,24 @@
                 app:iconTint="@color/rx_text"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Rainax.Pill" />
         </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- chapters as a film strip: one frame per chapter (time and name), tap to jump; filled in code -->
+    <HorizontalScrollView
+        android:id="@+id/vChapterStrip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:paddingHorizontal="12dp"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/vChapterFrames"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
     </HorizontalScrollView>
 
     <com.google.android.material.card.MaterialCardView

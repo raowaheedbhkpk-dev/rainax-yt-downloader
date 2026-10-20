@@ -87,7 +87,7 @@
                 android:layout_height="26dp"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_shorts"
-                app:tint="@color/rx_primary" />
+                app:tint="?attr/rxAccent" />
 
             <TextView
                 android:fontFamily="@font/rx_display"

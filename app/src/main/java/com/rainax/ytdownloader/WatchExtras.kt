@@ -222,6 +222,18 @@ object WatchHistory {
         }
     }
 
+    /** Your last 7 days: how long you watched, how many videos, and the channel you watched most. */
+    class Week(val watchedMs: Long, val videos: Int, val topChannel: String?)
+
+    @Synchronized
+    fun week(c: Context): Week {
+        load(c)
+        val since = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
+        val recent = entries.values.filter { it.at >= since }
+        val top = recent.filter { it.uploader.isNotBlank() }.groupingBy { it.uploader }.eachCount().maxByOrNull { it.value }?.key
+        return Week(recent.sumOf { it.posMs.coerceAtMost(it.durMs.takeIf { d -> d > 0 } ?: it.posMs) }, recent.size, top)
+    }
+
     /** Videos to continue, newest first. */
     @Synchronized
     fun continueList(c: Context): List<Entry> {

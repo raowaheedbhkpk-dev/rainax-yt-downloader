@@ -113,6 +113,22 @@ class DownloadAdapter(
 
         bindThumb(b.thumb, t)
 
+        // projector: the reel turns while this one downloads
+        val running = t.status == Status.RUNNING
+        b.reelBox.isVisible = running
+        if (running) {
+            b.reelPct.text = if (t.progress in 1..100) "${t.progress}%" else "···"
+            if (b.reel.animation == null && android.animation.ValueAnimator.areAnimatorsEnabled()) {
+                b.reel.startAnimation(android.view.animation.RotateAnimation(0f, 360f,
+                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f, android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f).apply {
+                    duration = 1400
+                    repeatCount = android.view.animation.Animation.INFINITE
+                    interpolator = android.view.animation.LinearInterpolator()
+                })
+            }
+        } else if (b.reel.animation != null) {
+            b.reel.clearAnimation()
+        }
         val showProgress = t.status == Status.RUNNING || t.status == Status.QUEUED ||
             t.status == Status.PAUSED || t.status == Status.WAITING
         b.progress.isVisible = showProgress

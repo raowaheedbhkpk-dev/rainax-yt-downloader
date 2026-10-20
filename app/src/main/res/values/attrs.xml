@@ -5,6 +5,8 @@
     <attr name="rxCard" format="color" />
     <attr name="rxSurfaceAlt" format="color" />
     <attr name="rxOutline" format="color" />
+    <!-- the accent colour (Settings › Accent): film red, gold, teal or purple -->
+    <attr name="rxAccent" format="color" />
     <!-- page background (Midnight Glass glows; pure black for AMOLED) -->
     <attr name="rxAmbient" format="reference" />
 </resources>

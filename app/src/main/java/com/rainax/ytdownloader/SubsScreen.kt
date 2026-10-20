@@ -43,7 +43,7 @@ class SubsScreen(
                 if (dy > 0 && lm.findLastVisibleItemPosition() >= lm.itemCount - 5) load(reset = false)
             }
         })
-        b.subsSwipe.setColorSchemeResources(R.color.rx_primary)
+        b.subsSwipe.setColorSchemeColors(Ui.accent(act))
         b.subsSwipe.setOnRefreshListener { load(reset = true, fresh = true) }
         b.subsRefresh.setOnClickListener { load(reset = true, fresh = true) }
         b.subsAll.setOnClickListener { openAllChannels() }

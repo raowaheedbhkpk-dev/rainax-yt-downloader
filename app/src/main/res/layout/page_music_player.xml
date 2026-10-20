@@ -117,6 +117,20 @@
                     app:surface_type="texture_view"
                     app:use_controller="false" />
 
+                <!-- vinyl (song mode): grooves over the cover and the red centre label; the cover spins while it plays -->
+                <View
+                    android:id="@+id/mpVinylGrooves"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_vinyl_grooves" />
+
+                <View
+                    android:id="@+id/mpVinylHole"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_vinyl_hole" />
+
                 <ProgressBar
                     android:id="@+id/mpArtLoading"
                     android:layout_width="40dp"

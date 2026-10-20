@@ -82,18 +82,16 @@ class DlCardAdapter(
             size.setTextColor(col(if (item.selected) R.color.dl_accent_text else R.color.dl_text2))
             check.isVisible = item.selected
             badge.isVisible = item.recommended
-            // selected: red border on a soft pink card; recommended: pink border; others: thin grey border
-            val shape = GradientDrawable().apply {
-                cornerRadius = 2 * d
-                when {
-                    item.selected -> { setColor(col(R.color.dl_card_selected_bg)); setStroke((2 * d).toInt(), col(R.color.dl_accent)) }
-                    item.recommended -> { setColor(col(R.color.dl_card_bg)); setStroke((2 * d).toInt(), col(R.color.dl_card_recommended)) }
-                    else -> { setColor(col(R.color.dl_card_bg)); setStroke((1.5f * d).toInt().coerceAtLeast(1), col(R.color.dl_card_stroke)) }
-                }
+            // a ticket: the size sits on the tear-off stub. Selected: red edge on a soft card; recommended: gold edge
+            val shape = when {
+                item.selected -> TicketDrawable(col(R.color.dl_card_selected_bg), col(R.color.dl_accent), 2 * d, d, 40 * d)
+                item.recommended -> TicketDrawable(col(R.color.dl_card_bg), col(R.color.dl_card_recommended), 2 * d, d, 40 * d)
+                else -> TicketDrawable(col(R.color.dl_card_bg), col(R.color.dl_card_stroke), 1.5f * d, d, 40 * d)
             }
             val mask = GradientDrawable().apply { cornerRadius = 2 * d; setColor(0xFFFFFFFF.toInt()) }
             card.background = RippleDrawable(ColorStateList.valueOf(0x22D42A35), shape, mask)
-            card.elevation = if (item.selected) 6 * d else 2 * d
+            card.tag = if (item.selected) SELECTED_TAG else null
+            card.elevation = 0f                       // (a ticket has notches: no square shadow behind it)
             card.contentDescription = listOf(item.quality, item.tag, item.size, if (item.recommended) "Recommended" else "",
                 if (item.selected) "Selected" else "").filter { it.isNotBlank() }.joinToString(", ")
             card.setOnClickListener { onPick(item.choice) }
@@ -103,5 +101,16 @@ class DlCardAdapter(
     companion object {
         private const val CARD = 0
         private const val MORE = 1
+        /** The chosen card's tag: Download tears it off (see MainActivity / QuickSheet). */
+        const val SELECTED_TAG = "rx_selected_ticket"
+
+        /** Download pressed: the chosen ticket lifts, tilts and fades like a stub torn off, then [then] runs. */
+        fun tear(list: android.view.View, then: () -> Unit) {
+            val t = list.findViewWithTag<android.view.View>(SELECTED_TAG)
+            if (t == null || !android.animation.ValueAnimator.areAnimatorsEnabled()) { then(); return }
+            val d = t.resources.displayMetrics.density
+            t.animate().rotation(-5f).translationY(-26 * d).alpha(0f).setDuration(240)
+                .withEndAction { then() }.start()
+        }
     }
 }

@@ -67,7 +67,7 @@
             android:rotation="-90"
             android:text="Admit one"
             android:textAllCaps="true"
-            android:textColor="#D7263D"
+            android:textColor="?attr/rxAccent"
             android:textSize="15sp" />
 
         <TextView

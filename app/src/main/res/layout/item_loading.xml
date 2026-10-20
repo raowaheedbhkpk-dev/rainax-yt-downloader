@@ -9,6 +9,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:indeterminate="true"
-        app:indicatorColor="@color/rx_primary"
+        app:indicatorColor="?attr/rxAccent"
         app:indicatorSize="28dp" />
 </FrameLayout>

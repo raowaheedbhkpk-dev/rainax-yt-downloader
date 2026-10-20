@@ -49,7 +49,7 @@ class RxNavBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val amoled = AppPrefs.themeMode(context) == 3
         stripPaint.color = if (amoled) Color.BLACK else themeColor(R.attr.rxBg)
         linePaint.color = ContextCompat.getColor(context, R.color.rx_divider)
-        markPaint.color = ContextCompat.getColor(context, R.color.rx_primary)
+        markPaint.color = Ui.accent(context)
     }
 
     private fun themeColor(attr: Int): Int {

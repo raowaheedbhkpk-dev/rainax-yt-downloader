@@ -39,6 +39,35 @@
             android:scaleType="centerCrop"
             app:shapeAppearance="@style/ShapeAppearance.Rainax.Sharp" />
 
+        <!-- while downloading: a film reel turning over the picture, like a projector, with the percent -->
+        <LinearLayout
+            android:id="@+id/reelBox"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#99000000"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/reel"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_film_reel"
+                app:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/reelPct"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:fontFamily="@font/rx_display"
+                android:includeFontPadding="false"
+                android:textColor="#E8B44A"
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <!-- pops in for a moment when a download finishes -->
         <ImageView
             android:id="@+id/doneCheck"
@@ -104,7 +133,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            app:indicatorColor="@color/rx_primary"
+            app:indicatorColor="?attr/rxAccent"
             app:trackColor="?attr/rxSurfaceAlt"
             app:trackCornerRadius="0dp"
             app:trackThickness="6dp" />
@@ -115,7 +144,7 @@
         style="@style/Widget.Rainax.Button.Icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:iconTint="@color/rx_primary" />
+        app:iconTint="?attr/rxAccent" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/closeBtn"

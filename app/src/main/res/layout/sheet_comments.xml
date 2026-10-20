@@ -69,7 +69,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:indeterminate="true"
-            app:indicatorColor="@color/rx_primary" />
+            app:indicatorColor="?attr/rxAccent" />
 
         <TextView
             android:id="@+id/commentEmpty"
@@ -161,7 +161,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Post comment"
             android:src="@drawable/ic_send"
-            app:tint="@color/rx_primary" />
+            app:tint="?attr/rxAccent" />
     </LinearLayout>
 
     <!-- quick emoji (while typing), like YouTube -->

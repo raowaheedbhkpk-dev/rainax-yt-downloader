@@ -77,6 +77,11 @@ class VideoAdapter(
     var chapters: List<Pair<String, String>> = emptyList()
     var onNeedChapter: ((String) -> Unit)? = null
     var onChapterMore: ((String) -> Unit)? = null
+    /** "Your week" numbers for the magazine (null = no such card). */
+    class WeekStats(val watchedMs: Long, val videos: Int, val downloads: Int, val topChannel: String?)
+    var weekStats: (() -> WeekStats)? = null
+    private var week: WeekStats? = null
+
     /** The magazine's Movies section (cinema tickets): its list id, loaded like a chapter. */
     var moviesId: String? = null
     private val chapterItems = HashMap<String, List<VideoItem>>()
@@ -151,6 +156,7 @@ class VideoAdapter(
         class Grid(val i: Int) : Slot(GRID)
         class Chapter(val label: String, val title: String, val id: String) : Slot(CHAPTER)
         class Movies(val label: String, val id: String) : Slot(MOVIES)
+        object Week : Slot(WEEK)
     }
 
     private var slots: List<Slot> = emptyList()
@@ -168,6 +174,8 @@ class VideoAdapter(
             if (header != null) out += Slot.Header
             out += Slot.Section(label("Editor's picks"), "Worth your time")
             out += Slot.Grid(6)
+            week = weekStats?.invoke()?.takeIf { it.videos > 0 || it.downloads > 0 }
+            if (week != null) out += Slot.Week
             var next = 9
             chapters.forEachIndexed { ci, (title, id) ->
                 val got = chapterItems[id]
@@ -209,6 +217,7 @@ class VideoAdapter(
             GRID -> GridRow(inf.inflate(R.layout.item_mag_grid, parent, false))
             CHAPTER -> ChapterRow(inf.inflate(R.layout.item_mag_chapter, parent, false))
             MOVIES -> MoviesRow(inf.inflate(R.layout.item_mag_movies, parent, false))
+            WEEK -> WeekRow(inf.inflate(R.layout.item_mag_week, parent, false))
             else -> Row(inf.inflate(if (big) R.layout.item_video_big else R.layout.item_video_small, parent, false))
         }
     }
@@ -223,6 +232,7 @@ class VideoAdapter(
             is GridRow -> holder.bind((slot as Slot.Grid).i)
             is ChapterRow -> (slot as Slot.Chapter).let { holder.bind(it.label, it.title, it.id) }
             is MoviesRow -> (slot as Slot.Movies).let { holder.bind(it.label, it.id) }
+            is WeekRow -> week?.let { holder.bind(it) }
             else -> if (slot === Slot.Header) {
                 val box = holder.itemView as FrameLayout
                 val h = header ?: return
@@ -307,7 +317,7 @@ class VideoAdapter(
                 val on = isPicked(item.url)
                 pick?.setImageResource(if (on) R.drawable.ic_check else R.drawable.ic_add)
                 pick?.imageTintList = android.content.res.ColorStateList.valueOf(
-                    androidx.core.content.ContextCompat.getColor(itemView.context, if (on) R.color.rx_primary else R.color.rx_text)
+                    if (on) Ui.accent(itemView.context) else androidx.core.content.ContextCompat.getColor(itemView.context, R.color.rx_text)
                 )
                 pick?.contentDescription = if (on) "Selected. Tap to unselect" else "Select for download"
                 pick?.setOnClickListener {
@@ -368,7 +378,7 @@ class VideoAdapter(
             val first = place == 1
             rank.paint.style = if (first) android.graphics.Paint.Style.FILL else android.graphics.Paint.Style.STROKE
             rank.paint.strokeWidth = 1.5f * ctx.resources.displayMetrics.density
-            rank.setTextColor(androidx.core.content.ContextCompat.getColor(ctx, if (first) R.color.rx_primary else R.color.rx_text))
+            rank.setTextColor(if (first) Ui.accent(ctx) else androidx.core.content.ContextCompat.getColor(ctx, R.color.rx_text))
             rank.contentDescription = "Number $place"
             rank.invalidate()
             Img.load(thumb, item.thumb, widthPx = 360)
@@ -425,6 +435,31 @@ class VideoAdapter(
             loading.isVisible = got == null
             if (posters.submit(got.orEmpty())) row.scrollToPosition(0)
             if (got == null && chapterAsked.add(id)) onNeedChapter?.invoke(id)
+        }
+    }
+
+    /** Your week: hours watched, videos, downloads, and your top channel. */
+    inner class WeekRow(v: View) : RecyclerView.ViewHolder(v) {
+        private val hours: TextView = v.findViewById(R.id.wkHours)
+        private val hoursLabel: TextView = v.findViewById(R.id.wkHoursLabel)
+        private val videos: TextView = v.findViewById(R.id.wkVideos)
+        private val downloads: TextView = v.findViewById(R.id.wkDownloads)
+        private val top: TextView = v.findViewById(R.id.wkTop)
+
+        fun bind(w: WeekStats) {
+            val minutes = w.watchedMs / 60_000
+            if (minutes >= 60) {
+                hours.text = String.format(java.util.Locale.US, "%.1f", minutes / 60.0)
+                hoursLabel.text = "Hours watched"
+            } else {
+                hours.text = minutes.toString()
+                hoursLabel.text = "Minutes watched"
+            }
+            videos.text = w.videos.toString()
+            downloads.text = w.downloads.toString()
+            top.isVisible = !w.topChannel.isNullOrBlank()
+            top.text = "Most watched: ${w.topChannel.orEmpty()}"
+            itemView.contentDescription = "Your week: ${hours.text} ${hoursLabel.text}, ${w.videos} videos, ${w.downloads} downloads"
         }
     }
 
@@ -558,5 +593,6 @@ class VideoAdapter(
         private const val WIDE = 9
         private const val CHAPTER = 10
         private const val MOVIES = 11
+        private const val WEEK = 12
     }
 }

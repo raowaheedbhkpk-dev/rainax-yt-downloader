@@ -50,4 +50,8 @@
     <color name="menu_label">#80FFFFFF</color>
     <color name="rx_gold">#E8B44A</color>
     <color name="rx_switch_off">#333333</color>
+    <!-- accent choices (Settings › Accent) -->
+    <color name="rx_accent_gold">#E8B44A</color>
+    <color name="rx_accent_teal">#2EC4B6</color>
+    <color name="rx_accent_purple">#A78BFA</color>
 </resources>

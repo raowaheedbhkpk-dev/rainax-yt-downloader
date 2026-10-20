@@ -70,7 +70,7 @@ object PicksSheet {
         }
         val clear = android.widget.TextView(act).apply {
             this.text = "Clear all"
-            setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary))
+            setTextColor(Ui.accent(act))
             textSize = 15f
             setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
             setPadding((14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())

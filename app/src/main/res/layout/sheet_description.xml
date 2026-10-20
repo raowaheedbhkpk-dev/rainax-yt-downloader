@@ -24,7 +24,7 @@
             android:layout_marginTop="16dp"
             android:letterSpacing="0.08"
             android:text="DESCRIPTION"
-            android:textColor="@color/rx_primary"
+            android:textColor="?attr/rxAccent"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -151,7 +151,7 @@
                 android:layout_marginBottom="8dp"
                 android:letterSpacing="0.08"
                 android:text="CHAPTERS"
-                android:textColor="@color/rx_primary"
+                android:textColor="?attr/rxAccent"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -171,7 +171,7 @@
             android:layout_marginBottom="8dp"
             android:letterSpacing="0.08"
             android:text="ABOUT THIS VIDEO"
-            android:textColor="@color/rx_primary"
+            android:textColor="?attr/rxAccent"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -183,7 +183,7 @@
             android:lineSpacingExtra="5dp"
             android:padding="16dp"
             android:textColor="@color/rx_text"
-            android:textColorLink="@color/rx_primary"
+            android:textColorLink="?attr/rxAccent"
             android:textSize="14.5sp" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

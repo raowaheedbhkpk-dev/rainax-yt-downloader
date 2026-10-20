@@ -435,7 +435,7 @@ class CommentsSheet(
             holder.text.text = c.text
 
             // like / dislike / reply
-            val red = ContextCompat.getColor(act, R.color.rx_primary)
+            val red = Ui.accent(act)
             val normal = ContextCompat.getColor(act, R.color.rx_text)
             holder.likeIcon.imageTintList = ColorStateList.valueOf(if (c.likeState == "LIKE") red else normal)
             holder.dislike.imageTintList = ColorStateList.valueOf(if (c.likeState == "DISLIKE") red else normal)

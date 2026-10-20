@@ -92,7 +92,7 @@
             android:layout_gravity="center"
             android:indeterminate="true"
             android:visibility="gone"
-            app:indicatorColor="@color/rx_primary" />
+            app:indicatorColor="?attr/rxAccent" />
 
         <!-- not signed in, nothing yet, or no internet -->
         <LinearLayout

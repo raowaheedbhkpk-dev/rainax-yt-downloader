@@ -41,5 +41,5 @@
         android:importantForAccessibility="no"
         android:src="@drawable/ic_check"
         android:visibility="gone"
-        app:tint="@color/rx_primary" />
+        app:tint="?attr/rxAccent" />
 </LinearLayout>

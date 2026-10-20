@@ -99,7 +99,7 @@ class HomeScreen(
     /** Soft glow at the top of the Music tab, in the colour of the song playing (like YouTube Music). */
     private val musicGlow = android.graphics.drawable.GradientDrawable(
         android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-        intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary), 0x30), android.graphics.Color.TRANSPARENT)
+        intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(Ui.accent(act), 0x30), android.graphics.Color.TRANSPARENT)
     )
     /**
      * A list opened from the side menu, the bell or the You tab (title bar with Back):
@@ -131,6 +131,12 @@ class HomeScreen(
     private fun setupMagazine() {
         bigAdapter.chapters = MAG_CHAPTERS
         bigAdapter.moviesId = MAG_MOVIES
+        bigAdapter.weekStats = {
+            val w = WatchHistory.week(act)
+            val since = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
+            val dl = TaskRepository.tasks.value.count { it.status == Status.DONE && it.createdAt >= since && !it.format.startsWith(AppUpdater.TASK_PREFIX) }
+            VideoAdapter.WeekStats(w.watchedMs, w.videos, dl, w.topChannel)
+        }
         bigAdapter.onNeedChapter = { id -> loadChapter(id) }
         bigAdapter.onChapterMore = { id -> openTab(id) }
     }
@@ -241,8 +247,11 @@ class HomeScreen(
         hm.suggestList.adapter = suggestAdapter
 
         // pull down: fresh list (not the saved one)
-        hm.feedRefresh.setColorSchemeResources(R.color.rx_primary)
+        // the round spinner is hidden: a film countdown shows instead (see countdown())
+        hm.feedRefresh.setColorSchemeColors(android.graphics.Color.TRANSPARENT)
+        hm.feedRefresh.setProgressBackgroundColorSchemeColor(android.graphics.Color.TRANSPARENT)
         hm.feedRefresh.setOnRefreshListener {
+            countdown()
             if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
             if (!isMusic && bigAdapter.magazine) {                    // the magazine's chapters come fresh too
                 (MAG_CHAPTERS.map { it.second } + MAG_MOVIES).forEach { vm.feedCache.remove("tab:$it") }
@@ -460,9 +469,9 @@ class HomeScreen(
         val history = AppPrefs.searchHistory(act)
         if (text.isBlank()) {
             // like YouTube: your recent searches, then "You may like" (channels you watch, popular videos) with pictures
-            val recent = history.take(6).map { Sug(it, icon = R.drawable.ic_history) }
+            val recent = history.take(10).map { Sug(it, icon = R.drawable.ic_history) }
             val local = mayLike(history)
-            suggestAdapter.submit(recent, local, showClear = history.isNotEmpty())
+            suggestAdapter.submit(emptyList(), local, showClear = history.isNotEmpty(), stubs = recent)
             // then, like YouTube: searches related to what you watch and search, each with a matching picture
             suggestJob = act.lifecycleScope.launch {
                 val personal = try {
@@ -475,7 +484,7 @@ class HomeScreen(
                 if (personal.isEmpty() || hm.searchInput.text?.isNotBlank() == true) return@launch
                 val channels = local.filter { it.sub != null }
                 val trending = local.filter { it.sub == null && personal.none { p -> p.text == it.text } }
-                suggestAdapter.submit(recent, (channels + personal + trending).take(8), showClear = history.isNotEmpty())
+                suggestAdapter.submit(emptyList(), (channels + personal + trending).take(8), showClear = history.isNotEmpty(), stubs = recent)
             }
             return
         }
@@ -791,7 +800,7 @@ class HomeScreen(
     fun musicTone(c: Int) {
         val hsv = FloatArray(3)
         android.graphics.Color.colorToHSV(c, hsv)
-        val glow = if (hsv[1] < 0.1f) androidx.core.content.ContextCompat.getColor(act, R.color.rx_primary)
+        val glow = if (hsv[1] < 0.1f) Ui.accent(act)
         else android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1].coerceAtMost(0.8f), 0.9f))
         musicGlow.colors = intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(glow, 0x38), android.graphics.Color.TRANSPARENT)
     }
@@ -994,6 +1003,30 @@ class HomeScreen(
         }
     }
 
+    /** Pull to refresh: 3 · 2 · 1 like an old film leader, round and round until the new list is in. */
+    private fun countdown() {
+        val v = hm.feedCountdown
+        if (v.isVisible) return
+        v.isVisible = true
+        v.alpha = 0f
+        v.animate().alpha(1f).setDuration(150).start()
+        var n = 3
+        val tick = object : Runnable {
+            override fun run() {
+                if (!hm.feedRefresh.isRefreshing) {
+                    v.animate().alpha(0f).setDuration(180).withEndAction { v.isVisible = false }.start()
+                    return
+                }
+                v.text = n.toString()
+                v.scaleX = 1.25f; v.scaleY = 1.25f
+                v.animate().scaleX(1f).scaleY(1f).setDuration(260).start()
+                n = if (n == 1) 3 else n - 1
+                v.postDelayed(this, 520)
+            }
+        }
+        v.post(tick)
+    }
+
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
     private fun showSkeleton() {
         hm.feedLoading.isVisible = false
@@ -1039,7 +1072,7 @@ class HomeScreen(
         "acc:VLWL" -> "Watch later is empty.\nTap Save on a video to add it."
         "local:history" -> "No watch history yet.\nVideos you watch in RAINAX Tube show here."
         NOTIFICATIONS -> "No new notifications.\nNew videos from your channels in the last days show here."
-        else -> "Nothing here right now"
+        else -> "Nothing showing here right now.\nPull down to try again."
     }
 
     private fun showError(text: String) {
@@ -1105,11 +1138,13 @@ class HomeScreen(
             class Item(val s: Sug) : Row()
             class Header(val title: String) : Row()
             object Clear : Row()
+            class Stubs(val list: List<Sug>) : Row()
         }
         private var rows: List<Row> = emptyList()
 
-        fun submit(list: List<Sug>, mayLike: List<Sug> = emptyList(), showClear: Boolean = false) {
+        fun submit(list: List<Sug>, mayLike: List<Sug> = emptyList(), showClear: Boolean = false, stubs: List<Sug> = emptyList()) {
             val r = mutableListOf<Row>()
+            if (stubs.isNotEmpty()) r += Row.Stubs(stubs)
             list.forEach { r += Row.Item(it) }
             if (showClear) r += Row.Clear
             if (mayLike.isNotEmpty()) {
@@ -1126,6 +1161,7 @@ class HomeScreen(
             is Row.Item -> ROW
             is Row.Header -> HEADER
             Row.Clear -> CLEAR
+            is Row.Stubs -> STUBS
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -1142,10 +1178,34 @@ class HomeScreen(
                 }
                 return object : RecyclerView.ViewHolder(tv) {}
             }
+            if (viewType == STUBS) {
+                // recent searches as ticket stubs in one sideways row, under a small gold label
+                val box = LinearLayout(c).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, (14 * d).toInt(), 0, (6 * d).toInt())
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                }
+                box.addView(TextView(c).apply {
+                    text = "RECENT SEARCHES"
+                    textSize = 10.5f
+                    letterSpacing = 0.25f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_gold))
+                    setPadding((16 * d).toInt(), 0, (16 * d).toInt(), (8 * d).toInt())
+                })
+                val scroll = android.widget.HorizontalScrollView(c).apply {
+                    isHorizontalScrollBarEnabled = false
+                    clipToPadding = false
+                    setPadding((12 * d).toInt(), 0, (12 * d).toInt(), 0)
+                }
+                scroll.addView(LinearLayout(c).apply { orientation = LinearLayout.HORIZONTAL; tag = "stubs" })
+                box.addView(scroll)
+                return object : RecyclerView.ViewHolder(box) {}
+            }
             if (viewType == CLEAR) {
                 // one row like the others: a bin icon in the same column, the words in film red, a thin line under it
                 val row = LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false)
-                val red = androidx.core.content.ContextCompat.getColor(c, R.color.rx_primary)
+                val red = Ui.accent(c)
                 row.findViewById<ImageView>(R.id.icon).apply {
                     setImageResource(R.drawable.ic_delete)
                     imageTintList = android.content.res.ColorStateList.valueOf(red)
@@ -1178,6 +1238,30 @@ class HomeScreen(
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             when (val row = rows[position]) {
                 is Row.Header -> (holder.itemView as TextView).text = row.title
+                is Row.Stubs -> {
+                    val c = holder.itemView.context
+                    val d = c.resources.displayMetrics.density
+                    val strip = holder.itemView.findViewWithTag<LinearLayout>("stubs")
+                    strip.removeAllViews()
+                    row.list.forEach { s ->
+                        strip.addView(TextView(c).apply {
+                            text = s.text
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            maxWidth = (180 * d).toInt()
+                            textSize = 13.5f
+                            gravity = android.view.Gravity.CENTER_VERTICAL
+                            setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
+                            setBackgroundResource(R.drawable.bg_recent_stub)
+                            setPadding((14 * d).toInt(), 0, (14 * d).toInt(), 0)
+                            contentDescription = "Search ${s.text}. Hold to edit"
+                            setOnClickListener { onPick(s.text) }
+                            setOnLongClickListener { onFill(s.text); true }
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * d).toInt()).apply {
+                            marginStart = (4 * d).toInt(); marginEnd = (4 * d).toInt()
+                        })
+                    }
+                }
                 Row.Clear -> (holder.itemView as ViewGroup).getChildAt(0).setOnClickListener { onClear() }
                 is Row.Item -> {
                     val h = holder as VH
@@ -1198,6 +1282,7 @@ class HomeScreen(
             private const val ROW = 0
             private const val CLEAR = 1
             private const val HEADER = 2
+            private const val STUBS = 3
         }
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {

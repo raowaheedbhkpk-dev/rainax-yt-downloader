@@ -92,6 +92,18 @@ object AppPrefs {
 
     /** Offer to download video links copied in other apps (on by default). */
     /** Video page: soft glow in the video's colours below the player (dark theme), like YouTube. */
+    /** Settings › Accent: 0 film red, 1 gold, 2 teal, 3 purple. */
+    fun accent(c: Context) = p(c).getInt("accent", 0)
+    fun setAccent(c: Context, v: Int) = p(c).edit().putInt("accent", v).apply()
+
+    /** Video page › Cinema mode: the page under the player dims while a video plays (dark theme). */
+    fun cinemaMode(c: Context) = p(c).getBoolean("cinema_mode", true)
+    fun setCinemaMode(c: Context, v: Boolean) = p(c).edit().putBoolean("cinema_mode", v).apply()
+
+    /** Settings › Opening title: the short RAINAX title card when the app starts. */
+    fun openingTitle(c: Context) = p(c).getBoolean("opening_title", true)
+    fun setOpeningTitle(c: Context, v: Boolean) = p(c).edit().putBoolean("opening_title", v).apply()
+
     fun ambientMode(c: Context) = p(c).getBoolean("ambient_mode", true)
     fun setAmbientMode(c: Context, v: Boolean) = p(c).edit().putBoolean("ambient_mode", v).apply()
 

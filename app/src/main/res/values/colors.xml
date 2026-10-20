@@ -73,4 +73,8 @@
     <color name="rx_snack_bg">#E6000000</color>
     <color name="rx_snack_text">#F3CF7F</color>
     <color name="rx_snack_action">#FF5A6C</color>
+    <!-- accent choices (Settings › Accent) -->
+    <color name="rx_accent_gold">#A87A1F</color>
+    <color name="rx_accent_teal">#0E8C80</color>
+    <color name="rx_accent_purple">#7C4DDB</color>
 </resources>

@@ -35,7 +35,7 @@ class RxDialogBuilder(
                 setPadding(dp(24f), dp(24f), dp(24f), dp(6f))
             }
             box.addView(View(ctx).apply {
-                setBackgroundColor(ContextCompat.getColor(ctx, R.color.rx_primary))
+                setBackgroundColor(Ui.accent(ctx))
             }, LinearLayout.LayoutParams(dp(40f), dp(3f)))
             box.addView(TextView(ctx).apply {
                 text = if (title.trim().endsWith("?")) "CONFIRM" else "RAINAX TUBE"

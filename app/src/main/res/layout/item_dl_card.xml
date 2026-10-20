@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One quality card of the download sheet. The "Recommended" pill sits over its top edge. -->
+<!-- One quality card of the download sheet, drawn as a ticket (TicketDrawable): the size sits on the tear-off
+     stub. The "Recommended" pill sits over its top edge. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -48,7 +49,7 @@
             android:id="@+id/cardSize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="12dp"
             android:fontFamily="@font/rx_body"
             android:textSize="13sp"
             android:textStyle="bold"
