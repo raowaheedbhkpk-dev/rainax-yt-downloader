@@ -997,6 +997,8 @@ class HomeScreen(
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
     private fun showSkeleton() {
         hm.feedLoading.isVisible = false
+        skeleton.magazine = adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
+            channelUrl == null && special == null
         if (hm.feedList.adapter !== skeleton) hm.feedList.adapter = skeleton
     }
 
@@ -1049,10 +1051,23 @@ class HomeScreen(
     }
 
     /** Five grey rows with a band of light sweeping across them (the row root is an RxShimmer). */
+    /** Grey placeholders in the shape of what is coming: the magazine (cover, section, Top 5) or a video list. */
     private class SkeletonAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        override fun getItemCount() = 5
+        var magazine = false
+            set(value) {
+                if (field == value) return
+                field = value
+                notifyDataSetChanged()
+            }
+        override fun getItemCount() = if (magazine) 6 else 5
+        override fun getItemViewType(position: Int) = when {
+            !magazine -> R.layout.item_skeleton
+            position == 0 -> R.layout.item_skeleton_cover
+            position == 1 -> R.layout.item_skeleton_section
+            else -> R.layout.item_skeleton_chart
+        }
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
-            object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_skeleton, parent, false)) {}
+            object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(viewType, parent, false)) {}
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = Unit
     }
 

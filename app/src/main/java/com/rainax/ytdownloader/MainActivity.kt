@@ -15,6 +15,7 @@ import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.PopupMenu
 import android.widget.Toast
@@ -1223,6 +1224,7 @@ class MainActivity : AppCompatActivity() {
             askFileAccess = { requestFileAccess(thenInstallAsk = false) }
         )
         statusSaver.setup()
+        fillSocialApps()
 
         so.socialPaste.setOnClickListener {
             val text = clipText()
@@ -1259,6 +1261,52 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** The link the copied-link strip was used for (it hides for that link afterwards). */
+    /**
+     * The site tags under the headline (TikTok, Instagram, Facebook, YouTube): the real app's icon from the phone
+     * when installed, else its coloured tag; tapping one opens that app (to copy a link) or its website.
+     * WhatsApp's own icon goes on the status saver too.
+     */
+    private fun fillSocialApps() {
+        val d = resources.displayMetrics.density
+        fun dp(v: Int) = (v * d).toInt()
+        so.socialApps.removeAllViews()
+        listOf("TikTok", "Instagram", "Facebook", "YouTube").mapNotNull { n -> SocialApps.ALL.firstOrNull { it.name == n } }.forEach { app ->
+            val tag = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setBackgroundResource(R.drawable.bg_social_tag)
+                setPadding(dp(6), 0, dp(10), 0)
+                isClickable = true
+                isFocusable = true
+                contentDescription = "Open ${app.name}"
+                setOnClickListener { if (!SocialApps.open(this@MainActivity, app)) message("Couldn't open ${app.name}") }
+            }
+            val badge = TextView(this).apply {
+                gravity = android.view.Gravity.CENTER
+                textSize = 9f
+                setTextColor(android.graphics.Color.WHITE)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            SocialApps.showOn(badge, app)
+            tag.addView(badge, LinearLayout.LayoutParams(dp(24), dp(24)))
+            tag.addView(TextView(this).apply {
+                text = app.name.uppercase()
+                textSize = 10.5f
+                letterSpacing = 0.12f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.rx_text))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
+            so.socialApps.addView(tag, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)).apply { marginEnd = dp(8) })
+        }
+        SocialApps.icon(this, SocialApps.WHATSAPP)?.let { wa ->
+            so.statusAppIcon.background = null
+            so.statusAppIcon.setPadding(0, 0, 0, 0)
+            so.statusAppIcon.setImageDrawable(wa)
+        }
+    }
+
     private var clipStripDone: String? = null
 
     /** Social page: a video link is on the clipboard → a strip "TikTok link copied · Download". */
@@ -1270,15 +1318,15 @@ class MainActivity : AppCompatActivity() {
         if (!show) { so.socialClipStrip.isVisible = false; return }
         val app = SocialApps.of(url!!)
         if (app != null) {
-            so.socialClipBadge.background = SocialApps.badge(app, this)
-            so.socialClipBadge.text = app.short
+            SocialApps.showOn(so.socialClipBadge, app)
         } else {
             so.socialClipBadge.background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(0x33FFFFFF)
+                cornerRadius = 4 * resources.displayMetrics.density
+                setColor(ContextCompat.getColor(this@MainActivity, R.color.rx_primary))
             }
             so.socialClipBadge.text = "\u2193"
         }
-        so.socialClipText.text = "${app?.name ?: "Video"} link copied"
+        so.socialClipText.text = "Copied · ${app?.name ?: "video link"}"
         so.socialClipGo.setOnClickListener {
             clipStripDone = url
             AppPrefs.setClipSeen(this, url)
@@ -1301,11 +1349,10 @@ class MainActivity : AppCompatActivity() {
         so.socialLinkIcon.isVisible = app == null
         so.socialDetected.isVisible = link != null
         if (app != null) {
-            so.socialLinkBadge.background = SocialApps.badge(app, this)
-            so.socialLinkBadge.text = app.short
-            so.socialDetected.text = "${app.name} link  •  ${app.what}"
+            SocialApps.showOn(so.socialLinkBadge, app)
+            so.socialDetected.text = "${app.name} link  ·  ${app.what}"
         } else if (link != null) {
-            so.socialDetected.text = "Link from ${Uri.parse(link).host?.removePrefix("www.").orEmpty()}  •  RAINAX will look for the video"
+            so.socialDetected.text = "Link from ${Uri.parse(link).host?.removePrefix("www.").orEmpty()}  ·  RAINAX will look for the video"
         }
     }
 

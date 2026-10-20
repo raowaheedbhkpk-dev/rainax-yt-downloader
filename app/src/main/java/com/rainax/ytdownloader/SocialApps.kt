@@ -6,8 +6,9 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 
 /**
- * The apps the Social page works with, each shown as a round badge in the app's colours with a short name
- * (plain lettering, not the apps' logos). Also tells which app a pasted link is from.
+ * The apps the Social page works with. Each shows the real app's own icon, read from the phone when that app is
+ * installed (like Android's share menu does); otherwise a square tag in the app's colours with a short name.
+ * Also tells which app a pasted link is from.
  */
 object SocialApps {
 
@@ -57,10 +58,27 @@ object SocialApps {
         return ALL.firstOrNull { app -> app.hosts.any { host == it || host.endsWith(".$it") } }
     }
 
-    /** The round badge: the app's colours as a soft diagonal blend. */
+    /** The installed app's own icon from the phone, or null when none of its packages is installed. */
+    fun icon(context: Context, app: App): android.graphics.drawable.Drawable? {
+        val pm = context.packageManager
+        for (p in app.packages) {
+            runCatching { pm.getApplicationIcon(p) }.getOrNull()?.let { return it }
+        }
+        return null
+    }
+
+    /** Shows [app] on a badge: its real icon when installed (no text), else its coloured tag with the short name. */
+    fun showOn(badge: android.widget.TextView, app: App) {
+        val real = icon(badge.context, app)
+        badge.background = real ?: badge(app, badge.context)
+        badge.text = if (real != null) "" else app.short
+    }
+
+    /** The tag (app not installed): the app's colours as a soft diagonal blend, square like Cinema Pro. */
     fun badge(app: App, context: Context): GradientDrawable =
         GradientDrawable(GradientDrawable.Orientation.TL_BR, if (app.colors.size == 1) intArrayOf(app.colors[0], app.colors[0]) else app.colors).apply {
-            shape = GradientDrawable.OVAL
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 4 * context.resources.displayMetrics.density
             if (app.short == "X") {
                 // black badge: a thin ring keeps it visible on the dark theme
                 val d = context.resources.displayMetrics.density
