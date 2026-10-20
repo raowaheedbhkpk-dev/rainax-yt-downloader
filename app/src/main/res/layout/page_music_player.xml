@@ -327,6 +327,36 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+
+                <!-- Lyrics (from YouTube Music) -->
+                <LinearLayout
+                    android:id="@+id/mpLyrics"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_mp_pill"
+                    android:contentDescription="Lyrics"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="14dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lyrics"
+                        app:tint="@color/rx_white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:importantForAccessibility="no"
+                        android:text="Lyrics"
+                        android:textColor="@color/rx_white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
         </HorizontalScrollView>
 

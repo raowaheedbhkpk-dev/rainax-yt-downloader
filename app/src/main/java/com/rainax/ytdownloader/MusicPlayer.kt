@@ -135,6 +135,7 @@ class MusicPlayer(
         pg.mpComments.setOnClickListener { showComments() }
         pg.mpDownload.setOnClickListener { current()?.let { download(it.url, it.title, true) } }
         pg.mpShare.setOnClickListener { current()?.let { share(it) } }
+        pg.mpLyrics.setOnClickListener { showLyrics() }
         pg.mpSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
@@ -1101,6 +1102,49 @@ class MusicPlayer(
     // ---------- helpers ----------
 
     private fun songOf(item: MediaItem?): VideoItem? = MusicQueue.songOf(item)
+
+    /** Lyrics of the song playing, from YouTube Music (with its source line), in a dark sheet. */
+    private fun showLyrics() {
+        val song = current() ?: currentUrl()?.let { VideoItem(it, pg.mpTitle.text.toString(), pg.mpArtist.text.toString(), null, 0, -1, null) }
+        val id = song?.let { youtubeId(it.url) }
+        if (song == null || id == null) { toast("Lyrics are only for songs from YouTube"); return }
+        val sb = com.rainax.ytdownloader.databinding.SheetLyricsBinding.inflate(act.layoutInflater)
+        val dialog = BottomSheetDialog(act)
+        dialog.setContentView(sb.root)
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        sb.lyTitle.text = song.title
+        sb.lyArtist.text = song.uploader
+        sb.lyArtist.isVisible = song.uploader.isNotBlank()
+        sb.lyLoading.isVisible = true
+        dialog.show()
+        val job = act.lifecycleScope.launch {
+            val res: Result<YtLyrics.Lyrics?> = try {
+                Result.success(withContext(Dispatchers.IO) { YtLyrics.get(id) })
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            sb.lyLoading.isVisible = false
+            val ly = res.getOrNull()
+            when {
+                ly != null -> {
+                    sb.lyText.text = ly.text
+                    sb.lySource.text = ly.source.orEmpty()
+                    sb.lySource.isVisible = !ly.source.isNullOrBlank()
+                }
+                res.isFailure -> {
+                    sb.lyEmpty.isVisible = true
+                    sb.lyEmpty.text = "Couldn't load the lyrics. Check your internet and try again"
+                }
+                else -> {
+                    sb.lyEmpty.isVisible = true
+                    sb.lyEmpty.text = "YouTube Music has no lyrics for this song"
+                }
+            }
+        }
+        dialog.setOnDismissListener { job.cancel() }
+    }
 
     private fun current(): VideoItem? = player()?.currentMediaItem?.takeIf { isMusic(it) }?.let { songOf(it) }
 

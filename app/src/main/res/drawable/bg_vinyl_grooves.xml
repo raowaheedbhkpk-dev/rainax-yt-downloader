@@ -2,13 +2,13 @@
 <!-- record grooves over the cover (thin dark rings) and a soft shine -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item><shape android:shape="oval"><solid android:color="#26000000" /></shape></item>
-    <item android:bottom="6%" android:left="6%" android:right="6%" android:top="6%">
+    <item android:bottom="16dp" android:left="16dp" android:right="16dp" android:top="16dp">
         <shape android:shape="oval"><stroke android:width="1dp" android:color="#33000000" /></shape></item>
-    <item android:bottom="13%" android:left="13%" android:right="13%" android:top="13%">
+    <item android:bottom="34dp" android:left="34dp" android:right="34dp" android:top="34dp">
         <shape android:shape="oval"><stroke android:width="1dp" android:color="#2E000000" /></shape></item>
-    <item android:bottom="20%" android:left="20%" android:right="20%" android:top="20%">
+    <item android:bottom="52dp" android:left="52dp" android:right="52dp" android:top="52dp">
         <shape android:shape="oval"><stroke android:width="1dp" android:color="#29000000" /></shape></item>
-    <item android:bottom="27%" android:left="27%" android:right="27%" android:top="27%">
+    <item android:bottom="70dp" android:left="70dp" android:right="70dp" android:top="70dp">
         <shape android:shape="oval"><stroke android:width="1dp" android:color="#24000000" /></shape></item>
     <item>
         <shape android:shape="oval">

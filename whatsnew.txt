@@ -1,3 +1,5 @@
+Build fix: the vinyl record rings in the Music player
+Lyrics in the Music player: tap Lyrics to read the words of the song, straight from YouTube Music
 Cinema mode on the video page (the lights go down while you watch), chapters as a film strip, Your week on Home, and a choice of accent colour: film red, gold, teal or purple
 Download sheet qualities as cinema tickets that tear off when you tap Download, a turning film reel on downloads in progress, My collection shelf and a storage strip on the You page
 Opening title card, film countdown when you pull to refresh, spinning vinyl music player, recent searches as tickets, Under 4 min and Over 20 min search filters, Now showing notifications with the picture, new empty screens

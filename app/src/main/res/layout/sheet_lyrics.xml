@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lyrics (Music player): a dark cinema sheet; the words centred like subtitles, YouTube Music's source under them -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#0A0A0A"
+    android:orientation="vertical"
+    android:paddingTop="10dp">
+
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#333333" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:letterSpacing="0.3"
+        android:text="Lyrics"
+        android:textAllCaps="true"
+        android:textColor="#E8B44A"
+        android:textSize="10.5sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/lyTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:fontFamily="@font/rx_display"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textAllCaps="true"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp" />
+
+    <TextView
+        android:id="@+id/lyArtist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:textColor="#9A9A9A"
+        android:textSize="13sp" />
+
+    <View
+        android:layout_width="44dp"
+        android:layout_height="3dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="?attr/rxAccent" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="420dp">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/lyScroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/lyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.45"
+                    android:textColor="#F2F2F2"
+                    android:textIsSelectable="false"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/lySource"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center"
+                    android:textColor="#7A7A7A"
+                    android:textSize="11.5sp" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/lyLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/lyEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:paddingHorizontal="32dp"
+            android:textColor="#9A9A9A"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>
