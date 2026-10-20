@@ -35,6 +35,11 @@ import kotlinx.coroutines.withContext
  */
 class PrivateActivity : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
+    }
+
     private lateinit var b: ActivityPrivateBinding
 
     private enum class Step { CREATE, CONFIRM, UNLOCK, CHECK_OLD }

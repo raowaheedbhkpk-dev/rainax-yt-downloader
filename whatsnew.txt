@@ -1,3 +1,4 @@
+Fits every screen by itself: normal size on big phones and tablets, a little smaller on small HD screens so nothing is cut; the update box always shows its Update button
 Build fix: the vinyl record rings in the Music player
 Lyrics in the Music player: tap Lyrics to read the words of the song, straight from YouTube Music
 Cinema mode on the video page (the lights go down while you watch), chapters as a film strip, Your week on Home, and a choice of accent colour: film red, gold, teal or purple

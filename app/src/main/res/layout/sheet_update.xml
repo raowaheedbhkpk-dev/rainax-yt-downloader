@@ -60,7 +60,9 @@
         android:textSize="11sp"
         android:textStyle="bold" />
 
+    <!-- what's new scrolls inside a limited height (set in code), so Update now always stays on screen -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/updNotesScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp">

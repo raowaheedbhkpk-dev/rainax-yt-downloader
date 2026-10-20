@@ -8,26 +8,42 @@ import com.google.android.material.color.MaterialColors
 /** Small shared look helpers. */
 object Ui {
 
-    /** Largest text size the app follows (bigger phone settings would push buttons and text off screen). */
-    private const val MAX_FONT_SCALE = 1.15f
+    /**
+     * How big everything is drawn, worked out from the screen itself (no setting): roomy screens (Pixel 8:
+     * about 411 × 914 dp, tablets) keep the phone's own size; narrow or short ones (HD phones like the itel A70:
+     * about 360 × 800 dp) are drawn a little smaller, so text isn't cut and buttons at the bottom stay on screen.
+     * [swDp] and [longDp] are the screen's short and long sides at the phone's normal size.
+     */
+    private fun sizeFactor(swDp: Int, longDp: Int): Float {
+        if (swDp >= 600) return 1f                                   // tablets and open foldables
+        val byWidth = if (swDp > 0) swDp / 400f else 1f
+        val byHeight = if (longDp > 0) longDp / 860f else 1f
+        return minOf(1f, byWidth, byHeight).coerceAtLeast(0.8f)
+    }
 
     /**
-     * The same clean sizes on every phone: very large "Font size" settings are capped, and a "Display size"
-     * set above the phone's normal one is brought back to normal (only inside this app).
-     * Used by every screen in attachBaseContext.
+     * The same clean sizes on every phone, automatically: a "Display size" above the phone's normal one is
+     * brought back to normal, small screens are drawn a little smaller (see [sizeFactor]), and very large
+     * "Font size" settings are capped (more on small screens, where big text would be cut).
+     * Only inside this app. Used by every screen in attachBaseContext.
      */
     fun saneScale(base: android.content.Context): android.content.res.Configuration? {
         val cur = base.resources.configuration
         val over = android.content.res.Configuration()
         var change = false
-        if (cur.fontScale > MAX_FONT_SCALE) { over.fontScale = MAX_FONT_SCALE; change = true }
         val stable = android.util.DisplayMetrics.DENSITY_DEVICE_STABLE
-        if (stable > 0 && cur.densityDpi > stable) {
-            over.densityDpi = stable
-            // the screen measured in the normal size (layouts read these)
-            over.screenWidthDp = cur.screenWidthDp * cur.densityDpi / stable
-            over.screenHeightDp = cur.screenHeightDp * cur.densityDpi / stable
-            over.smallestScreenWidthDp = cur.smallestScreenWidthDp * cur.densityDpi / stable
+        val normal = if (stable > 0) minOf(cur.densityDpi, stable) else cur.densityDpi
+        val swDp = if (normal > 0) cur.smallestScreenWidthDp * cur.densityDpi / normal else cur.smallestScreenWidthDp
+        val longDp = if (normal > 0) maxOf(cur.screenWidthDp, cur.screenHeightDp) * cur.densityDpi / normal else 0
+        val maxFont = if (swDp in 1 until 380) 1.0f else 1.1f
+        if (cur.fontScale > maxFont) { over.fontScale = maxFont; change = true }
+        val target = (normal * sizeFactor(swDp, longDp)).toInt().coerceAtLeast(120)
+        if (cur.densityDpi > 0 && target != cur.densityDpi) {
+            over.densityDpi = target
+            // the screen measured in the new size (layouts read these)
+            over.screenWidthDp = cur.screenWidthDp * cur.densityDpi / target
+            over.screenHeightDp = cur.screenHeightDp * cur.densityDpi / target
+            over.smallestScreenWidthDp = cur.smallestScreenWidthDp * cur.densityDpi / target
             change = true
         }
         return if (change) over else null

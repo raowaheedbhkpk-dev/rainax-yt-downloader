@@ -21,6 +21,11 @@ import com.rainax.ytdownloader.databinding.ActivityWelcomeBinding
  */
 class WelcomeActivity : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
+    }
+
     private class Page(val icon: Int, val tint: Boolean, val title: String, val text: String)
 
     private val pages = listOf(

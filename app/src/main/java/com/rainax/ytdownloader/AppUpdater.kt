@@ -160,6 +160,18 @@ object AppUpdater {
         }
         sb.updVersion.text = "v$current  →  v${rel.version}"
         val d = activity.resources.displayMetrics.density
+        // short screens (HD phones): no big logo, and the notes list never pushes the buttons off screen
+        val screenH = activity.resources.displayMetrics.heightPixels
+        if (screenH / d < 720) sb.updLogo.visibility = android.view.View.GONE
+        sb.updNotesScroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val max = (screenH * 0.28f).toInt()
+                if (sb.updNotesScroll.height > max) {
+                    sb.updNotesScroll.layoutParams = sb.updNotesScroll.layoutParams.apply { height = max }
+                }
+                sb.updNotesScroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+            }
+        })
         friendlyNotes(rel.notes).lines().filter { it.isNotBlank() }.forEachIndexed { i, line ->
             val row = android.widget.TextView(activity).apply {
                 text = line.removePrefix("•").trim()
