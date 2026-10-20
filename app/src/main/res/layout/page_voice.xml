@@ -54,6 +54,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="28dp"
         android:layout_marginTop="120dp"
+        android:textAllCaps="true"
         android:fontFamily="@font/rx_display"
         android:gravity="center"
         android:lineSpacingMultiplier="1.1"

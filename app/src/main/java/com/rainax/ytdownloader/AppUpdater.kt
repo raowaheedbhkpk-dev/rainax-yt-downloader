@@ -51,7 +51,7 @@ object AppUpdater {
             val current = currentVersion(activity)
             when {
                 rel == null -> if (manual) {
-                    MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
+                    RxDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
                         .setTitle("Couldn't check for updates")
                         .setMessage("Check your internet connection. Updates are read from the app's GitHub Releases page, which must be public.")
                         .setPositiveButton("OK", null)
@@ -300,7 +300,7 @@ object AppUpdater {
                 required = null
                 file.delete()
                 updateTask(version)?.let { TaskRepository.remove(it.id) }
-                MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
+                RxDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
                     .setTitle("New version needs a fresh install")
                     .setMessage(
                         "This update is signed with a new key, so it can't install over this version. " +
@@ -353,7 +353,7 @@ object AppUpdater {
     private fun install(activity: AppCompatActivity, file: File) {
         if (!activity.packageManager.canRequestPackageInstalls()) {
             pendingApk = file
-            MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
+            RxDialogBuilder(activity, R.style.ThemeOverlay_Rainax_Dialog)
                 .setTitle("Allow app updates")
                 .setMessage("To install the update, allow RAINAX to install apps. Turn on \"Allow from this source\", then come back.")
                 .setPositiveButton("Open settings") { _, _ ->

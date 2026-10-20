@@ -58,7 +58,7 @@ object AppShare {
         p.edit().putInt("next", total + ASK_AGAIN).apply()
         act.window.decorView.postDelayed({
             if (act.isFinishing || act.isDestroyed) return@postDelayed
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+            RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
                 .setTitle("Enjoying RAINAX Tube?")
                 .setMessage("A 5-star rating on APKPure helps other people find the app. Sharing it with friends helps too. Thank you!")
                 .setPositiveButton("Rate on APKPure") { _, _ -> rate(act) }

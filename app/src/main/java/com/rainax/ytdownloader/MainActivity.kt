@@ -388,7 +388,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun askSignOut() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Sign out of YouTube?")
             .setMessage("Your subscriptions, likes and history won't show in RAINAX until you sign in again. Your downloads stay.")
             .setNegativeButton("Cancel", null)
@@ -410,7 +410,7 @@ class MainActivity : AppCompatActivity() {
     private fun askClearWatchHistory() {
         val signedIn = YtAccount.isSignedIn(this)
         val also = booleanArrayOf(signedIn)
-        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        val builder = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Clear watch history?")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Clear") { _, _ ->
@@ -1361,7 +1361,7 @@ class MainActivity : AppCompatActivity() {
             url.contains("facebook", true) || url.contains("fb.watch", true) -> "Facebook"
             else -> Uri.parse(url).host?.removePrefix("www.") ?: "Link"
         }
-        clipDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        clipDialog = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setIcon(R.drawable.ic_link)
             .setTitle("$site link copied")
             .setMessage(url)
@@ -2042,7 +2042,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun confirm(title: String, text: String, onYes: () -> Unit) {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle(title)
             .setMessage(text)
             .setPositiveButton("Yes") { _, _ -> onYes() }
@@ -2094,7 +2094,7 @@ class MainActivity : AppCompatActivity() {
     /** Hides a finished download in the Private folder (set it up first if needed). */
     private fun moveToPrivate(t: DownloadTask) {
         if (!PrivateVault.hasLock(this)) {
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
                 .setTitle("Set up Private folder")
                 .setMessage("Choose a PIN, pattern or password first. Then tap “Move to Private folder” again.")
                 .setPositiveButton("Set up") { _, _ -> PrivateActivity.open(this) }
@@ -2270,7 +2270,7 @@ class MainActivity : AppCompatActivity() {
         st.allFilesBtn.setOnClickListener { openAllFilesSettings(thenInstallAsk = false) }
         st.privateFolderBtn.setOnClickListener { PrivateActivity.open(this) }
         st.clearSearchBtn.setOnClickListener {
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
                 .setTitle("Clear search history?")
                 .setMessage("Your recent searches will be removed from this phone.")
                 .setPositiveButton("Clear") { _, _ ->
@@ -2413,7 +2413,7 @@ class MainActivity : AppCompatActivity() {
         }
         val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty() && !needsAllFiles()) { askInstallUpdates(); return }
-        permDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        permDialog = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setIcon(R.drawable.ic_download)
             .setTitle("Allow storage access")
             .setMessage("RAINAX Tube saves your videos, music and WhatsApp statuses in Internal storage/Rainax Tube. " +
@@ -2434,7 +2434,7 @@ class MainActivity : AppCompatActivity() {
         if (isFinishing || isDestroyed) return
         AppPrefs.setFirstRunAsked(this)
         if (packageManager.canRequestPackageInstalls()) return
-        permDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        permDialog = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setIcon(R.drawable.ic_refresh)
             .setTitle("Allow app updates")
             .setMessage("New versions of RAINAX Tube download inside the app. To install them with one tap, " +

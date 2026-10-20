@@ -4,5 +4,5 @@
         android:angle="0"
         android:endColor="@color/rx_grad_end"
         android:startColor="@color/rx_grad_start" />
-    <corners android:radius="22dp" />
+    <corners android:radius="2dp" />
 </shape>

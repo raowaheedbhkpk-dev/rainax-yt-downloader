@@ -1,40 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- RAINAX "Tube" palette, light version: clean white like YouTube, red accent.
-         values-night/colors.xml holds the dark one (#0F0F0F). -->
-    <color name="rx_bg">#FFFFFF</color>
+    <!-- RAINAX "Cinema Pro" palette, light version: warm paper, film red, gold.
+         values-night/colors.xml holds the dark one (near black). -->
+    <color name="rx_bg">#F6F4F0</color>
     <color name="rx_surface">#FFFFFF</color>
-    <color name="rx_card">#F7F7F7</color>
-    <color name="rx_surface_alt">#F2F2F2</color>
-    <color name="rx_text">#0F0F0F</color>
-    <color name="rx_text2">#606060</color>
-    <color name="rx_outline">#14000000</color>
+    <color name="rx_card">#EFECE6</color>
+    <color name="rx_surface_alt">#E8E4DC</color>
+    <color name="rx_text">#111111</color>
+    <color name="rx_text2">#5F5A52</color>
+    <color name="rx_outline">#1F000000</color>
     <color name="rx_divider">#1A000000</color>
-    <color name="rx_primary">#FF0033</color>
+    <color name="rx_primary">#C81E33</color>
     <color name="rx_on_primary">#FFFFFF</color>
-    <color name="rx_primary_container">#14FF0033</color>
-    <color name="rx_on_primary_container">#CC0029</color>
-    <color name="rx_accent">#065FD4</color>
+    <color name="rx_primary_container">#14C81E33</color>
+    <color name="rx_on_primary_container">#A3172A</color>
+    <color name="rx_accent">#A87A1F</color>
     <color name="rx_error">#CC0000</color>
     <color name="rx_error_container">#FFE3E3</color>
 
     <!-- selected chip: black with white text (white with black text in dark mode) -->
-    <color name="rx_chip_on">#0F0F0F</color>
+    <color name="rx_chip_on">#111111</color>
     <color name="rx_chip_on_text">#FFFFFF</color>
 
     <!-- page background and the bottom bar: flat -->
-    <color name="rx_bg_top">#FFFFFF</color>
-    <color name="rx_bg_bottom">#FFFFFF</color>
+    <color name="rx_bg_top">#F6F4F0</color>
+    <color name="rx_bg_bottom">#F6F4F0</color>
     <color name="rx_glow_coral">#00000000</color>
     <color name="rx_glow_blue">#00000000</color>
-    <color name="rx_glass_nav">#FFFFFF</color>
+    <color name="rx_glass_nav">#F6F4F0</color>
 
     <!-- in-app logo (red). The launcher icon keeps its own colours below. -->
-    <color name="rx_logo_start">#FF2E4D</color>
-    <color name="rx_logo_end">#E0001B</color>
+    <color name="rx_logo_start">#D7263D</color>
+    <color name="rx_logo_end">#B01C30</color>
 
-    <color name="rx_grad_start">#FF4D6A</color>
-    <color name="rx_grad_end">#FF0033</color>
+    <color name="rx_grad_start">#D7263D</color>
+    <color name="rx_grad_end">#B01C30</color>
     <color name="rx_white">#FFFFFF</color>
     <color name="rx_black">#000000</color>
 
@@ -68,4 +68,9 @@
     <color name="menu_fill">#0D000000</color>
     <color name="menu_stroke">#14000000</color>
     <color name="menu_label">#8C000000</color>
+    <color name="rx_gold">#A87A1F</color>
+    <color name="rx_switch_off">#D6D1C7</color>
+    <color name="rx_snack_bg">#E6000000</color>
+    <color name="rx_snack_text">#F3CF7F</color>
+    <color name="rx_snack_action">#FF5A6C</color>
 </resources>

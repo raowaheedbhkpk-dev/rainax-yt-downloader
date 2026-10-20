@@ -106,7 +106,7 @@
             android:layout_marginTop="8dp"
             app:indicatorColor="@color/rx_primary"
             app:trackColor="?attr/rxSurfaceAlt"
-            app:trackCornerRadius="3dp"
+            app:trackCornerRadius="0dp"
             app:trackThickness="6dp" />
     </LinearLayout>
 

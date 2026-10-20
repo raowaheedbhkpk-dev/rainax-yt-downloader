@@ -51,6 +51,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
+                android:textAllCaps="true"
                 android:fontFamily="@font/rx_display"
                 android:maxLines="1"
                 android:text="RAINAX Tube"

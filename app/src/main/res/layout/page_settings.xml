@@ -19,6 +19,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginTop="18dp"
+        android:textAllCaps="true"
         android:fontFamily="@font/rx_display"
         android:text="Settings"
         android:textColor="@color/rx_text"

@@ -34,7 +34,7 @@ object Integrity {
 
     /** Explains it and offers the official download page. The app can't be used. */
     fun showNotOfficial(activity: AppCompatActivity) {
-        MaterialAlertDialogBuilder(activity)
+        RxDialogBuilder(activity)
             .setTitle("Not the official RAINAX")
             .setMessage(
                 "This copy of RAINAX was changed by someone else and may not be safe. " +

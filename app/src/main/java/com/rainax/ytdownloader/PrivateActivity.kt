@@ -254,7 +254,7 @@ class PrivateActivity : AppCompatActivity() {
     }
 
     private fun confirmReset() {
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Forgot your lock?")
             .setMessage("For your privacy it can't be recovered. You can reset the Private folder, but everything in it is deleted for good.")
             .setPositiveButton("Delete all and reset") { _, _ ->
@@ -330,7 +330,7 @@ class PrivateActivity : AppCompatActivity() {
                     Notify.show(this@PrivateActivity, if (ok) "Moved back to Rainax Tube" else "Couldn't move it back")
                     refresh()
                 }
-                3 -> MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+                3 -> RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
                     .setTitle("Delete for good?")
                     .setMessage("\"${item.title}\" is deleted from your phone. This can't be undone.")
                     .setPositiveButton("Delete") { _, _ ->

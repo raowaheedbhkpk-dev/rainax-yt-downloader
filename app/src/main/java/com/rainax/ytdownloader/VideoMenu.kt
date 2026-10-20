@@ -157,7 +157,7 @@ object VideoMenu {
         }
         group.check(1000)
         box.addView(group)
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("New playlist")
             .setView(box)
             .setNegativeButton("Cancel", null)

@@ -372,7 +372,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showError(code: String) {
         if (isFinishing) return
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Can't play this file")
             .setMessage("This file could not be played here ($code).")
             .setPositiveButton("Open with another app") { _, _ -> openExternally() }
@@ -497,7 +497,7 @@ class PlayerActivity : AppCompatActivity() {
         val labels = speeds.map { speedLabel(it) }.toTypedArray()
         val cur = player?.playbackParameters?.speed ?: 1f
         val checked = speeds.indexOfFirst { abs(it - cur) < 0.01f }
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Playback speed")
             .setSingleChoiceItems(labels, checked) { d, which ->
                 player?.setPlaybackSpeed(speeds[which])
@@ -537,7 +537,7 @@ class PlayerActivity : AppCompatActivity() {
         val has = p.currentTracks.groups.any { it.type == C.TRACK_TYPE_TEXT }
         val options = if (has) arrayOf("Choose subtitle track", "Load subtitle file (.srt / .vtt)")
         else arrayOf("Load subtitle file (.srt / .vtt)")
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Subtitles")
             .setItems(options) { _, which ->
                 if (has && which == 0) chooseTrack(C.TRACK_TYPE_TEXT, "Subtitles") else loadSubtitleFile()
@@ -575,7 +575,7 @@ class PlayerActivity : AppCompatActivity() {
             else -> "Repeat: off"
         }
         val items = arrayOf(repeatLabel, if (p.shuffleModeEnabled) "Shuffle: on" else "Shuffle: off", "Open with another app", "Share")
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> {

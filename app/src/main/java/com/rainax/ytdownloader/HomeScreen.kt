@@ -158,7 +158,7 @@ class HomeScreen(
 
     /** "Clear search history" under the recent searches: asks once, then removes them all. */
     private fun confirmClearHistory() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Clear search history?")
             .setMessage("Your recent searches will be removed from this phone.")
             .setPositiveButton("Clear") { _, _ ->

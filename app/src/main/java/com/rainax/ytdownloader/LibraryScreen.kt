@@ -278,7 +278,7 @@ class LibraryScreen(
     private fun addToPlaylist(t: DownloadTask) {
         val lists = LocalPlaylists.all(act)
         val names = arrayOf("+ New playlist") + lists.map { it.name }.toTypedArray()
-        MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Add to playlist")
             .setItems(names) { _, which ->
                 if (which == 0) {
@@ -305,7 +305,7 @@ class LibraryScreen(
         menu.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> askName("Rename playlist", p.name) { LocalPlaylists.rename(act, p, it); render() }
-                2 -> MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+                2 -> RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
                     .setTitle("Delete \"${p.name}\"?")
                     .setMessage("The songs and videos stay in your downloads.")
                     .setPositiveButton("Delete") { _, _ ->
@@ -334,7 +334,7 @@ class LibraryScreen(
             setPadding(pad, pad / 2, pad, 0)
             addView(input)
         }
-        MaterialAlertDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+        RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle(title)
             .setView(box)
             .setPositiveButton("Save") { _, _ -> onName(input.text.toString()) }
