@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
-            // a little bounce on the tapped tab (the middle one is the raised "+" button)
+            // a little bounce on the tapped tab (the middle one is the red "+")
             if (it.itemId == R.id.nav_social) b.navCard.fab?.let { f -> Motion.bounce(f) }
             else b.bottomNav.findViewById<View>(it.itemId)?.let { item -> Motion.bounce(item) }
             val chosen = when (it.itemId) {
@@ -236,10 +236,10 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_subs -> { showTab(4); true }
                 else -> false
             }
-            if (chosen) b.navCard.select(it.itemId)      // the dot jumps over to it
+            if (chosen) b.navCard.select(it.itemId)      // the red bar slides over to it
             chosen
         }
-        // the raised "+" in the middle of the bar: Add (download from a link)
+        // the red square "+" in the middle of the bar: Add (download from a link)
         b.navCard.fab?.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_social }
 
         // Anything left in the queue (app or service was killed) continues automatically
@@ -828,14 +828,6 @@ class MainActivity : AppCompatActivity() {
             goHome()
             b.root.post { home.openSearch() }
         }
-        pl.youMainBtn.setOnClickListener {
-            if (!YtAccount.isSignedIn(this)) { signIn.launch(Intent(this, SignInActivity::class.java)); return@setOnClickListener }
-            val p = YtAccount.profile(this)
-            val handle = p?.handle?.trim()?.takeIf { it.isNotBlank() }
-            if (handle == null) { message("Your channel's address isn't known yet. Try again in a moment"); refreshAccount(); return@setOnClickListener }
-            goHome()
-            home.openChannel("https://www.youtube.com/" + (if (handle.startsWith("@")) handle else "@$handle"), p.name, p.avatar)
-        }
         pl.youSecondBtn.setOnClickListener { askSignOut() }
         pl.youSignInBtn.setOnClickListener { signIn.launch(Intent(this, SignInActivity::class.java)) }
         // shortcuts after Downloads / Music / Videos / Playlists, like YouTube's Library
@@ -866,8 +858,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshYou() {
         val signedIn = YtAccount.isSignedIn(this)
         updateNavAvatar()
-        // signed in: View channel + Sign out; signed out: one red Sign in button
-        pl.youMainBtn.isVisible = signedIn
+        // signed in: Sign out; signed out: one red Sign in button
         pl.youSecondBtn.isVisible = signedIn
         pl.youSignInBtn.isVisible = !signedIn
         pl.youAccounts.isVisible = signedIn

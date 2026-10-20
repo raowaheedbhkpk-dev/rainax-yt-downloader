@@ -466,19 +466,19 @@ object SocialExtractor {
      * like Instagram's own website reads it (its web data request), then from its embed page (what websites show).
      */
     private fun instagram(url: String, code: String): Media {
-        var last: Exception? = null
+        val errors = mutableListOf<Exception>()          // every way tried, for the error report
         try {
             instagramData(code)?.let { return it }
-        } catch (e: Exception) { last = e }
+        } catch (e: Exception) { errors += e }
         try {
             instagramEmbed(code)?.let { return it }
-        } catch (e: Exception) { last = e }
+        } catch (e: Exception) { errors += e }
         try {
             return generic(url)
-        } catch (e: Exception) { last = e }
+        } catch (e: Exception) { errors += e }
         throw IllegalStateException(
-            "Couldn't read this Instagram post. Only posts and Reels from public accounts can be saved.", last
-        )
+            "Couldn't read this Instagram post. Only posts and Reels from public accounts can be saved.", errors.lastOrNull()
+        ).also { ex -> errors.dropLast(1).forEach { ex.addSuppressed(it) } }
     }
 
     private const val IG_APP_ID = "936619743392459"
@@ -576,7 +576,7 @@ object SocialExtractor {
                 val type = (attr("contentType") ?: attr("mimeType")).orEmpty()
                 if (type.startsWith("audio")) {
                     val bw = attr("bandwidth")?.toIntOrNull() ?: 0
-                    if (audio == null || bw > audio!!.second) audio = base to bw
+                    if (audio == null || bw > audio.second) audio = base to bw
                 } else if (type.startsWith("video")) {
                     val h = attr("height")?.toIntOrNull() ?: continue
                     val w = attr("width")?.toIntOrNull() ?: h
@@ -718,9 +718,9 @@ object SocialExtractor {
         for ((u, h) in candidates) if (h > 0 && h !in byHeight) byHeight[h] = u
         val files = if (byHeight.isNotEmpty()) byHeight.entries.map { it.value to it.key }.sortedByDescending { it.second }.take(3)
         else candidates.take(1)                                    // quality unknown: the page's main video
-        val headers = mapOf("Referer" to page.finalUrl, "User-Agent" to UA)
+        val sendHeaders = mapOf("Referer" to page.finalUrl, "User-Agent" to UA)
         val variants = files.map { (u, h) ->
-            fileHeaders[u] = headers
+            fileHeaders[u] = sendHeaders
             val ext = DIRECT.find(u)?.groupValues?.get(1)?.lowercase() ?: "mp4"
             Variant(u, h, sizeOf(u), ext)
         }

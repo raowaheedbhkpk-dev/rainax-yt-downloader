@@ -536,7 +536,7 @@ class DownloadService : Service() {
                 }
             }
         }
-        val result = saved ?: return
+        val result: FileStore.Saved = saved
         // cancelled while saving: don't leave a file the app no longer knows about
         if (TaskRepository.get(id) == null) {
             FileStore.delete(this, result.uri)

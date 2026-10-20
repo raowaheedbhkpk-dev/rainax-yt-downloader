@@ -20,6 +20,7 @@ import com.google.android.material.chip.Chip
 import com.rainax.ytdownloader.databinding.PageHomeBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -129,13 +130,14 @@ class HomeScreen(
 
     private fun setupMagazine() {
         bigAdapter.chapters = MAG_CHAPTERS
+        bigAdapter.moviesId = MAG_MOVIES
         bigAdapter.onNeedChapter = { id -> loadChapter(id) }
         bigAdapter.onChapterMore = { id -> openTab(id) }
     }
 
     /** A chapter's posters: from the saved tab list when there is one, otherwise its first page. */
     private fun loadChapter(id: String) {
-        fun pick(list: List<VideoItem>) = list.filter { !it.isChannel && !it.isPlaylist }.take(12)
+        fun pick(list: List<VideoItem>) = list.filter { !it.isChannel && !it.isPlaylist }.take(if (id == MAG_MOVIES) 20 else 12)
         val cached = vm.feedCache["tab:$id"]
         if (cached != null) {
             hm.feedList.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
@@ -243,7 +245,7 @@ class HomeScreen(
         hm.feedRefresh.setOnRefreshListener {
             if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
             if (!isMusic && bigAdapter.magazine) {                    // the magazine's chapters come fresh too
-                MAG_CHAPTERS.forEach { vm.feedCache.remove("tab:${it.second}") }
+                (MAG_CHAPTERS.map { it.second } + MAG_MOVIES).forEach { vm.feedCache.remove("tab:$it") }
                 bigAdapter.clearChapters()
             }
             if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
@@ -459,7 +461,22 @@ class HomeScreen(
         if (text.isBlank()) {
             // like YouTube: your recent searches, then "You may like" (channels you watch, popular videos) with pictures
             val recent = history.take(6).map { Sug(it, icon = R.drawable.ic_history) }
-            suggestAdapter.submit(recent, mayLike(history), showClear = history.isNotEmpty())
+            val local = mayLike(history)
+            suggestAdapter.submit(recent, local, showClear = history.isNotEmpty())
+            // then, like YouTube: searches related to what you watch and search, each with a matching picture
+            suggestJob = act.lifecycleScope.launch {
+                val personal = try {
+                    withContext(Dispatchers.IO) { relatedSearches(history, local) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                if (personal.isEmpty() || hm.searchInput.text?.isNotBlank() == true) return@launch
+                val channels = local.filter { it.sub != null }
+                val trending = local.filter { it.sub == null && personal.none { p -> p.text == it.text } }
+                suggestAdapter.submit(recent, (channels + personal + trending).take(8), showClear = history.isNotEmpty())
+            }
             return
         }
         val fromHistory = history.filter { it.contains(text, true) }.take(3).map { Sug(it, icon = R.drawable.ic_history) }
@@ -472,26 +489,65 @@ class HomeScreen(
     }
 
     /**
-     * "You may like" under an empty search box: channels you watched lately ("Channel that you watch") and
-     * short searches made from popular videos in your feed, each with the video's picture.
+     * "You may like" under an empty search box, shown at once: two channels you watched lately ("Channel that you
+     * watch", picked at random from your recent ones) and short searches made from videos in your feeds, in a new
+     * order every time (so the list never looks frozen).
      */
     private fun mayLike(history: List<String>): List<Sug> {
         val out = mutableListOf<Sug>()
         val used = HashSet<String>()
         history.forEach { used += it.lowercase() }
-        WatchHistory.recentItems(act).asSequence()
-            .filter { it.uploader.isNotBlank() && used.add(it.uploader.lowercase()) }
+        WatchHistory.recentItems(act).take(25)
+            .filter { it.uploader.isNotBlank() }
+            .distinctBy { it.uploader.lowercase() }
+            .shuffled()
+            .filter { used.add(it.uploader.lowercase()) }
             .take(2)
             .forEach { out += Sug(it.uploader.lowercase(), "Channel that you watch", it.thumb, R.drawable.ic_search) }
         val feed = (bigAdapter.all() + vm.feedCache.values.flatMap { it.first })
             .filter { !it.isChannel && !it.isPlaylist && !it.isShort && it.title.isNotBlank() }
+            .distinctBy { it.url }
+            .shuffled()
         for (v in feed) {
-            if (out.size >= 7) break
+            if (out.size >= 8) break
             val q = shortQuery(v.title) ?: continue
             if (!used.add(q)) continue
             out += Sug(q, null, v.thumb, R.drawable.ic_trending)
         }
         return out
+    }
+
+    /** Pictures for searches made before (a search costs a moment, so each phrase is looked up once). */
+    private val suggestThumbs = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Blocking. Searches related to you: YouTube's own suggestions for a few things you watched or searched lately
+     * (picked at random each time), each with the picture of its first video.
+     */
+    private suspend fun relatedSearches(history: List<String>, shown: List<Sug>): List<Sug> = coroutineScope {
+        val seeds = (history.take(8) + WatchHistory.recentItems(act).take(12).mapNotNull { shortQuery(it.title) })
+            .map { it.split(' ').take(3).joinToString(" ") }
+            .filter { it.length >= 3 }
+            .distinct()
+            .shuffled()
+            .take(3)
+        if (seeds.isEmpty()) return@coroutineScope emptyList()
+        val skip = HashSet<String>()
+        history.forEach { skip += it.lowercase() }
+        shown.forEach { skip += it.text.lowercase() }
+        val phrases = seeds.map { seed -> async { YtCatalog.suggestions(seed).drop(1).shuffled().take(2) } }
+            .flatMap { it.await() }
+            .map { it.lowercase().trim() }
+            .filter { it.isNotBlank() && skip.add(it) }
+            .take(4)
+        phrases.map { q ->
+            async {
+                val thumb = suggestThumbs[q] ?: runCatching {
+                    YtCatalog.search(q, 0, null).items.firstOrNull { !it.isChannel && !it.isPlaylist }?.thumb
+                }.getOrNull()?.also { suggestThumbs[q] = it }
+                Sug(q, null, thumb, R.drawable.ic_trending)
+            }
+        }.map { it.await() }
     }
 
     /** "Tere Darwaze Peh Chilman | Nusrat Fateh Ali Khan | OSA" -> "tere darwaze peh chilman". */
@@ -877,7 +933,7 @@ class HomeScreen(
         loadJob = act.lifecycleScope.launch {
             try {
                 var header: ChannelDetails? = null
-                val res = withContext(Dispatchers.IO) {
+                val got = withContext(Dispatchers.IO) {
                     val watched by lazy { WatchHistory.recentItems(act) }     // to leave out what you already saw
                     when {
                         sp != null && sp.startsWith("q:") -> YtCatalog.kiosk(sp, page)
@@ -907,6 +963,10 @@ class HomeScreen(
                     }
                 }
                 header?.let { if (channelUrl == chUrl) fillChannel(it) }
+                // Home's first page: never the same top videos every time (For you and the popular mix)
+                val fresh = reset && page == null && q == null && plUrl == null && chUrl == null && sp == null &&
+                    (tabId == FOR_YOU || tabId == YtCatalog.HOME)
+                val res = if (fresh) FeedPage(FeedFreshen.apply(act, got.items), got.next) else got
                 // a fresh list: its first videos rise in one after another
                 if (reset && res.items.isNotEmpty()) hm.feedList.scheduleLayoutAnimation()
                 val added = if (reset) { a.submit(res.items); res.items.size } else a.append(res.items)
@@ -1007,6 +1067,9 @@ class HomeScreen(
             "Cricket" to "q:cricket highlights",
             "Comedy" to "q:comedy"
         )
+
+        /** The magazine's Movies section: the same list as the Movies chip. */
+        const val MAG_MOVIES = "q:full movie"
         /** The bell's list (YouTube's notifications, recent ones only). */
         const val NOTIFICATIONS = "acc:notifications"
     }
@@ -1055,7 +1118,8 @@ class HomeScreen(
             val d = parent.resources.displayMetrics.density
             if (viewType == HEADER) {
                 val tv = TextView(c).apply {
-                    textSize = 20f
+                    textSize = 22f
+                    isAllCaps = true
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(c, R.font.rx_display)
                     setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
                     setPadding((16 * d).toInt(), (18 * d).toInt(), (16 * d).toInt(), (8 * d).toInt())
@@ -1064,19 +1128,34 @@ class HomeScreen(
                 return object : RecyclerView.ViewHolder(tv) {}
             }
             if (viewType == CLEAR) {
-                val tv = TextView(c).apply {
-                    text = "Clear search history"
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    textSize = 14f
-                    setPadding((60 * d).toInt(), 0, (16 * d).toInt(), 0)
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_accent))
-                    val tvv = android.util.TypedValue()
-                    c.theme.resolveAttribute(android.R.attr.selectableItemBackground, tvv, true)
-                    setBackgroundResource(tvv.resourceId)
-                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (44 * d).toInt())
+                // one row like the others: a bin icon in the same column, the words in film red, a thin line under it
+                val row = LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false)
+                val red = androidx.core.content.ContextCompat.getColor(c, R.color.rx_primary)
+                row.findViewById<ImageView>(R.id.icon).apply {
+                    setImageResource(R.drawable.ic_delete)
+                    imageTintList = android.content.res.ColorStateList.valueOf(red)
                 }
-                return object : RecyclerView.ViewHolder(tv) {}
+                row.findViewById<TextView>(R.id.text).apply {
+                    text = "Clear search history"
+                    setTextColor(red)
+                    textSize = 14f
+                    isAllCaps = true
+                    letterSpacing = 0.08f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+                row.findViewById<View>(R.id.fill).isVisible = false
+                row.findViewById<View>(R.id.thumb).isVisible = false
+                val box = LinearLayout(c).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    addView(row)
+                    addView(View(c).apply {
+                        setBackgroundColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_divider))
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, (1 * d).toInt())).apply {
+                        marginStart = (16 * d).toInt(); marginEnd = (16 * d).toInt(); topMargin = (4 * d).toInt()
+                    })
+                }
+                return object : RecyclerView.ViewHolder(box) {}
             }
             return VH(LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false))
         }
@@ -1084,7 +1163,7 @@ class HomeScreen(
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             when (val row = rows[position]) {
                 is Row.Header -> (holder.itemView as TextView).text = row.title
-                Row.Clear -> holder.itemView.setOnClickListener { onClear() }
+                Row.Clear -> (holder.itemView as ViewGroup).getChildAt(0).setOnClickListener { onClear() }
                 is Row.Item -> {
                     val h = holder as VH
                     val s = row.s

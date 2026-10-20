@@ -86,7 +86,7 @@ class PlayerActivity : AppCompatActivity() {
         val pos = p.currentPosition
         stopWatching()
         uris = arrayListOf(uri)
-        titles = arrayListOf(t?.title.orEmpty())
+        titles = arrayListOf(t.title)
         p.setMediaItem(buildItem(0), pos)
         p.prepare()
         p.play()

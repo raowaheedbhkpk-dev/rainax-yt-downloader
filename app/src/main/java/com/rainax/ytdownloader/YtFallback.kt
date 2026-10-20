@@ -165,7 +165,7 @@ object YtFallback {
                             .setMediaFormat(item.mediaFormat)
                             .setIsVideoOnly(only)
                             .setItagItem(item)
-                            .setResolution(item.resolutionString ?: "")
+                            .setResolution(item.getResolutionString() ?: "")
                             .build()
                         if (only) videoOnly += s else video += s
                     }

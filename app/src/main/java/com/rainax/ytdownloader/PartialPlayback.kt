@@ -70,7 +70,7 @@ class PartialDataSource : BaseDataSource(false) {
                 pause()
             }
         }
-        val (f, e) = found ?: throw IOException("No download")
+        val (f, e) = found
         if (!f.exists()) throw IOException(RESTARTED)
         entry = e
         file = f

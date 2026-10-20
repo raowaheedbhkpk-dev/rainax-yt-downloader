@@ -53,22 +53,18 @@
             layout="@layout/layout_music_mini"
             android:visibility="gone" />
 
-        <!-- bottom bar: a floating rounded bar, the raised "+" button in its middle, and a dot that jumps to the chosen tab -->
+        <!-- bottom bar (Cinema Pro "Ticket"): a flat strip, a red bar above the chosen tab, a red square "+" in the middle -->
         <com.rainax.ytdownloader.RxNavBar
             android:id="@+id/navCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clipChildren="false"
-            android:clipToPadding="false"
-            android:paddingStart="14dp"
-            android:paddingTop="28dp"
-            android:paddingEnd="14dp"
-            android:paddingBottom="10dp">
+            android:clipToPadding="false">
 
             <com.google.android.material.bottomnavigation.BottomNavigationView
                 android:id="@+id/bottomNav"
                 android:layout_width="match_parent"
-                android:layout_height="64dp"
+                android:layout_height="66dp"
                 android:background="@android:color/transparent"
                 app:itemPaddingBottom="8dp"
                 app:itemPaddingTop="9dp"
@@ -77,18 +73,15 @@
                 app:labelVisibilityMode="labeled"
                 app:menu="@menu/bottom_nav" />
 
-            <!-- the raised "+" (Add: download from a link); placed on the bar's top edge by RxNavBar -->
+            <!-- the red square "+" (Add: download from a link); placed in the middle of the strip by RxNavBar -->
             <FrameLayout
                 android:id="@+id/navFab"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@drawable/bg_nav_fab"
                 android:clickable="true"
                 android:contentDescription="Add: download from a link"
-                android:elevation="8dp"
-                android:focusable="true"
-                android:outlineAmbientShadowColor="@color/rx_primary"
-                android:outlineSpotShadowColor="@color/rx_primary">
+                android:focusable="true">
 
                 <ImageView
                     android:layout_width="24dp"

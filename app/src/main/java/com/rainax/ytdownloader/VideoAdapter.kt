@@ -77,6 +77,8 @@ class VideoAdapter(
     var chapters: List<Pair<String, String>> = emptyList()
     var onNeedChapter: ((String) -> Unit)? = null
     var onChapterMore: ((String) -> Unit)? = null
+    /** The magazine's Movies section (cinema tickets): its list id, loaded like a chapter. */
+    var moviesId: String? = null
     private val chapterItems = HashMap<String, List<VideoItem>>()
     private val chapterAsked = HashSet<String>()
 
@@ -148,6 +150,7 @@ class VideoAdapter(
         class Chart(val i: Int, val rank: Int) : Slot(CHART)
         class Grid(val i: Int) : Slot(GRID)
         class Chapter(val label: String, val title: String, val id: String) : Slot(CHAPTER)
+        class Movies(val label: String, val id: String) : Slot(MOVIES)
     }
 
     private var slots: List<Slot> = emptyList()
@@ -169,8 +172,12 @@ class VideoAdapter(
             chapters.forEachIndexed { ci, (title, id) ->
                 val got = chapterItems[id]
                 if (got == null || got.isNotEmpty()) out += Slot.Chapter(label(title), title, id)
-                // a pull quote after the first chapter
+                // a pull quote after the first chapter, then the cinema
                 if (ci == 0 && next < n && !items[next].isChannel) out += Slot.Video(next++, WIDE)
+                if (ci == 0) moviesId?.let { mid ->
+                    val m = chapterItems[mid]
+                    if (m == null || m.isNotEmpty()) out += Slot.Movies(label("Movies"), mid)
+                }
             }
             if (next < n) out += Slot.Section(label("More stories"), "Keep watching")
             for (i in next until n) out += video(i)
@@ -201,6 +208,7 @@ class VideoAdapter(
             CHART -> ChartRow(inf.inflate(R.layout.item_mag_chart, parent, false))
             GRID -> GridRow(inf.inflate(R.layout.item_mag_grid, parent, false))
             CHAPTER -> ChapterRow(inf.inflate(R.layout.item_mag_chapter, parent, false))
+            MOVIES -> MoviesRow(inf.inflate(R.layout.item_mag_movies, parent, false))
             else -> Row(inf.inflate(if (big) R.layout.item_video_big else R.layout.item_video_small, parent, false))
         }
     }
@@ -214,6 +222,7 @@ class VideoAdapter(
             is ChartRow -> (slot as Slot.Chart).let { holder.bind(itemAt(it.i), it.rank) }
             is GridRow -> holder.bind((slot as Slot.Grid).i)
             is ChapterRow -> (slot as Slot.Chapter).let { holder.bind(it.label, it.title, it.id) }
+            is MoviesRow -> (slot as Slot.Movies).let { holder.bind(it.label, it.id) }
             else -> if (slot === Slot.Header) {
                 val box = holder.itemView as FrameLayout
                 val h = header ?: return
@@ -419,6 +428,69 @@ class VideoAdapter(
         }
     }
 
+    /** Movies: a dark cinema band with NOW SHOWING and a row of tickets (long films first). */
+    inner class MoviesRow(v: View) : RecyclerView.ViewHolder(v) {
+        private val label: TextView = v.findViewById(R.id.movLabel)
+        private val row: RecyclerView = v.findViewById(R.id.movRow)
+        private val more: View = v.findViewById(R.id.movMore)
+        private val tickets = TicketAdapter()
+
+        init {
+            row.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(v.context, RecyclerView.HORIZONTAL, false)
+            row.adapter = tickets
+            row.isNestedScrollingEnabled = false
+        }
+
+        fun bind(l: String, id: String) {
+            label.text = l
+            more.isVisible = onChapterMore != null
+            more.setOnClickListener { onChapterMore?.invoke(id) }
+            val got = chapterItems[id]
+            // real films (over 50 minutes) first; trailers and clips only when there are too few
+            val films = got.orEmpty().let { all -> all.filter { it.seconds >= 3000 }.let { f -> if (f.size >= 3) f else all } }
+            if (tickets.submit(films)) row.scrollToPosition(0)
+            if (got == null && chapterAsked.add(id)) onNeedChapter?.invoke(id)
+        }
+    }
+
+    private inner class TicketAdapter : RecyclerView.Adapter<TicketAdapter.T>() {
+        private var list: List<VideoItem> = emptyList()
+
+        fun submit(l: List<VideoItem>): Boolean {
+            if (l == list) return false
+            list = l
+            notifyDataSetChanged()
+            return true
+        }
+
+        override fun getItemCount() = list.size
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            T(LayoutInflater.from(parent.context).inflate(R.layout.item_mag_ticket, parent, false))
+
+        override fun onBindViewHolder(h: T, position: Int) = h.bind(list[position])
+
+        inner class T(v: View) : RecyclerView.ViewHolder(v) {
+            private val poster: View = v.findViewById(R.id.tkPoster)
+            private val thumb: ImageView = v.findViewById(R.id.thumb)
+            private val title: TextView = v.findViewById(R.id.title)
+            private val meta: TextView = v.findViewById(R.id.meta)
+            private val duration: TextView = v.findViewById(R.id.duration)
+
+            init { poster.clipToOutline = true }
+
+            fun bind(item: VideoItem) {
+                Img.load(thumb, item.thumb, widthPx = 480)
+                title.text = item.title
+                meta.text = listOf(item.uploader, item.views.takeIf { it >= 0 }?.let { YtCatalog.count(it) + " views" }.orEmpty())
+                    .filter { it.isNotBlank() }.joinToString(" · ")
+                duration.text = badge(item)
+                itemView.contentDescription = item.title
+                wire(itemView, item)
+            }
+        }
+    }
+
     private inner class PosterAdapter : RecyclerView.Adapter<PosterAdapter.P>() {
         private var list: List<VideoItem> = emptyList()
 
@@ -485,5 +557,6 @@ class VideoAdapter(
         private const val GRID = 8
         private const val WIDE = 9
         private const val CHAPTER = 10
+        private const val MOVIES = 11
     }
 }

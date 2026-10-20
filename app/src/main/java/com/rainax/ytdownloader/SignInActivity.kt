@@ -40,8 +40,7 @@ class SignInActivity : AppCompatActivity() {
         ws.allowFileAccess = false              // the sign-in page never needs the phone's files
         ws.allowContentAccess = false
         ws.javaScriptEnabled = true
-        ws.allowFileAccessFromFileURLs = false
-        ws.allowUniversalAccessFromFileURLs = false
+        // (file:// pages reaching other files is already off on Android 4.1+; no need to set it)
         ws.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         ws.domStorageEnabled = true
         ws.cacheMode = WebSettings.LOAD_DEFAULT

@@ -1,3 +1,5 @@
+New flat Ticket bottom bar, NOW SHOWING movie tickets on Home, a fresh Home feed every time, You may like based on what you watch, neater Clear search history
+Cleaner build: all code warnings fixed, safer Instagram error reports
 Magazine Home: Cover story, Top 5 right now, Editor's picks, chapters for Music, Gaming, News, Cricket and Comedy with their own poster rows, a pull quote, then More stories
 Cinema Pro everywhere: movie-poster Home with Play and Download, red tag chips, Settings in numbered chapters, sharp cards and buttons on every screen, new side menu, download sheet and voice search colours
 New Cinema Pro look (part 1): film red and gold colours, bold Oswald titles, sharp corners, new confirmation boxes, subtitle-style messages, square switches and thin loading lines

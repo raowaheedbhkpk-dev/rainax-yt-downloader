@@ -3,8 +3,8 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/nav_home" android:icon="@drawable/ic_nav_home" android:title="Home" />
     <item android:id="@+id/nav_shorts" android:icon="@drawable/ic_shorts" android:title="Shorts" />
-    <!-- (its icon is the raised "+" button drawn over the bar's middle) -->
+    <!-- (its icon is the red square "+" placed in the middle of the bar) -->
     <item android:id="@+id/nav_social" android:icon="@drawable/ic_nav_blank" android:title="" />
-    <item android:id="@+id/nav_subs" android:icon="@drawable/ic_nav_subs" android:title="Subscriptions" />
+    <item android:id="@+id/nav_subs" android:contentDescription="Subscriptions" android:icon="@drawable/ic_nav_subs" android:title="Subs" />
     <item android:id="@+id/nav_downloads" android:icon="@drawable/ic_nav_you" android:title="You" />
 </menu>

@@ -206,7 +206,7 @@ object YtCatalog {
 
     /** Videos the last Home feeds showed: put after fresh ones next time. */
     private val recentlyShown = java.util.LinkedHashSet<String>()
-    private var refreshes = 0
+    private var refreshes = java.util.Random().nextInt(64)        // a different popular search from the first start
     @Volatile private var homeQuery: String? = null
 
     /**
@@ -255,8 +255,8 @@ object YtCatalog {
         if (lists.all { it.isEmpty() }) error("Couldn't load videos. Check your internet")
 
         val watchedIds = watched.mapNotNull { youtubeId(it.url) }.toHashSet()
-        // popular first-page videos in a new order each time, the other lists woven in
-        val main = lists.first().let { l -> l.take(4) + l.drop(4).shuffled(rnd) }
+        // popular first-page videos in a new order each time (the top too), the other lists woven in
+        val main = lists.first().shuffled(rnd)
         val woven = mutableListOf<VideoItem>()
         val seen = HashSet<String>()
         val all = listOf(main) + lists.drop(1)
@@ -438,7 +438,7 @@ object YtCatalog {
         var firstPage: FeedPage? = null
         var opened = found.keys.first()
         for ((label, tab) in found) {
-            val page = runCatching { tabPage(url, tab) }.getOrNull() ?: continue
+            val page = runCatching { tabPage(tab) }.getOrNull() ?: continue
             if (firstPage == null) { firstPage = page; opened = label }
             if (page.items.isNotEmpty()) { firstPage = page; opened = label; break }
         }
@@ -455,7 +455,7 @@ object YtCatalog {
     /** The channels' tabs found by [channel] (by its address). */
     private val channelAllTabs = java.util.concurrent.ConcurrentHashMap<String, Map<String, org.schabi.newpipe.extractor.linkhandler.ListLinkHandler>>()
 
-    private fun tabPage(url: String, tab: org.schabi.newpipe.extractor.linkhandler.ListLinkHandler): FeedPage {
+    private fun tabPage(tab: org.schabi.newpipe.extractor.linkhandler.ListLinkHandler): FeedPage {
         val tabInfo = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(yt, tab)
         return FeedPage(tabInfo.relatedItems.mapNotNull { item(it) }, if (tabInfo.hasNextPage()) tabInfo.nextPage else null)
     }
@@ -489,7 +489,7 @@ object YtCatalog {
         directChannels[url]?.let { return@guard YtAccount.channelTab(it, label) }
         val tab = channelAllTabs[url]?.get(label) ?: return@guard channel(url).second
         channelTabs[url] = tab
-        tabPage(url, tab)
+        tabPage(tab)
     }
 
     /** The channel's picture from its page, when YouTube's data left it out. */
@@ -650,8 +650,8 @@ object YtCatalog {
         return Comment(
             author = c.uploaderName.orEmpty(),
             avatar = best(c.uploaderAvatars, 48),
-            text = text?.content().orEmpty(),
-            html = text?.type() == org.schabi.newpipe.extractor.stream.Description.Type.HTML,
+            text = text.content().orEmpty(),
+            html = text.type() == org.schabi.newpipe.extractor.stream.Description.Type.HTML,
             likes = c.textualLikeCount?.takeIf { it.isNotBlank() && it != "0" },
             date = c.textualUploadDate,
             replyCount = runCatching { c.replyCount }.getOrDefault(0).coerceAtLeast(0),

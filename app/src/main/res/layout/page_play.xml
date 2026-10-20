@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- You (like YouTube): Accounts, bell, search, settings; your picture, name and @handle; View channel / Sign out -->
+    <!-- You (like YouTube): Accounts, bell, search, settings; your picture, name and @handle; Sign out -->
     <LinearLayout
         android:id="@+id/youHeader"
         android:layout_width="match_parent"
@@ -156,27 +156,10 @@
                 app:iconTint="#FFFFFF" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/youMainBtn"
-                android:layout_width="0dp"
-                android:layout_height="42dp"
-                android:layout_weight="1"
-                app:backgroundTint="@color/rx_text"
-                android:fontFamily="@font/rx_body"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:stateListAnimator="@animator/rx_press"
-                android:text="View channel"
-                android:textAllCaps="false"
-                android:textColor="?attr/rxBg"
-                android:textSize="15sp"
-                app:cornerRadius="2dp" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/youSecondBtn"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
-                android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:fontFamily="@font/rx_body"
                 android:insetTop="0dp"
