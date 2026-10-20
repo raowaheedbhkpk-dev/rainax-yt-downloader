@@ -1,3 +1,4 @@
+TikTok in the browser: Download finds the playing video reliably, and Share offers to download it
 Browser fixes: TikTok's app popups close without breaking the page, Download picks the exact video playing, app-install pages are blocked
 Browser: TikTok's "Open app" popups are hidden, and Download gets the video playing in the feed
 Channels have Videos, Shorts, Live and Playlists tabs, like YouTube; your own channel shows properly

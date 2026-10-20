@@ -39,6 +39,10 @@ class WebPage(
     private var destroyed = false
     private val clipboard = act.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     private var lastClip: String? = null
+    /** The last real page address (not an "open the app" page the site tried to send you to). */
+    private var pageUrl: String = app.web
+    /** The last video id seen in a TikTok "open in the app" link (Share, Open app). */
+    private var appLinkId: String? = null
 
     /** "Copy link" on the site (its Share menu): that video goes straight to the download sheet. */
     private val clipListener = android.content.ClipboardManager.OnPrimaryClipChangedListener {
@@ -47,6 +51,11 @@ class WebPage(
         val link = Regex("https?://\\S+").find(text)?.value ?: return@OnPrimaryClipChangedListener
         if (link == lastClip) return@OnPrimaryClipChangedListener
         lastClip = link
+        TikTokFeed.idFromAppLink(link)?.takeIf { !isVideoPage(link) }?.let { id ->
+            AppPrefs.setClipSeen(act, link)
+            b.webRoot.post { if (!destroyed) downloadLink(TikTokFeed.linkForId(id)) }
+            return@OnPrimaryClipChangedListener
+        }
         val short = link.contains("vm.tiktok.com") || link.contains("vt.tiktok.com")
         if (short || isVideoPage(link)) {
             AppPrefs.setClipSeen(act, link)                // (the app won't ask again about this link)
@@ -94,7 +103,18 @@ class WebPage(
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
                 handleLink(view, request.url)
 
+            // TikTok's video lists pass through RAINAX (fetched for the page, unchanged) so Download knows each video
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): android.webkit.WebResourceResponse? =
+                if (app.short == "TT") TikTokFeed.intercept(request) else null
+
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                // an "open the app" page that slipped through: back to where you were (keeping the video it named)
+                if (isAppPage(url)) {
+                    view.stopLoading()
+                    noteAppLink(url)
+                    if (view.canGoBack()) view.goBack() else view.loadUrl(pageUrl)
+                    return
+                }
                 b.webProgress.isVisible = true
                 pageChanged(url)
                 view.evaluateJavascript(HOOK_JS, null)        // as early as possible: the feed's video list
@@ -102,9 +122,14 @@ class WebPage(
 
             override fun onPageFinished(view: WebView, url: String) {
                 b.webProgress.isVisible = false
+                if (isAppPage(url)) return
                 pageChanged(url)
                 view.evaluateJavascript(HOOK_JS, null)
                 view.evaluateJavascript(CLEANER_JS, null)
+                // TikTok: the videos the page arrived with (its own data) join the list Download matches against
+                if (app.short == "TT") view.evaluateJavascript(PAGE_DATA_JS) { r ->
+                    Thread { runCatching { TikTokFeed.record(org.json.JSONObject(org.json.JSONArray("[$r]").optString(0))) } }.start()
+                }
                 CookieManager.getInstance().flush()          // sign-ins are kept (and used for downloads)
             }
 
@@ -168,10 +193,10 @@ class WebPage(
         val scheme = uri.scheme?.lowercase().orEmpty()
         if (scheme == "http" || scheme == "https") {
             // "Open the app" / "Get the app" pages (onelink, app stores…): stay on the page you were on
-            val host = uri.host.orEmpty().lowercase()
-            val blocked = BLOCKED_HOSTS.any { host == it || host.endsWith(".$it") }
-            return blocked
+            if (isAppPage(uri.toString())) { noteAppLink(uri.toString()); return true }
+            return false
         }
+        noteAppLink(uri.toString())                           // snssdk1233://aweme/detail/<id>, intent://…
         if (scheme == "intent") {
             // "open in the app" links: use the web address they carry instead (stay in RAINAX)
             runCatching {
@@ -184,10 +209,33 @@ class WebPage(
         return true                                           // instagram://, fb://, snssdk…, market://: ignored
     }
 
-    private fun currentUrl(): String = b.webView.url ?: app.web
+    private fun currentUrl(): String = pageUrl
+
+    private fun isAppPage(url: String): Boolean {
+        val host = runCatching { Uri.parse(url).host.orEmpty().lowercase() }.getOrDefault("")
+        return BLOCKED_HOSTS.any { host == it || host.endsWith(".$it") }
+    }
+
+    /**
+     * TikTok tried to open its app for a video (you tapped Share or Open app): its link names the video, so offer
+     * to download that one.
+     */
+    private fun noteAppLink(url: String) {
+        if (app.short != "TT") return
+        val id = TikTokFeed.idFromAppLink(url) ?: return
+        val fresh = id != appLinkId
+        appLinkId = id
+        if (fresh && !destroyed) b.webRoot.post {
+            Snackbar.make(b.webRoot, "Download this TikTok?", Snackbar.LENGTH_LONG)
+                .setAnchorView(b.webDownload)
+                .setAction("Download") { downloadLink(TikTokFeed.linkForId(id)) }
+                .show()
+        }
+    }
 
     private fun pageChanged(url: String) {
-        if (destroyed) return
+        if (destroyed || isAppPage(url) || !url.startsWith("http")) return
+        pageUrl = url
         b.webHost.text = runCatching { Uri.parse(url).let { (it.host.orEmpty().removePrefix("www.") + it.path.orEmpty()).take(80) } }.getOrDefault("")
         val video = isVideoPage(url)
         // feeds play videos too (TikTok For You, Reels, Facebook Watch): the button is always ready
@@ -221,9 +269,20 @@ class WebPage(
         // a feed (TikTok For You, Reels, Facebook Watch, X timeline): find the video playing on screen and its link
         b.webView.evaluateJavascript(FIND_PLAYING_JS) { result ->
             if (destroyed) return@evaluateJavascript
-            val link = runCatching { org.json.JSONArray("[$result]").optString(0) }.getOrNull().orEmpty()
-            if (link.startsWith("http") && isVideoPage(link)) downloadLink(link)
-            else Snackbar.make(b.webRoot, "Couldn't find this video's link. Tap Share → Copy link on the video", Snackbar.LENGTH_LONG)
+            val o = runCatching { org.json.JSONObject(org.json.JSONArray("[$result]").optString(0)) }.getOrNull()
+            fun list(k: String) = o?.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty()
+            val link = o?.optString("link").orEmpty()
+            val found = when {
+                link.startsWith("http") && isVideoPage(link) -> link
+                app.short == "TT" -> {
+                    // the page's own data (read natively), then ids in the video's "open in app" links
+                    TikTokFeed.find(list("src"), o?.optString("poster"), list("who"), o?.optString("text").orEmpty())?.let { TikTokFeed.link(it) }
+                        ?: list("ids").firstOrNull()?.let { TikTokFeed.linkForId(it) }
+                }
+                else -> null
+            }
+            if (found != null) downloadLink(found)
+            else Snackbar.make(b.webRoot, "Couldn't find this video's link. Tap the video's Share button, then Download", Snackbar.LENGTH_LONG)
                 .setAnchorView(b.webDownload).show()
         }
     }
@@ -268,6 +327,14 @@ class WebPage(
     }
 
     private companion object {
+        /** TikTok's own page data (the first videos of the feed), as text. */
+        val PAGE_DATA_JS = """
+            (function(){
+              var s = document.getElementById('__UNIVERSAL_DATA_FOR_REHYDRATION__') || document.getElementById('SIGI_STATE') || document.getElementById('__NEXT_DATA__');
+              return s ? s.textContent : '';
+            })()
+        """.trimIndent()
+
         /** Pages that only try to send you to the app or an app store. */
         val BLOCKED_HOSTS = listOf("onelink.me", "app.link", "app.adjust.com", "adj.st", "play.google.com",
             "apps.apple.com", "itunes.apple.com", "smart.link", "go.onelink.me")
@@ -393,41 +460,60 @@ class WebPage(
          */
         val FIND_PLAYING_JS = """
             (function(){
+              var out = { link: '', src: [], poster: '', who: [], text: '', ids: [] };
               function seen(v){ var r = v.getBoundingClientRect();
                 var h = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0), w = Math.min(r.right, innerWidth) - Math.max(r.left, 0);
                 return (h > 0 && w > 0) ? h * w : 0; }
               var vids = [].slice.call(document.querySelectorAll('video')).filter(function(v){ return seen(v) > 0; });
-              if (!vids.length) return '';
+              if (!vids.length) return JSON.stringify(out);
               vids.sort(function(a, b){ return ((b.paused ? 0 : 1e9) + seen(b)) - ((a.paused ? 0 : 1e9) + seen(a)); });
               var v = vids[0];
               var tiktok = location.host.indexOf('tiktok') >= 0;
+              out.src = [v.currentSrc, v.src].concat([].map.call(v.querySelectorAll('source'), function(s){ return s.src; }))
+                .filter(function(s){ return s && s.indexOf('blob:') != 0; });
+              out.poster = v.poster || v.getAttribute('poster') || '';
+              // the page's own list (when the early hook caught it)
               if (tiktok) {
                 if (window.__rxPage) window.__rxPage();
                 var items = window.__rxItems || {};
-                var srcs = [v.currentSrc, v.src].concat([].map.call(v.querySelectorAll('source'), function(s){ return s.src; }));
-                for (var i = 0; i < srcs.length; i++) {
-                  if (!srcs[i] || srcs[i].indexOf('blob:') == 0) continue;
-                  var p; try { p = new URL(srcs[i]).pathname; } catch (e) { continue; }
+                for (var i = 0; i < out.src.length; i++) {
+                  var p; try { p = new URL(out.src[i]).pathname; } catch (e) { continue; }
                   var it = items[p];
-                  if (it && it.id) return 'https://www.tiktok.com/@' + (it.who || 'tiktok') + '/video/' + it.id;
+                  if (it && it.id) { out.link = 'https://www.tiktok.com/@' + (it.who || 'tiktok') + '/video/' + it.id; break; }
                 }
+              }
+              // this video's own box: the biggest element around it that holds no other video
+              var box = v;
+              for (var n = 0; n < 16 && box.parentElement && box.parentElement !== document.body; n++) {
+                if (box.parentElement.querySelectorAll('video').length > 1) break;
+                box = box.parentElement;
               }
               var post = /(\/@[\w.-]+\/(video|photo)\/\d{8,}|\/reels?\/[\w-]{5,}|\/p\/[\w-]{5,}|\/tv\/[\w-]{5,}|\/videos\/[\w.%-]{5,}|\/watch\/?\?v=\d+|\/share\/[vr]\/[\w-]+|\/status\/\d+)/;
-              var el = v;
-              for (var n = 0; n < 16 && el && el !== document.body; n++) {
-                if (n > 0 && el.querySelectorAll('video').length > 1) break;      // left this video's own box
-                var as = el.querySelectorAll ? el.querySelectorAll('a[href]') : [];
-                for (var j = 0; j < as.length; j++) if (post.test(as[j].href)) return as[j].href;
-                // TikTok's player box is named after the video: "xgwrapper-0-<id>"
-                var m = tiktok && el.id ? /-(\d{18,20})$/.exec(el.id) : null;
-                if (m) {
-                  var au = el.querySelector('a[href*="/@"]');
-                  var who = au ? ((au.getAttribute('href').match(/\/@[\w.-]+/) || [''])[0]) : '';
-                  return 'https://www.tiktok.com' + (who || '/@tiktok') + '/video/' + m[1];
-                }
-                el = el.parentElement;
+              var idRe = /(?:aweme\/detail\/|item_id=|share_item_id=|aweme_id=|group_id=)(\d{15,21})/;
+              var who = {};
+              [].forEach.call(box.querySelectorAll('a[href]'), function(a){
+                var h = a.href || '', d = h; try { d = decodeURIComponent(decodeURIComponent(h)); } catch (e) {}
+                if (!out.link && post.test(h)) out.link = h;
+                var m = idRe.exec(d); if (m) out.ids.push(m[1]);
+                var u = (a.getAttribute('href') || '').match(/^\/@([\w.-]+)\/?$/); if (u) who[u[1]] = 1;
+              });
+              // ids kept in the box's attributes (data-…), and the player box named after the video ("…-<id>")
+              [box].concat([].slice.call(box.querySelectorAll('*'), 0, 500)).forEach(function(e){
+                if (e.id) { var m = /-(\d{18,20})$/.exec(e.id); if (m && tiktok) out.ids.push(m[1]); }
+                [].forEach.call(e.attributes || [], function(at){
+                  if (at.name.indexOf('data-') == 0 || at.name == 'href') { var m = idRe.exec(at.value); if (m) out.ids.push(m[1]); }
+                });
+              });
+              if (!out.poster) {
+                var img = [].filter.call(box.querySelectorAll('img'), function(im){ return /tiktokcdn|ibyteimg|byteimg/.test(im.src) && im.naturalWidth > 200; })[0];
+                if (img) out.poster = img.src;
               }
-              return '';
+              // the usernames shown on the video ("@name" text too)
+              var t = (box.innerText || '').slice(0, 800);
+              (t.match(/@[\w.-]{2,30}/g) || []).forEach(function(x){ who[x.slice(1)] = 1; });
+              out.who = Object.keys(who);
+              out.text = t;
+              return JSON.stringify(out);
             })()
         """.trimIndent()
     }
