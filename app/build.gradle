@@ -7,7 +7,7 @@ plugins {
 // so the app always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+(\.\d+)?/
-def rxVersionName = isTag ? tagVersion : "10.3"
+def rxVersionName = isTag ? tagVersion : "10.4"
 def rxParts = (rxVersionName.tokenize('.').collect { it.toInteger() } + [0, 0, 0]).take(3)
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
@@ -66,6 +66,11 @@ android {
                 keyAlias System.getenv("RAINAX_KEY_ALIAS") ?: "rainax"
                 keyPassword System.getenv("RAINAX_KEY_PASSWORD")
             }
+            // every signature kind, same key: some phones' file managers (Tecno, Infinix, itel...) only read the
+            // classic JAR signature and say "There was a problem parsing the package" without it
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
         }
     }
 
