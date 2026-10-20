@@ -433,7 +433,7 @@ object YtCatalog {
             info.tabs.firstOrNull { it.contentFilters.contains(filter) }?.let { found[label] = it }
         }
         if (found.isEmpty()) info.tabs.firstOrNull()?.let { found["Videos"] = it }
-        if (found.isEmpty()) return@guard details to FeedPage(emptyList(), null)
+        if (found.isEmpty()) return@guard direct(url, details)
         channelAllTabs[url] = found
         var firstPage: FeedPage? = null
         var opened = found.keys.first()
@@ -441,6 +441,10 @@ object YtCatalog {
             val page = runCatching { tabPage(url, tab) }.getOrNull() ?: continue
             if (firstPage == null) { firstPage = page; opened = label }
             if (page.items.isNotEmpty()) { firstPage = page; opened = label; break }
+        }
+        // nothing in any tab the extractor read: ask YouTube directly (it may simply have missed them)
+        if (firstPage == null || firstPage.items.isEmpty()) {
+            runCatching { direct(url, details) }.getOrNull()?.takeIf { it.second.items.isNotEmpty() }?.let { return@guard it }
         }
         channelTabs[url] = found[opened]!!
         val withAvatar = if (details.avatar == null) runCatching { avatarFromPage(url) }.getOrNull() else null
@@ -456,9 +460,34 @@ object YtCatalog {
         return FeedPage(tabInfo.relatedItems.mapNotNull { item(it) }, if (tabInfo.hasNextPage()) tabInfo.nextPage else null)
     }
 
+    /** Channels read straight from YouTube (address -> "UC…" id), see [direct]. */
+    private val directChannels = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * A channel's tabs straight from YouTube: Videos, Shorts, Live, Playlists (those with something in them), the
+     * first non-empty one opened.
+     */
+    private fun direct(url: String, details: ChannelDetails): Pair<ChannelDetails, FeedPage> {
+        val id = details.id?.takeIf { it.startsWith("UC") } ?: YtAccount.channelId(url) ?: error("Couldn't open this channel")
+        directChannels[url] = id
+        val have = mutableListOf<String>()
+        var first: Pair<String, FeedPage>? = null
+        for (label in YtAccount.CHANNEL_TAB_PARAMS.keys) {
+            val page = runCatching { YtAccount.channelTab(id, label) }.getOrNull() ?: continue
+            if (page.items.isEmpty()) continue
+            have += label
+            if (first == null) first = label to page
+        }
+        val avatar = details.avatar ?: runCatching { avatarFromPage(url) }.getOrNull()
+        val d = ChannelDetails(details.url, id, details.name, avatar, details.banner, details.subscribers, details.description,
+            have, first?.first ?: "Videos")
+        return d to (first?.second ?: FeedPage(emptyList(), null))
+    }
+
     /** Blocking. Another tab of a channel opened with [channel] ("Shorts", "Live"…). */
     fun channelTab(url: String, label: String): FeedPage = guard {
-        val tab = channelAllTabs[url]?.get(label) ?: error("Open the channel again")
+        directChannels[url]?.let { return@guard YtAccount.channelTab(it, label) }
+        val tab = channelAllTabs[url]?.get(label) ?: return@guard channel(url).second
         channelTabs[url] = tab
         tabPage(url, tab)
     }
@@ -481,6 +510,10 @@ object YtCatalog {
 
     /** Blocking. More videos of a channel opened with [channel]. */
     fun channelMore(url: String, page: Page): FeedPage = guard {
+        if (page.url.startsWith(YtAccount.CHANNEL_PAGE)) {
+            val (id, label) = page.url.removePrefix(YtAccount.CHANNEL_PAGE).split('|').let { it[0] to it.getOrElse(1) { "Videos" } }
+            return@guard YtAccount.channelTab(id, label, page.id)
+        }
         val tab = channelTabs[url] ?: error("Open the channel again")
         val p = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getMoreItems(yt, tab, page)
         FeedPage(p.items.mapNotNull { item(it) }, if (p.hasNextPage()) p.nextPage else null)

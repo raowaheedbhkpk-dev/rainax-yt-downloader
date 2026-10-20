@@ -147,6 +147,43 @@ object YtAccount {
         return FeedPage(items.filter { seen.add(it.url) }, next[0]?.let { Page(browseId, it) })
     }
 
+    // ---------- a channel's tabs straight from YouTube (when the extractor finds none) ----------
+
+    /** YouTube's own codes for a channel's tabs. */
+    val CHANNEL_TAB_PARAMS = linkedMapOf(
+        "Videos" to "EgZ2aWRlb3PyBgQKAjoA",
+        "Shorts" to "EgZzaG9ydHPyBgUKA5oBAA%3D%3D",
+        "Live" to "EgdzdHJlYW1z8gYECgJ6AA%3D%3D",
+        "Playlists" to "EglwbGF5bGlzdHPyBgQKAkIA"
+    )
+
+    /** Page addresses made by [channelTab] start with this (their next pages come from here too). */
+    const val CHANNEL_PAGE = "rxch:"
+
+    /**
+     * Blocking. One tab of a channel ("UC…" id), or its next page ([continuation]). Works signed out too
+     * (signed in: as YouTube shows it to you).
+     */
+    fun channelTab(channelId: String, label: String, continuation: String? = null): FeedPage {
+        val body = JSONObject().put("context", context())
+        if (continuation != null) body.put("continuation", continuation)
+        else body.put("browseId", channelId).put("params", java.net.URLDecoder.decode(CHANNEL_TAB_PARAMS[label] ?: CHANNEL_TAB_PARAMS["Videos"]!!, "UTF-8"))
+        val json = request("browse", body, needAuth = false)
+        val items = mutableListOf<VideoItem>()
+        val next = arrayOfNulls<String>(1)
+        collect(json, items, next)
+        val seen = HashSet<String>()
+        val list = items.filter { seen.add(it.url) }.map { if (label == "Shorts" && !it.isShort) it.copy(isShort = true) else it }
+        return FeedPage(list, next[0]?.let { Page("$CHANNEL_PAGE$channelId|$label", it) })
+    }
+
+    /** Blocking. The "UC…" id of a channel address (…/@handle, …/c/name, …/channel/UC…). */
+    fun channelId(url: String): String? {
+        Regex("/channel/(UC[\\w-]{20,})").find(url)?.let { return it.groupValues[1] }
+        val json = request("navigation/resolve_url", JSONObject().put("context", context()).put("url", url), needAuth = false)
+        return (findValue(json, "browseId") as? String)?.takeIf { it.startsWith("UC") }
+    }
+
     // ---------- notifications (the bell) ----------
 
     /** Notifications older than this are left out (YouTube's own bell shows about the last month). */
@@ -546,6 +583,8 @@ object YtAccount {
             is JSONObject -> {
                 for (k in VIDEO_KEYS) node.optJSONObject(k)?.let { r -> video(r)?.let { out += it }; return }
                 node.optJSONObject("lockupViewModel")?.let { r -> lockup(r)?.let { out += it }; return }
+                node.optJSONObject("shortsLockupViewModel")?.let { r -> shortLockup(r)?.let { out += it }; return }
+                node.optJSONObject("reelItemRenderer")?.let { r -> reelItem(r)?.let { out += it }; return }
                 for (k in CHANNEL_KEYS) node.optJSONObject(k)?.let { r -> channel(r)?.let { out += it }; return }
                 node.optJSONObject("continuationCommand")?.optString("token")?.takeIf { it.isNotBlank() }?.let { next[0] = it }
                 node.optJSONObject("nextContinuationData")?.optString("continuation")?.takeIf { it.isNotBlank() }?.let { next[0] = it }
@@ -591,6 +630,33 @@ object YtAccount {
             thumb = "https://i.ytimg.com/vi/$id/hqdefault.jpg", seconds = seconds(length),
             views = -1, uploaded = details.ifBlank { null }, avatar = avatar,
             notInterestedToken = ni, noChannelToken = nc
+        )
+    }
+
+    /** A Short in YouTube's new layout (channel Shorts tab, Shorts shelves). */
+    private fun shortLockup(r: JSONObject): VideoItem? {
+        val id = (findValue(r.optJSONObject("onTap"), "videoId") as? String)
+            ?: r.optString("entityId").removePrefix("shorts-shelf-item-").takeIf { it.length in 10..12 } ?: return null
+        val meta = r.optJSONObject("overlayMetadata")
+        val title = meta?.optJSONObject("primaryText")?.optString("content")?.takeIf { it.isNotBlank() }
+            ?: r.optString("accessibilityText").substringBefore(",").takeIf { it.isNotBlank() } ?: return null
+        val views = meta?.optJSONObject("secondaryText")?.optString("content").orEmpty()
+        val thumb = r.optJSONObject("thumbnail")?.optJSONArray("sources")?.optJSONObject(0)?.optString("url")
+        return VideoItem(
+            url = "https://www.youtube.com/shorts/$id", title = title, uploader = "",
+            thumb = thumb ?: "https://i.ytimg.com/vi/$id/hq2.jpg", seconds = 0, views = -1,
+            uploaded = views.ifBlank { null }, isShort = true
+        )
+    }
+
+    /** A Short in YouTube's older layout. */
+    private fun reelItem(r: JSONObject): VideoItem? {
+        val id = r.optString("videoId").takeIf { it.isNotBlank() } ?: return null
+        val title = text(r.optJSONObject("headline")) ?: return null
+        return VideoItem(
+            url = "https://www.youtube.com/shorts/$id", title = title, uploader = "",
+            thumb = lastThumb(r.optJSONObject("thumbnail")) ?: "https://i.ytimg.com/vi/$id/hq2.jpg", seconds = 0, views = -1,
+            uploaded = text(r.optJSONObject("viewCountText")), isShort = true
         )
     }
 
