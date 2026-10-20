@@ -122,6 +122,45 @@ class HomeScreen(
         listOf(channelAdapter, playlistAdapter, specialAdapter).forEach { ad ->
             ad.onMore = { item, _ -> VideoMenu.show(act, item, { download(it) }, { onAccount() }) }
         }
+        setupMagazine()
+    }
+
+    // ---------- magazine Home (first tab): chapters with their own rows ----------
+
+    private fun setupMagazine() {
+        bigAdapter.chapters = MAG_CHAPTERS
+        bigAdapter.onNeedChapter = { id -> loadChapter(id) }
+        bigAdapter.onChapterMore = { id -> openTab(id) }
+    }
+
+    /** A chapter's posters: from the saved tab list when there is one, otherwise its first page. */
+    private fun loadChapter(id: String) {
+        fun pick(list: List<VideoItem>) = list.filter { !it.isChannel && !it.isPlaylist }.take(12)
+        val cached = vm.feedCache["tab:$id"]
+        if (cached != null) {
+            hm.feedList.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
+            return
+        }
+        act.lifecycleScope.launch {
+            val res = try {
+                withContext(Dispatchers.IO) { YtCatalog.kiosk(id, null) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+            if (res != null && res.items.isNotEmpty()) vm.feedCache["tab:$id"] = res.items to res.next
+            hm.feedList.post { bigAdapter.setChapter(id, pick(res?.items.orEmpty())) }
+        }
+    }
+
+    /** MORE on a chapter: that chip opens (Music, Gaming...). */
+    private fun openTab(id: String) {
+        if (query != null) return
+        val i = tabs.indexOfFirst { it.second == id }
+        val chip = hm.homeChips.getChildAt(i) as? Chip ?: return
+        chip.isChecked = true
+        hm.chipsScroll.post { hm.chipsScroll.smoothScrollTo((chip.left - 24 * act.resources.displayMetrics.density).toInt().coerceAtLeast(0), 0) }
     }
 
     private val adapter get() = when {
@@ -140,6 +179,7 @@ class HomeScreen(
         val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null && special == null
         val wantHeader = if (shelfHere) shelf.root else null
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
+        bigAdapter.magazine = shelfHere            // the first tab reads like a magazine
         if (shelfHere) shelf.refresh()
         val want: RecyclerView.Adapter<*> = if (isMusic) musicHome else adapter
         if (hm.feedList.adapter !== want) hm.feedList.adapter = want
@@ -202,6 +242,10 @@ class HomeScreen(
         hm.feedRefresh.setColorSchemeResources(R.color.rx_primary)
         hm.feedRefresh.setOnRefreshListener {
             if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
+            if (!isMusic && bigAdapter.magazine) {                    // the magazine's chapters come fresh too
+                MAG_CHAPTERS.forEach { vm.feedCache.remove("tab:${it.second}") }
+                bigAdapter.clearChapters()
+            }
             if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
             load(reset = true, pulled = true)
         }
@@ -954,6 +998,15 @@ class HomeScreen(
 
     private companion object {
         const val FOR_YOU = "acc:FEwhat_to_watch"
+
+        /** Magazine Home chapters (title to list id): the same lists as their chips. */
+        val MAG_CHAPTERS = listOf(
+            "Music" to YtCatalog.MUSIC,
+            "Gaming" to "q:gaming",
+            "News" to "q:news today",
+            "Cricket" to "q:cricket highlights",
+            "Comedy" to "q:comedy"
+        )
         /** The bell's list (YouTube's notifications, recent ones only). */
         const val NOTIFICATIONS = "acc:notifications"
     }
