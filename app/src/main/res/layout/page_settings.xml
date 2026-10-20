@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Settings: a big title, then grouped cards. Every option is one row: a coloured icon, a title and a short
-     line, and a switch or › at the end (like the phone's own settings). Same look in light, dark and AMOLED. -->
+<!-- Settings, Cinema Pro: a big Oswald title with a red bar, then numbered chapters ("01 — APPEARANCE") in gold.
+     Every option is one clean row: a title, a short line, and a switch or › at the end, with thin lines between. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -17,20 +17,27 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="18dp"
-        android:textAllCaps="true"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
         android:fontFamily="@font/rx_display"
+        android:includeFontPadding="false"
         android:text="Settings"
+        android:textAllCaps="true"
         android:textColor="@color/rx_text"
-        android:textSize="30sp" />
+        android:textSize="44sp" />
+
+    <View
+        android:layout_width="44dp"
+        android:layout_height="3dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="12dp"
+        android:background="@color/rx_primary" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="2dp"
-        android:fontFamily="@font/rx_body"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="12dp"
         android:text="Make RAINAX Tube work your way"
         android:textColor="@color/rx_text2"
         android:textSize="14sp" />
@@ -38,66 +45,40 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginBottom="10dp"
-        android:fontFamily="@font/rx_body"
-        android:letterSpacing="0.1"
-        android:text="APPEARANCE"
-        android:textColor="@color/rx_text2"
-        android:textSize="12sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="4dp"
+        android:letterSpacing="0.25"
+        android:text="01 — APPEARANCE"
+        android:textColor="@color/rx_gold"
+        android:textSize="11sp"
         android:textStyle="bold" />
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/menu_stroke"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+        android:orientation="vertical">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#268B5CF6">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_palette"
-                    app:tint="#8B5CF6" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Theme"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -115,8 +96,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="68dp"
-            android:paddingEnd="16dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:paddingBottom="12dp"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
@@ -150,72 +131,50 @@
                     android:layout_height="wrap_content"
                     android:text="AMOLED black" />
         </com.google.android.material.chip.ChipGroup>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginBottom="10dp"
-        android:fontFamily="@font/rx_body"
-        android:letterSpacing="0.1"
-        android:text="DOWNLOADS"
-        android:textColor="@color/rx_text2"
-        android:textSize="12sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="4dp"
+        android:letterSpacing="0.25"
+        android:text="02 — DOWNLOADS"
+        android:textColor="@color/rx_gold"
+        android:textSize="11sp"
         android:textStyle="bold" />
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/menu_stroke"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+        android:orientation="vertical">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#263D8BFF">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_wifi"
-                    app:tint="#3D8BFF" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Wi-Fi only"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -236,45 +195,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#263D8BFF">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_layers"
-                    app:tint="#3D8BFF" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Simultaneous downloads"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -292,8 +236,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="68dp"
-            android:paddingEnd="16dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:paddingBottom="12dp"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
@@ -330,45 +274,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#263D8BFF">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_refresh"
-                    app:tint="#3D8BFF" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Auto-retry failed downloads"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -389,45 +318,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#263D8BFF">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_delete"
-                    app:tint="#3D8BFF" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Auto-clear finished list"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -448,8 +362,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/batteryBtn"
             android:layout_width="match_parent"
@@ -458,39 +372,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#26FF8A00">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_battery"
-                    app:tint="#FF8A00" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Downloads stop when the screen is off?"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -515,80 +414,57 @@
             android:id="@+id/mp3Report"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/menu_fill"
-            android:fontFamily="@font/rx_body"
+            android:background="?attr/rxSurfaceAlt"
             android:lineSpacingMultiplier="1.15"
             android:paddingHorizontal="16dp"
             android:paddingVertical="12dp"
             android:textColor="@color/rx_text2"
             android:textSize="11.5sp"
             android:visibility="gone" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginBottom="10dp"
-        android:fontFamily="@font/rx_body"
-        android:letterSpacing="0.1"
-        android:text="PLAYBACK"
-        android:textColor="@color/rx_text2"
-        android:textSize="12sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="4dp"
+        android:letterSpacing="0.25"
+        android:text="03 — PLAYBACK"
+        android:textColor="@color/rx_gold"
+        android:textSize="11sp"
         android:textStyle="bold" />
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/menu_stroke"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+        android:orientation="vertical">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#261FAF7A">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_play_box"
-                    app:tint="#1FAF7A" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Autoplay in feed"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -606,8 +482,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="68dp"
-            android:paddingEnd="16dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:paddingBottom="12dp"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
@@ -637,45 +513,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#261FAF7A">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_headphones"
-                    app:tint="#1FAF7A" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Background play"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -696,45 +557,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#261FAF7A">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_skip"
-                    app:tint="#1FAF7A" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Skip sponsors"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -755,45 +601,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#261FAF7A">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_history"
-                    app:tint="#1FAF7A" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Continue where you left off"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -814,45 +645,30 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#260EA5B7">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_link"
-                    app:tint="#0EA5B7" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Detect copied links"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -870,72 +686,50 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginBottom="10dp"
-        android:fontFamily="@font/rx_body"
-        android:letterSpacing="0.1"
-        android:text="STORAGE"
-        android:textColor="@color/rx_text2"
-        android:textSize="12sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="4dp"
+        android:letterSpacing="0.25"
+        android:text="04 — STORAGE"
+        android:textColor="@color/rx_gold"
+        android:textSize="11sp"
         android:textStyle="bold" />
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/menu_stroke"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+        android:orientation="vertical">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#26FF8A00">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_folder"
-                    app:tint="#FF8A00" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Saved in"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:id="@+id/folderPath"
@@ -952,8 +746,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/allFilesBtn"
             android:layout_width="match_parent"
@@ -962,39 +756,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#26FF8A00">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_set_folder"
-                    app:tint="#FF8A00" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Allow all files access"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1018,8 +797,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/privateFolderBtn"
             android:layout_width="match_parent"
@@ -1028,39 +807,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#268B5CF6">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_lock"
-                    app:tint="#8B5CF6" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Private folder"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1081,72 +845,50 @@
                 android:src="@drawable/ic_chevron_down"
                 app:tint="@color/rx_text2" />
         </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginBottom="10dp"
-        android:fontFamily="@font/rx_body"
-        android:letterSpacing="0.1"
-        android:text="PRIVACY"
-        android:textColor="@color/rx_text2"
-        android:textSize="12sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="4dp"
+        android:letterSpacing="0.25"
+        android:text="05 — PRIVACY"
+        android:textColor="@color/rx_gold"
+        android:textSize="11sp"
         android:textStyle="bold" />
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/menu_stroke"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+        android:orientation="vertical">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#268A8A93">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_history"
-                    app:tint="#8A8A93" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Pause watch history"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1167,8 +909,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/clearSearchBtn"
             android:layout_width="match_parent"
@@ -1177,39 +919,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#268A8A93">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_search"
-                    app:tint="#8A8A93" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Clear search history"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
             </LinearLayout>
 
             <ImageView
@@ -1223,8 +950,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/unhideBtn"
             android:layout_width="match_parent"
@@ -1233,39 +960,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#268A8A93">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_not_interested"
-                    app:tint="#8A8A93" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Bring back hidden videos"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1289,8 +1001,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/clearWatchBtn"
             android:layout_width="match_parent"
@@ -1299,39 +1011,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#26FF3355">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_history"
-                    app:tint="#FF3355" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Clear watch history"
                     android:textColor="@color/rx_primary"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1352,35 +1049,28 @@
                 android:src="@drawable/ic_chevron_down"
                 app:tint="@color/rx_text2" />
         </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginBottom="10dp"
-        android:fontFamily="@font/rx_body"
-        android:letterSpacing="0.1"
-        android:text="ABOUT"
-        android:textColor="@color/rx_text2"
-        android:textSize="12sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="4dp"
+        android:letterSpacing="0.25"
+        android:text="06 — ABOUT"
+        android:textColor="@color/rx_gold"
+        android:textSize="11sp"
         android:textStyle="bold" />
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/menu_stroke"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+        android:orientation="vertical">
         <LinearLayout
             android:id="@+id/checkAppUpdateBtn"
             android:layout_width="match_parent"
@@ -1389,39 +1079,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#263D8BFF">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_refresh"
-                    app:tint="#3D8BFF" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Check for app update"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
             </LinearLayout>
 
             <ImageView
@@ -1435,8 +1110,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/rateAppBtn"
             android:layout_width="match_parent"
@@ -1445,39 +1120,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#26FF8A00">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_star"
-                    app:tint="#FF8A00" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Rate us on APKPure"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1501,8 +1161,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginStart="68dp"
-            android:background="@color/menu_stroke" />
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/shareAppBtn"
             android:layout_width="match_parent"
@@ -1511,39 +1171,24 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
-            android:minHeight="68dp"
+            android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@drawable/bg_set_icon"
-                android:backgroundTint="#26E1306C">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_share"
-                    app:tint="#E1306C" />
-            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/rx_body"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Share RAINAX Tube"
                     android:textColor="@color/rx_text"
-                    android:textSize="15.5sp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -1564,8 +1209,12 @@
                 android:src="@drawable/ic_chevron_down"
                 app:tint="@color/rx_text2" />
         </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/rx_divider" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/versionText"

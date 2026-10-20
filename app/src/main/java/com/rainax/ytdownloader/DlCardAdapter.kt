@@ -84,14 +84,14 @@ class DlCardAdapter(
             badge.isVisible = item.recommended
             // selected: red border on a soft pink card; recommended: pink border; others: thin grey border
             val shape = GradientDrawable().apply {
-                cornerRadius = 20 * d
+                cornerRadius = 2 * d
                 when {
                     item.selected -> { setColor(col(R.color.dl_card_selected_bg)); setStroke((2 * d).toInt(), col(R.color.dl_accent)) }
                     item.recommended -> { setColor(col(R.color.dl_card_bg)); setStroke((2 * d).toInt(), col(R.color.dl_card_recommended)) }
                     else -> { setColor(col(R.color.dl_card_bg)); setStroke((1.5f * d).toInt().coerceAtLeast(1), col(R.color.dl_card_stroke)) }
                 }
             }
-            val mask = GradientDrawable().apply { cornerRadius = 20 * d; setColor(0xFFFFFFFF.toInt()) }
+            val mask = GradientDrawable().apply { cornerRadius = 2 * d; setColor(0xFFFFFFFF.toInt()) }
             card.background = RippleDrawable(ColorStateList.valueOf(0x22D42A35), shape, mask)
             card.elevation = if (item.selected) 6 * d else 2 * d
             card.contentDescription = listOf(item.quality, item.tag, item.size, if (item.recommended) "Recommended" else "",

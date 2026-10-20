@@ -38,14 +38,16 @@
             android:orientation="vertical">
 
             <TextView
+                android:fontFamily="@font/rx_display"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
                 android:id="@+id/chHeadName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:textColor="@color/rx_text"
-                android:textSize="20sp"
-                android:fontFamily="sans-serif-medium" />
+                android:textSize="22sp" />
 
             <TextView
                 android:id="@+id/chHeadMeta"

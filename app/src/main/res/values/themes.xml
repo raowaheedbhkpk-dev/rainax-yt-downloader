@@ -244,8 +244,13 @@
         <item name="cornerSize">4dp</item>
     </style>
 
-    <!-- fully rounded, like YouTube's pill buttons -->
+    <!-- action buttons (Like, Share, Subscribe ...): sharp like the rest of Cinema Pro -->
     <style name="ShapeAppearance.Rainax.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">2dp</item>
+    </style>
+    <!-- avatars stay round -->
+    <style name="ShapeAppearance.Rainax.Round" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
@@ -272,6 +277,17 @@
         <item name="fontFamily">sans-serif-medium</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textStyle">normal</item>
+    </style>
+
+    <!-- filter chips: small bold capitals, like film credits -->
+    <style name="TextAppearance.Rainax.ChipCaps" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">sans-serif</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
     </style>
 
     <!-- bottom bar labels: small, like YouTube -->
@@ -350,9 +366,10 @@
     <style name="Widget.Rainax.Chip.Filter" parent="Widget.Material3.Chip.Filter">
         <item name="chipBackgroundColor">@color/rx_chip_bg</item>
         <item name="android:textColor">@color/rx_chip_text</item>
-        <item name="checkedIconTint">@color/rx_chip_on_text</item>
-        <item name="android:textAppearance">@style/TextAppearance.Rainax.Chip</item>
-        <item name="chipStrokeWidth">0dp</item>
+        <item name="checkedIconTint">@color/rx_white</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.ChipCaps</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipStrokeColor">@color/rx_chip_stroke</item>
         <item name="chipCornerRadius">2dp</item>
     </style>
 

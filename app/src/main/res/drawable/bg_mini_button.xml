@@ -2,7 +2,8 @@
 <!-- Round dark button over the floating video -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#40FFFFFF">
     <item>
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
+            <corners android:radius="2dp" />
             <solid android:color="#99000000" />
         </shape>
     </item>

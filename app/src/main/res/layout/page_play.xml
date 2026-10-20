@@ -33,7 +33,7 @@
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
                 android:textSize="15sp"
-                app:cornerRadius="22dp"
+                app:cornerRadius="2dp"
                 app:icon="@drawable/ic_chevron_down"
                 app:iconGravity="textEnd"
                 app:iconSize="18dp"
@@ -150,7 +150,7 @@
                 android:textStyle="bold"
                 android:visibility="gone"
                 app:backgroundTint="@color/rx_primary"
-                app:cornerRadius="21dp"
+                app:cornerRadius="2dp"
                 app:icon="@drawable/ic_person"
                 app:iconGravity="textStart"
                 app:iconTint="#FFFFFF" />
@@ -169,7 +169,7 @@
                 android:textAllCaps="false"
                 android:textColor="?attr/rxBg"
                 android:textSize="15sp"
-                app:cornerRadius="21dp" />
+                app:cornerRadius="2dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/youSecondBtn"
@@ -185,7 +185,7 @@
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
                 android:textSize="15sp"
-                app:cornerRadius="21dp"
+                app:cornerRadius="2dp"
                 app:strokeColor="@color/rx_outline" />
         </LinearLayout>
     </LinearLayout>
@@ -324,7 +324,7 @@
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="Play all"
-                app:cornerRadius="22dp"
+                app:cornerRadius="2dp"
                 app:icon="@drawable/ic_play"
                 app:iconTint="@color/rx_on_primary" />
 
@@ -337,7 +337,7 @@
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="Shuffle"
-                app:cornerRadius="22dp"
+                app:cornerRadius="2dp"
                 app:icon="@drawable/ic_shuffle"
                 app:iconTint="@color/rx_text" />
 
@@ -351,7 +351,7 @@
                 android:insetBottom="0dp"
                 android:text="New playlist"
                 android:visibility="gone"
-                app:cornerRadius="22dp"
+                app:cornerRadius="2dp"
                 app:icon="@drawable/ic_add"
                 app:iconTint="@color/rx_on_primary" />
         </LinearLayout>
@@ -581,7 +581,7 @@
             android:layout_marginTop="24dp"
             android:minWidth="200dp"
             android:text="Explore videos"
-            app:cornerRadius="24dp"
+            app:cornerRadius="2dp"
             app:icon="@drawable/ic_play"
             app:iconTint="@color/rx_on_primary" />
     </LinearLayout>

@@ -172,8 +172,8 @@
                     android:textColor="#FFFFFF"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    app:backgroundTint="#FF0033"
-                    app:cornerRadius="12dp" />
+                    app:backgroundTint="@color/rx_primary"
+                    app:cornerRadius="2dp" />
             </LinearLayout>
 
             <TextView
@@ -291,12 +291,14 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:fontFamily="@font/rx_display"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.02"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
                         android:text="WhatsApp Status Saver"
                         android:textColor="@color/rx_text"
-                        android:textSize="17sp" />
+                        android:textSize="19sp" />
 
                     <TextView
                         android:id="@+id/statusSub"
@@ -383,7 +385,7 @@
                     android:insetBottom="0dp"
                     android:text="Allow access"
                     android:textColor="#FFFFFF"
-                    app:cornerRadius="25dp"
+                    app:cornerRadius="2dp"
                     app:icon="@drawable/ic_check"
                     app:iconTint="#FFFFFF" />
 
@@ -439,20 +441,22 @@
                 android:insetBottom="0dp"
                 android:text="Save all"
                 android:visibility="gone"
-                app:cornerRadius="24dp"
+                app:cornerRadius="2dp"
                 app:icon="@drawable/ic_download"
                 app:iconTint="@color/rx_text" />
         </LinearLayout>
 
         <!-- ===== 3 steps ===== -->
         <TextView
+            android:fontFamily="@font/rx_display"
+            android:textAllCaps="true"
+            android:letterSpacing="0.02"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"
-            android:fontFamily="sans-serif-medium"
             android:text="Three taps"
             android:textColor="@color/rx_text"
-            android:textSize="19sp" />
+            android:textSize="21sp" />
 
         <LinearLayout
             android:layout_width="match_parent"

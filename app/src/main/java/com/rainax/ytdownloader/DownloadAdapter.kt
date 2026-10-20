@@ -89,7 +89,7 @@ class DownloadAdapter(
             b.statusPill.text = pill.first
             b.statusPill.setTextColor(pill.second)
             b.statusPill.background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 10 * d
+                cornerRadius = 2 * d
                 setColor((pill.second and 0x00FFFFFF) or 0x24000000)
             }
         }

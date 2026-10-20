@@ -78,16 +78,17 @@
             android:orientation="vertical">
 
             <TextView
+                android:fontFamily="@font/rx_display"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
                 android:id="@+id/sheetHeading"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:fontFamily="@font/rx_body"
                 android:lineSpacingMultiplier="1.1"
                 android:maxLines="2"
                 android:textColor="@color/dl_text"
-                android:textSize="17sp"
-                android:textStyle="bold"
+                android:textSize="19sp"
                 tools:text="Mangroves Fishing | Karachi" />
 
             <TextView
@@ -306,7 +307,7 @@
             android:textColor="#FFFFFF"
             android:textSize="15sp"
             android:textStyle="bold"
-            app:cornerRadius="27dp"
+            app:cornerRadius="2dp"
             app:icon="@drawable/ic_dl_download"
             app:iconGravity="textStart"
             app:iconPadding="10dp"

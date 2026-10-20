@@ -46,24 +46,24 @@
     <color name="rx_amoled_outline">#14FFFFFF</color>
 
     <!-- download sheet (light) -->
-    <color name="dl_bg_top">#FFFFFF</color>
-    <color name="dl_bg_bottom">#FFF6F7</color>
-    <color name="dl_text">#1E1416</color>
-    <color name="dl_text2">#6E5A5F</color>
-    <color name="dl_accent">#D42A35</color>
-    <color name="dl_accent_text">#B0222D</color>
-    <color name="dl_handle">#E4D6D9</color>
-    <color name="dl_close_bg">#F6EDEF</color>
-    <color name="dl_close_icon">#5B4449</color>
-    <color name="dl_tabs_bg">#F3E9EB</color>
+    <color name="dl_bg_top">#F6F4F0</color>
+    <color name="dl_bg_bottom">#F6F4F0</color>
+    <color name="dl_text">#111111</color>
+    <color name="dl_text2">#5F5A52</color>
+    <color name="dl_accent">#C81E33</color>
+    <color name="dl_accent_text">#A3172A</color>
+    <color name="dl_handle">#C9C3B8</color>
+    <color name="dl_close_bg">#E8E4DC</color>
+    <color name="dl_close_icon">#111111</color>
+    <color name="dl_tabs_bg">#E8E4DC</color>
     <color name="dl_card_bg">#FFFFFF</color>
-    <color name="dl_card_stroke">#EEE2E4</color>
-    <color name="dl_card_recommended">#EFA3A9</color>
-    <color name="dl_card_selected_bg">#FFF1F2</color>
-    <color name="dl_more_stroke">#E2CDD1</color>
-    <color name="dl_more_icon_bg">#FBE9EB</color>
-    <color name="dl_bar_bg">#FFFFFF</color>
-    <color name="dl_bar_line">#F3E6E8</color>
+    <color name="dl_card_stroke">#E2DDD3</color>
+    <color name="dl_card_recommended">#A87A1F</color>
+    <color name="dl_card_selected_bg">#FBEFF0</color>
+    <color name="dl_more_stroke">#D6D1C7</color>
+    <color name="dl_more_icon_bg">#E8E4DC</color>
+    <color name="dl_bar_bg">#F6F4F0</color>
+    <color name="dl_bar_line">#E2DDD3</color>
     <!-- side menu (light / dark: values-night) -->
     <color name="menu_fill">#0D000000</color>
     <color name="menu_stroke">#14000000</color>

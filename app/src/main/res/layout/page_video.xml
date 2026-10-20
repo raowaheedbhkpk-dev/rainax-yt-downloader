@@ -191,7 +191,7 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:text="Download"
-            app:cornerRadius="22dp"
+            app:cornerRadius="2dp"
             app:icon="@drawable/ic_download"
             app:iconTint="@color/rx_on_primary" />
     </LinearLayout>

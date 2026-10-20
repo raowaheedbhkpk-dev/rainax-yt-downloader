@@ -58,7 +58,7 @@
         android:importantForAccessibility="no"
         android:scaleType="centerCrop"
         android:visibility="gone"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Small" />
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Rainax.Sharp" />
 
     <!-- ↖ : put this in the search box -->
     <ImageView

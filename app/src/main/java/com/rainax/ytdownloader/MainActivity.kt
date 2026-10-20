@@ -955,9 +955,9 @@ class MainActivity : AppCompatActivity() {
         }
         e.explorePanel.background = android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(attrColor(R.attr.rxCard), attrColor(R.attr.rxSurface))
+            intArrayOf(attrColor(R.attr.rxBg), attrColor(R.attr.rxBg))
         ).apply {
-            cornerRadius = 26 * d
+            cornerRadius = 2 * d
             setStroke((1 * d).toInt().coerceAtLeast(1), ContextCompat.getColor(this@MainActivity, R.color.menu_stroke))
         }
         e.menuBrand.text = android.text.SpannableStringBuilder("RAINAX ").apply {
@@ -985,13 +985,15 @@ class MainActivity : AppCompatActivity() {
         e.explorePanel.onDrag = { shown -> e.exploreScrim.alpha = shown.coerceIn(0f, 1f) }
         e.explorePanel.onSwipedClosed = { closeExplore() }
 
+        var chapter = 0
         fun section(title: String) {
+            chapter++
             val tv = TextView(this).apply {
-                text = title
-                textSize = 10f
-                letterSpacing = 0.14f
+                text = String.format(java.util.Locale.US, "%02d — %s", chapter, title)      // Cinema chapters
+                textSize = 10.5f
+                letterSpacing = 0.25f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.menu_label))
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.rx_gold))
                 setPadding(dp(20), dp(14), dp(12), dp(6))
             }
             menuLabels += tv

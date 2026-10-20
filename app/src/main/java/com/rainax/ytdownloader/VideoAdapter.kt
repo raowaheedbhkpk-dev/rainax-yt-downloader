@@ -50,6 +50,14 @@ class VideoAdapter(
     /** ⋮ on every video (Save to playlist, Share, Not interested…); null = no ⋮ button. */
     var onMore: ((VideoItem, View) -> Unit)? = null
 
+    /** Home (Cinema Pro): the first video is shown as a big movie poster with Play and Download. */
+    var hero = false
+        set(value) {
+            if (field == value) return
+            field = value
+            notifyDataSetChanged()
+        }
+
     /** Home and Up next: leave out videos and channels you said "Not interested" to. */
     var filterHidden = false
 
@@ -91,6 +99,7 @@ class VideoAdapter(
         header != null && position == 0 -> HEADER
         position >= headerCount + contentCount -> FOOTER
         itemAt(position - headerCount).isChannel -> CHANNEL
+        hero && big && position == headerCount && itemAt(position - headerCount).let { !it.isPlaylist && !it.isShort } -> HERO
         else -> ITEM
     }
 
@@ -102,6 +111,7 @@ class VideoAdapter(
             }) {}
             FOOTER -> object : RecyclerView.ViewHolder(inf.inflate(R.layout.item_loading, parent, false)) {}
             CHANNEL -> ChannelRow(inf.inflate(R.layout.item_channel_row, parent, false))
+            HERO -> Row(inf.inflate(R.layout.item_video_hero, parent, false), isHero = true)
             else -> Row(inf.inflate(if (big) R.layout.item_video_big else R.layout.item_video_small, parent, false))
         }
     }
@@ -122,13 +132,14 @@ class VideoAdapter(
         }
     }
 
-    inner class Row(v: View) : RecyclerView.ViewHolder(v) {
+    inner class Row(v: View, private val isHero: Boolean = false) : RecyclerView.ViewHolder(v) {
         private val thumb: ImageView = v.findViewById(R.id.thumb)
         /** The duration badge (feed autoplay shows the time left in it). */
         val duration: TextView = v.findViewById(R.id.duration)
         private val title: TextView = v.findViewById(R.id.title)
         private val meta: TextView = v.findViewById(R.id.meta)
-        private val download: ImageButton = v.findViewById(R.id.download)
+        private val download: View = v.findViewById(R.id.download)
+        private val heroPlay: View? = v.findViewById(R.id.heroPlay)
         private val avatar: ImageView? = v.findViewById(R.id.avatar)      // big rows only
         private val watchBar: android.widget.ProgressBar? = v.findViewById(R.id.watchBar)
         private val pick: ImageButton? = v.findViewById(R.id.pick)
@@ -140,7 +151,7 @@ class VideoAdapter(
         var item: VideoItem? = null
             private set
         /** Big rows of normal videos can play in the list (not playlists, channels or live streams). */
-        val canPreview get() = big && item?.let { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds > 0 } == true
+        val canPreview get() = big && !isHero && item?.let { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds > 0 } == true
 
         init {
             (thumb.parent as View).clipToOutline = true      // rounded corners from the background shape
@@ -173,6 +184,7 @@ class VideoAdapter(
             duration.isVisible = badge.isNotEmpty()
             duration.setBackgroundResource(if (item.seconds < 0) R.drawable.bg_live else R.drawable.bg_duration)
             itemView.setOnClickListener { onOpen(item) }
+            heroPlay?.setOnClickListener { onOpen(item) }
             val menu = onMore
             more?.isVisible = menu != null && !item.isChannel
             more?.setOnClickListener { v -> menu?.invoke(item, v) }
@@ -218,5 +230,6 @@ class VideoAdapter(
         private const val HEADER = 0
         private const val ITEM = 1
         private const val FOOTER = 2
+        private const val HERO = 4
     }
 }

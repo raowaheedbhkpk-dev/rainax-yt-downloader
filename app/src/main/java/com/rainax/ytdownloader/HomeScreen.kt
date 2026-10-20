@@ -74,7 +74,7 @@ class HomeScreen(
     private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
     private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
-    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) })
+    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) }).also { it.hero = true }
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     /** Continue watching + Shorts, on top of the first Home tab. */
     private val shelf = HomeShelf(act, openVideo)

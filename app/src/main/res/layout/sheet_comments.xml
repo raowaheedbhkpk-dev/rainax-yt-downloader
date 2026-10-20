@@ -15,12 +15,14 @@
         android:paddingVertical="8dp">
 
         <TextView
+            android:fontFamily="@font/rx_display"
+            android:textAllCaps="true"
+            android:letterSpacing="0.02"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Comments"
             android:textColor="@color/rx_text"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-medium" />
+            android:textSize="20sp" />
 
         <TextView
             android:id="@+id/commentCount"

@@ -26,24 +26,24 @@
     <color name="rx_glass_nav">#0A0A0A</color>
 
     <!-- download sheet (dark) -->
-    <color name="dl_bg_top">#1E1719</color>
-    <color name="dl_bg_bottom">#241A1D</color>
-    <color name="dl_text">#F6EEF0</color>
-    <color name="dl_text2">#BBA7AC</color>
-    <color name="dl_accent">#E0434E</color>
-    <color name="dl_accent_text">#FF8A93</color>
-    <color name="dl_handle">#4A3A3E</color>
-    <color name="dl_close_bg">#2F2427</color>
-    <color name="dl_close_icon">#D8C4C9</color>
-    <color name="dl_tabs_bg">#2F2427</color>
-    <color name="dl_card_bg">#271D20</color>
-    <color name="dl_card_stroke">#3A2C30</color>
-    <color name="dl_card_recommended">#8A3B42</color>
-    <color name="dl_card_selected_bg">#3A1D22</color>
-    <color name="dl_more_stroke">#4A383C</color>
-    <color name="dl_more_icon_bg">#3A2226</color>
-    <color name="dl_bar_bg">#1E1719</color>
-    <color name="dl_bar_line">#33262A</color>
+    <color name="dl_bg_top">#0A0A0A</color>
+    <color name="dl_bg_bottom">#0A0A0A</color>
+    <color name="dl_text">#F2F2F2</color>
+    <color name="dl_text2">#9A9A9A</color>
+    <color name="dl_accent">#D7263D</color>
+    <color name="dl_accent_text">#FF6B7B</color>
+    <color name="dl_handle">#333333</color>
+    <color name="dl_close_bg">#1E1E1E</color>
+    <color name="dl_close_icon">#F2F2F2</color>
+    <color name="dl_tabs_bg">#1A1A1A</color>
+    <color name="dl_card_bg">#121212</color>
+    <color name="dl_card_stroke">#262626</color>
+    <color name="dl_card_recommended">#E8B44A</color>
+    <color name="dl_card_selected_bg">#2A1014</color>
+    <color name="dl_more_stroke">#333333</color>
+    <color name="dl_more_icon_bg">#1E1E1E</color>
+    <color name="dl_bar_bg">#0A0A0A</color>
+    <color name="dl_bar_line">#1F1F1F</color>
     <!-- side menu (light / dark: values-night) -->
     <color name="menu_fill">#17FFFFFF</color>
     <color name="menu_stroke">#24FFFFFF</color>

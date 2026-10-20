@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Cinema chips: the chosen one is a solid red tag, the others are see-through with a thin edge -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/rx_chip_on" android:state_checked="true" />
-    <item android:color="?attr/rxSurfaceAlt" />
+    <item android:color="@color/rx_primary" android:state_checked="true" />
+    <item android:color="@android:color/transparent" />
 </selector>

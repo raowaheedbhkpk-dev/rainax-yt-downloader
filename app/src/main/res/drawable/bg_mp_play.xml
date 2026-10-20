@@ -2,7 +2,8 @@
 <!-- Music player: big white play button -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#33000000">
     <item>
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
+            <corners android:radius="2dp" />
             <solid android:color="#FFFFFFFF" />
         </shape>
     </item>

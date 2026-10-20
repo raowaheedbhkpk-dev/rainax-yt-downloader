@@ -45,16 +45,17 @@
         android:visibility="gone">
 
         <TextView
+            android:fontFamily="@font/rx_display"
+            android:textAllCaps="true"
+            android:letterSpacing="0.02"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
             android:paddingHorizontal="16dp"
             android:paddingTop="6dp"
             android:paddingBottom="10dp"
             android:text="Continue watching"
             android:textColor="@color/rx_text"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textSize="22sp" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/continueList"
@@ -89,14 +90,15 @@
                 app:tint="@color/rx_primary" />
 
             <TextView
+                android:fontFamily="@font/rx_display"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:fontFamily="sans-serif-medium"
                 android:text="Shorts"
                 android:textColor="@color/rx_text"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textSize="22sp" />
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView

@@ -113,7 +113,7 @@ class MusicPlayer(
     @SuppressLint("ClickableViewAccessibility")
     fun setup() {
         pg.root.background = pageBg
-        miniBg.cornerRadius = 18 * act.resources.displayMetrics.density
+        miniBg.cornerRadius = 2 * act.resources.displayMetrics.density
         mini.root.background = miniBg
         mini.mmArt.clipToOutline = true
         pg.mpArtBox.clipToOutline = true
