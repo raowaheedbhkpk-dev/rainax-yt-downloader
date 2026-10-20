@@ -1,3 +1,5 @@
+New side menu: a floating glass panel with your account, search, sections, red highlight, badges and Collapse
+Social sites (Instagram, Facebook, TikTok, X, WhatsApp status) moved into the side menu
 Channels open properly: Videos, Shorts, Live and Playlists read straight from YouTube when needed
 Installs on more phones: fixes "There was a problem parsing the package" on some Tecno, Infinix and itel phones
 TikTok in the browser: Download finds the playing video reliably, and Share offers to download it

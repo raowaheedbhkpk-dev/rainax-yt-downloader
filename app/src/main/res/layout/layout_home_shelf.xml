@@ -6,34 +6,6 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <!-- social apps: open the site inside RAINAX and download from it (WhatsApp: Status saver) -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="10dp"
-        app:cardBackgroundColor="?attr/rxCard"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="0dp">
-
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipToPadding="false"
-            android:paddingHorizontal="6dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:id="@+id/socialRow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingVertical="12dp" />
-        </HorizontalScrollView>
-    </com.google.android.material.card.MaterialCardView>
-
     <!-- your channels (signed in), like the top of YouTube's Home -->
     <LinearLayout
         android:id="@+id/subsBox"

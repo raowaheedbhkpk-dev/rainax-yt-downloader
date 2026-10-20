@@ -13,6 +13,9 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -923,29 +926,103 @@ class MainActivity : AppCompatActivity() {
 
     private var exploreOpen = false
 
+    /** One place in the side menu. */
+    private class MenuRow(val label: String, val row: android.widget.LinearLayout, val iconBox: android.widget.FrameLayout,
+                          val icon: ImageView, val text: TextView, val badge: TextView) {
+        /** social sites: their coloured round badge stays as the icon's background */
+        var socialBadge: android.graphics.drawable.Drawable? = null
+    }
+
+    private val menuRows = mutableListOf<MenuRow>()
+    private val menuLabels = mutableListOf<TextView>()
+    private var menuActive = "Home"
+    private var menuCollapsed = false
+    private val menuPrefs by lazy { getSharedPreferences("ui", MODE_PRIVATE) }
+
+    /**
+     * The side menu (≡): a floating frosted-glass card like the reference: header with bell and Collapse, your
+     * account, search, then MENU / DISCOVER / GENERAL with a red bar on the open place, count badges, and a
+     * Collapse button that shrinks it to an icon rail (remembered).
+     */
     private fun setupExplore() {
         val e = b.explore
+        val d = resources.displayMetrics.density
+        fun dp(v: Int) = (v * d).toInt()
         e.exploreScrim.setOnClickListener { closeExplore() }
-        fun add(icon: Int, text: String, action: () -> Unit) {
-            val row = com.rainax.ytdownloader.databinding.ItemOptionBinding.inflate(layoutInflater, e.exploreList, false)
-            row.optText.text = text
-            row.optValue.isVisible = false
-            row.optIcon.setImageResource(icon)
-            row.optIcon.isVisible = true
-            row.root.setOnClickListener {
-                closeExplore()
-                action()
+        e.menuBell.setOnClickListener { closeExplore(); home.openNotifications() }
+        e.menuProfile.setOnClickListener { closeExplore(); onAccountClick() }
+        e.menuSearch.setOnClickListener {
+            closeExplore()
+            goHome()
+            b.root.postDelayed({ home.openSearch() }, 200)
+        }
+        e.menuCollapse.setOnClickListener { setMenuCollapsed(!menuCollapsed, animate = true) }
+
+        fun section(title: String) {
+            val tv = TextView(this).apply {
+                text = title
+                textSize = 10f
+                letterSpacing = 0.14f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(0x73FFFFFF)
+                setPadding(dp(20), dp(14), dp(12), dp(6))
             }
-            e.exploreList.addView(row.root)
+            menuLabels += tv
+            e.exploreList.addView(tv)
         }
-        fun divider() {
-            val v = View(this)
-            v.setBackgroundColor(ContextCompat.getColor(this, R.color.rx_divider))
-            val lp = android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * resources.displayMetrics.density).toInt().coerceAtLeast(1))
-            lp.topMargin = (8 * resources.displayMetrics.density).toInt()
-            lp.bottomMargin = lp.topMargin
-            e.exploreList.addView(v, lp)
+        fun add(icon: Int, label: String, action: () -> Unit) {
+            val row = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(14), 0, dp(14), 0)
+                isClickable = true
+                isFocusable = true
+                contentDescription = label
+                stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(this@MainActivity, R.animator.rx_press)
+            }
+            val box = android.widget.FrameLayout(this).apply { setBackgroundResource(R.drawable.bg_menu_icon) }
+            val iv = ImageView(this).apply {
+                if (icon != 0) setImageResource(icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(0xE6FFFFFF.toInt())
+            }
+            box.addView(iv, android.widget.FrameLayout.LayoutParams(dp(17), dp(17), android.view.Gravity.CENTER))
+            row.addView(box, android.widget.LinearLayout.LayoutParams(dp(32), dp(32)))
+            val tv = TextView(this).apply {
+                text = label
+                textSize = 14f
+                maxLines = 1
+                setTextColor(0xF2FFFFFF.toInt())
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.rx_body)
+            }
+            row.addView(tv, android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(14) })
+            val badge = TextView(this).apply {
+                setBackgroundResource(R.drawable.bg_menu_badge)
+                gravity = android.view.Gravity.CENTER
+                textSize = 10f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(android.graphics.Color.WHITE)
+                isVisible = false
+            }
+            row.addView(badge, android.widget.LinearLayout.LayoutParams(dp(20), dp(20)))
+            val r = MenuRow(label, row, box, iv, tv, badge)
+            menuRows += r
+            row.setOnClickListener {
+                setMenuActive(label)
+                // a moment to see the red bar move, then go
+                b.root.postDelayed({ closeExplore(); action() }, 140)
+            }
+            e.exploreList.addView(row, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)))
         }
+
+        section("MENU")
+        add(R.drawable.ic_nav_home, "Home") { goHome() }
+        add(R.drawable.ic_shorts, "Shorts") { video.minimize(); ShortsActivity.open(this, 0) }
+        add(R.drawable.ic_nav_subs, "Subscriptions") { b.bottomNav.selectedItemId = R.id.nav_subs }
+        add(R.drawable.ic_download, "Downloads") { b.bottomNav.selectedItemId = R.id.nav_downloads }
+        add(R.drawable.ic_history, "History") { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") }
+        add(R.drawable.ic_watch_later, "Watch later") { openHomeList("Watch later", "acc:VLWL") }
+        add(R.drawable.ic_thumb_up, "Liked videos") { openHomeList("Liked videos", "acc:VLLL") }
+        section("DISCOVER")
         add(R.drawable.ic_music_note, "Music") { goHome(); video.minimize(); home.showMusic() }
         add(R.drawable.ic_trending, "Trending") { openHomeList("Trending", "q:trending") }
         add(R.drawable.ic_gaming, "Gaming") { openHomeList("Gaming", "q:gaming") }
@@ -954,31 +1031,148 @@ class MainActivity : AppCompatActivity() {
         add(R.drawable.ic_movie, "Movies") { openHomeList("Movies", "q:full movie") }
         add(R.drawable.ic_podcast, "Podcasts") { openHomeList("Podcasts", "q:podcast") }
         add(R.drawable.ic_live, "Live") { openHomeList("Live", "q:live now") }
-        divider()
-        add(R.drawable.ic_shorts, "Shorts") { video.minimize(); ShortsActivity.open(this, 0) }
-        add(R.drawable.ic_nav_subs, "Subscriptions") { b.bottomNav.selectedItemId = R.id.nav_subs }
-        add(R.drawable.ic_history, "History") { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") }
-        add(R.drawable.ic_download, "Downloads") { b.bottomNav.selectedItemId = R.id.nav_downloads }
+        section("SOCIAL")
+        listOf("Instagram", "Facebook", "TikTok", "X", "WhatsApp").mapNotNull { n -> SocialApps.ALL.firstOrNull { it.name == n } }.forEach { app ->
+            add(0, if (app.name == "WhatsApp") "WhatsApp status" else app.name) {
+                if (app.name == "WhatsApp") home.onWhatsApp() else home.onSite(app)
+            }
+            // its round badge in the app's colours instead of an icon
+            menuRows.last().let { r ->
+                r.iconBox.background = SocialApps.badge(app, this)
+                r.icon.isVisible = false
+                r.iconBox.addView(TextView(this).apply {
+                    text = app.short
+                    gravity = android.view.Gravity.CENTER
+                    textSize = 10f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(android.graphics.Color.WHITE)
+                }, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                r.socialBadge = SocialApps.badge(app, this)
+            }
+        }
+        section("GENERAL")
         add(R.drawable.ic_link, "Download from a link") { b.bottomNav.selectedItemId = R.id.nav_social }
-        divider()
         add(R.drawable.ic_gear, "Settings") {
             if (tab != 1) b.bottomNav.selectedItemId = R.id.nav_downloads
             showTab(2)
         }
+        add(R.drawable.ic_close, "Sign out") { askSignOut() }
+
         val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull()
         e.exploreVersion.text = "RAINAX Tube" + (version?.let { " v$it" } ?: "")
+        setMenuActive("Home")
+        setMenuCollapsed(menuPrefs.getBoolean("menu_collapsed", false), animate = false)
+    }
+
+    /** The red bar moves to [label] (the open place). */
+    private fun setMenuActive(label: String) {
+        menuActive = label
+        menuRows.forEach { r ->
+            val on = r.label == label
+            if (on) {
+                r.row.background = ContextCompat.getDrawable(this, R.drawable.bg_menu_active)
+                r.row.background.alpha = 0
+                android.animation.ObjectAnimator.ofInt(r.row.background, "alpha", 0, 255).setDuration(180).start()
+                if (r.socialBadge == null) r.iconBox.background = null
+            } else {
+                r.row.background = null
+                if (r.socialBadge != null) r.iconBox.background = r.socialBadge else r.iconBox.setBackgroundResource(R.drawable.bg_menu_icon)
+            }
+            r.text.setTypeface(r.text.typeface, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+        }
+    }
+
+    /** Full menu <-> a narrow rail of icons (the red bar and badges stay). */
+    private fun setMenuCollapsed(on: Boolean, animate: Boolean) {
+        menuCollapsed = on
+        menuPrefs.edit().putBoolean("menu_collapsed", on).apply()
+        val e = b.explore
+        val d = resources.displayMetrics.density
+        val target = ((if (on) 74 else 292) * d).toInt()
+        val texts = listOf<View>(e.menuBrand, e.menuProfileText, e.menuChevron, e.menuSearchText, e.menuBell) +
+            menuRows.map { it.text }
+        e.menuCollapse.text = if (on) "»" else "Collapse"
+        e.menuCollapse.setPadding(((if (on) 8 else 10) * d).toInt(), 0, ((if (on) 8 else 10) * d).toInt(), 0)
+        menuLabels.forEach { it.textSize = if (on) 7f else 10f; it.setPadding(((if (on) 8 else 20) * d).toInt(), it.paddingTop, it.paddingRight, it.paddingBottom) }
+        fun apply(w: Int) {
+            val lp = e.explorePanel.layoutParams
+            lp.width = w
+            e.explorePanel.layoutParams = lp
+        }
+        if (!animate) {
+            apply(target)
+            texts.forEach { it.isVisible = !on; it.alpha = 1f }
+            return
+        }
+        if (!on) texts.forEach { it.isVisible = true; it.alpha = 0f }
+        android.animation.ValueAnimator.ofInt(e.explorePanel.width, target).apply {
+            duration = 260
+            interpolator = android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)
+            addUpdateListener { apply(it.animatedValue as Int) }
+            start()
+        }
+        texts.forEach { v ->
+            v.animate().alpha(if (on) 0f else 1f).setDuration(if (on) 120 else 220).setStartDelay(if (on) 0 else 120)
+                .withEndAction { if (menuCollapsed) v.isVisible = false }.start()
+        }
+    }
+
+    /** Account, open place and badges, fresh each time the menu opens. */
+    private fun refreshMenu() {
+        val e = b.explore
+        val signedIn = YtAccount.isSignedIn(this)
+        val p = if (signedIn) YtAccount.profile(this) else null
+        e.menuName.text = p?.name?.takeIf { it.isNotBlank() } ?: if (signedIn) "Signed in" else "Not signed in"
+        e.menuAccountHint.text = if (signedIn) "⇄  Switch account" else "Tap to sign in to YouTube"
+        if (p?.avatar != null) {
+            e.menuAvatar.imageTintList = null
+            e.menuAvatar.setPadding(0, 0, 0, 0)
+            Img.load(e.menuAvatar, p.avatar, circle = true, widthPx = 120)
+        } else {
+            Img.load(e.menuAvatar, null)
+            e.menuAvatar.setImageResource(R.drawable.ic_person)
+            val pad = (8 * resources.displayMetrics.density).toInt()
+            e.menuAvatar.setPadding(pad, pad, pad, pad)
+            e.menuAvatar.imageTintList = android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt())
+        }
+        menuRows.firstOrNull { it.label == "Sign out" }?.row?.isVisible = signedIn
+        listOf("Watch later", "Liked videos").forEach { l -> menuRows.firstOrNull { it.label == l }?.row?.isVisible = signedIn }
+        // downloads in progress: a red count, like the reference's "My List" badge
+        val active = latestTasks.count { it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING }
+        menuRows.firstOrNull { it.label == "Downloads" }?.badge?.let { bd ->
+            bd.isVisible = active > 0
+            bd.text = if (active > 9) "9+" else active.toString()
+        }
+        setMenuActive(when (tab) {
+            1 -> "Downloads"
+            2 -> "Settings"
+            3 -> "Download from a link"
+            4 -> "Subscriptions"
+            else -> if (menuActive in listOf("Music", "Trending", "Gaming", "News", "Sports", "Movies", "Podcasts", "Live",
+                    "History", "Watch later", "Liked videos")) menuActive else "Home"
+        })
     }
 
     private fun openExplore() {
         val e = b.explore
         if (exploreOpen) return
         exploreOpen = true
-        // start off screen (300dp wide panel), then slide in
-        e.explorePanel.translationX = -(e.explorePanel.width.takeIf { it > 0 } ?: (300 * resources.displayMetrics.density).toInt()).toFloat()
+        refreshMenu()
+        val d = resources.displayMetrics.density
+        // the card slides in from the side and fades up; its places rise in one after another
+        e.explorePanel.translationX = -(320 * d)
+        e.explorePanel.alpha = 0.6f
         e.root.isVisible = true
-        e.explorePanel.animate().translationX(0f).setDuration(220).start()
+        e.explorePanel.animate().translationX(0f).alpha(1f).setDuration(300)
+            .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start()
         e.exploreScrim.alpha = 0f
-        e.exploreScrim.animate().alpha(1f).setDuration(220).start()
+        e.exploreScrim.animate().alpha(1f).setDuration(240).start()
+        menuRows.filter { it.row.isVisible }.forEachIndexed { i, r ->
+            r.row.alpha = 0f
+            r.row.translationX = -24 * d
+            r.row.animate().alpha(1f).translationX(0f).setStartDelay(60L + i * 18L).setDuration(220).start()
+        }
+        blurBehindMenu(true)
     }
 
     private fun closeExplore() {
@@ -986,8 +1180,23 @@ class MainActivity : AppCompatActivity() {
         if (!exploreOpen) return
         exploreOpen = false
         e.exploreScrim.animate().alpha(0f).setDuration(180).start()
-        e.explorePanel.animate().translationX(-e.explorePanel.width.toFloat()).setDuration(180)
+        e.explorePanel.animate().translationX(-(e.explorePanel.width + 40 * resources.displayMetrics.density)).alpha(0.6f).setDuration(200)
             .withEndAction { if (!exploreOpen) e.root.isVisible = false }.start()
+        blurBehindMenu(false)
+    }
+
+    /** The app behind the menu goes soft (frosted glass), on Android 12 and newer. */
+    private fun blurBehindMenu(on: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < 31) return
+        val content = (b.root as ViewGroup).getChildAt(0) ?: return
+        android.animation.ValueAnimator.ofFloat(if (on) 0f else 18f, if (on) 18f else 0f).apply {
+            duration = if (on) 260 else 180
+            addUpdateListener {
+                val r = it.animatedValue as Float
+                content.setRenderEffect(if (r < 0.5f) null else android.graphics.RenderEffect.createBlurEffect(r, r, android.graphics.Shader.TileMode.CLAMP))
+            }
+            start()
+        }
     }
 
     /** The welcome guide closed: the first-run questions come next. */
