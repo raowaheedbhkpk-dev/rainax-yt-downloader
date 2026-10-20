@@ -64,4 +64,8 @@
     <color name="dl_more_icon_bg">#FBE9EB</color>
     <color name="dl_bar_bg">#FFFFFF</color>
     <color name="dl_bar_line">#F3E6E8</color>
+    <!-- side menu (light / dark: values-night) -->
+    <color name="menu_fill">#0D000000</color>
+    <color name="menu_stroke">#14000000</color>
+    <color name="menu_label">#8C000000</color>
 </resources>

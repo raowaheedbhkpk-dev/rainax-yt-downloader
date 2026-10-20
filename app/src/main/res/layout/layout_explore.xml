@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Side menu (≡ on Home): a floating frosted-glass card. Header with bell and Collapse, your account,
-     search, then MENU / DISCOVER / GENERAL with a red bar on the open place. Collapses to an icon rail. -->
+<!-- Side menu (≡ on Home): a floating frosted-glass card. Header with bell and close, your account,
+     search, then MENU / DISCOVER / GENERAL with a red bar on the open place. Swipe it left, tap outside, Back or ✕ to close. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -11,19 +11,18 @@
         android:id="@+id/exploreScrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#8C000000"
+        android:background="#80000000"
         android:clickable="true"
         android:contentDescription="Close menu"
         android:focusable="true" />
 
-    <LinearLayout
+    <com.rainax.ytdownloader.SwipeCloseLayout
         android:id="@+id/explorePanel"
         android:layout_width="292dp"
         android:layout_height="match_parent"
         android:layout_marginStart="10dp"
         android:layout_marginTop="34dp"
         android:layout_marginBottom="18dp"
-        android:background="@drawable/bg_menu_glass"
         android:clickable="true"
         android:clipToOutline="true"
         android:elevation="24dp"
@@ -55,7 +54,7 @@
                 android:fontFamily="@font/rx_display"
                 android:maxLines="1"
                 android:text="RAINAX Tube"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/rx_text"
                 android:textSize="18sp" />
 
             <FrameLayout
@@ -71,22 +70,20 @@
                     android:layout_gravity="center"
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_bell"
-                    app:tint="#FFFFFF" />
+                    app:tint="@color/rx_text" />
             </FrameLayout>
 
-            <TextView
-                android:id="@+id/menuCollapse"
-                android:layout_width="wrap_content"
-                android:layout_height="26dp"
-                android:layout_marginStart="4dp"
-                android:background="@drawable/bg_menu_pill"
-                android:fontFamily="@font/rx_body"
-                android:gravity="center"
-                android:paddingHorizontal="10dp"
-                android:text="Collapse"
-                android:textColor="#E50914"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+            <ImageButton
+                android:id="@+id/menuClose"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="2dp"
+                android:background="@drawable/bg_menu_icon"
+                android:contentDescription="Close menu"
+                android:padding="9dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_close"
+                app:tint="@color/rx_text" />
         </LinearLayout>
 
         <!-- your account -->
@@ -108,7 +105,7 @@
                 android:padding="8dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_person"
-                app:tint="#CCFFFFFF" />
+                app:tint="@color/rx_text2" />
 
             <LinearLayout
                 android:id="@+id/menuProfileText"
@@ -125,7 +122,7 @@
                     android:ellipsize="end"
                     android:fontFamily="@font/rx_body"
                     android:maxLines="1"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/rx_text"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
@@ -136,7 +133,7 @@
                     android:ellipsize="end"
                     android:fontFamily="@font/rx_body"
                     android:maxLines="1"
-                    android:textColor="#99FFFFFF"
+                    android:textColor="@color/rx_text2"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -147,7 +144,7 @@
                 android:importantForAccessibility="no"
                 android:rotation="-90"
                 android:src="@drawable/ic_chevron_down"
-                app:tint="#80FFFFFF" />
+                app:tint="@color/rx_text2" />
         </LinearLayout>
 
         <!-- search -->
@@ -167,7 +164,7 @@
                 android:layout_height="18dp"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_search"
-                app:tint="#99FFFFFF" />
+                app:tint="@color/rx_text2" />
 
             <TextView
                 android:id="@+id/menuSearchText"
@@ -178,7 +175,7 @@
                 android:fontFamily="@font/rx_body"
                 android:letterSpacing="0.08"
                 android:text="SEARCH…"
-                android:textColor="#80FFFFFF"
+                android:textColor="@color/rx_text2"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -205,7 +202,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:paddingVertical="12dp"
-            android:textColor="#66FFFFFF"
+            android:textColor="@color/rx_text2"
             android:textSize="11sp" />
-    </LinearLayout>
+    </com.rainax.ytdownloader.SwipeCloseLayout>
 </FrameLayout>

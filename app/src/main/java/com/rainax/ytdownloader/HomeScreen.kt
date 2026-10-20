@@ -173,9 +173,6 @@ class HomeScreen(
     /** The ≡ button (side menu) and the mic (voice search): handled by the main screen. */
     var onMenu: () -> Unit = {}
     var onVoice: () -> Unit = {}
-    /** Social row: open a site in RAINAX's browser / the WhatsApp Status saver (set by the main screen). */
-    var onSite: (SocialApps.App) -> Unit = {}
-    var onWhatsApp: () -> Unit = {}
 
     /** All on the channels row: the Subscriptions tab (set by the main screen). */
     var onAllSubs: () -> Unit = {}
@@ -183,14 +180,6 @@ class HomeScreen(
     fun setup() {
         shelf.openChannel = { openChannel(it.url, it.title, it.thumb) }
         shelf.openAllSubs = { onAllSubs() }
-        // top row of social apps: YouTube = search here, WhatsApp = Status saver, the others open in RAINAX's browser
-        shelf.openSocial = { app ->
-            when (app.name) {
-                "YouTube" -> startTyping()
-                "WhatsApp" -> onWhatsApp()
-                else -> onSite(app)
-            }
-        }
         tabs = computeTabs()
         hm.accountBtn.setOnClickListener { onAccount() }
         updateAccountIcon()

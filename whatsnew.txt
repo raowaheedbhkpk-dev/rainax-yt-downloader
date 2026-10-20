@@ -1,13 +1,8 @@
-New side menu: a floating glass panel with your account, search, sections, red highlight, badges and Collapse
-Social sites (Instagram, Facebook, TikTok, X, WhatsApp status) moved into the side menu
+New Settings page: clean grouped cards, coloured icons and one tidy row for every option
+New side menu: matches light, dark and AMOLED themes, close with ✕, Back, tap outside or swipe left
 Channels open properly: Videos, Shorts, Live and Playlists read straight from YouTube when needed
 Installs on more phones: fixes "There was a problem parsing the package" on some Tecno, Infinix and itel phones
-TikTok in the browser: Download finds the playing video reliably, and Share offers to download it
-Browser fixes: TikTok's app popups close without breaking the page, Download picks the exact video playing, app-install pages are blocked
-Browser: TikTok's "Open app" popups are hidden, and Download gets the video playing in the feed
 Channels have Videos, Shorts, Live and Playlists tabs, like YouTube; your own channel shows properly
-New social row on Home: open Instagram, Facebook, TikTok and X inside RAINAX and download with one tap
-WhatsApp button opens the Status saver
 Save to playlist: tap Save or ⋮ to add videos to your YouTube playlists, or make a new one
 ⋮ menu on every video: Download, Watch later, Save, Share, Not interested, Don't recommend channel
 Videos you watch now also show in your YouTube history, and you can pause watch history in Settings

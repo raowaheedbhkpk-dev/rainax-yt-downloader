@@ -1,833 +1,1591 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Settings: a big title, then grouped cards. Every option is one row: a coloured icon, a title and a short
+     line, and a switch or › at the end (like the phone's own settings). Same look in light, dark and AMOLED. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent">
+    android:clipToPadding="false"
+    android:paddingBottom="120dp"
+    android:scrollbars="none">
 
-    <LinearLayout
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="18dp"
+        android:fontFamily="@font/rx_display"
+        android:text="Settings"
+        android:textColor="@color/rx_text"
+        android:textSize="30sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="2dp"
+        android:fontFamily="@font/rx_body"
+        android:text="Make RAINAX Tube work your way"
+        android:textColor="@color/rx_text2"
+        android:textSize="14sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginBottom="10dp"
+        android:fontFamily="@font/rx_body"
+        android:letterSpacing="0.1"
+        android:text="APPEARANCE"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="32dp">
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="?attr/rxCard"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_stroke"
+        app:strokeWidth="1dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Settings"
-            android:textColor="@color/rx_text"
-            android:textSize="34sp"
-            android:fontFamily="sans-serif-medium" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
-            android:text="APPEARANCE"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#268B5CF6">
 
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_palette"
+                    app:tint="#8B5CF6" />
+            </FrameLayout>
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:fontFamily="@font/rx_body"
                     android:text="Theme"
-                        android:drawableStart="@drawable/ic_set_palette"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
                     android:textColor="@color/rx_text"
-                    android:textSize="16sp" />
+                    android:textSize="15.5sp" />
 
                 <TextView
-                        android:paddingStart="38dp"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="Choose how RAINAX looks. System follows your phone."
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="How RAINAX looks. System follows your phone"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12sp" />
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/themeGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/themeSystem"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="System" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/themeLight"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="Light" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/themeDark"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="Dark" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/themeAmoled"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="AMOLED black" />
-                </com.google.android.material.chip.ChipGroup>
-                <Space android:layout_width="match_parent" android:layout_height="8dp" />
+                    android:textSize="12.5sp" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
-            android:text="DOWNLOADS"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-        <com.google.android.material.card.MaterialCardView
+        </LinearLayout>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/themeGroup"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-4dp"
+            android:paddingStart="68dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp"
+            app:chipSpacingHorizontal="8dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Wi-Fi only"
-                        android:drawableStart="@drawable/ic_set_wifi"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Wait for Wi-Fi instead of using mobile data"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/wifiSwitch"
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/themeSystem"
+                    style="@style/Widget.Rainax.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
-            </LinearLayout>
-                <View
+                    android:text="System" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/themeLight"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Light" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/themeDark"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dark" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/themeAmoled"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AMOLED black" />
+        </com.google.android.material.chip.ChipGroup>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginBottom="10dp"
+        android:fontFamily="@font/rx_body"
+        android:letterSpacing="0.1"
+        android:text="DOWNLOADS"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="?attr/rxCard"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#263D8BFF">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_wifi"
+                    app:tint="#3D8BFF" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="?attr/rxOutline" />
-                <TextView
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Simultaneous downloads"
-                        android:drawableStart="@drawable/ic_set_layers"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Wi-Fi only"
                     android:textColor="@color/rx_text"
-                    android:textSize="16sp" />
+                    android:textSize="15.5sp" />
 
                 <TextView
-                        android:paddingStart="38dp"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:layout_marginBottom="8dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Wait for Wi-Fi instead of using mobile data"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/wifiSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#263D8BFF">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_layers"
+                    app:tint="#3D8BFF" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Simultaneous downloads"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
                     android:text="How many files download at the same time"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12sp" />
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/parallelGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/par1"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="1" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/par2"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="2" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/par3"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="3" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/par4"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="4" />
-                </com.google.android.material.chip.ChipGroup>
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="?attr/rxOutline" />
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Auto-clear finished list"
-                        android:drawableStart="@drawable/ic_delete"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Remove finished items from the list after 7 days (the files stay in the Rainax Tube folder)"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/autoClearSwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
+                    android:textSize="12.5sp" />
             </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
-            android:text="YOUTUBE"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-        <com.google.android.material.card.MaterialCardView
+        </LinearLayout>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/parallelGroup"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-4dp"
+            android:paddingStart="68dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp"
+            app:chipSpacingHorizontal="8dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
-
-            <!-- Autoplay in feed: the video in view plays silently inside its picture -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingVertical="10dp">
-
-                <TextView
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/par1"
+                    style="@style/Widget.Rainax.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Autoplay in feed"
-                        android:drawableStart="@drawable/ic_play_box"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                    android:textColor="@color/rx_text"
-                    android:textSize="16sp" />
+                    android:text="1" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/par2"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/par3"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/par4"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4" />
+        </com.google.android.material.chip.ChipGroup>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#263D8BFF">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_refresh"
+                    app:tint="#3D8BFF" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
-                        android:paddingStart="38dp"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Auto-retry failed downloads"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="The video you stop on plays silently in the list. Tap the speaker for sound"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Tries again after 1, 3 and 10 minutes, and when the internet comes back"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12sp" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/autoplayGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/autoplayAlways"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="Always on" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/autoplayWifi"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="Wi-Fi only" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/autoplayOff"
-                        style="@style/Widget.Rainax.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="Off" />
-                </com.google.android.material.chip.ChipGroup>
+                    android:textSize="12.5sp" />
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?attr/rxOutline" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Background play"
-                        android:drawableStart="@drawable/ic_headphones"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="The video keeps playing as sound when you press Home or lock the screen. Closing the app pauses it: press play on the notification to continue"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/bgPlaySwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Skip sponsors (SponsorBlock)"
-                        android:drawableStart="@drawable/ic_set_skip"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Jumps over sponsor ads, self-promotion and &quot;subscribe&quot; reminders inside videos"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/sponsorSwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Continue where you left off"
-                        android:drawableStart="@drawable/ic_history"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Videos start again where you stopped watching"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/resumeSwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Detect copied links"
-                        android:drawableStart="@drawable/ic_link"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="When you copy a YouTube, TikTok, Instagram or Facebook link, RAINAX offers to download it"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/clipSwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
-            </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
-            android:text="STORAGE"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-        <com.google.android.material.card.MaterialCardView
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/autoRetrySwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#263D8BFF">
 
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_delete"
+                    app:tint="#3D8BFF" />
+            </FrameLayout>
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Auto-clear finished list"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Finished items leave the list after 7 days (the files stay)"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/autoClearSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/batteryBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#26FF8A00">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_battery"
+                    app:tint="#FF8A00" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Downloads stop when the screen is off?"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Let RAINAX run in the background"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/mp3Report"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/menu_fill"
+            android:fontFamily="@font/rx_body"
+            android:lineSpacingMultiplier="1.15"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textColor="@color/rx_text2"
+            android:textSize="11.5sp"
+            android:visibility="gone" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginBottom="10dp"
+        android:fontFamily="@font/rx_body"
+        android:letterSpacing="0.1"
+        android:text="PLAYBACK"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="?attr/rxCard"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#261FAF7A">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_play_box"
+                    app:tint="#1FAF7A" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Autoplay in feed"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="The video you stop on plays silently in the list"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/autoplayGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-4dp"
+            android:paddingStart="68dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp"
+            app:chipSpacingHorizontal="8dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/autoplayAlways"
+                    style="@style/Widget.Rainax.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="Saved in"
-                        android:drawableStart="@drawable/ic_set_folder"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
+                    android:text="Always" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/autoplayWifi"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wi-Fi only" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/autoplayOff"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Off" />
+        </com.google.android.material.chip.ChipGroup>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#261FAF7A">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_headphones"
+                    app:tint="#1FAF7A" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Background play"
                     android:textColor="@color/rx_text"
-                    android:textSize="16sp" />
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Keeps playing as sound when you press Home or lock the screen"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/bgPlaySwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#261FAF7A">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_skip"
+                    app:tint="#1FAF7A" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Skip sponsors"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Jumps over sponsor ads and subscribe reminders (SponsorBlock)"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/sponsorSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#261FAF7A">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_history"
+                    app:tint="#1FAF7A" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Continue where you left off"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Videos start again where you stopped"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/resumeSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#260EA5B7">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_link"
+                    app:tint="#0EA5B7" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Detect copied links"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Copy a YouTube, TikTok, Instagram or Facebook link and RAINAX offers to download it"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/clipSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginBottom="10dp"
+        android:fontFamily="@font/rx_body"
+        android:letterSpacing="0.1"
+        android:text="STORAGE"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="?attr/rxCard"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#26FF8A00">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_folder"
+                    app:tint="#FF8A00" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Saved in"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
 
                 <TextView
                     android:id="@+id/folderPath"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Video, Audio and Status folders"
                     android:textColor="@color/rx_text2"
-                    android:textSize="13sp" />
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/allFilesBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#26FF8A00">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_set_folder"
+                    app:tint="#FF8A00" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Allow all files access"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="Video, Audio and Status folders"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Needed to save in your Downloads folder"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/allFilesBtn"
-                    style="@style/Widget.Rainax.Button.Text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
-                    android:text="Allow All files access"
-                    android:visibility="gone" />
+                    android:textSize="12.5sp" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:layout_width="wrap_content"
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/privateFolderBtn"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
-            android:text="PRIVACY"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#268B5CF6">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_lock"
+                    app:tint="#8B5CF6" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Private folder"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Hidden videos behind your PIN"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginBottom="10dp"
+        android:fontFamily="@font/rx_body"
+        android:letterSpacing="0.1"
+        android:text="PRIVACY"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="?attr/rxCard"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_stroke"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/privateFolderBtn"
-                app:icon="@drawable/ic_lock"
-                style="@style/Widget.Rainax.Button.Tonal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                android:text="Private folder" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/clearSearchBtn"
-                app:icon="@drawable/ic_search"
-                style="@style/Widget.Rainax.Button.Tonal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:text="Clear search history" />
-        </LinearLayout>
-
-        <!-- Pause watch history (like YouTube): nothing watched is saved, here or on your YouTube account -->
-        <com.google.android.material.card.MaterialCardView
+            android:orientation="vertical">
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp">
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#268A8A93">
 
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_history"
+                    app:tint="#8A8A93" />
+            </FrameLayout>
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="10dp">
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:fontFamily="@font/rx_body"
+                    android:text="Pause watch history"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:drawableStart="@drawable/ic_history"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:text="Pause watch history"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:paddingStart="38dp"
-                        android:text="Videos you watch aren't saved in RAINAX or on your YouTube account. When it's off and you're signed in, they show in your YouTube history"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/historyPauseSwitch"
-                    android:layout_width="wrap_content"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp" />
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Nothing you watch is saved, here or on your YouTube account"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- forgets what you watched (Continue watching, resume points; and YouTube's history when signed in) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/clearWatchBtn"
-            style="@style/Widget.Rainax.Button.Tonal"
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/historyPauseSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/clearSearchBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Clear watch history"
-            app:icon="@drawable/ic_history" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#268A8A93">
 
-        <!-- "Not interested" / "Don't recommend channel": bring them back -->
-        <com.google.android.material.button.MaterialButton
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_search"
+                    app:tint="#8A8A93" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Clear search history"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
             android:id="@+id/unhideBtn"
-            style="@style/Widget.Rainax.Button.Text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Bring back hidden videos and channels"
-            app:icon="@drawable/ic_not_interested" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:letterSpacing="0.08"
-            android:text="APP"
-            android:textColor="@color/rx_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="64dp"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Auto-retry failed downloads"
-                        android:drawableStart="@drawable/ic_refresh"
-                        android:drawablePadding="14dp"
-                        android:drawableTint="@color/rx_primary"
-                        android:gravity="center_vertical"
-                        android:textColor="@color/rx_text"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:paddingStart="38dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Try again by itself after 1, 3 and 10 minutes, and when the internet comes back"
-                        android:textColor="@color/rx_text2"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/autoRetrySwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp" />
-            </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/batteryBtn"
-                app:icon="@drawable/ic_set_battery"
-            style="@style/Widget.Rainax.Button.Text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Downloads stop when the screen is off? Fix it here" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#268A8A93">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_not_interested"
+                    app:tint="#8A8A93" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Bring back hidden videos"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Videos and channels you said Not interested to"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/clearWatchBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#26FF3355">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_history"
+                    app:tint="#FF3355" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Clear watch history"
+                    android:textColor="@color/rx_primary"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Continue watching and resume points"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginBottom="10dp"
+        android:fontFamily="@font/rx_body"
+        android:letterSpacing="0.1"
+        android:text="ABOUT"
+        android:textColor="@color/rx_text2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="?attr/rxCard"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_stroke"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/rateAppBtn"
-                style="@style/Widget.Rainax.Button.Tonal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                android:text="Rate us on APKPure"
-                app:icon="@drawable/ic_star"
-                app:iconSize="18dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/shareAppBtn"
-                style="@style/Widget.Rainax.Button.Tonal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:text="Share app"
-                app:icon="@drawable/ic_share"
-                app:iconSize="18dp" />
-        </LinearLayout>
-
-        <com.google.android.material.button.MaterialButton
+            android:orientation="vertical">
+        <LinearLayout
             android:id="@+id/checkAppUpdateBtn"
-                app:icon="@drawable/ic_refresh"
-            style="@style/Widget.Rainax.Button.Tonal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Check for app update" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#263D8BFF">
 
-        <TextView
-            android:id="@+id/versionText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:textColor="@color/rx_text2"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_refresh"
+                    app:tint="#3D8BFF" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-        <!-- the last MP3 conversion: how long each step took (long-press to copy) -->
-        <TextView
-            android:id="@+id/mp3Report"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Check for app update"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/rateAppBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="@color/rx_text2"
-            android:textIsSelectable="true"
-            android:textSize="11sp"
-            android:visibility="gone" />
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#26FF8A00">
 
-        <TextView
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_star"
+                    app:tint="#FF8A00" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Rate us on APKPure"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="A good review helps a lot"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="68dp"
+            android:background="@color/menu_stroke" />
+        <LinearLayout
+            android:id="@+id/shareAppBtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Only download content you have the right to download. Not affiliated with YouTube, Google or any video site."
-            android:textColor="@color/rx_text2"
-            android:textSize="12sp" />
-    </LinearLayout>
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_set_icon"
+                android:backgroundTint="#26E1306C">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_share"
+                    app:tint="#E1306C" />
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/rx_body"
+                    android:text="Share RAINAX Tube"
+                    android:textColor="@color/rx_text"
+                    android:textSize="15.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/rx_body"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="Send the app to a friend"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/versionText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:fontFamily="@font/rx_body"
+        android:gravity="center"
+        android:textColor="@color/rx_text2"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:fontFamily="@font/rx_body"
+        android:gravity="center"
+        android:paddingHorizontal="36dp"
+        android:text="Only download content you have the right to download. Not affiliated with YouTube, Google or any video site."
+        android:textColor="@color/rx_text2"
+        android:textSize="11.5sp" />
+</LinearLayout>
 </ScrollView>

@@ -216,18 +216,6 @@ class MainActivity : AppCompatActivity() {
         FeedAutoplay.blocked = { video.isOpen || (::music.isInitialized && music.expanded) }
         home.onMenu = { openExplore() }
         home.onVoice = { startVoiceSearch() }
-        home.onSite = { app ->
-            var page: WebPage? = null
-            page = WebPage(this, app,
-                download = { url -> showDownloadSheet(listOf(url), onAdded = { what -> page?.added(what) }) },
-                openDownloads = { b.bottomNav.selectedItemId = R.id.nav_downloads })
-            page.show()
-        }
-        home.onWhatsApp = {
-            // the Social tab's WhatsApp Status saver, scrolled into view
-            b.bottomNav.selectedItemId = R.id.nav_social
-            so.socialScroll.post { so.socialScroll.smoothScrollTo(0, so.statusCard.top) }
-        }
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
@@ -936,13 +924,13 @@ class MainActivity : AppCompatActivity() {
     private val menuRows = mutableListOf<MenuRow>()
     private val menuLabels = mutableListOf<TextView>()
     private var menuActive = "Home"
-    private var menuCollapsed = false
-    private val menuPrefs by lazy { getSharedPreferences("ui", MODE_PRIVATE) }
+    private var menuText = 0
+    private var menuIcon = 0
 
     /**
-     * The side menu (≡): a floating frosted-glass card like the reference: header with bell and Collapse, your
-     * account, search, then MENU / DISCOVER / GENERAL with a red bar on the open place, count badges, and a
-     * Collapse button that shrinks it to an icon rail (remembered).
+     * The side menu (≡): a floating card in the app's colours (light, dark, AMOLED): header with bell and ✕, your
+     * account, search, then MENU / DISCOVER / GENERAL with a red bar on the open place and count badges.
+     * Closes with ✕, Back, a tap outside, or a swipe to the left.
      */
     private fun setupExplore() {
         val e = b.explore
@@ -956,7 +944,46 @@ class MainActivity : AppCompatActivity() {
             goHome()
             b.root.postDelayed({ home.openSearch() }, 200)
         }
-        e.menuCollapse.setOnClickListener { setMenuCollapsed(!menuCollapsed, animate = true) }
+        e.menuClose.setOnClickListener { closeExplore() }
+        menuText = ContextCompat.getColor(this, R.color.rx_text)
+        menuIcon = menuText
+        // the card's colours come from the theme (white, dark grey, or pure black for AMOLED)
+        fun attrColor(a: Int): Int {
+            val tv = android.util.TypedValue()
+            theme.resolveAttribute(a, tv, true)
+            return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
+        }
+        e.explorePanel.background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(attrColor(R.attr.rxCard), attrColor(R.attr.rxSurface))
+        ).apply {
+            cornerRadius = 26 * d
+            setStroke((1 * d).toInt().coerceAtLeast(1), ContextCompat.getColor(this@MainActivity, R.color.menu_stroke))
+        }
+        e.menuBrand.text = android.text.SpannableStringBuilder("RAINAX ").apply {
+            val start = length
+            append("Tube")
+            setSpan(android.text.style.ForegroundColorSpan(ContextCompat.getColor(this@MainActivity, R.color.rx_primary)), start, length, 0)
+        }
+        // width: 300dp, or less on small phones (always leaves room to tap outside)
+        e.explorePanel.layoutParams = e.explorePanel.layoutParams.apply {
+            width = minOf((300 * d).toInt(), (resources.displayMetrics.widthPixels * 0.84f).toInt())
+        }
+        // clear of the status bar and the gesture bar
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(e.root) { _, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            (e.explorePanel.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                topMargin = bars.top + dp(10)
+                bottomMargin = bars.bottom + dp(12)
+                marginStart = bars.left + dp(10)
+            }
+            e.explorePanel.requestLayout()
+            insets
+        }
+        e.root.requestApplyInsets()
+        // swipe left to close: the dark layer fades with the panel
+        e.explorePanel.onDrag = { shown -> e.exploreScrim.alpha = shown.coerceIn(0f, 1f) }
+        e.explorePanel.onSwipedClosed = { closeExplore() }
 
         fun section(title: String) {
             val tv = TextView(this).apply {
@@ -964,7 +991,7 @@ class MainActivity : AppCompatActivity() {
                 textSize = 10f
                 letterSpacing = 0.14f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(0x73FFFFFF)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.menu_label))
                 setPadding(dp(20), dp(14), dp(12), dp(6))
             }
             menuLabels += tv
@@ -983,7 +1010,7 @@ class MainActivity : AppCompatActivity() {
             val box = android.widget.FrameLayout(this).apply { setBackgroundResource(R.drawable.bg_menu_icon) }
             val iv = ImageView(this).apply {
                 if (icon != 0) setImageResource(icon)
-                imageTintList = android.content.res.ColorStateList.valueOf(0xE6FFFFFF.toInt())
+                imageTintList = android.content.res.ColorStateList.valueOf(menuIcon)
             }
             box.addView(iv, android.widget.FrameLayout.LayoutParams(dp(17), dp(17), android.view.Gravity.CENTER))
             row.addView(box, android.widget.LinearLayout.LayoutParams(dp(32), dp(32)))
@@ -991,7 +1018,7 @@ class MainActivity : AppCompatActivity() {
                 text = label
                 textSize = 14f
                 maxLines = 1
-                setTextColor(0xF2FFFFFF.toInt())
+                setTextColor(menuText)
                 typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.rx_body)
             }
             row.addView(tv, android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(14) })
@@ -1031,25 +1058,6 @@ class MainActivity : AppCompatActivity() {
         add(R.drawable.ic_movie, "Movies") { openHomeList("Movies", "q:full movie") }
         add(R.drawable.ic_podcast, "Podcasts") { openHomeList("Podcasts", "q:podcast") }
         add(R.drawable.ic_live, "Live") { openHomeList("Live", "q:live now") }
-        section("SOCIAL")
-        listOf("Instagram", "Facebook", "TikTok", "X", "WhatsApp").mapNotNull { n -> SocialApps.ALL.firstOrNull { it.name == n } }.forEach { app ->
-            add(0, if (app.name == "WhatsApp") "WhatsApp status" else app.name) {
-                if (app.name == "WhatsApp") home.onWhatsApp() else home.onSite(app)
-            }
-            // its round badge in the app's colours instead of an icon
-            menuRows.last().let { r ->
-                r.iconBox.background = SocialApps.badge(app, this)
-                r.icon.isVisible = false
-                r.iconBox.addView(TextView(this).apply {
-                    text = app.short
-                    gravity = android.view.Gravity.CENTER
-                    textSize = 10f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(android.graphics.Color.WHITE)
-                }, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-                r.socialBadge = SocialApps.badge(app, this)
-            }
-        }
         section("GENERAL")
         add(R.drawable.ic_link, "Download from a link") { b.bottomNav.selectedItemId = R.id.nav_social }
         add(R.drawable.ic_gear, "Settings") {
@@ -1061,7 +1069,6 @@ class MainActivity : AppCompatActivity() {
         val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull()
         e.exploreVersion.text = "RAINAX Tube" + (version?.let { " v$it" } ?: "")
         setMenuActive("Home")
-        setMenuCollapsed(menuPrefs.getBoolean("menu_collapsed", false), animate = false)
     }
 
     /** The red bar moves to [label] (the open place). */
@@ -1079,41 +1086,8 @@ class MainActivity : AppCompatActivity() {
                 if (r.socialBadge != null) r.iconBox.background = r.socialBadge else r.iconBox.setBackgroundResource(R.drawable.bg_menu_icon)
             }
             r.text.setTypeface(r.text.typeface, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
-        }
-    }
-
-    /** Full menu <-> a narrow rail of icons (the red bar and badges stay). */
-    private fun setMenuCollapsed(on: Boolean, animate: Boolean) {
-        menuCollapsed = on
-        menuPrefs.edit().putBoolean("menu_collapsed", on).apply()
-        val e = b.explore
-        val d = resources.displayMetrics.density
-        val target = ((if (on) 74 else 292) * d).toInt()
-        val texts = listOf<View>(e.menuBrand, e.menuProfileText, e.menuChevron, e.menuSearchText, e.menuBell) +
-            menuRows.map { it.text }
-        e.menuCollapse.text = if (on) "»" else "Collapse"
-        e.menuCollapse.setPadding(((if (on) 8 else 10) * d).toInt(), 0, ((if (on) 8 else 10) * d).toInt(), 0)
-        menuLabels.forEach { it.textSize = if (on) 7f else 10f; it.setPadding(((if (on) 8 else 20) * d).toInt(), it.paddingTop, it.paddingRight, it.paddingBottom) }
-        fun apply(w: Int) {
-            val lp = e.explorePanel.layoutParams
-            lp.width = w
-            e.explorePanel.layoutParams = lp
-        }
-        if (!animate) {
-            apply(target)
-            texts.forEach { it.isVisible = !on; it.alpha = 1f }
-            return
-        }
-        if (!on) texts.forEach { it.isVisible = true; it.alpha = 0f }
-        android.animation.ValueAnimator.ofInt(e.explorePanel.width, target).apply {
-            duration = 260
-            interpolator = android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)
-            addUpdateListener { apply(it.animatedValue as Int) }
-            start()
-        }
-        texts.forEach { v ->
-            v.animate().alpha(if (on) 0f else 1f).setDuration(if (on) 120 else 220).setStartDelay(if (on) 0 else 120)
-                .withEndAction { if (menuCollapsed) v.isVisible = false }.start()
+            r.text.setTextColor(if (on) android.graphics.Color.WHITE else menuText)
+            r.icon.imageTintList = android.content.res.ColorStateList.valueOf(if (on) android.graphics.Color.WHITE else menuIcon)
         }
     }
 
@@ -1133,7 +1107,7 @@ class MainActivity : AppCompatActivity() {
             e.menuAvatar.setImageResource(R.drawable.ic_person)
             val pad = (8 * resources.displayMetrics.density).toInt()
             e.menuAvatar.setPadding(pad, pad, pad, pad)
-            e.menuAvatar.imageTintList = android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt())
+            e.menuAvatar.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text2))
         }
         menuRows.firstOrNull { it.label == "Sign out" }?.row?.isVisible = signedIn
         listOf("Watch later", "Liked videos").forEach { l -> menuRows.firstOrNull { it.label == l }?.row?.isVisible = signedIn }
@@ -1160,7 +1134,8 @@ class MainActivity : AppCompatActivity() {
         refreshMenu()
         val d = resources.displayMetrics.density
         // the card slides in from the side and fades up; its places rise in one after another
-        e.explorePanel.translationX = -(320 * d)
+        e.explorePanel.animate().cancel()
+        e.explorePanel.translationX = -(e.explorePanel.layoutParams.width + 40 * d)
         e.explorePanel.alpha = 0.6f
         e.root.isVisible = true
         e.explorePanel.animate().translationX(0f).alpha(1f).setDuration(300)

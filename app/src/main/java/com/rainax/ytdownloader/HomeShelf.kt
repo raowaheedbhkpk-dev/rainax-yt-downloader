@@ -35,8 +35,6 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     private var subsLoading = false
     private var subsTriedAt = 0L
 
-    /** A social app's round button was tapped (YouTube = search, WhatsApp = Status saver, others = its site). */
-    var openSocial: (SocialApps.App) -> Unit = {}
 
     init {
         b.subsRow.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
