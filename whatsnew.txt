@@ -1,3 +1,4 @@
+Updates download by themselves in the background: a small pill above the bottom bar shows the progress, then tap Install when it is ready
 Fits every screen by itself: normal size on big phones and tablets, a little smaller on small HD screens so nothing is cut; the update box always shows its Update button
 Build fix: the vinyl record rings in the Music player
 Lyrics in the Music player: tap Lyrics to read the words of the song, straight from YouTube Music

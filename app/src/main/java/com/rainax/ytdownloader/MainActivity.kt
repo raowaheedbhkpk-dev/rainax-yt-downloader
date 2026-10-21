@@ -169,7 +169,6 @@ class MainActivity : AppCompatActivity() {
         home.setup()
         fitWideScreen()
         home.downloadMany = { list -> showDownloadSheet(list.map { it.url }) }
-        AppUpdater.onQueued = { b.bottomNav.selectedItemId = R.id.nav_downloads }
         video = VideoScreen(
             this, vp, vm, { controller },
             download = { u, t, audio -> showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t) },
@@ -365,7 +364,6 @@ class MainActivity : AppCompatActivity() {
             sheet?.dismiss()
             clipDialog?.dismiss()
             permDialog?.dismiss()
-            AppUpdater.onQueued = null
             FeedAutoplay.release()
         }
         super.onDestroy()
@@ -642,6 +640,8 @@ class MainActivity : AppCompatActivity() {
         if (wasShown && !vp.root.isVisible && tab == 0) home.onShown()      // back on Home: fresh watched bars
         val full = video.fullscreen
         b.navCard.isVisible = !full                    // the bottom bar (hidden in full screen)
+        pillHidden = full
+        renderUpdatePill(latestTasks)
         // mini music bar: songs loaded, big player closed, no video open
         b.musicMini.root.isVisible = music.active && !music.expanded && !video.isOpen && !full
         // the banner hides in full screen and comes back after (only once an ad has loaded)
@@ -1903,6 +1903,7 @@ class MainActivity : AppCompatActivity() {
         pl.playScroll.isVisible = all.isNotEmpty() && library.showingDownloads
         library.onTasks(all)
         checkUpdateReady(all)
+        renderUpdatePill(all)
         countForRating(done)
 
         renderCollection(done)
@@ -2128,9 +2129,7 @@ class MainActivity : AppCompatActivity() {
         if (fresh > 0) AppShare.onDownloadsDone(this, fresh, lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
     }
 
-    /** The update finished downloading while the app is open: open the installer once. */
-    private val updatePrompted = HashSet<String>()
-
+    /** A finished update that is already installed (or was refused) is cleaned away; the pill shows the rest. */
     private fun checkUpdateReady(all: List<DownloadTask>) {
         val t = all.firstOrNull { it.format.startsWith(AppUpdater.TASK_PREFIX) && it.status == Status.DONE } ?: return
         val version = t.format.removePrefix(AppUpdater.TASK_PREFIX)
@@ -2138,10 +2137,73 @@ class MainActivity : AppCompatActivity() {
             // already installed: the finished update row and its file are not needed any more
             t.fileUri?.let { java.io.File(it).delete() }
             TaskRepository.remove(t.id)
-            return
         }
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || !updatePrompted.add(t.id)) return
-        installUpdate(t)
+    }
+
+    /** True in full screen (video, music): the update pill waits. */
+    private var pillHidden = false
+
+    /**
+     * The update pill above the bottom bar: the new version downloads by itself ("v12.3 · 72%"), then
+     * "v12.3 READY" with INSTALL. Paused or failed: CONTINUE / RETRY. Nothing to show: hidden.
+     */
+    private fun renderUpdatePill(all: List<DownloadTask>) {
+        val pill = b.updatePill
+        val t = all.firstOrNull {
+            it.format.startsWith(AppUpdater.TASK_PREFIX) &&
+                it.format.removePrefix(AppUpdater.TASK_PREFIX).let { v -> AppUpdater.isNewer(this, v) && v != AppPrefs.badRelease(this) }
+        }
+        if (t == null || pillHidden) { pill.isVisible = false; return }
+        val v = t.format.removePrefix(AppUpdater.TASK_PREFIX)
+        val done = t.status == Status.DONE
+        b.updateDot.isVisible = done
+        b.updateRing.isVisible = !done
+        when (t.status) {
+            Status.DONE -> {
+                b.updateTitle.text = "v$v READY"
+                b.updateSub.text = "Tap Install to update"
+                b.updateAction.text = "Install"
+            }
+            Status.PAUSED, Status.FAILED -> {
+                b.updateRing.isIndeterminate = false
+                b.updateRing.setProgressCompat(t.progress.coerceIn(0, 100), false)
+                b.updateTitle.text = "v$v · ${t.progress.coerceIn(0, 100)}%"
+                b.updateSub.text = if (t.status == Status.FAILED) "Couldn't get the update" else "Update paused"
+                b.updateAction.text = if (t.status == Status.FAILED) "Retry" else "Continue"
+            }
+            else -> {
+                val known = t.progress in 1..100
+                if (b.updateRing.isIndeterminate != !known) {
+                    b.updateRing.visibility = View.INVISIBLE                  // (the indicator can't switch while shown)
+                    b.updateRing.isIndeterminate = !known
+                    b.updateRing.visibility = View.VISIBLE
+                }
+                if (known) b.updateRing.setProgressCompat(t.progress, true)
+                b.updateTitle.text = if (known) "v$v · ${t.progress}%" else "v$v"
+                b.updateSub.text = when (t.status) {
+                    Status.WAITING -> t.message.ifBlank { "Waiting for the internet" }
+                    Status.QUEUED -> "Update queued…"
+                    else -> "Getting the update…"
+                }
+                b.updateAction.text = "Install"
+            }
+        }
+        val actionOn = done || t.status == Status.PAUSED || t.status == Status.FAILED
+        b.updateAction.alpha = if (actionOn) 1f else 0.35f
+        val act = {
+            when (t.status) {
+                Status.DONE -> installUpdate(t)
+                Status.PAUSED, Status.FAILED -> DownloadService.send(this, DownloadService.ACTION_RESUME, t.id)
+                else -> message("The update is still downloading. Install shows when it's ready")
+            }
+        }
+        b.updateAction.setOnClickListener { act() }
+        pill.setOnClickListener { act() }
+        pill.contentDescription = "${b.updateTitle.text}. ${b.updateSub.text}"
+        if (!pill.isVisible) {
+            pill.isVisible = true
+            Motion.popIn(pill)
+        }
     }
 
     /** Hides a finished download in the Private folder (set it up first if needed). */

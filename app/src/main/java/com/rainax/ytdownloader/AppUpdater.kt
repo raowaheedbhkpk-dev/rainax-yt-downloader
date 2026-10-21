@@ -19,8 +19,9 @@ import java.net.URL
 
 /**
  * In-app updates from the GitHub Releases of this app's repository.
- * The app checks the latest release, shows what's new, downloads the APK and opens the Android installer.
- * When a newer version exists the update is REQUIRED: the app can't be used until it is installed.
+ * The app checks the latest release and, when it is newer, downloads the APK by itself in the background while
+ * you keep using the app. A small pill above the bottom bar shows the progress, then "vX READY · INSTALL";
+ * tapping Install opens Android's installer (MainActivity.renderUpdatePill).
  * (Works when the repository / its releases are public. Offline, the app keeps working.)
  */
 object AppUpdater {
@@ -31,11 +32,7 @@ object AppUpdater {
 
     private var pendingApk: File? = null
     private var job: Job? = null
-    private var required: Release? = null          // newer version found: must be installed
-    private var dialog: android.app.Dialog? = null
-    private var installAsked = false               // the installer was opened once this time
-    private var readyApk: File? = null              // downloaded and complete: no need to download again
-    private val dialogShowing get() = dialog?.isShowing == true
+    private var required: Release? = null          // newer version found: downloads by itself
 
     /** Every time the app opens. */
     fun checkOnStart(activity: AppCompatActivity) = check(activity, manual = false)
@@ -61,15 +58,15 @@ object AppUpdater {
                     if (manual) toast(activity, "You have the latest version (v$current)")
                 else -> {
                     required = rel
-                    offer(activity, rel, current)
+                    startBackground(activity, rel, manual)
                 }
             }
         }
     }
 
     /**
-     * Back in the app (from settings or the installer): continue the waiting install,
-     * or ask again, because the update is required.
+     * Back in the app (from settings or the installer): continue the waiting install, or make sure the newer
+     * version is downloading (the pill shows it).
      */
     fun resumeInstall(activity: AppCompatActivity) {
         val f = pendingApk
@@ -79,20 +76,22 @@ object AppUpdater {
             return
         }
         val rel = required ?: return
-        val current = currentVersion(activity)
-        if (!isNewer(rel.version, current)) {        // already updated
+        if (!isNewer(rel.version, currentVersion(activity))) {        // already updated
             required = null
             return
         }
-        if (dialogShowing || job?.isActive == true || downloading(rel)) return
-        val done = updateTask(rel.version)?.takeIf { it.status == Status.DONE }
-        val file = done?.fileUri?.let { File(it) }
-        if (file != null && file.exists()) {
-            if (!installAsked) { installAsked = true; installDownloaded(activity, file, rel.version) }
-            else offer(activity, rel, current)                // still required: ask again (Update now installs it)
-            return
+        if (job?.isActive != true) startBackground(activity, rel, manual = false)
+    }
+
+    /** A newer version: download it quietly unless it is already downloading or downloaded. */
+    private fun startBackground(activity: AppCompatActivity, rel: Release, manual: Boolean) {
+        val t = updateTask(rel.version)
+        val ready = t?.status == Status.DONE && t.fileUri?.let { File(it).exists() } == true
+        when {
+            ready -> if (manual) toast(activity, "v${rel.version} is ready. Tap Install above the bottom bar")
+            downloading(rel) -> if (manual) toast(activity, "v${rel.version} is downloading")
+            else -> download(activity, rel, quiet = !manual)
         }
-        offer(activity, rel, current)
     }
 
     private fun currentVersion(activity: AppCompatActivity): String = try {
@@ -143,102 +142,8 @@ object AppUpdater {
         return false
     }
 
-    /** Required update: no "Later". The only ways out are Update or closing the app. */
-    private fun offer(activity: AppCompatActivity, rel: Release, current: String) {
-        if (dialogShowing || activity.isFinishing || downloading(rel)) return
-        val sb = com.rainax.ytdownloader.databinding.SheetUpdateBinding.inflate(activity.layoutInflater)
-        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(activity)
-        sheet.setContentView(sb.root)
-        sheet.setCancelable(false)                      // required: no swipe-away, no back
-        sheet.behavior.isDraggable = false
-        sheet.behavior.skipCollapsed = true
-        sheet.setOnShowListener {
-            sheet.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-            sheet.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
-                ?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            Motion.popIn(sb.updLogo)
-        }
-        sb.updVersion.text = "v$current  →  v${rel.version}"
-        val d = activity.resources.displayMetrics.density
-        // short screens (HD phones): no big logo, and the notes list never pushes the buttons off screen
-        val screenH = activity.resources.displayMetrics.heightPixels
-        if (screenH / d < 720) sb.updLogo.visibility = android.view.View.GONE
-        sb.updNotesScroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                val max = (screenH * 0.28f).toInt()
-                if (sb.updNotesScroll.height > max) {
-                    sb.updNotesScroll.layoutParams = sb.updNotesScroll.layoutParams.apply { height = max }
-                }
-                sb.updNotesScroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
-            }
-        })
-        friendlyNotes(rel.notes).lines().filter { it.isNotBlank() }.forEachIndexed { i, line ->
-            val row = android.widget.TextView(activity).apply {
-                text = line.removePrefix("•").trim()
-                textSize = 14f
-                setTextColor(androidx.core.content.ContextCompat.getColor(activity, R.color.dl_text))
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(activity, R.font.rx_body)
-                setLineSpacing(0f, 1.15f)
-                setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_dl_check_small, 0, 0, 0)
-                compoundDrawablePadding = (10 * d).toInt()
-                if (i > 0) setPadding(0, (10 * d).toInt(), 0, 0)
-            }
-            sb.updNotes.addView(row)
-        }
-        sb.updInfo.text = buildString {
-            append("Required to keep using the app")
-            if (rel.size > 0) append("  •  ${formatSize(rel.size)}")
-            append("\nIt downloads in the background — keep watching meanwhile.")
-        }
-        sb.updNow.setOnClickListener {
-            sheet.dismiss()
-            val ready = readyApk?.takeIf { it.exists() && it.name.contains(rel.version) }
-            if (ready != null) install(activity, ready) else download(activity, rel)
-            installAsked = false
-        }
-        sb.updClose.setOnClickListener { activity.finishAffinity() }
-        dialog = sheet
-        sheet.show()
-        // Screen rebuilt (theme change, rotation): close this dialog cleanly; the new screen asks again
-        val shown = dialog
-        activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
-                try { shown?.dismiss() } catch (e: Exception) { }
-                if (dialog === shown) dialog = null
-            }
-        })
-    }
-
-    /**
-     * Release notes as simple bullet lines for users: no links, no GitHub text, no markdown.
-     * (Written in whatsnew.txt, one change per line.)
-     */
-    private fun friendlyNotes(raw: String): String {
-        val lines = raw.lines()
-            .map { line ->
-                line.replace(Regex("\\[([^\\]]*)]\\([^)]*\\)"), "$1")       // [text](link) -> text
-                    .replace(Regex("https?://\\S+"), "")                 // bare links
-                    .replace(Regex("[*_`#>]+"), "")                         // markdown symbols
-                    .replace(Regex("\\s+by @\\S+.*$"), "")               // "by @user in ..."
-                    .trim().trimStart('-', '•', ' ').trim()
-            }
-            .filter { it.isNotEmpty() }
-            .filterNot { l ->
-                val low = l.lowercase()
-                low.startsWith("full changelog") || low.startsWith("what's changed") || low.startsWith("whats changed") ||
-                    low.startsWith("new contributors") || low.contains("made their first contribution") ||
-                    low.contains("github") || low.endsWith(":")
-            }
-            .take(8)
-        if (lines.isEmpty()) return "• Improvements and bug fixes"
-        return lines.joinToString("\n") { "• " + it.take(120) }
-    }
-
     /** Prefix of the download task's format; the version follows ("app:update:8.9.20"). */
     const val TASK_PREFIX = "app:update:"
-
-    /** Called when the update was added to Downloads (the app shows the Library tab). */
-    var onQueued: (() -> Unit)? = null
 
     private fun updateTask(version: String): DownloadTask? =
         TaskRepository.tasks.value.firstOrNull { it.format == TASK_PREFIX + version }
@@ -247,7 +152,7 @@ object AppUpdater {
      * The update downloads in the Downloads tab like any other file: you see its progress, can pause and
      * resume it, and after a network error or a restart it continues where it stopped.
      */
-    private fun download(activity: AppCompatActivity, rel: Release) {
+    private fun download(activity: AppCompatActivity, rel: Release, quiet: Boolean) {
         TaskRepository.init(activity)
         val existing = updateTask(rel.version)
         when {
@@ -278,8 +183,7 @@ object AppUpdater {
                 DownloadService.send(activity, DownloadService.ACTION_PUMP)
             }
         }
-        toast(activity, "The update is downloading in Downloads. You can keep using the app.")
-        onQueued?.invoke()
+        if (!quiet) toast(activity, "v${rel.version} is downloading. You can keep using the app")
     }
 
     /** The update download finished (or its row was tapped): check the file, then open the installer. */
@@ -287,7 +191,7 @@ object AppUpdater {
         if (!file.exists()) {
             toast(activity, "The update file is gone. Downloading it again…")
             updateTask(version)?.let { TaskRepository.remove(it.id) }
-            required?.let { download(activity, it) }
+            required?.let { download(activity, it, quiet = false) }
             return
         }
         // checking the APK reads the whole file: off the main thread
@@ -299,7 +203,7 @@ object AppUpdater {
 
     private fun afterCheck(activity: AppCompatActivity, file: File, version: String, check: ApkCheck) {
         when (check) {
-            ApkCheck.OK -> { readyApk = file; install(activity, file) }
+            ApkCheck.OK -> install(activity, file)
             ApkCheck.OLDER -> {
                 AppPrefs.setBadRelease(activity, version)
                 required = null
@@ -330,13 +234,13 @@ object AppUpdater {
             else -> {
                 file.delete()
                 updateTask(version)?.let { TaskRepository.remove(it.id) }
-                toast(activity, "The update file is damaged. Tap Update to download it again.")
-                required?.let { offer(activity, it, currentVersion(activity)) }
+                toast(activity, "The update file was damaged. Downloading it again…")
+                required?.let { download(activity, it, quiet = true) }
             }
         }
     }
 
-    /** True while the required update is downloading (the app stays usable meanwhile). */
+    /** True while the update is downloading (the app stays usable meanwhile). */
     private fun downloading(rel: Release): Boolean {
         val t = updateTask(rel.version) ?: return false
         return t.status == Status.RUNNING || t.status == Status.QUEUED || t.status == Status.WAITING
@@ -377,8 +281,7 @@ object AppUpdater {
                         toast(activity, "Open Settings > Apps > RAINAX and allow installing apps")
                     }
                 }
-                .setNegativeButton("Close app") { _, _ -> activity.finishAffinity() }
-                .setCancelable(false)
+                .setNegativeButton("Not now", null)
                 .show()
             return
         }

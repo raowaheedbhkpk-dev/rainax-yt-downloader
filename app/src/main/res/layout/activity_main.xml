@@ -45,6 +45,92 @@
                 android:id="@+id/videoPage"
                 layout="@layout/page_video"
                 android:visibility="gone" />
+
+            <!-- app update: a small pill above the bottom bar while the new version downloads by itself,
+                 then "vX READY · INSTALL" (filled in by MainActivity.renderUpdatePill) -->
+            <LinearLayout
+                android:id="@+id/updatePill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_update_pill"
+                android:clickable="true"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="6dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:layout_width="30dp"
+                    android:layout_height="30dp">
+
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/updateRing"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:max="100"
+                        app:indicatorColor="#E8B44A"
+                        app:indicatorSize="28dp"
+                        app:trackColor="#2A2A2A"
+                        app:trackThickness="3dp" />
+
+                    <View
+                        android:id="@+id/updateDot"
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:layout_gravity="center"
+                        android:background="?attr/rxAccent"
+                        android:visibility="gone" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/updateTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/rx_display"
+                        android:includeFontPadding="false"
+                        android:letterSpacing="0.03"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/updateSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:maxWidth="170dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="#9A9A9A"
+                        android:textSize="10.5sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/updateAction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="12dp"
+                    android:background="?attr/rxAccent"
+                    android:gravity="center"
+                    android:letterSpacing="0.15"
+                    android:paddingHorizontal="14dp"
+                    android:text="Install"
+                    android:textAllCaps="true"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </FrameLayout>
 
         <!-- mini music bar (while songs play in the Music player) -->
