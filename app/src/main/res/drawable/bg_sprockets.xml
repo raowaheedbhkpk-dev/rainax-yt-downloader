@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- a row of film sprocket holes (storage meter edges) -->
+<!-- a row of film sprocket holes (storage strip edges): holes in the page colour, so they read as holes -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="line">
     <stroke
         android:width="4dp"
-        android:color="#33FFFFFF"
+        android:color="?attr/rxBg"
         android:dashGap="6dp"
         android:dashWidth="6dp" />
 </shape>

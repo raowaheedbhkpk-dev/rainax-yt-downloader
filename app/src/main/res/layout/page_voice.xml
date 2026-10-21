@@ -15,7 +15,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Close"
         android:src="@drawable/ic_close"
-        app:tint="#FFFFFF" />
+        app:tint="@color/voice_text" />
 
     <!-- ● Listening / Searching / Tap to try again -->
     <LinearLayout
@@ -42,7 +42,7 @@
             android:fontFamily="@font/rx_body"
             android:letterSpacing="0.06"
             android:text="LISTENING"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/voice_text"
             android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -61,7 +61,7 @@
         android:maxLines="4"
         android:ellipsize="start"
         android:text="Speak now…"
-        android:textColor="#66FFFFFF"
+        android:textColor="@color/voice_hint"
         android:textSize="30sp" />
 
     <LinearLayout
@@ -79,7 +79,7 @@
             android:layout_marginHorizontal="32dp"
             android:fontFamily="@font/rx_body"
             android:gravity="center"
-            android:textColor="#99FFFFFF"
+            android:textColor="@color/voice_text2"
             android:textSize="15sp" />
 
         <FrameLayout
@@ -122,7 +122,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="@font/rx_body"
-            android:textColor="#55FFFFFF"
+            android:textColor="@color/voice_muted"
             android:textSize="12sp" />
     </LinearLayout>
 </FrameLayout>

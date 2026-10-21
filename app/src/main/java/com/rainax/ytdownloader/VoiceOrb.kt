@@ -27,7 +27,10 @@ class VoiceOrb @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     var mode = MODE_IDLE
         set(v) { field = v; invalidate() }
 
-    private val colors = intArrayOf(0xFFD7263D.toInt(), 0xFFE8B44A.toInt(), 0xFFB01C30.toInt())
+    /** The accent colour (Settings), gold, and a deeper shade of the accent. */
+    private val colors = Ui.accent(context).let { acc ->
+        intArrayOf(acc, 0xFFE8B44A.toInt(), androidx.core.graphics.ColorUtils.blendARGB(acc, 0xFF000000.toInt(), 0.25f))
+    }
     private val blobPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SCREEN
     }
@@ -102,7 +105,7 @@ class VoiceOrb @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         for (r in ripples) {
             val p = r[0]
             ringPaint.strokeWidth = max * 0.012f * (1f - p) + 1f
-            ringPaint.color = 0xFFD7263D.toInt()
+            ringPaint.color = colors[0]
             ringPaint.alpha = ((1f - p) * 150).toInt()
             canvas.drawCircle(cx, cy, base * (1.05f + p * 1.25f), ringPaint)
         }

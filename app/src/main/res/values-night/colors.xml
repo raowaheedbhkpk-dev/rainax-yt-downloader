@@ -54,4 +54,16 @@
     <color name="rx_accent_gold">#E8B44A</color>
     <color name="rx_accent_teal">#2EC4B6</color>
     <color name="rx_accent_purple">#A78BFA</color>
+    <!-- voice search page and film-strip surfaces (follow light / dark) -->
+    <color name="voice_bg">#0B0A0F</color>
+    <color name="voice_glow">#552A0612</color>
+    <color name="voice_text">#FFFFFF</color>
+    <color name="voice_text2">#99FFFFFF</color>
+    <color name="voice_hint">#66FFFFFF</color>
+    <color name="voice_muted">#55FFFFFF</color>
+    <color name="voice_chip_bg">#1AFFFFFF</color>
+    <color name="voice_chip_stroke">#22FFFFFF</color>
+    <color name="film_bg">#141414</color>
+    <color name="film_track">#2A2A2A</color>
+    <color name="film_text">#FFFFFF</color>
 </resources>

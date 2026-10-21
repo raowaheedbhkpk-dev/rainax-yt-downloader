@@ -689,14 +689,14 @@ class VideoScreen(
                     text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
                     textSize = 15f
                     typeface = display
-                    setTextColor(0xFFE8B44A.toInt())
+                    setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_gold))
                 })
                 addView(android.widget.TextView(act).apply {
                     text = name
                     textSize = 12.5f
                     maxLines = 2
                     ellipsize = android.text.TextUtils.TruncateAt.END
-                    setTextColor(0xFFFFFFFF.toInt())
+                    setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.film_text))
                 }, android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (2 * dp).toInt() })
                 setOnClickListener {
                     player()?.takeIf { p -> p.currentMediaItem?.mediaId == d.url }?.let { p ->

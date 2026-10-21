@@ -433,7 +433,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
                     android:layout_marginTop="8dp"
-                    android:background="#141414"
+                    android:background="@color/film_bg"
                     android:orientation="vertical"
                     android:paddingHorizontal="6dp"
                     android:paddingVertical="4dp">
@@ -449,7 +449,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="14dp"
                         android:layout_marginVertical="4dp"
-                        android:background="#2A2A2A"
+                        android:background="@color/film_track"
                         android:orientation="horizontal">
 
                         <View
@@ -464,7 +464,7 @@
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_weight="0"
-                            android:background="#E8B44A" />
+                            android:background="@color/rx_gold" />
 
                         <View
                             android:id="@+id/meterFree"

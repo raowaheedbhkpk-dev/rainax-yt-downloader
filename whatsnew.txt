@@ -1,3 +1,4 @@
+Light and dark fixes: voice search, Your week, the storage strip and chapter film strip now follow your theme; voice orb uses your accent colour
 New cinematic opening in full HDR on HDR screens: the RAINAX mark spins in under a stage light, RAINAX and TUBE slide out on two lines, with a floor reflection; light and dark themes
 A slow, smooth 6-second opening: RAINAX TUBE written letter by letter with a soft glow, then it opens into the app
 Updates download by themselves in the background: a small pill above the bottom bar shows the progress, then tap Install when it is ready

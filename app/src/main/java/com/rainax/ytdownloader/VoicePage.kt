@@ -44,11 +44,15 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
         dialog.setContentView(b.root)
         dialog.window?.let { w ->
             w.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
-            w.statusBarColor = 0xFF0B0A0F.toInt()
-            w.navigationBarColor = 0xFF0B0A0F.toInt()
+            // the page's own colour (night or warm paper), with dark icons on the light one
+            val bg = androidx.core.content.ContextCompat.getColor(act, R.color.voice_bg)
+            w.statusBarColor = bg
+            w.navigationBarColor = bg
+            val night = (act.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
             WindowInsetsControllerCompat(w, w.decorView).apply {
-                isAppearanceLightStatusBars = false
-                isAppearanceLightNavigationBars = false
+                isAppearanceLightStatusBars = !night
+                isAppearanceLightNavigationBars = !night
             }
         }
         b.vClose.setOnClickListener { dialog.dismiss() }
@@ -116,13 +120,15 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
         }
     }
 
+    private fun color(id: Int) = androidx.core.content.ContextCompat.getColor(act, id)
+
     private fun setText(text: String?) {
         if (text.isNullOrBlank()) {
             b.vText.text = "Speak now…"
-            b.vText.setTextColor(0x66FFFFFF)
+            b.vText.setTextColor(color(R.color.voice_hint))
         } else {
             b.vText.text = text
-            b.vText.setTextColor(0xFFFFFFFF.toInt())
+            b.vText.setTextColor(color(R.color.voice_text))
         }
     }
 
@@ -145,7 +151,7 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
                 b.vOrb.mode = VoiceOrb.MODE_IDLE
                 b.vDot.alpha = 0.4f
                 b.vText.text = error ?: "Didn't catch that"
-                b.vText.setTextColor(0xCCFFFFFF.toInt())
+                b.vText.setTextColor(color(R.color.voice_text2))
                 Motion.bounce(b.vMic)
             }
         }
