@@ -10,6 +10,7 @@
     <color name="rx_text2">#5F5A52</color>
     <color name="rx_outline">#1F000000</color>
     <color name="rx_divider">#1A000000</color>
+    <color name="rx_divider_strong">#33000000</color>
     <color name="rx_primary">#C81E33</color>
     <!-- film red for small text (dark theme uses a lighter red so it stays readable on black) -->
     <color name="rx_primary_text">#C81E33</color>

@@ -9,6 +9,7 @@
     <color name="rx_text2">#9A9A9A</color>
     <color name="rx_outline">#1FFFFFFF</color>
     <color name="rx_divider">#1AFFFFFF</color>
+    <color name="rx_divider_strong">#40FFFFFF</color>
     <color name="rx_primary">#D7263D</color>
     <color name="rx_primary_text">#E8455A</color>
     <color name="rx_on_primary">#FFFFFF</color>

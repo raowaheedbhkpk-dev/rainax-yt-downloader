@@ -379,6 +379,7 @@ class DownloadService : Service() {
 
         val uiLock = Any()
         var label = ""
+        LiveStats.clear(id)                       // fresh numbers for this run (not the ones from before a pause)
 
         fun report() = synchronized(uiLock) {
             val now = System.currentTimeMillis()
@@ -407,6 +408,7 @@ class DownloadService : Service() {
                 if (speed > 1) append("  •  ").append(formatSize(speed.toLong())).append("/s")
                 if (eta in 0..86_400) append("  •  ETA ").append(formatEta(eta))
             }
+            LiveStats.put(id, LiveStats.Stats(speed, eta, bytes, if (known) total else -1))
             TaskRepository.update(id) {
                 if (it.status != Status.RUNNING) it else it.copy(progress = best, message = text)
             }

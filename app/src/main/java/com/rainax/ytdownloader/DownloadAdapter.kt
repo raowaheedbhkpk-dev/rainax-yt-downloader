@@ -83,8 +83,23 @@ class DownloadAdapter(
             Status.FAILED -> "Failed" to 0xFFD32F2F.toInt()
             Status.DONE -> null
         }
-        b.statusPill.isVisible = pill != null
-        if (pill != null) {
+        // running with live numbers: the stat strip (speed / time left / size) says it all, no pill needed
+        val live = if (t.status == Status.RUNNING) LiveStats.get(t.id) else null
+        b.statsRow.isVisible = live != null
+        if (live != null) {
+            b.status.text = qualityLabel(t)
+            b.status.setTextColor(MaterialColors.getColor(b.status, com.google.android.material.R.attr.colorOnSurfaceVariant))
+            val sp = LiveStats.split(live.bytesPerSec)
+            b.statSpeed.text = if (live.bytesPerSec > 1) unit(b.root.context, sp.first, sp.second + "/s") else "—"
+            b.statLeft.text = LiveStats.eta(live.etaSec)
+            val got = LiveStats.split(live.done.toDouble())
+            b.statSize.text = if (live.total > 0) {
+                val all = LiveStats.split(live.total.toDouble())
+                unit(b.root.context, got.first, "/ ${all.first} ${all.second}")
+            } else unit(b.root.context, got.first, got.second)
+        }
+        b.statusPill.isVisible = pill != null && live == null
+        if (pill != null && live == null) {
             val d = b.root.resources.displayMetrics.density
             b.statusPill.text = pill.first
             b.statusPill.setTextColor(pill.second)
@@ -131,8 +146,11 @@ class DownloadAdapter(
         }
         val showProgress = t.status == Status.RUNNING || t.status == Status.QUEUED ||
             t.status == Status.PAUSED || t.status == Status.WAITING
-        b.progress.isVisible = showProgress
-        if (showProgress) b.progress.setProgressCompat(t.progress, true)
+        b.progressRow.isVisible = showProgress
+        if (showProgress) {
+            b.progress.setProgressCompat(t.progress, true)
+            b.progressPct.text = if (t.progress in 1..100) "${t.progress}%" else ""
+        }
 
         b.actionBtn.setIconResource(
             when (t.status) {
@@ -163,6 +181,32 @@ class DownloadAdapter(
         b.root.setOnLongClickListener {
             onLongPress(t)
             true
+        }
+    }
+
+    /** "2.4" big with " MB/s" smaller and grey after it. */
+    private fun unit(c: android.content.Context, number: String, unit: String): CharSequence {
+        val sb = android.text.SpannableStringBuilder(number).append(' ')
+        val start = sb.length
+        sb.append(unit)
+        sb.setSpan(android.text.style.RelativeSizeSpan(0.6f), start, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        sb.setSpan(android.text.style.ForegroundColorSpan(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text2)),
+            start, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        return sb
+    }
+
+    /** What is being saved: "720p video", "Best quality video", "M4A audio", "App update". */
+    private fun qualityLabel(t: DownloadTask): String {
+        val f = t.format
+        return when {
+            f.startsWith(AppUpdater.TASK_PREFIX) -> "App update"
+            f.startsWith("audio:") -> f.removePrefix("audio:").substringBefore(':').uppercase().ifBlank { "Audio" } + " audio"
+            f.startsWith("video:") -> {
+                val q = f.removePrefix("video:").substringBefore(':').toIntOrNull() ?: 0
+                if (q > 0) "${q}p video" else "Best quality video"
+            }
+            t.isAudio -> "Audio"
+            else -> "Video"
         }
     }
 
