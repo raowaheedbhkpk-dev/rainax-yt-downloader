@@ -947,7 +947,7 @@ class MainActivity : AppCompatActivity() {
 
     internal val menuRows = mutableListOf<MenuRow>()
     internal val menuLabels = mutableListOf<TextView>()
-    internal var menuActive = "Home"
+    private var menuActive = "Home"     // (private: an internal var would clash with setMenuActive())
     internal var menuText = 0
     internal var menuIcon = 0
 
