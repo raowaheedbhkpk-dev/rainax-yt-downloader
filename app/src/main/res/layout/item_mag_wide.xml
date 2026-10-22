@@ -4,13 +4,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
+    android:layout_marginHorizontal="@dimen/rx_space_16"
     android:layout_marginTop="6dp"
     android:background="?attr/rxCard"
     android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="12dp">
+    android:padding="@dimen/rx_space_12">
 
     <FrameLayout
         android:layout_width="124dp"
@@ -29,18 +29,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="4dp"
+            android:layout_margin="@dimen/rx_space_4"
             android:background="@drawable/bg_duration"
-            android:paddingHorizontal="4dp"
+            android:paddingHorizontal="@dimen/rx_space_4"
             android:textColor="@color/rx_white"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
     </FrameLayout>
 
     <View
         android:layout_width="3dp"
         android:layout_height="match_parent"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:background="?attr/rxAccent" />
 
     <LinearLayout
@@ -57,18 +57,18 @@
             android:ellipsize="end"
             android:maxLines="3"
             android:textColor="@color/rx_text"
-            android:textSize="14.5sp"
+            android:textSize="14sp"
             android:textStyle="bold|italic" />
 
         <TextView
             android:id="@+id/meta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="@dimen/rx_space_4"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/rx_text2"
-            android:textSize="11.5sp" />
+            android:textSize="12sp" />
     </LinearLayout>
 
     <ImageButton
@@ -77,7 +77,7 @@
         android:layout_height="36dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Download"
-        android:padding="8dp"
+        android:padding="@dimen/rx_space_8"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_download"
         app:tint="?attr/rxAccent" />

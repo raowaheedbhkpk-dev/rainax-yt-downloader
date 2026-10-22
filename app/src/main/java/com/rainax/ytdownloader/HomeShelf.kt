@@ -53,6 +53,9 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
         })
     }
 
+    /** Videos you didn't finish are showing (the magazine then puts this shelf near the top). */
+    val hasContinue: Boolean get() = b.continueBox.isVisible
+
     /** Called when Home shows: newest Continue watching list, and the Shorts strip (loaded once). */
     fun refresh() {
         refreshSubs()

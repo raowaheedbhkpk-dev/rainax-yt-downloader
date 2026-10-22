@@ -18,8 +18,8 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp">
+            android:paddingStart="@dimen/rx_space_4"
+            android:paddingEnd="@dimen/rx_space_4">
 
             <!-- ≡ side menu (Music, Gaming, News...) -->
             <ImageButton
@@ -50,7 +50,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:textAllCaps="true"
                     android:fontFamily="@font/rx_display"
                     android:importantForAccessibility="no"
@@ -58,7 +58,7 @@
                     android:letterSpacing="0.06"
                     android:text="RAINAX"
                     android:textColor="@color/rx_text"
-                    android:textSize="21sp" />
+                    android:textSize="20sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -70,8 +70,8 @@
                     android:includeFontPadding="false"
                     android:letterSpacing="0.06"
                     android:text="Tube"
-                    android:textColor="?attr/rxAccent"
-                    android:textSize="21sp" />
+                    android:textColor="?attr/rxAccentText"
+                    android:textSize="20sp" />
             </LinearLayout>
 
             <ImageButton
@@ -122,8 +122,8 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="@dimen/rx_space_4"
+            android:paddingEnd="@dimen/rx_space_12"
             android:visibility="gone">
 
             <ImageButton
@@ -139,13 +139,13 @@
                 android:id="@+id/titleText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="@dimen/rx_space_4"
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
-                android:textSize="18sp"
-                android:fontFamily="sans-serif-medium" />
+                android:textSize="20sp"
+                android:fontFamily="@font/rx_body_semibold" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/titleDownload"
@@ -153,7 +153,7 @@
                 android:layout_height="40dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/rx_space_16"
                 android:text="Download all"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_on_primary"
@@ -173,7 +173,7 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="4dp"
+            android:paddingHorizontal="@dimen/rx_space_4"
             android:visibility="gone">
 
             <ImageButton
@@ -190,13 +190,13 @@
                 android:id="@+id/searchBox"
                 android:layout_width="0dp"
                 android:layout_height="54dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="@dimen/rx_space_8"
                 android:layout_weight="1"
                 android:background="@drawable/bg_search_focus"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingStart="18dp"
-                android:paddingEnd="8dp">
+                android:paddingEnd="@dimen/rx_space_8">
 
                 <ImageView
                     android:layout_width="20dp"
@@ -220,16 +220,16 @@
                     android:maxLines="1"
                     android:textColor="@color/rx_text"
                     android:textColorHint="@color/rx_text2"
-                    android:textSize="15sp" />
+                    android:textSize="14sp" />
 
                 <ImageButton
                     android:id="@+id/searchClear"
                     android:layout_width="30dp"
                     android:layout_height="30dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="@dimen/rx_space_4"
                     android:background="@drawable/bg_clear_circle"
                     android:contentDescription="Clear"
-                    android:padding="8dp"
+                    android:padding="@dimen/rx_space_8"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_close"
                     android:visibility="gone"
@@ -247,7 +247,7 @@
                     android:padding="9dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_mic"
-                    app:tint="#FFFFFF" />
+                    app:tint="@color/rx_white" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
@@ -280,7 +280,7 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/rx_space_12"
             android:layout_weight="1"
             android:ellipsize="end"
             android:fontFamily="@font/rx_body"
@@ -288,7 +288,7 @@
             android:maxLines="1"
             android:text="Search YouTube or paste a link"
             android:textColor="@color/rx_text2"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <ImageButton
             android:id="@+id/homeSearchMic"
@@ -309,9 +309,9 @@
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
         android:clipToPadding="false"
-        android:paddingHorizontal="12dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="12dp"
+        android:paddingHorizontal="@dimen/rx_space_12"
+        android:paddingTop="@dimen/rx_space_4"
+        android:paddingBottom="@dimen/rx_space_12"
         android:scrollbars="none">
 
         <com.google.android.material.chip.ChipGroup
@@ -343,7 +343,7 @@
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:paddingTop="0dp"
-                android:paddingBottom="16dp" />
+                android:paddingBottom="@dimen/rx_space_16" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <!-- pull to refresh: a film countdown (3 · 2 · 1) while the new list loads -->
@@ -359,8 +359,8 @@
             android:gravity="center"
             android:importantForAccessibility="no"
             android:includeFontPadding="false"
-            android:textColor="#FFFFFF"
-            android:textSize="26sp"
+            android:textColor="@color/rx_white"
+            android:textSize="24sp"
             android:visibility="gone" />
 
         <androidx.recyclerview.widget.RecyclerView
@@ -386,7 +386,7 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="32dp"
+            android:padding="@dimen/rx_space_32"
             android:visibility="gone">
 
             <ImageView
@@ -400,17 +400,17 @@
                 android:id="@+id/feedErrorText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/rx_space_12"
                 android:gravity="center"
                 android:textColor="@color/rx_text2"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/feedRetry"
                 style="@style/Widget.Rainax.Button.Tonal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/rx_space_16"
                 android:text="Try again" />
 
             <com.google.android.material.button.MaterialButton
@@ -429,13 +429,13 @@
             android:layout_height="60dp"
             android:layout_gravity="bottom"
             android:layout_marginHorizontal="14dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="@dimen/rx_space_12"
             android:background="@drawable/bg_glass_nav"
             android:elevation="6dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="18dp"
-            android:paddingEnd="8dp"
+            android:paddingEnd="@dimen/rx_space_8"
             android:visibility="gone">
 
             <TextView
@@ -445,7 +445,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/rx_body_semibold"
                 android:textColor="@color/rx_text"
                 android:textSize="16sp" />
 

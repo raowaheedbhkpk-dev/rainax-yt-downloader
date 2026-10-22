@@ -1,3 +1,6 @@
+Tablets: finished downloads now show in 2 or 3 columns; tidier spacing and building blocks under the hood for faster, safer updates
+Cleaner look: one font family and one tidy set of text sizes across the app; easier-to-read gold labels in light mode and red text in dark mode; lists now animate smoothly when videos are removed, chapters arrive or more videos load
+Smoother everyday use: the full opening plays once after each update, a quick 1-second title every other time; Continue watching sits near the top; Back on a Home tab returns to For you; hold a recent search to edit or remove it; a red count on You while downloads run; chapters follow the video; Movies shows real films only; the lights stay on while you read in cinema mode; bigger touch areas, soft vibrations, and lists never hide under the update pill
 Light and dark fixes: voice search, Your week, the storage strip and chapter film strip now follow your theme; voice orb uses your accent colour
 New cinematic opening in full HDR on HDR screens: the RAINAX mark spins in under a stage light, RAINAX and TUBE slide out on two lines, with a floor reflection; light and dark themes
 A slow, smooth 6-second opening: RAINAX TUBE written letter by letter with a soft glow, then it opens into the app

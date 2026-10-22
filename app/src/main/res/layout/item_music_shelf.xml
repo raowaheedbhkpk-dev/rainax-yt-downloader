@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingTop="18dp"
-    android:paddingBottom="4dp">
+    android:paddingBottom="@dimen/rx_space_4">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,8 +14,8 @@
         android:gravity="center_vertical"
         android:minHeight="40dp"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="12dp">
+        android:paddingStart="@dimen/rx_space_16"
+        android:paddingEnd="@dimen/rx_space_12">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -27,7 +27,7 @@
                 android:id="@+id/shelfLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="2dp"
+                android:layout_marginBottom="@dimen/rx_space_2"
                 android:letterSpacing="0.04"
                 android:textAllCaps="true"
                 android:textColor="@color/rx_text2"
@@ -52,13 +52,13 @@
             style="@style/Widget.Rainax.Button.Outlined"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/rx_space_8"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:minHeight="36dp"
             android:paddingHorizontal="14dp"
             android:text="Play all"
-            android:textSize="13.5sp"
+            android:textSize="14sp"
             android:visibility="gone"
             app:cornerRadius="2dp" />
     </LinearLayout>
@@ -70,5 +70,5 @@
         android:layout_marginTop="10dp"
         android:clipToPadding="false"
         android:nestedScrollingEnabled="false"
-        android:paddingHorizontal="8dp" />
+        android:paddingHorizontal="@dimen/rx_space_8" />
 </LinearLayout>

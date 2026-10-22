@@ -17,8 +17,8 @@
             android:layout_height="56dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="4dp">
+            android:paddingStart="@dimen/rx_space_12"
+            android:paddingEnd="@dimen/rx_space_4">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/youAccounts"
@@ -28,11 +28,11 @@
                 android:fontFamily="@font/rx_body"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/rx_space_16"
                 android:text="Accounts"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 app:cornerRadius="2dp"
                 app:icon="@drawable/ic_chevron_down"
                 app:iconGravity="textEnd"
@@ -69,7 +69,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Settings"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_gear"
                 app:tint="@color/rx_text" />
@@ -82,7 +82,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="@dimen/rx_space_16">
 
             <ImageView
                 android:id="@+id/youAvatar"
@@ -96,7 +96,7 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="@dimen/rx_space_16"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -110,13 +110,13 @@
                     android:maxLines="1"
                     android:text="You"
                     android:textColor="@color/rx_text"
-                    android:textSize="25sp" />
+                    android:textSize="24sp" />
 
                 <TextView
                     android:id="@+id/youHandle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:ellipsize="end"
                     android:fontFamily="@font/rx_body"
                     android:maxLines="1"
@@ -129,9 +129,9 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="@dimen/rx_space_4"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="@dimen/rx_space_16">
 
             <!-- signed out: one red "Sign in" button (fixed colours, right in light and dark) -->
             <com.google.android.material.button.MaterialButton
@@ -145,15 +145,15 @@
                 android:stateListAnimator="@animator/rx_press"
                 android:text="Sign in to YouTube"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"
+                android:textColor="@color/rx_white"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:visibility="gone"
                 app:backgroundTint="?attr/rxAccent"
                 app:cornerRadius="2dp"
                 app:icon="@drawable/ic_person"
                 app:iconGravity="textStart"
-                app:iconTint="#FFFFFF" />
+                app:iconTint="@color/rx_white" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/youSecondBtn"
@@ -167,7 +167,7 @@
                 android:text="Sign out"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 app:cornerRadius="2dp"
                 app:strokeColor="@color/rx_outline" />
         </LinearLayout>
@@ -183,7 +183,7 @@
         android:layout_height="48dp"
         android:layout_marginTop="196dp"
         android:clipToPadding="false"
-        android:paddingHorizontal="16dp"
+        android:paddingHorizontal="@dimen/rx_space_16"
         android:scrollbars="none">
 
         <com.google.android.material.chip.ChipGroup
@@ -212,8 +212,8 @@
             android:layout_height="48dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="@dimen/rx_space_4"
+            android:paddingEnd="@dimen/rx_space_12"
             android:visibility="gone">
 
             <ImageButton
@@ -231,10 +231,10 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ellipsize="end"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/rx_body_semibold"
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
-                android:textSize="18sp" />
+                android:textSize="20sp" />
 
             <ImageButton
                 android:id="@+id/libPlaylistMore"
@@ -249,12 +249,12 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="44dp"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="4dp"
+            android:layout_marginHorizontal="@dimen/rx_space_16"
+            android:layout_marginTop="@dimen/rx_space_4"
             android:background="@drawable/bg_search"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
+            android:paddingHorizontal="@dimen/rx_space_12">
 
             <ImageView
                 android:layout_width="20dp"
@@ -277,7 +277,7 @@
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
                 android:textColorHint="@color/rx_text2"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
 
             <ImageButton
                 android:id="@+id/libSearchClear"
@@ -295,14 +295,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="@dimen/rx_space_16">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/libPlayAll"
                 style="@style/Widget.Rainax.Button"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="@dimen/rx_space_8"
                 android:layout_weight="1"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
@@ -349,7 +349,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingHorizontal="12dp"
+                android:paddingHorizontal="@dimen/rx_space_12"
                 android:paddingTop="6dp"
                 android:paddingBottom="120dp" />
 
@@ -360,9 +360,9 @@
                 android:layout_gravity="center"
                 android:layout_marginBottom="80dp"
                 android:gravity="center"
-                android:paddingHorizontal="32dp"
+                android:paddingHorizontal="@dimen/rx_space_32"
                 android:textColor="@color/rx_text2"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:visibility="gone" />
         </FrameLayout>
     </LinearLayout>
@@ -379,7 +379,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="@dimen/rx_space_12"
             android:paddingBottom="96dp"
             android:scrollbars="vertical" />
 
@@ -397,7 +397,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingBottom="8dp"
+                android:paddingBottom="@dimen/rx_space_8"
                 android:visibility="gone">
 
                 <LinearLayout
@@ -405,7 +405,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="16dp">
+                    android:paddingHorizontal="@dimen/rx_space_16">
 
                     <TextView
                         android:layout_width="0dp"
@@ -415,7 +415,7 @@
                         android:text="Your storage"
                         android:textAllCaps="true"
                         android:textColor="@color/rx_gold"
-                        android:textSize="10.5sp"
+                        android:textSize="10sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -424,19 +424,19 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/rx_display"
                         android:textColor="@color/rx_text"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <!-- the strip: sprocket holes above and below, the bar in the middle -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="16dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginHorizontal="@dimen/rx_space_16"
+                    android:layout_marginTop="@dimen/rx_space_8"
                     android:background="@color/film_bg"
                     android:orientation="vertical"
                     android:paddingHorizontal="6dp"
-                    android:paddingVertical="4dp">
+                    android:paddingVertical="@dimen/rx_space_4">
 
                     <View
                         android:layout_width="match_parent"
@@ -448,7 +448,7 @@
                         android:id="@+id/meterBar"
                         android:layout_width="match_parent"
                         android:layout_height="14dp"
-                        android:layout_marginVertical="4dp"
+                        android:layout_marginVertical="@dimen/rx_space_4"
                         android:background="@color/film_track"
                         android:orientation="horizontal">
 
@@ -484,18 +484,18 @@
                     android:id="@+id/meterText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginHorizontal="@dimen/rx_space_16"
                     android:layout_marginTop="6dp"
                     android:textColor="@color/rx_text2"
-                    android:textSize="11.5sp" />
+                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="@dimen/rx_space_20"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="16dp">
+                    android:paddingHorizontal="@dimen/rx_space_16">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -509,7 +509,7 @@
                     <View
                         android:layout_width="0dp"
                         android:layout_height="1dp"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="@dimen/rx_space_12"
                         android:layout_weight="1"
                         android:background="@color/rx_divider" />
                 </LinearLayout>
@@ -518,7 +518,7 @@
                     android:id="@+id/shelfList"
                     android:layout_width="match_parent"
                     android:layout_height="168dp"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/rx_space_12"
                     android:clipToPadding="false"
                     android:paddingHorizontal="11dp" />
 
@@ -526,7 +526,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="4dp"
-                    android:layout_marginHorizontal="12dp"
+                    android:layout_marginHorizontal="@dimen/rx_space_12"
                     android:background="#5A4320"
                     android:elevation="2dp" />
             </LinearLayout>
@@ -544,7 +544,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingStart="8dp">
+                    android:paddingStart="@dimen/rx_space_8">
 
                     <TextView
                         android:id="@+id/activeTitle"
@@ -575,7 +575,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="8dp"
+                    android:paddingHorizontal="@dimen/rx_space_8"
                     android:paddingTop="6dp"
                     android:text="Tip: tap Select all, or press and hold a download, then Pause, Resume or Cancel the selected ones"
                     android:textAppearance="?attr/textAppearanceBodySmall"
@@ -594,9 +594,9 @@
                     android:id="@+id/doneTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingStart="8dp"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="4dp"
+                    android:paddingStart="@dimen/rx_space_8"
+                    android:paddingTop="@dimen/rx_space_12"
+                    android:paddingBottom="@dimen/rx_space_4"
                     android:textAppearance="?attr/textAppearanceTitleSmall"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -604,7 +604,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="4dp">
+                    android:paddingHorizontal="@dimen/rx_space_4">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/selectDoneBtn"
@@ -615,9 +615,9 @@
                         android:layout_weight="1"
                         android:insetLeft="0dp"
                         android:insetRight="0dp"
-                        android:paddingHorizontal="4dp"
+                        android:paddingHorizontal="@dimen/rx_space_4"
                         android:text="Select all"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/removeAllBtn"
@@ -628,9 +628,9 @@
                         android:layout_weight="1"
                         android:insetLeft="0dp"
                         android:insetRight="0dp"
-                        android:paddingHorizontal="4dp"
+                        android:paddingHorizontal="@dimen/rx_space_4"
                         android:text="Remove all"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/deleteAllBtn"
@@ -640,10 +640,10 @@
                         android:layout_weight="1"
                         android:insetLeft="0dp"
                         android:insetRight="0dp"
-                        android:paddingHorizontal="4dp"
+                        android:paddingHorizontal="@dimen/rx_space_4"
                         android:text="Delete all"
                         android:textColor="?attr/colorError"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
@@ -674,24 +674,24 @@
             android:text="Coming soon"
             android:textAllCaps="true"
             android:textColor="@color/rx_gold"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="@dimen/rx_space_4"
             android:textAllCaps="true"
             android:fontFamily="@font/rx_display"
             android:gravity="center"
             android:text="No downloads yet"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="22sp" />
+            android:textSize="24sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:fontFamily="@font/rx_body"
             android:gravity="center"
             android:lineSpacingMultiplier="1.2"
@@ -705,7 +705,7 @@
             style="@style/Widget.Rainax.Button"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="@dimen/rx_space_24"
             android:minWidth="200dp"
             android:text="Explore videos"
             app:cornerRadius="2dp"
@@ -723,7 +723,7 @@
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="4dp"
+        android:paddingHorizontal="@dimen/rx_space_4"
         android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
@@ -760,8 +760,8 @@
         android:background="?attr/rxSurface"
         android:elevation="8dp"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="4dp"
+        android:paddingHorizontal="@dimen/rx_space_8"
+        android:paddingVertical="@dimen/rx_space_4"
         android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
@@ -772,7 +772,7 @@
             android:layout_weight="1"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:paddingHorizontal="2dp"
+            android:paddingHorizontal="@dimen/rx_space_2"
             android:text="Pause"
             android:textColor="?attr/colorOnSurface"
             android:textSize="12sp"
@@ -789,7 +789,7 @@
             android:layout_weight="1"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:paddingHorizontal="2dp"
+            android:paddingHorizontal="@dimen/rx_space_2"
             android:text="Resume"
             android:textColor="?attr/colorOnSurface"
             android:textSize="12sp"
@@ -806,7 +806,7 @@
             android:layout_weight="1"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:paddingHorizontal="2dp"
+            android:paddingHorizontal="@dimen/rx_space_2"
             android:text="Cancel"
             android:textColor="?attr/colorError"
             android:textSize="12sp"
@@ -823,7 +823,7 @@
             android:layout_weight="1"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:paddingHorizontal="2dp"
+            android:paddingHorizontal="@dimen/rx_space_2"
             android:text="Remove"
             android:textColor="?attr/colorOnSurface"
             android:textSize="12sp"
@@ -840,7 +840,7 @@
             android:layout_weight="1"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:paddingHorizontal="2dp"
+            android:paddingHorizontal="@dimen/rx_space_2"
             android:text="Delete"
             android:textColor="?attr/colorError"
             android:textSize="12sp"

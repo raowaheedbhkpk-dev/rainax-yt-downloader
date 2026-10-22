@@ -4,14 +4,14 @@
     android:id="@+id/playerRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/rx_black">
 
     <androidx.media3.ui.PlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:resize_mode="fit"
-        app:shutter_background_color="#000000"
+        app:shutter_background_color="@color/rx_black"
         app:surface_type="surface_view"
         app:use_controller="false" />
 
@@ -40,7 +40,7 @@
             android:layout_marginTop="18dp"
             android:gravity="center"
             android:maxLines="2"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/rx_white"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -49,7 +49,7 @@
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:layout_gravity="center"
-        android:indeterminateTint="#FFFFFF"
+        android:indeterminateTint="@color/rx_white"
         android:visibility="gone" />
 
     <!-- Swipe feedback: volume / brightness / seek / zoom -->
@@ -60,10 +60,10 @@
         android:layout_gravity="center"
         android:background="@drawable/bg_player_pill"
         android:paddingHorizontal="22dp"
-        android:paddingVertical="12dp"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:fontFamily="sans-serif-medium"
+        android:paddingVertical="@dimen/rx_space_12"
+        android:textColor="@color/rx_white"
+        android:textSize="20sp"
+        android:fontFamily="@font/rx_body_semibold"
         android:visibility="gone" />
 
     <FrameLayout
@@ -79,9 +79,9 @@
             android:background="@drawable/bg_player_scrim_top"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="24dp">
+            android:paddingHorizontal="@dimen/rx_space_8"
+            android:paddingTop="@dimen/rx_space_8"
+            android:paddingBottom="@dimen/rx_space_24">
 
             <ImageButton
                 android:id="@+id/backBtn"
@@ -97,11 +97,11 @@
                 android:id="@+id/titleText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
+                android:layout_marginHorizontal="@dimen/rx_space_8"
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/rx_white"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -112,9 +112,9 @@
                 android:background="@drawable/bg_player_btn"
                 android:gravity="center"
                 android:minWidth="44dp"
-                android:paddingHorizontal="8dp"
+                android:paddingHorizontal="@dimen/rx_space_8"
                 android:text="1x"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/rx_white"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -161,7 +161,7 @@
                 android:layout_height="52dp"
                 android:background="@drawable/bg_player_btn"
                 android:contentDescription="Previous"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_p_prev" />
             <ImageButton
@@ -199,7 +199,7 @@
                 android:layout_height="52dp"
                 android:background="@drawable/bg_player_btn"
                 android:contentDescription="Next"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_p_next" />
         </LinearLayout>
@@ -211,9 +211,9 @@
             android:layout_gravity="bottom"
             android:background="@drawable/bg_player_scrim_bottom"
             android:orientation="vertical"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="@dimen/rx_space_12"
             android:paddingTop="28dp"
-            android:paddingBottom="8dp">
+            android:paddingBottom="@dimen/rx_space_8">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -227,8 +227,8 @@
                     android:layout_height="wrap_content"
                     android:minWidth="48dp"
                     android:text="0:00"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp" />
+                    android:textColor="@color/rx_white"
+                    android:textSize="14sp" />
 
                 <SeekBar
                     android:id="@+id/seekBar"
@@ -240,7 +240,7 @@
                     android:progressBackgroundTint="#66FFFFFF"
                     android:progressTint="@color/rx_grad_start"
                     android:secondaryProgressTint="#99FFFFFF"
-                    android:thumbTint="#FFFFFF" />
+                    android:thumbTint="@color/rx_white" />
 
                 <TextView
                     android:id="@+id/durText"
@@ -249,8 +249,8 @@
                     android:gravity="end"
                     android:minWidth="48dp"
                     android:text="0:00"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp" />
+                    android:textColor="@color/rx_white"
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -310,7 +310,7 @@
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:layout_gravity="start|center_vertical"
-        android:layout_marginStart="24dp"
+        android:layout_marginStart="@dimen/rx_space_24"
         android:background="@drawable/bg_player_play"
         android:contentDescription="Unlock"
         android:padding="15dp"

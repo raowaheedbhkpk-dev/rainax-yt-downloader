@@ -4,7 +4,7 @@
     android:id="@+id/scBox"
     android:layout_width="128dp"
     android:layout_height="228dp"
-    android:layout_marginHorizontal="4dp"
+    android:layout_marginHorizontal="@dimen/rx_space_4"
     android:background="@drawable/bg_short_card">
 
     <ImageView
@@ -28,7 +28,7 @@
         android:ellipsize="end"
         android:maxLines="2"
         android:padding="10dp"
-        android:shadowColor="#99000000"
+        android:shadowColor="@color/rx_scrim"
         android:shadowRadius="4"
         android:textColor="@color/rx_white"
         android:textSize="14sp"

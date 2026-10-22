@@ -4,15 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:paddingTop="8dp">
+    android:paddingTop="@dimen/rx_space_8">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="@dimen/rx_space_16"
+        android:paddingVertical="@dimen/rx_space_8">
 
         <TextView
             android:fontFamily="@font/rx_display"
@@ -28,18 +28,18 @@
             android:id="@+id/commentCount"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/rx_space_8"
             android:layout_weight="1"
             android:textColor="@color/rx_text2"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
     </LinearLayout>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/commentSort"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="16dp"
-        android:paddingBottom="8dp"
+        android:paddingHorizontal="@dimen/rx_space_16"
+        android:paddingBottom="@dimen/rx_space_8"
         android:visibility="gone"
         app:chipSpacingHorizontal="8dp"
         app:selectionRequired="true"
@@ -61,7 +61,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingBottom="12dp" />
+            android:paddingBottom="@dimen/rx_space_12" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/commentLoading"
@@ -76,9 +76,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:padding="24dp"
+            android:padding="@dimen/rx_space_24"
             android:textColor="@color/rx_text2"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>
 
@@ -90,8 +90,8 @@
         android:background="?attr/rxSurfaceAlt"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="4dp"
+        android:paddingStart="@dimen/rx_space_16"
+        android:paddingEnd="@dimen/rx_space_4"
         android:visibility="gone">
 
         <TextView
@@ -102,7 +102,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/rx_text2"
-            android:textSize="13sp" />
+            android:textSize="14sp" />
 
         <ImageButton
             android:id="@+id/replyCancel"
@@ -110,7 +110,7 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Cancel reply"
-            android:padding="8dp"
+            android:padding="@dimen/rx_space_8"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_close"
             app:tint="@color/rx_text2" />
@@ -124,8 +124,8 @@
         android:background="?attr/rxCard"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="@dimen/rx_space_12"
+        android:paddingVertical="@dimen/rx_space_8">
 
         <ImageView
             android:id="@+id/commentMe"
@@ -148,16 +148,16 @@
             android:maxLines="4"
             android:minHeight="40dp"
             android:paddingHorizontal="14dp"
-            android:paddingVertical="8dp"
+            android:paddingVertical="@dimen/rx_space_8"
             android:textColor="@color/rx_text"
             android:textColorHint="@color/rx_text2"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <ImageButton
             android:id="@+id/commentSend"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="@dimen/rx_space_4"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Post comment"
             android:src="@drawable/ic_send"
@@ -171,8 +171,8 @@
         android:layout_height="wrap_content"
         android:background="?attr/rxCard"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
-        android:paddingBottom="4dp"
+        android:paddingHorizontal="@dimen/rx_space_8"
+        android:paddingBottom="@dimen/rx_space_4"
         android:visibility="gone">
 
         <TextView

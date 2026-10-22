@@ -3,7 +3,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#0A0A0A"
+    android:background="@color/rx_cinema_bg"
     android:orientation="vertical"
     android:paddingTop="10dp">
 
@@ -11,48 +11,48 @@
         android:layout_width="36dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:background="#333333" />
+        android:background="@color/rx_cinema_line" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="@dimen/rx_space_16"
         android:gravity="center"
         android:letterSpacing="0.3"
         android:text="Lyrics"
         android:textAllCaps="true"
-        android:textColor="#E8B44A"
-        android:textSize="10.5sp"
+        android:textColor="@color/rx_cinema_gold"
+        android:textSize="10sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/lyTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
+        android:layout_marginHorizontal="@dimen/rx_space_24"
         android:layout_marginTop="6dp"
         android:ellipsize="end"
         android:fontFamily="@font/rx_display"
         android:gravity="center"
         android:maxLines="2"
         android:textAllCaps="true"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp" />
+        android:textColor="@color/rx_white"
+        android:textSize="24sp" />
 
     <TextView
         android:id="@+id/lyArtist"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="@dimen/rx_space_2"
         android:gravity="center"
-        android:textColor="#9A9A9A"
-        android:textSize="13sp" />
+        android:textColor="@color/rx_cinema_text3"
+        android:textSize="14sp" />
 
     <View
         android:layout_width="44dp"
         android:layout_height="3dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/rx_space_12"
         android:background="?attr/rxAccent" />
 
     <FrameLayout
@@ -64,9 +64,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingHorizontal="24dp"
+            android:paddingHorizontal="@dimen/rx_space_24"
             android:paddingTop="18dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="@dimen/rx_space_24">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -79,18 +79,18 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:lineSpacingMultiplier="1.45"
-                    android:textColor="#F2F2F2"
+                    android:textColor="@color/rx_cinema_text"
                     android:textIsSelectable="false"
-                    android:textSize="18sp" />
+                    android:textSize="20sp" />
 
                 <TextView
                     android:id="@+id/lySource"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="@dimen/rx_space_20"
                     android:gravity="center"
-                    android:textColor="#7A7A7A"
-                    android:textSize="11.5sp" />
+                    android:textColor="@color/rx_cinema_text4"
+                    android:textSize="12sp" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
@@ -107,8 +107,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center"
-            android:paddingHorizontal="32dp"
-            android:textColor="#9A9A9A"
+            android:paddingHorizontal="@dimen/rx_space_32"
+            android:textColor="@color/rx_cinema_text3"
             android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>

@@ -40,12 +40,12 @@
         android:id="@+id/cardTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/rx_space_8"
         android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/rx_body_semibold"
         android:maxLines="2"
         android:textColor="@color/rx_text"
-        android:textSize="14.5sp" />
+        android:textSize="14sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -61,7 +61,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/rx_text2"
-            android:textSize="12.5sp" />
+            android:textSize="12sp" />
 
         <ImageButton
             android:id="@+id/cardDownload"

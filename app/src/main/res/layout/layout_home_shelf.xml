@@ -30,10 +30,10 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackground"
             android:gravity="center"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="@dimen/rx_space_16"
             android:text="All"
             android:textColor="@color/rx_accent"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -50,19 +50,19 @@
             android:letterSpacing="0.02"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="@dimen/rx_space_16"
             android:paddingTop="6dp"
             android:paddingBottom="10dp"
             android:text="Continue watching"
             android:textColor="@color/rx_text"
-            android:textSize="22sp" />
+            android:textSize="24sp" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/continueList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clipToPadding="false"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="@dimen/rx_space_12"
             android:paddingBottom="22dp" />
     </LinearLayout>
 
@@ -78,9 +78,9 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="12dp">
+            android:paddingHorizontal="@dimen/rx_space_16"
+            android:paddingTop="@dimen/rx_space_2"
+            android:paddingBottom="@dimen/rx_space_12">
 
             <ImageView
                 android:layout_width="26dp"
@@ -95,10 +95,10 @@
                 android:letterSpacing="0.02"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:text="Shorts"
                 android:textColor="@color/rx_text"
-                android:textSize="22sp" />
+                android:textSize="24sp" />
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
@@ -106,14 +106,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clipToPadding="false"
-            android:paddingHorizontal="12dp" />
+            android:paddingHorizontal="@dimen/rx_space_12" />
 
         <!-- clear gap and a thin line before the next video, like YouTube -->
         <View
             android:layout_width="match_parent"
             android:layout_height="6dp"
             android:layout_marginTop="22dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="@dimen/rx_space_16"
             android:background="?attr/rxSurfaceAlt" />
     </LinearLayout>
 </LinearLayout>

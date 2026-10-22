@@ -56,7 +56,7 @@
                 android:maxLines="1"
                 android:text="RAINAX Tube"
                 android:textColor="@color/rx_text"
-                android:textSize="18sp" />
+                android:textSize="20sp" />
 
             <FrameLayout
                 android:id="@+id/menuBell"
@@ -78,7 +78,7 @@
                 android:id="@+id/menuClose"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
-                android:layout_marginStart="2dp"
+                android:layout_marginStart="@dimen/rx_space_2"
                 android:background="@drawable/bg_menu_icon"
                 android:contentDescription="Close menu"
                 android:padding="9dp"
@@ -95,7 +95,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="@dimen/rx_space_16">
 
             <ImageView
                 android:id="@+id/menuAvatar"
@@ -103,7 +103,7 @@
                 android:layout_height="40dp"
                 android:background="@drawable/bg_menu_icon"
                 android:importantForAccessibility="no"
-                android:padding="8dp"
+                android:padding="@dimen/rx_space_8"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_person"
                 app:tint="@color/rx_text2" />
@@ -112,7 +112,7 @@
                 android:id="@+id/menuProfileText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -124,7 +124,7 @@
                     android:fontFamily="@font/rx_body"
                     android:maxLines="1"
                     android:textColor="@color/rx_text"
-                    android:textSize="15sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -158,7 +158,7 @@
             android:background="@drawable/bg_menu_search"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
+            android:paddingHorizontal="@dimen/rx_space_12">
 
             <ImageView
                 android:layout_width="18dp"
@@ -202,8 +202,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingVertical="12dp"
+            android:paddingVertical="@dimen/rx_space_12"
             android:textColor="@color/rx_text2"
-            android:textSize="11sp" />
+            android:textSize="12sp" />
     </com.rainax.ytdownloader.SwipeCloseLayout>
 </FrameLayout>

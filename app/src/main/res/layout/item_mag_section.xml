@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingHorizontal="16dp"
+    android:paddingHorizontal="@dimen/rx_space_16"
     android:paddingTop="26dp"
     android:paddingBottom="10dp">
 
@@ -14,13 +14,13 @@
         android:layout_height="wrap_content"
         android:letterSpacing="0.25"
         android:textColor="@color/rx_gold"
-        android:textSize="10.5sp"
+        android:textSize="10sp"
         android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="@dimen/rx_space_2"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -37,7 +37,7 @@
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="12dp"
+            android:layout_marginHorizontal="@dimen/rx_space_12"
             android:layout_weight="1"
             android:background="@color/rx_divider" />
 
@@ -48,11 +48,11 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:letterSpacing="0.15"
-            android:paddingHorizontal="4dp"
+            android:paddingHorizontal="@dimen/rx_space_4"
             android:text="More"
             android:textAllCaps="true"
             android:textColor="@color/rx_gold"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:visibility="gone" />
     </LinearLayout>

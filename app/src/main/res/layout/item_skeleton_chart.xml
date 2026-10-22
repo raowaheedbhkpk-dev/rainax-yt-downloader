@@ -5,9 +5,9 @@
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="16dp"
+    android:paddingStart="@dimen/rx_space_16"
     android:paddingTop="10dp"
-    android:paddingEnd="16dp"
+    android:paddingEnd="@dimen/rx_space_16"
     android:paddingBottom="10dp">
 
     <View
@@ -24,7 +24,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -43,7 +43,7 @@
         <View
             android:layout_width="90dp"
             android:layout_height="10dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:background="@drawable/bg_skeleton_line" />
     </LinearLayout>
 </com.rainax.ytdownloader.RxShimmer>

@@ -12,7 +12,7 @@
         android:layout_height="56dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="4dp">
+        android:paddingHorizontal="@dimen/rx_space_4">
 
         <ImageButton
             android:id="@+id/signInClose"
@@ -29,7 +29,7 @@
             android:letterSpacing="0.02"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/rx_space_8"
             android:layout_weight="1"
             android:text="Sign in with YouTube"
             android:textColor="@color/rx_text"
@@ -38,7 +38,7 @@
         <ImageView
             android:layout_width="26dp"
             android:layout_height="26dp"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="@dimen/rx_space_12"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_lock"
             app:tint="@color/rx_text2" />
@@ -74,8 +74,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="28dp"
-                android:paddingTop="32dp"
-                android:paddingBottom="24dp">
+                android:paddingTop="@dimen/rx_space_32"
+                android:paddingBottom="@dimen/rx_space_24">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -114,15 +114,15 @@
                     android:letterSpacing="0.02"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="32dp"
+                    android:layout_marginTop="@dimen/rx_space_32"
                     android:text="Sign in with YouTube"
                     android:textColor="@color/rx_text"
-                    android:textSize="30sp" />
+                    android:textSize="32sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/rx_space_8"
                     android:layout_marginBottom="14dp"
                     android:text="to unlock these features"
                     android:textColor="@color/rx_text2"
@@ -257,7 +257,7 @@
                     android:gravity="center"
                     android:text="You sign in on Google's own page. RAINAX Tube never sees your password, and you can sign out any time."
                     android:textColor="@color/rx_text2"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
             </LinearLayout>
         </ScrollView>
     </FrameLayout>

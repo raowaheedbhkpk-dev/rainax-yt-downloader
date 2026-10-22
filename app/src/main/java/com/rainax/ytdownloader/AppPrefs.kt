@@ -57,6 +57,10 @@ object AppPrefs {
     fun searchHistory(c: Context): List<String> =
         p(c).getString("search_history", "").orEmpty().split('\n').filter { it.isNotBlank() }
     fun clearSearchHistory(c: Context) = p(c).edit().remove("search_history").apply()
+    fun removeSearch(c: Context, q: String) {
+        val list = searchHistory(c).filter { it != q }
+        p(c).edit().putString("search_history", list.joinToString("\n")).apply()
+    }
     fun addSearch(c: Context, q: String) {
         val list = (listOf(q.trim()) + searchHistory(c).filter { !it.equals(q.trim(), true) }).take(20)
         p(c).edit().putString("search_history", list.joinToString("\n")).apply()
@@ -103,6 +107,10 @@ object AppPrefs {
     /** Settings › Opening title: the short RAINAX title card when the app starts. */
     fun openingTitle(c: Context) = p(c).getBoolean("opening_title", true)
     fun setOpeningTitle(c: Context, v: Boolean) = p(c).edit().putBoolean("opening_title", v).apply()
+
+    /** The app version that last played the full opening; the full one plays once per install or update. */
+    fun openingSeen(c: Context) = p(c).getString("opening_seen", "").orEmpty()
+    fun setOpeningSeen(c: Context, v: String) = p(c).edit().putString("opening_seen", v).apply()
 
     fun ambientMode(c: Context) = p(c).getBoolean("ambient_mode", true)
     fun setAmbientMode(c: Context, v: Boolean) = p(c).edit().putBoolean("ambient_mode", v).apply()

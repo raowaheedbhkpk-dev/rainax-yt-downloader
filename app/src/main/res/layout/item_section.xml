@@ -3,8 +3,8 @@
     android:id="@+id/sectionText"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="4dp"
-    android:paddingTop="20dp"
+    android:paddingStart="@dimen/rx_space_4"
+    android:paddingTop="@dimen/rx_space_20"
     android:paddingBottom="6dp"
     android:textAppearance="?attr/textAppearanceBodyMedium"
     android:textColor="?attr/colorOnSurfaceVariant" />

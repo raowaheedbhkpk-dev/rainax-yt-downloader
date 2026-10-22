@@ -8,6 +8,29 @@ import com.google.android.material.color.MaterialColors
 /** Small shared look helpers. */
 object Ui {
 
+    /** Extra bottom room (px) every list has while the app-update pill floats above the bottom bar. */
+    @JvmStatic var pillExtra = 0
+
+    /**
+     * Makes a small button easier to hit: its touch area grows to at least [minDp] square (the picture stays
+     * the same size). Uses the parent's TouchDelegate, so it suits one small button per parent.
+     */
+    fun expandTouch(v: android.view.View, minDp: Int = 48) {
+        val min = (minDp * v.resources.displayMetrics.density).toInt()
+        fun apply() {
+            val parent = v.parent as? android.view.View ?: return
+            val r = android.graphics.Rect()
+            v.getHitRect(r)
+            if (r.isEmpty) return
+            r.inset(-((min - r.width()) / 2).coerceAtLeast(0), -((min - r.height()) / 2).coerceAtLeast(0))
+            parent.touchDelegate = android.view.TouchDelegate(r, v)
+        }
+        // worked out again whenever the button is laid out (it may start hidden or move)
+        v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply() }
+        v.post { apply() }
+    }
+
+
     /**
      * How big everything is drawn, worked out from the screen itself (no setting): roomy screens (Pixel 8:
      * about 411 × 914 dp, tablets) keep the phone's own size; narrow or short ones (HD phones like the itel A70:
@@ -73,6 +96,10 @@ object Ui {
 
     /** The accent colour itself (right for light and dark; works with any context, services too). */
     fun accent(c: android.content.Context): Int = ContextCompat.getColor(c, accentRes(c))
+
+    /** The accent for small text (film red is a touch lighter in the dark theme so it stays readable). */
+    fun accentText(c: android.content.Context): Int =
+        ContextCompat.getColor(c, if (AppPrefs.accent(c) == 0) R.color.rx_primary_text else accentRes(c))
 
     /** Every screen: buttons, bars, chips and switches take the chosen accent (?attr/rxAccent). */
     fun applyAccent(a: android.app.Activity) {

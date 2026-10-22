@@ -40,7 +40,7 @@ class RxDialogBuilder(
             box.addView(TextView(ctx).apply {
                 text = if (title.trim().endsWith("?")) "CONFIRM" else "RAINAX TUBE"
                 setTextColor(ContextCompat.getColor(ctx, R.color.rx_gold))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 typeface = Typeface.DEFAULT_BOLD
                 letterSpacing = 0.25f
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -48,7 +48,7 @@ class RxDialogBuilder(
             box.addView(TextView(ctx).apply {
                 text = title
                 setTextColor(ContextCompat.getColor(ctx, R.color.rx_text))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 27f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
                 typeface = runCatching { ResourcesCompat.getFont(ctx, R.font.rx_display) }.getOrNull() ?: Typeface.DEFAULT_BOLD
                 isAllCaps = true
                 letterSpacing = 0.01f

@@ -12,8 +12,8 @@
         android:layout_height="56dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="4dp">
+        android:paddingStart="@dimen/rx_space_16"
+        android:paddingEnd="@dimen/rx_space_4">
 
         <TextView
             android:fontFamily="@font/rx_display"
@@ -24,7 +24,7 @@
             android:layout_weight="1"
             android:text="Subscriptions"
             android:textColor="@color/rx_text"
-            android:textSize="22sp" />
+            android:textSize="24sp" />
 
         <ImageButton
             android:id="@+id/subsRefresh"
@@ -51,7 +51,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:clipToPadding="false"
-            android:paddingHorizontal="8dp" />
+            android:paddingHorizontal="@dimen/rx_space_8" />
 
         <TextView
             android:id="@+id/subsAll"
@@ -59,10 +59,10 @@
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackground"
             android:gravity="center"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="@dimen/rx_space_16"
             android:text="All"
             android:textColor="@color/rx_accent"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -81,8 +81,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingTop="8dp"
-                android:paddingBottom="16dp" />
+                android:paddingTop="@dimen/rx_space_8"
+                android:paddingBottom="@dimen/rx_space_16" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
@@ -102,7 +102,7 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="32dp"
+            android:padding="@dimen/rx_space_32"
             android:visibility="gone">
 
             <ImageView
@@ -119,14 +119,14 @@
                 android:layout_marginTop="14dp"
                 android:gravity="center"
                 android:textColor="@color/rx_text2"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/subsAction"
                 style="@style/Widget.Rainax.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/rx_space_16"
                 android:text="Sign in" />
         </LinearLayout>
     </FrameLayout>

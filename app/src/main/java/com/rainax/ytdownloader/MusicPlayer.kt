@@ -1081,7 +1081,7 @@ class MusicPlayer(
             val s = songOf(item)
             Img.loadSquare(art, MusicArt.small(item.mediaId, s?.thumb), widthPx = 200)
             title.text = s?.title.orEmpty()
-            title.setTextColor(if (playing) Ui.accent(act) else androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
+            title.setTextColor(if (playing) Ui.accentText(act) else androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
             sub.text = s?.let { MusicHome.songLine(it) }.orEmpty()
             nowIcon.isVisible = playing
             remove.isVisible = !playing

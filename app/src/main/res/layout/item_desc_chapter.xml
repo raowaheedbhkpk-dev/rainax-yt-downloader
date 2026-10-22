@@ -8,7 +8,7 @@
     android:minHeight="48dp"
     android:orientation="horizontal"
     android:paddingHorizontal="14dp"
-    android:paddingVertical="8dp">
+    android:paddingVertical="@dimen/rx_space_8">
 
     <TextView
         android:id="@+id/chTime"
@@ -17,28 +17,28 @@
         android:background="@drawable/bg_time_chip"
         android:minWidth="58dp"
         android:gravity="center"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="4dp"
-        android:textColor="?attr/rxAccent"
-        android:textSize="13sp"
+        android:paddingHorizontal="@dimen/rx_space_8"
+        android:paddingVertical="@dimen/rx_space_4"
+        android:textColor="?attr/rxAccentText"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/chTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:layout_weight="1"
         android:ellipsize="end"
         android:maxLines="2"
         android:textColor="@color/rx_text"
-        android:textSize="14.5sp" />
+        android:textSize="14sp" />
 
     <ImageView
         android:id="@+id/chNow"
         android:layout_width="18dp"
         android:layout_height="18dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="@dimen/rx_space_8"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_play"
         android:visibility="gone"

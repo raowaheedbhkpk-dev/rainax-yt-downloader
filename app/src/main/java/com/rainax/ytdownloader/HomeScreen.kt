@@ -143,7 +143,13 @@ class HomeScreen(
 
     /** A chapter's posters: from the saved tab list when there is one, otherwise its first page. */
     private fun loadChapter(id: String) {
-        fun pick(list: List<VideoItem>) = list.filter { !it.isChannel && !it.isPlaylist }.take(if (id == MAG_MOVIES) 20 else 12)
+        fun pick(list: List<VideoItem>): List<VideoItem> {
+            val videos = list.filter { !it.isChannel && !it.isPlaylist }
+            if (id != MAG_MOVIES) return videos.take(12)
+            // the cinema: real films only (an hour or longer) and not ones almost nobody watched
+            val films = videos.filter { it.seconds >= 3600 && (it.views < 0 || it.views >= 10_000) }
+            return (if (films.size >= 4) films else videos.filter { it.seconds >= 2400 || it.seconds == 0L }).take(20)
+        }
         val cached = vm.feedCache["tab:$id"]
         if (cached != null) {
             hm.feedList.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
@@ -189,6 +195,7 @@ class HomeScreen(
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
         bigAdapter.magazine = shelfHere            // the first tab reads like a magazine
         if (shelfHere) shelf.refresh()
+        if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
         val want: RecyclerView.Adapter<*> = if (isMusic) musicHome else adapter
         if (hm.feedList.adapter !== want) hm.feedList.adapter = want
         val bg = if (isMusic) musicGlow else null
@@ -201,7 +208,13 @@ class HomeScreen(
             hm.searchInput.setText(text)
             hm.searchInput.setSelection(hm.searchInput.text.length)
         },
-        onClear = { confirmClearHistory() }
+        onClear = { confirmClearHistory() },
+        onRemove = { q ->
+            AppPrefs.removeSearch(act, q)
+            Haptics.tick(hm.suggestList)
+            suggest(hm.searchInput.text.toString())
+            Notify.show(act, "Removed from recent searches")
+        }
     )
 
     /** "Clear search history" under the recent searches: asks once, then removes them all. */
@@ -266,6 +279,7 @@ class HomeScreen(
 
         hm.homeChips.setOnCheckedStateChangeListener { group, ids ->
             if (buildingTabs) return@setOnCheckedStateChangeListener
+            Haptics.tick(group)
             val index = ids.firstOrNull()?.let { id -> (0 until group.childCount).firstOrNull { group.getChildAt(it).id == id } } ?: return@setOnCheckedStateChangeListener
             if (query != null) searchKind = index else tabIndex = index
             applyListAdapter()
@@ -281,6 +295,7 @@ class HomeScreen(
         hm.homeMenu.setOnClickListener { onMenu() }
         hm.homeBell.setOnClickListener { openNotifications() }
         hm.searchMic.setOnClickListener { onVoice() }
+        Ui.expandTouch(hm.searchClear)
         hm.searchInput.setOnFocusChangeListener { _, focused -> if (focused) startTyping() }
         hm.searchInput.setOnClickListener { startTyping() }
         hm.searchInput.setOnEditorActionListener { _, actionId, _ ->
@@ -355,6 +370,13 @@ class HomeScreen(
             load(reset = true)
             return true
         }
+        // on another Home tab (Music, Gaming...): Back returns to the first tab before the app closes
+        if (tabIndex != 0) {
+            (hm.homeChips.getChildAt(0) as? Chip)?.isChecked = true
+            hm.chipsScroll.smoothScrollTo(0, 0)
+            hm.feedList.scrollToPosition(0)
+            return true
+        }
         return false
     }
 
@@ -369,7 +391,7 @@ class HomeScreen(
         hm.pickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
         hm.pickDownload.text = if (n > 1) "Download $n" else "Download"
         val d = act.resources.displayMetrics.density
-        hm.feedList.setPadding(hm.feedList.paddingLeft, hm.feedList.paddingTop, hm.feedList.paddingRight, ((if (n > 0) 88 else 16) * d).toInt())
+        hm.feedList.setPadding(hm.feedList.paddingLeft, hm.feedList.paddingTop, hm.feedList.paddingRight, ((if (n > 0) 88 else 16) * d).toInt() + Ui.pillExtra)
         hm.feedList.adapter?.notifyDataSetChanged()
     }
 
@@ -1132,8 +1154,27 @@ class HomeScreen(
     private class SuggestAdapter(
         private val onPick: (String) -> Unit,
         private val onFill: (String) -> Unit,
-        private val onClear: () -> Unit
+        private val onClear: () -> Unit,
+        private val onRemove: (String) -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        /** Hold a recent search: Search / Edit / Remove (one at a time, not only "Clear all"). */
+        private fun recentMenu(anchor: View, q: String) {
+            Haptics.press(anchor)
+            val pm = android.widget.PopupMenu(anchor.context, anchor)
+            pm.menu.add(0, 1, 0, "Search")
+            pm.menu.add(0, 2, 1, "Edit")
+            pm.menu.add(0, 3, 2, "Remove")
+            pm.setOnMenuItemClickListener {
+                when (it.itemId) {
+                    1 -> onPick(q)
+                    2 -> onFill(q)
+                    3 -> onRemove(q)
+                }
+                true
+            }
+            pm.show()
+        }
         private sealed class Row {
             class Item(val s: Sug) : Row()
             class Header(val title: String) : Row()
@@ -1169,7 +1210,7 @@ class HomeScreen(
             val d = parent.resources.displayMetrics.density
             if (viewType == HEADER) {
                 val tv = TextView(c).apply {
-                    textSize = 22f
+                    textSize = 24f
                     isAllCaps = true
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(c, R.font.rx_display)
                     setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
@@ -1187,7 +1228,7 @@ class HomeScreen(
                 }
                 box.addView(TextView(c).apply {
                     text = "RECENT SEARCHES"
-                    textSize = 10.5f
+                    textSize = 10f
                     letterSpacing = 0.25f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_gold))
@@ -1205,7 +1246,7 @@ class HomeScreen(
             if (viewType == CLEAR) {
                 // one row like the others: a bin icon in the same column, the words in film red, a thin line under it
                 val row = LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false)
-                val red = Ui.accent(c)
+                val red = Ui.accentText(c)
                 row.findViewById<ImageView>(R.id.icon).apply {
                     setImageResource(R.drawable.ic_delete)
                     imageTintList = android.content.res.ColorStateList.valueOf(red)
@@ -1240,26 +1281,15 @@ class HomeScreen(
                 is Row.Header -> (holder.itemView as TextView).text = row.title
                 is Row.Stubs -> {
                     val c = holder.itemView.context
-                    val d = c.resources.displayMetrics.density
                     val strip = holder.itemView.findViewWithTag<LinearLayout>("stubs")
                     strip.removeAllViews()
                     row.list.forEach { s ->
-                        strip.addView(TextView(c).apply {
-                            text = s.text
-                            maxLines = 1
-                            ellipsize = android.text.TextUtils.TruncateAt.END
-                            maxWidth = (180 * d).toInt()
-                            textSize = 13.5f
-                            gravity = android.view.Gravity.CENTER_VERTICAL
-                            setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
-                            setBackgroundResource(R.drawable.bg_recent_stub)
-                            setPadding((14 * d).toInt(), 0, (14 * d).toInt(), 0)
-                            contentDescription = "Search ${s.text}. Hold to edit"
-                            setOnClickListener { onPick(s.text) }
-                            setOnLongClickListener { onFill(s.text); true }
-                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * d).toInt()).apply {
-                            marginStart = (4 * d).toInt(); marginEnd = (4 * d).toInt()
-                        })
+                        val stub = LayoutInflater.from(c).inflate(R.layout.item_recent_stub, strip, false) as TextView
+                        stub.text = s.text
+                        stub.contentDescription = "Search ${s.text}. Hold for edit or remove"
+                        stub.setOnClickListener { onPick(s.text) }
+                        stub.setOnLongClickListener { v -> recentMenu(v, s.text); true }
+                        strip.addView(stub)
                     }
                 }
                 Row.Clear -> (holder.itemView as ViewGroup).getChildAt(0).setOnClickListener { onClear() }
@@ -1274,6 +1304,9 @@ class HomeScreen(
                     if (s.thumb != null) Img.load(h.thumb, s.thumb, widthPx = 240)
                     h.itemView.setOnClickListener { onPick(s.text) }
                     h.fill.setOnClickListener { onFill(s.text) }
+                    // a recent search (clock icon): hold for Search / Edit / Remove
+                    if (s.icon == R.drawable.ic_history) h.itemView.setOnLongClickListener { v -> recentMenu(v, s.text); true }
+                    else h.itemView.setOnLongClickListener(null)
                 }
             }
         }

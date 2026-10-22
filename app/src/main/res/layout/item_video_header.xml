@@ -4,37 +4,37 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingBottom="8dp">
+    android:paddingBottom="@dimen/rx_space_8">
 
     <TextView
         android:id="@+id/vTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
         android:layout_marginTop="14dp"
         android:ellipsize="end"
         android:maxLines="3"
         android:lineSpacingExtra="1dp"
         android:textColor="@color/rx_text"
-        android:textSize="19sp"
+        android:textSize="20sp"
         android:textStyle="bold"
-        android:fontFamily="sans-serif-medium" />
+        android:fontFamily="@font/rx_body_semibold" />
 
     <TextView
         android:id="@+id/vMeta"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
+        android:layout_marginTop="@dimen/rx_space_4"
         android:textColor="@color/rx_text2"
-        android:textSize="13sp" />
+        android:textSize="14sp" />
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/vLoading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
+        android:layout_marginTop="@dimen/rx_space_12"
         android:indeterminate="true"
         android:visibility="gone"
         app:indicatorColor="?attr/rxAccent" />
@@ -43,7 +43,7 @@
         android:id="@+id/vError"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
         android:layout_marginTop="10dp"
         android:textColor="@color/rx_error"
         android:textSize="14sp"
@@ -57,7 +57,7 @@
         android:background="?attr/selectableItemBackground"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
+        android:paddingHorizontal="@dimen/rx_space_16"
         android:paddingVertical="6dp">
 
         <ImageView
@@ -71,7 +71,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/rx_space_12"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -82,7 +82,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -97,11 +97,11 @@
             android:id="@+id/vSubscribe"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/rx_space_8"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:minWidth="0dp"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="@dimen/rx_space_16"
             android:text="Subscribe"
             android:textAllCaps="false"
             android:textSize="14sp"
@@ -114,9 +114,9 @@
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/rx_space_8"
         android:clipToPadding="false"
-        android:paddingHorizontal="16dp"
+        android:paddingHorizontal="@dimen/rx_space_16"
         android:paddingVertical="6dp"
         android:scrollbars="none">
 
@@ -137,7 +137,7 @@
                 android:text="Download"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_on_primary"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:elevation="6dp"
                 android:outlineAmbientShadowColor="?attr/rxAccent"
@@ -153,12 +153,12 @@
                 android:id="@+id/vChapters"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:stateListAnimator="@animator/rx_press"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/rx_space_16"
                 android:text="Chapters"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
@@ -177,12 +177,12 @@
                 android:id="@+id/vLike"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:stateListAnimator="@animator/rx_press"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/rx_space_16"
                 android:text="Like"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
@@ -202,12 +202,12 @@
                 android:contentDescription="Dislike"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:stateListAnimator="@animator/rx_press"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/rx_space_16"
                 android:text=""
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
@@ -226,12 +226,12 @@
                 android:id="@+id/vSave"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:stateListAnimator="@animator/rx_press"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/rx_space_16"
                 android:text="Save"
                 android:textAllCaps="false"
                 android:textColor="@color/rx_text"
@@ -250,7 +250,7 @@
                 android:id="@+id/vShare"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:stateListAnimator="@animator/rx_press"
                 android:insetTop="0dp"
@@ -276,9 +276,9 @@
         android:id="@+id/vChapterStrip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/rx_space_12"
         android:clipToPadding="false"
-        android:paddingHorizontal="12dp"
+        android:paddingHorizontal="@dimen/rx_space_12"
         android:scrollbars="none"
         android:visibility="gone">
 
@@ -293,8 +293,8 @@
         android:id="@+id/vComments"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
+        android:layout_marginTop="@dimen/rx_space_16"
         android:visibility="gone"
         app:cardBackgroundColor="?attr/rxSurfaceAlt"
         app:cardCornerRadius="2dp">
@@ -311,7 +311,7 @@
                 android:layout_height="wrap_content"
                 android:text="Comments"
                 android:textColor="@color/rx_text"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -333,7 +333,7 @@
                     android:id="@+id/vCommentText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/rx_space_12"
                     android:layout_weight="1"
                     android:ellipsize="end"
                     android:maxLines="2"
@@ -347,22 +347,22 @@
         android:id="@+id/vDesc"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
         android:layout_marginTop="14dp"
         android:background="?attr/selectableItemBackground"
         android:ellipsize="end"
         android:maxLines="3"
         android:textColor="@color/rx_text2"
-        android:textSize="13sp"
+        android:textSize="14sp"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/vUpNext"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
         android:layout_marginTop="18dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:text="Up next"
         android:textColor="@color/rx_text"
         android:textSize="16sp"

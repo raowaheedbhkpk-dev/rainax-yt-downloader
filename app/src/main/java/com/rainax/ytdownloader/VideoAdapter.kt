@@ -25,8 +25,7 @@ class VideoAdapter(
     var header: View? = null
         set(value) {
             field = value
-            rebuild()
-            notifyDataSetChanged()
+            rebuild(); notifyDataSetChanged()
         }
 
     /** + button on every video: pick several, then download them together (null = no + button). */
@@ -40,8 +39,7 @@ class VideoAdapter(
         set(value) {
             if (field == value) return
             field = value
-            rebuild()
-            notifyDataSetChanged()
+            refresh()
         }
 
     val count get() = items.size
@@ -57,8 +55,7 @@ class VideoAdapter(
         set(value) {
             if (field == value) return
             field = value
-            rebuild()
-            notifyDataSetChanged()
+            rebuild(); notifyDataSetChanged()
         }
 
     /**
@@ -69,8 +66,15 @@ class VideoAdapter(
         set(value) {
             if (field == value) return
             field = value
-            rebuild()
-            notifyDataSetChanged()
+            rebuild(); notifyDataSetChanged()
+        }
+
+    /** Magazine: the shelf (Continue watching...) goes right under the Cover story instead of after Top 5. */
+    var headerEarly = false
+        set(value) {
+            if (field == value) return
+            field = value
+            if (magazine) refresh()
         }
 
     /** Magazine chapters: title to list id. Their videos load on their own (see [onNeedChapter]). */
@@ -90,14 +94,14 @@ class VideoAdapter(
     /** A chapter's videos arrived (empty = it failed or had nothing: the chapter is left out). */
     fun setChapter(id: String, list: List<VideoItem>) {
         chapterItems[id] = keep(list)
-        if (magazine) { rebuild(); notifyDataSetChanged() }
+        if (magazine) refresh()
     }
 
     /** Pull to refresh: chapters load again too. */
     fun clearChapters() {
         chapterItems.clear()
         chapterAsked.clear()
-        if (magazine) { rebuild(); notifyDataSetChanged() }
+        if (magazine) refresh()
     }
 
     /** Home and Up next: leave out videos and channels you said "Not interested" to. */
@@ -108,28 +112,16 @@ class VideoAdapter(
     fun submit(list: List<VideoItem>) {
         items.clear()
         items.addAll(keep(list))
+        // a whole new list: redraw it all (a diff here could make the list jump to an old video further down)
         rebuild()
         notifyDataSetChanged()
     }
 
     /** "Not interested": the video (or a whole channel's videos) leaves the list at once. */
     fun removeWhere(test: (VideoItem) -> Boolean) {
-        if (magazine) {
-            items.removeAll(test)
-            chapterItems.keys.toList().forEach { k -> chapterItems[k] = chapterItems[k].orEmpty().filterNot(test) }
-            rebuild()
-            notifyDataSetChanged()
-            return
-        }
-        var i = 0
-        while (i < items.size) {
-            if (test(items[i])) {
-                items.removeAt(i)
-                val wasHero = slots.getOrNull(i + headerCount)?.type == HERO
-                rebuild()
-                if (wasHero || (hero && i == 0)) notifyDataSetChanged() else notifyItemRemoved(i + headerCount)
-            } else i++
-        }
+        items.removeAll(test)
+        if (magazine) chapterItems.keys.toList().forEach { k -> chapterItems[k] = chapterItems[k].orEmpty().filterNot(test) }
+        refresh()                                   // the row slides out, the rest move up
     }
 
     /** Adds the next page (skipping videos already shown). Returns how many were new. */
@@ -137,8 +129,7 @@ class VideoAdapter(
         val known = items.mapTo(HashSet()) { it.url }
         val fresh = keep(list).filter { known.add(it.url) }
         items.addAll(fresh)
-        rebuild()
-        notifyDataSetChanged()
+        refresh()
         return fresh.size
     }
 
@@ -160,6 +151,53 @@ class VideoAdapter(
     }
 
     private var slots: List<Slot> = emptyList()
+    private var keys: List<String> = emptyList()
+    private var sigs: List<String> = emptyList()
+
+    /** Who a place in the list is (the same video stays the same row, so it can move instead of blinking). */
+    private fun keyOf(s: Slot): String = when (s) {
+        Slot.Header -> "h"
+        Slot.Footer -> "f"
+        Slot.Week -> "w"
+        is Slot.Video -> "v${s.type}:" + items.getOrNull(s.i)?.url
+        is Slot.Section -> "s:" + s.label
+        is Slot.Chart -> "c${s.rank}"
+        is Slot.Grid -> "g${s.i}"
+        is Slot.Chapter -> "ch:" + s.id
+        is Slot.Movies -> "m:" + s.id
+    }
+
+    /** What a place shows: when only this changes, just that row is redrawn (a soft fade, no jump). */
+    private fun sigOf(s: Slot): String = when (s) {
+        Slot.Header -> "h" + System.identityHashCode(header)
+        Slot.Footer -> "f"
+        Slot.Week -> "w" + week?.let { "${it.watchedMs}/${it.videos}/${it.downloads}/${it.topChannel}" }
+        is Slot.Video -> keyOf(s)
+        is Slot.Section -> "s:" + s.label + s.title
+        is Slot.Chart -> "c${s.rank}:" + items.getOrNull(s.i)?.url
+        is Slot.Grid -> "g:" + (s.i..s.i + 2).joinToString { items.getOrNull(it)?.url.orEmpty() }
+        is Slot.Chapter -> "ch:" + s.label + chapterItems[s.id]?.joinToString { it.url }
+        is Slot.Movies -> "m:" + s.label + chapterItems[s.id]?.joinToString { it.url }
+    }
+
+    /**
+     * Rebuilds the list and tells the RecyclerView only what really changed (DiffUtil), so removing a
+     * video, a chapter arriving or the next page loading animate smoothly instead of the whole list blinking.
+     */
+    private fun refresh() {
+        val oldKeys = keys
+        val oldSigs = sigs
+        rebuild()
+        if (oldKeys.isEmpty() || slots.isEmpty()) { notifyDataSetChanged(); return }
+        val newKeys = keys
+        val newSigs = sigs
+        androidx.recyclerview.widget.DiffUtil.calculateDiff(object : androidx.recyclerview.widget.DiffUtil.Callback() {
+            override fun getOldListSize() = oldKeys.size
+            override fun getNewListSize() = newKeys.size
+            override fun areItemsTheSame(o: Int, n: Int) = oldKeys[o] == newKeys[n]
+            override fun areContentsTheSame(o: Int, n: Int) = oldSigs[o] == newSigs[n]
+        }, false).dispatchUpdatesTo(this)
+    }
 
     private fun rebuild() {
         val out = ArrayList<Slot>()
@@ -169,9 +207,10 @@ class VideoAdapter(
             var chapterNo = 0
             fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t.uppercase()) }
             out += Slot.Video(0, COVER)
+            if (header != null && headerEarly) out += Slot.Header
             out += Slot.Section(label("Today"), "Top 5 right now")
             for (r in 1..5) out += Slot.Chart(r, r)
-            if (header != null) out += Slot.Header
+            if (header != null && !headerEarly) out += Slot.Header
             out += Slot.Section(label("Editor's picks"), "Worth your time")
             out += Slot.Grid(6)
             week = weekStats?.invoke()?.takeIf { it.videos > 0 || it.downloads > 0 }
@@ -195,6 +234,8 @@ class VideoAdapter(
         }
         if (loadingMore) out += Slot.Footer
         slots = out
+        keys = out.map { keyOf(it) }
+        sigs = out.map { sigOf(it) }
     }
 
     override fun getItemCount() = slots.size
@@ -378,7 +419,7 @@ class VideoAdapter(
             val first = place == 1
             rank.paint.style = if (first) android.graphics.Paint.Style.FILL else android.graphics.Paint.Style.STROKE
             rank.paint.strokeWidth = 1.5f * ctx.resources.displayMetrics.density
-            rank.setTextColor(if (first) Ui.accent(ctx) else androidx.core.content.ContextCompat.getColor(ctx, R.color.rx_text))
+            rank.setTextColor(if (first) Ui.accentText(ctx) else androidx.core.content.ContextCompat.getColor(ctx, R.color.rx_text))
             rank.contentDescription = "Number $place"
             rank.invalidate()
             Img.load(thumb, item.thumb, widthPx = 360)

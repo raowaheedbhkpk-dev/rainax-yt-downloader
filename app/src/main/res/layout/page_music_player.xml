@@ -51,7 +51,7 @@
                     android:layout_height="38dp"
                     android:background="@drawable/bg_mp_toggle_on"
                     android:contentDescription="Song"
-                    android:padding="8dp"
+                    android:padding="@dimen/rx_space_8"
                     android:src="@drawable/ic_headphones"
                     app:tint="@color/rx_white" />
 
@@ -60,7 +60,7 @@
                     android:layout_width="60dp"
                     android:layout_height="38dp"
                     android:contentDescription="Video"
-                    android:padding="8dp"
+                    android:padding="@dimen/rx_space_8"
                     android:src="@drawable/ic_video"
                     app:tint="@color/rx_white" />
             </LinearLayout>
@@ -86,9 +86,9 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="4dp">
+            android:paddingHorizontal="@dimen/rx_space_24"
+            android:paddingTop="@dimen/rx_space_8"
+            android:paddingBottom="@dimen/rx_space_4">
 
             <com.rainax.ytdownloader.FitRatioLayout
                 android:id="@+id/mpArtBox"
@@ -145,16 +145,16 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/rx_space_16"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp">
+            android:paddingHorizontal="@dimen/rx_space_24">
 
             <TextView
                 android:id="@+id/mpTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="marquee"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/rx_body_semibold"
                 android:letterSpacing="-0.01"
                 android:marqueeRepeatLimit="marquee_forever"
                 android:singleLine="true"
@@ -165,10 +165,10 @@
                 android:id="@+id/mpArtist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="@dimen/rx_space_2"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#B3FFFFFF"
+                android:textColor="@color/rx_on_picture2"
                 android:textSize="16sp" />
         </LinearLayout>
 
@@ -176,9 +176,9 @@
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/rx_space_16"
             android:clipToPadding="false"
-            android:paddingHorizontal="24dp"
+            android:paddingHorizontal="@dimen/rx_space_24"
             android:scrollbars="none">
 
             <LinearLayout
@@ -202,7 +202,7 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingStart="14dp"
-                        android:paddingEnd="12dp">
+                        android:paddingEnd="@dimen/rx_space_12">
 
                         <ImageView
                             android:id="@+id/mpLikeIcon"
@@ -216,7 +216,7 @@
                             android:id="@+id/mpLikeText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
+                            android:layout_marginStart="@dimen/rx_space_8"
                             android:text="Like"
                             android:textColor="@color/rx_white"
                             android:textSize="14sp"
@@ -250,7 +250,7 @@
                     android:id="@+id/mpComments"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:background="@drawable/bg_mp_pill"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
@@ -267,7 +267,7 @@
                         android:id="@+id/mpCommentsText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/rx_space_8"
                         android:text="Comments"
                         android:textColor="@color/rx_white"
                         android:textSize="14sp"
@@ -278,7 +278,7 @@
                     android:id="@+id/mpDownload"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:background="@drawable/bg_mp_pill"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
@@ -294,7 +294,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/rx_space_8"
                         android:text="Download"
                         android:textColor="@color/rx_white"
                         android:textSize="14sp"
@@ -305,7 +305,7 @@
                     android:id="@+id/mpShare"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:background="@drawable/bg_mp_pill"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
@@ -321,7 +321,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/rx_space_8"
                         android:text="Share"
                         android:textColor="@color/rx_white"
                         android:textSize="14sp"
@@ -333,7 +333,7 @@
                     android:id="@+id/mpLyrics"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:background="@drawable/bg_mp_pill"
                     android:contentDescription="Lyrics"
                     android:gravity="center_vertical"
@@ -350,7 +350,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="@dimen/rx_space_8"
                         android:importantForAccessibility="no"
                         android:text="Lyrics"
                         android:textColor="@color/rx_white"
@@ -367,7 +367,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:max="1000"
-            android:paddingHorizontal="24dp"
+            android:paddingHorizontal="@dimen/rx_space_24"
             android:paddingVertical="10dp"
             android:progressBackgroundTint="#4DFFFFFF"
             android:progressTint="@color/rx_white"
@@ -379,7 +379,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingHorizontal="24dp">
+            android:paddingHorizontal="@dimen/rx_space_24">
 
             <TextView
                 android:id="@+id/mpPos"
@@ -387,16 +387,16 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="0:00"
-                android:textColor="#B3FFFFFF"
-                android:textSize="12.5sp" />
+                android:textColor="@color/rx_on_picture2"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/mpDur"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0:00"
-                android:textColor="#B3FFFFFF"
-                android:textSize="12.5sp" />
+                android:textColor="@color/rx_on_picture2"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <!-- shuffle, previous, play, next, repeat -->
@@ -405,7 +405,7 @@
             android:layout_height="92dp"
             android:gravity="center"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
+            android:paddingHorizontal="@dimen/rx_space_12">
 
             <ImageButton
                 android:id="@+id/mpShuffle"
@@ -486,7 +486,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingTop="8dp"
+            android:paddingTop="@dimen/rx_space_8"
             android:paddingBottom="14dp">
 
             <View
@@ -498,14 +498,14 @@
                 android:id="@+id/mpUpNextText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="24dp"
+                android:layout_marginHorizontal="@dimen/rx_space_24"
                 android:layout_marginTop="10dp"
                 android:ellipsize="end"
-                android:fontFamily="sans-serif"
+                android:fontFamily="@font/rx_body"
                 android:maxLines="1"
                 android:text="Up next"
                 android:textColor="@color/rx_white"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>

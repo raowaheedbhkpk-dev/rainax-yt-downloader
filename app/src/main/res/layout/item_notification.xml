@@ -8,7 +8,7 @@
     android:background="?attr/selectableItemBackground"
     android:gravity="top"
     android:orientation="horizontal"
-    android:paddingVertical="12dp"
+    android:paddingVertical="@dimen/rx_space_12"
     android:paddingStart="6dp">
 
     <View
@@ -22,7 +22,7 @@
         android:id="@+id/nAvatar"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="@dimen/rx_space_8"
         android:background="@drawable/bg_avatar"
         android:importantForAccessibility="no"
         android:scaleType="centerCrop"
@@ -44,19 +44,19 @@
             android:fontFamily="@font/rx_body"
             android:maxLines="2"
             android:textColor="@color/rx_text"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/nBody"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:ellipsize="end"
             android:fontFamily="@font/rx_body"
             android:maxLines="2"
             android:textColor="@color/rx_text"
-            android:textSize="14.5sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/nTime"
@@ -65,7 +65,7 @@
             android:layout_marginTop="3dp"
             android:fontFamily="@font/rx_body"
             android:textColor="@color/rx_text2"
-            android:textSize="13sp" />
+            android:textSize="14sp" />
     </LinearLayout>
 
     <com.google.android.material.imageview.ShapeableImageView

@@ -45,52 +45,51 @@ class MainActivity : AppCompatActivity() {
         Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
     }
 
+    internal lateinit var b: ActivityMainBinding
+    internal val vm: MainViewModel by viewModels()
 
-    private lateinit var b: ActivityMainBinding
-    private val vm: MainViewModel by viewModels()
+    internal val hm get() = b.homePage
+    internal val vp get() = b.videoPage
+    internal val pl get() = b.playPage
+    internal val st get() = b.settingsPage
+    internal val so get() = b.socialPage
+    internal val sb get() = b.subsPage
 
-    private val hm get() = b.homePage
-    private val vp get() = b.videoPage
-    private val pl get() = b.playPage
-    private val st get() = b.settingsPage
-    private val so get() = b.socialPage
-    private val sb get() = b.subsPage
+    internal var tab = 0            // pages: 0 Home, 1 You (library), 2 Settings, 3 Add link (+), 4 Subscriptions
+    internal lateinit var home: HomeScreen
+    internal lateinit var video: VideoScreen
+    internal lateinit var library: LibraryScreen
+    internal lateinit var music: MusicPlayer
+    internal lateinit var subs: SubsScreen
+    internal var pendingVideo: String? = null     // reopen this video page once the player is connected
 
-    private var tab = 0            // pages: 0 Home, 1 You (library), 2 Settings, 3 Add link (+), 4 Subscriptions
-    private lateinit var home: HomeScreen
-    private lateinit var video: VideoScreen
-    private lateinit var library: LibraryScreen
-    private lateinit var music: MusicPlayer
-    private lateinit var subs: SubsScreen
-    private var pendingVideo: String? = null     // reopen this video page once the player is connected
+    internal var latestTasks: List<DownloadTask> = emptyList()
+    internal var selecting = false
+    internal val selected = linkedSetOf<String>()
+    internal var sheet: BottomSheetDialog? = null
 
-    private var latestTasks: List<DownloadTask> = emptyList()
-    private var selecting = false
-    private val selected = linkedSetOf<String>()
-    private var sheet: BottomSheetDialog? = null
-
-    private val activeAdapter = DownloadAdapter(
+    internal val activeAdapter = DownloadAdapter(
         { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openOrWatch(it) },
         { toggleSelect(it) }, { startSelect(it) }
     )
-    private val doneAdapter = DownloadAdapter(
+    internal val doneAdapter = DownloadAdapter(
         { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openOrWatch(it) },
         { toggleSelect(it) }, { startSelect(it) }
     )
 
-    private lateinit var statusSaver: StatusSaver
+    internal lateinit var statusSaver: StatusSaver
     /** Android's folder screen, for the WhatsApp status folder. */
-    private val statusFolderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+    internal val statusFolderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (::statusSaver.isInitialized) statusSaver.onFolderPicked(uri)
     }
 
-    private val collectionHeader by lazy { SectionHeader(pl.collectionSection) }
-    private val shelf = ShelfAdapter { openFile(it) }
-    private var meterKey = ""
-    private val activeHeader by lazy { SectionHeader(pl.activeSection) }
-    private val doneHeader by lazy { SectionHeader(pl.doneSection) }
+    internal val collectionHeader by lazy { SectionHeader(pl.collectionSection) }
+    internal val shelf = ShelfAdapter { openFile(it) }
+    internal var meterKey = ""
+    internal val activeHeader by lazy { SectionHeader(pl.activeSection) }
+    internal val doneHeader by lazy { SectionHeader(pl.doneSection) }
 
-    private val signIn =
+    internal val signIn =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
             if (r.resultCode != RESULT_OK) return@registerForActivityResult
             home.onAccountChanged()
@@ -101,12 +100,10 @@ class MainActivity : AppCompatActivity() {
             refreshAccount()
         }
 
-    private val notifPermission =
+    internal val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-
-
-    private val backCallback = object : OnBackPressedCallback(true) {
+    internal val backCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             when {
                 exploreOpen -> closeExplore()
@@ -130,7 +127,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** A modified copy signed by someone else: nothing runs, only the "not official" message shows. */
-    private var blocked = false
+    internal var blocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)   // pure black
@@ -224,6 +221,7 @@ class MainActivity : AppCompatActivity() {
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
         b.bottomNav.setOnItemSelectedListener {
+            Haptics.tick(b.bottomNav)
             // a little bounce on the tapped tab (the middle one is the red "+")
             if (it.itemId == R.id.nav_social) b.navCard.fab?.let { f -> Motion.bounce(f) }
             else b.bottomNav.findViewById<View>(it.itemId)?.let { item -> Motion.bounce(item) }
@@ -315,7 +313,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Tablets / wide screens: the bottom bar keeps a phone-like width, the Home feed uses columns. */
-    private fun fitWideScreen() {
+    internal fun fitWideScreen() {
         // the bottom bar is full width (flat, like YouTube); on wide screens its buttons stay close together
         val wide = resources.configuration.screenWidthDp >= 600
         val lp = b.bottomNav.layoutParams as android.widget.FrameLayout.LayoutParams
@@ -323,6 +321,36 @@ class MainActivity : AppCompatActivity() {
         lp.gravity = android.view.Gravity.CENTER_HORIZONTAL
         b.bottomNav.layoutParams = lp
         if (::home.isInitialized) home.applyColumns()
+        if (pl.playList.adapter != null) applyPlayColumns()
+    }
+
+    /**
+     * Tablets and wide screens: finished downloads sit in 2 columns (3 on very wide screens); the
+     * collection, the section titles and the rows still downloading keep the full width.
+     */
+    internal fun applyPlayColumns() {
+        val w = resources.configuration.screenWidthDp
+        val cols = when {
+            w >= 1000 -> 3
+            w >= 600 -> 2
+            else -> 1
+        }
+        val list = pl.playList
+        if (cols == 1) {
+            if (list.layoutManager is androidx.recyclerview.widget.GridLayoutManager || list.layoutManager == null) {
+                list.layoutManager = LinearLayoutManager(this)
+            }
+            return
+        }
+        val grid = (list.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)
+            ?: androidx.recyclerview.widget.GridLayoutManager(this, cols).also { list.layoutManager = it }
+        grid.spanCount = cols
+        grid.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int {
+                val before = collectionHeader.itemCount + activeHeader.itemCount + activeAdapter.itemCount + doneHeader.itemCount
+                return if (position >= before) 1 else cols
+            }
+        }
     }
 
     override fun onStart() {
@@ -356,7 +384,6 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-
     override fun onDestroy() {
         if (!blocked) {
             disconnectPlayer()            // the player service keeps playing on its own
@@ -371,7 +398,7 @@ class MainActivity : AppCompatActivity() {
 
     // ----- YouTube account -----
 
-    private fun onAccountClick() {
+    internal fun onAccountClick() {
         if (!YtAccount.isSignedIn(this)) {
             signIn.launch(Intent(this, SignInActivity::class.java))
             return
@@ -391,7 +418,7 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun askSignOut() {
+    internal fun askSignOut() {
         RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
             .setTitle("Sign out of YouTube?")
             .setMessage("Your subscriptions, likes and history won't show in RAINAX until you sign in again. Your downloads stay.")
@@ -400,7 +427,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun signOut() {
+    internal fun signOut() {
         YtAccount.signOut(this)
         android.webkit.CookieManager.getInstance().removeAllCookies(null)
         home.onAccountChanged()
@@ -411,7 +438,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Settings > Clear watch history: RAINAX's own history, and (signed in, if ticked) YouTube's too. */
-    private fun askClearWatchHistory() {
+    internal fun askClearWatchHistory() {
         val signedIn = YtAccount.isSignedIn(this)
         val also = booleanArrayOf(signedIn)
         val builder = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
@@ -436,7 +463,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Name and picture of the signed-in account (top bar). */
-    private fun refreshAccount() {
+    internal fun refreshAccount() {
         if (!YtAccount.isSignedIn(this)) return
         lifecycleScope.launch {
             val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -450,7 +477,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Finished: open the file. Still downloading: watch the part already downloaded while the rest comes in. */
-    private fun openOrWatch(t: DownloadTask) {
+    internal fun openOrWatch(t: DownloadTask) {
         if (t.format.startsWith(AppUpdater.TASK_PREFIX)) {
             if (t.status == Status.DONE) installUpdate(t) else onTaskAction(t)
             return
@@ -474,7 +501,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** A video from a list: open its page (playlists go straight to the download sheet). */
-    private fun openItem(item: VideoItem) {
+    internal fun openItem(item: VideoItem) {
         when {
             item.isPlaylist -> home.openPlaylist(item)
             item.isShort -> {
@@ -495,10 +522,10 @@ class MainActivity : AppCompatActivity() {
     // can keep the sound going (Settings > Background play)
     // =====================================================================
 
-    private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaController>? = null
-    private var controller: androidx.media3.session.MediaController? = null
+    internal var controllerFuture: com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaController>? = null
+    internal var controller: androidx.media3.session.MediaController? = null
 
-    private fun connectPlayer() {
+    internal fun connectPlayer() {
         if (controllerFuture != null) return
         val token = androidx.media3.session.SessionToken(this, android.content.ComponentName(this, BgPlayService::class.java))
         val future = androidx.media3.session.MediaController.Builder(this, token).buildAsync()
@@ -546,7 +573,7 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun disconnectPlayer() {
+    internal fun disconnectPlayer() {
         video.attach(null)
         music.attach(null)
         music.videoView.player = null
@@ -557,7 +584,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Leaving the app: keep only the sound (Background play on) or pause. */
-    private fun leaveApp() {
+    internal fun leaveApp() {
         val c = controller ?: return
         if (c.mediaItemCount == 0) return
         if (!AppPrefs.backgroundPlay(this)) {
@@ -571,14 +598,14 @@ class MainActivity : AppCompatActivity() {
 
     /** Back in the app: picture on again, and the page shows what is playing (maybe a later track). */
     /** Picture on again (it was turned off to save battery while the app was away). */
-    private fun enableVideo(c: androidx.media3.session.MediaController) {
+    internal fun enableVideo(c: androidx.media3.session.MediaController) {
         if (c.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO)) {
             c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false).build()
         }
     }
 
-    private fun backInApp() {
+    internal fun backInApp() {
         val c = controller ?: return
         enableVideo(c)
         val id = c.currentMediaItem?.mediaId
@@ -600,7 +627,7 @@ class MainActivity : AppCompatActivity() {
         music.sync()
     }
 
-    private fun showTab(index: Int) {
+    internal fun showTab(index: Int) {
         if (index != 1 && selecting) exitSelection()
         val old = tab
         tab = index
@@ -622,13 +649,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Where each page's tab sits in the bottom bar (Settings counts as after You), for the slide direction. */
-    private fun tabOrder(index: Int) = when (index) { 0 -> 0; 3 -> 2; 4 -> 3; 1 -> 4; else -> 5 }
+    internal fun tabOrder(index: Int) = when (index) { 0 -> 0; 3 -> 2; 4 -> 3; 1 -> 4; else -> 5 }
 
     /** The tab the chrome was last laid out for (the video page only animates when it opens on the same tab). */
-    private var chromeTab = 0
+    internal var chromeTab = 0
 
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
-    private fun updateChrome() {
+    internal fun updateChrome() {
         if (!::music.isInitialized) return
         // a video opened while the big Music player was open: show the video
         if (video.isOpen && !video.minimized && music.expanded) music.collapse()
@@ -659,12 +686,12 @@ class MainActivity : AppCompatActivity() {
 
     // ----- floating mini player -----
 
-    private var miniPlaced = false
-    private var miniLeftSide = false
-    private var miniDragging = false
+    internal var miniPlaced = false
+    internal var miniLeftSide = false
+    internal var miniDragging = false
 
     @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun setupMiniPlayer() {
+    internal fun setupMiniPlayer() {
         val m = b.miniPlayer
         m.root.setOnClickListener {
             if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
@@ -734,7 +761,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Where the floating player may go: inside the screen, below the status bar, above the bottom bar. */
-    private fun miniBounds(): List<Float> {
+    internal fun miniBounds(): List<Float> {
         val m = b.miniPlayer.root
         val margin = 12 * resources.displayMetrics.density
         val root = b.root
@@ -759,7 +786,7 @@ class MainActivity : AppCompatActivity() {
         return listOf(margin, maxX, top, maxY)
     }
 
-    private fun placeMiniPlayer() {
+    internal fun placeMiniPlayer() {
         val m = b.miniPlayer.root
         m.alpha = 0f                                   // hidden until it is in place (no flash at the corner)
         m.post {
@@ -778,12 +805,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateMiniPlayer() {
+    internal fun updateMiniPlayer() {
         b.miniPlayer.miniPlay.setImageResource(if (controller?.isPlaying == true) R.drawable.ic_pause else R.drawable.ic_play)
     }
 
     /** The picture follows the player that is on screen: the floating window or the video page. */
-    private fun syncVideoSurface() {
+    internal fun syncVideoSurface() {
         val c = controller ?: return
         val mini = b.miniPlayer.miniVideo
         val page = video.playerView
@@ -800,7 +827,7 @@ class MainActivity : AppCompatActivity() {
         show.player = c
     }
 
-    private fun updateBack() {
+    internal fun updateBack() {
         backCallback.isEnabled = true          // Back is decided in handleOnBackPressed (video, search, tabs)
     }
 
@@ -813,19 +840,19 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     /** Home tab with nothing on top (for lists opened from other places). */
-    private fun goHome() {
+    internal fun goHome() {
         if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
         music.collapse()
     }
 
     /** A list on Home with its own title bar (topics, liked, history...). */
-    private fun openHomeList(title: String, id: String) {
+    internal fun openHomeList(title: String, id: String) {
         goHome()
         video.minimize()
         home.openList(title, id)
     }
 
-    private fun setupYou() {
+    internal fun setupYou() {
         pl.youSettings.setOnClickListener { showTab(2) }
         pl.youAccounts.setOnClickListener { onAccountClick() }
         pl.youProfile.setOnClickListener { onAccountClick() }
@@ -861,7 +888,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** You header: your YouTube picture and name, or Sign in. */
-    private fun refreshYou() {
+    internal fun refreshYou() {
         val signedIn = YtAccount.isSignedIn(this)
         updateNavAvatar()
         // signed in: Sign out; signed out: one red Sign in button
@@ -887,10 +914,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private var navAvatarUrl: String? = null
+    internal var navAvatarUrl: String? = null
 
     /** The bottom bar's You icon: your profile picture when signed in (like YouTube), the person icon otherwise. */
-    private fun updateNavAvatar() {
+    internal fun updateNavAvatar() {
         val item = b.bottomNav.menu.findItem(R.id.nav_downloads) ?: return
         val url = if (YtAccount.isSignedIn(this)) YtAccount.profile(this)?.avatar?.takeIf { it.isNotBlank() } else null
         if (url == null) {
@@ -909,27 +936,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private var exploreOpen = false
+    internal var exploreOpen = false
 
     /** One place in the side menu. */
-    private class MenuRow(val label: String, val row: android.widget.LinearLayout, val iconBox: android.widget.FrameLayout,
+    internal class MenuRow(val label: String, val row: android.widget.LinearLayout, val iconBox: android.widget.FrameLayout,
                           val icon: ImageView, val text: TextView, val badge: TextView) {
         /** social sites: their coloured round badge stays as the icon's background */
         var socialBadge: android.graphics.drawable.Drawable? = null
     }
 
-    private val menuRows = mutableListOf<MenuRow>()
-    private val menuLabels = mutableListOf<TextView>()
-    private var menuActive = "Home"
-    private var menuText = 0
-    private var menuIcon = 0
+    internal val menuRows = mutableListOf<MenuRow>()
+    internal val menuLabels = mutableListOf<TextView>()
+    internal var menuActive = "Home"
+    internal var menuText = 0
+    internal var menuIcon = 0
 
     /**
      * The side menu (≡): a floating card in the app's colours (light, dark, AMOLED): header with bell and ✕, your
      * account, search, then MENU / DISCOVER / GENERAL with a red bar on the open place and count badges.
      * Closes with ✕, Back, a tap outside, or a swipe to the left.
      */
-    private fun setupExplore() {
+    internal fun setupExplore() {
         val e = b.explore
         val d = resources.displayMetrics.density
         fun dp(v: Int) = (v * d).toInt()
@@ -987,7 +1014,7 @@ class MainActivity : AppCompatActivity() {
             chapter++
             val tv = TextView(this).apply {
                 text = String.format(java.util.Locale.US, "%02d — %s", chapter, title)      // Cinema chapters
-                textSize = 10.5f
+                textSize = 10f
                 letterSpacing = 0.25f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.rx_gold))
@@ -1071,7 +1098,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** The red bar moves to [label] (the open place). */
-    private fun setMenuActive(label: String) {
+    internal fun setMenuActive(label: String) {
         menuActive = label
         menuRows.forEach { r ->
             val on = r.label == label
@@ -1091,7 +1118,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Account, open place and badges, fresh each time the menu opens. */
-    private fun refreshMenu() {
+    internal fun refreshMenu() {
         val e = b.explore
         val signedIn = YtAccount.isSignedIn(this)
         val p = if (signedIn) YtAccount.profile(this) else null
@@ -1126,7 +1153,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun openExplore() {
+    internal fun openExplore() {
         val e = b.explore
         if (exploreOpen) return
         exploreOpen = true
@@ -1149,7 +1176,7 @@ class MainActivity : AppCompatActivity() {
         blurBehindMenu(true)
     }
 
-    private fun closeExplore() {
+    internal fun closeExplore() {
         val e = b.explore
         if (!exploreOpen) return
         exploreOpen = false
@@ -1160,7 +1187,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** The app behind the menu goes soft (frosted glass), on Android 12 and newer. */
-    private fun blurBehindMenu(on: Boolean) {
+    internal fun blurBehindMenu(on: Boolean) {
         if (android.os.Build.VERSION.SDK_INT < 31) return
         val content = (b.root as ViewGroup).getChildAt(0) ?: return
         android.animation.ValueAnimator.ofFloat(if (on) 0f else 18f, if (on) 18f else 0f).apply {
@@ -1174,19 +1201,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** The welcome guide closed: the first-run questions come next. */
-    private val welcomeGuide =
+    internal val welcomeGuide =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             AppPrefs.setGuideSeen(this)
             if (!AppPrefs.firstRunAsked(this)) b.root.post { askStorage() }
         }
 
-    private val voiceSearch =
+    internal val voiceSearch =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
             val text = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
             if (r.resultCode == RESULT_OK && !text.isNullOrBlank()) home.search(text)
         }
 
-    private val micPermission =
+    internal val micPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
             if (ok) VoicePage(this) { home.search(it) }.show() else startSystemVoiceSearch()
         }
@@ -1195,7 +1222,7 @@ class MainActivity : AppCompatActivity() {
      * Mic in the search box: RAINAX's own listening screen (glowing orb, your words as you speak). Without the
      * microphone permission or a speech recognizer, Android's voice search window is used instead.
      */
-    private fun startVoiceSearch() {
+    internal fun startVoiceSearch() {
         if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { startSystemVoiceSearch(); return }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             VoicePage(this) { home.search(it) }.show()
@@ -1204,7 +1231,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startSystemVoiceSearch() {
+    internal fun startSystemVoiceSearch() {
         val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Say what you want to watch")
@@ -1217,166 +1244,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =====================================================================
-    // Social tab and copied links
+    // Social, You (downloads) and Settings live in MainSocial.kt, MainLibrary.kt and MainSettings.kt;
+    // their state stays here.
     // =====================================================================
 
-    private fun setupSocial() {
-        statusSaver = StatusSaver(
-            this, so,
-            pickFolder = { initial ->
-                try { statusFolderPicker.launch(initial) } catch (e: Exception) { message("This phone has no folder picker") }
-            },
-            askFileAccess = { requestFileAccess(thenInstallAsk = false) }
-        )
-        statusSaver.setup()
-        fillSocialApps()
+    internal var clipStripDone: String? = null
 
-        so.socialPaste.setOnClickListener {
-            val text = clipText()
-            val url = text?.let { extractUrls(it).firstOrNull() }
-            if (url == null) message("Copy a video link first, then tap Paste") else so.socialInput.setText(url)
-        }
-        so.socialClear.setOnClickListener { so.socialInput.setText("") }
-        so.socialInput.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                so.socialClear.isVisible = !s.isNullOrEmpty()
-                showDetectedApp(s?.toString().orEmpty())
-                if (so.socialClipStrip.isVisible) refreshClipStrip()      // pasted the copied link: the strip goes
-            }
-        })
-        val go = {
-            val urls = extractUrls(so.socialInput.text.toString())
-            if (urls.isEmpty()) message("Paste a video link first")
-            else {
-                (getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
-                    .hideSoftInputFromWindow(so.socialInput.windowToken, 0)
-                AppPrefs.setClipSeen(this, urls.first())
-                showDownloadSheet(urls)
-            }
-        }
-        so.socialDownload.setOnClickListener { go() }
-        so.socialInput.setOnEditorActionListener { _, actionId, event ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO ||
-                event?.action == android.view.KeyEvent.ACTION_UP
-            ) go()
-            true
-        }
-    }
+    internal var lastClipStamp = -1L
 
-    /** The link the copied-link strip was used for (it hides for that link afterwards). */
-    /**
-     * The site tags under the headline (TikTok, Instagram, Facebook, YouTube): the real app's icon from the phone
-     * when installed, else its coloured tag; tapping one opens that app (to copy a link) or its website.
-     * WhatsApp's own icon goes on the status saver too.
-     */
-    private fun fillSocialApps() {
-        val d = resources.displayMetrics.density
-        fun dp(v: Int) = (v * d).toInt()
-        so.socialApps.removeAllViews()
-        listOf("TikTok", "Instagram", "Facebook", "YouTube").mapNotNull { n -> SocialApps.ALL.firstOrNull { it.name == n } }.forEach { app ->
-            val tag = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                setBackgroundResource(R.drawable.bg_social_tag)
-                setPadding(dp(6), 0, dp(10), 0)
-                isClickable = true
-                isFocusable = true
-                contentDescription = "Open ${app.name}"
-                setOnClickListener { if (!SocialApps.open(this@MainActivity, app)) message("Couldn't open ${app.name}") }
-            }
-            val badge = TextView(this).apply {
-                gravity = android.view.Gravity.CENTER
-                textSize = 9f
-                setTextColor(android.graphics.Color.WHITE)
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }
-            SocialApps.showOn(badge, app)
-            tag.addView(badge, LinearLayout.LayoutParams(dp(24), dp(24)))
-            tag.addView(TextView(this).apply {
-                text = app.name.uppercase()
-                textSize = 10.5f
-                letterSpacing = 0.12f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.rx_text))
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
-            so.socialApps.addView(tag, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)).apply { marginEnd = dp(8) })
-        }
-        SocialApps.icon(this, SocialApps.WHATSAPP)?.let { wa ->
-            so.statusAppIcon.background = null
-            so.statusAppIcon.setPadding(0, 0, 0, 0)
-            so.statusAppIcon.setImageDrawable(wa)
-        }
-    }
-
-    private var clipStripDone: String? = null
-
-    /** Social page: a video link is on the clipboard → a strip "TikTok link copied · Download". */
-    private fun refreshClipStrip() {
-        if (isFinishing || isDestroyed) return
-        val url = clipText()?.let { extractUrls(it).firstOrNull() }
-        val typed = extractUrls(so.socialInput.text.toString()).firstOrNull()
-        val show = url != null && url != clipStripDone && url != typed
-        if (!show) { so.socialClipStrip.isVisible = false; return }
-        val app = SocialApps.of(url!!)
-        if (app != null) {
-            SocialApps.showOn(so.socialClipBadge, app)
-        } else {
-            so.socialClipBadge.background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 4 * resources.displayMetrics.density
-                setColor(Ui.accent(this@MainActivity))
-            }
-            so.socialClipBadge.text = "\u2193"
-        }
-        so.socialClipText.text = "Copied · ${app?.name ?: "video link"}"
-        so.socialClipGo.setOnClickListener {
-            clipStripDone = url
-            AppPrefs.setClipSeen(this, url)
-            so.socialClipStrip.animate().alpha(0f).setDuration(180).withEndAction {
-                so.socialClipStrip.isVisible = false; so.socialClipStrip.alpha = 1f
-            }.start()
-            showDownloadSheet(listOf(url))
-        }
-        if (!so.socialClipStrip.isVisible) {
-            so.socialClipStrip.isVisible = true
-            Motion.popIn(so.socialClipStrip)
-        }
-    }
-
-    /** Names the app a typed or pasted link is from, with its badge in the link box. */
-    private fun showDetectedApp(text: String) {
-        val link = extractUrls(text).firstOrNull()
-        val app = link?.let { SocialApps.of(it) }
-        so.socialLinkBadge.isVisible = app != null
-        so.socialLinkIcon.isVisible = app == null
-        so.socialDetected.isVisible = link != null
-        if (app != null) {
-            SocialApps.showOn(so.socialLinkBadge, app)
-            so.socialDetected.text = "${app.name} link  ·  ${app.what}"
-        } else if (link != null) {
-            so.socialDetected.text = "Link from ${Uri.parse(link).host?.removePrefix("www.").orEmpty()}  ·  RAINAX will look for the video"
-        }
-    }
-
-    private fun clipText(): String? = runCatching {
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
-    }.getOrNull()
-
-    /** Video sites whose copied links RAINAX offers to download. */
-    private fun isVideoLink(url: String): Boolean {
-        val u = url.lowercase()
-        return FastExtractor.supports(u) || isPlaylistUrl(u) || listOf(
-            "tiktok.com", "instagram.com", "facebook.com", "fb.watch", "soundcloud.com", "bandcamp.com",
-            "x.com/", "twitter.com/"
-        ).any { u.contains(it) }
-    }
-
-    private var lastClipStamp = -1L
-    private var clipDialog: AlertDialog? = null
+    internal var clipDialog: AlertDialog? = null
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
@@ -1385,1166 +1261,43 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus && tab == 3) b.root.postDelayed({ refreshClipStrip() }, 250)
     }
 
-    /** A video link was copied in another app: offer to download it (once per link). */
-    private fun checkClipboard() {
-        if (isFinishing || isDestroyed || !AppPrefs.clipDetect(this) || clipDialog?.isShowing == true || permDialog?.isShowing == true ||
-            sheet?.isShowing == true || video.fullscreen
-        ) return
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val desc = cm.primaryClipDescription ?: return
-        // reading the text shows "pasted" on new Android versions: only when something new was copied
-        if (desc.timestamp == lastClipStamp) return
-        lastClipStamp = desc.timestamp
-        if (!desc.hasMimeType("text/*")) return
-        val url = clipText()?.let { t -> extractUrls(t).firstOrNull { isVideoLink(it) } } ?: return
-        if (url == AppPrefs.clipSeen(this)) return
-        AppPrefs.setClipSeen(this, url)
-        val site = when {
-            FastExtractor.supports(url) || isPlaylistUrl(url) -> "YouTube"
-            url.contains("tiktok", true) -> "TikTok"
-            url.contains("instagram", true) -> "Instagram"
-            url.contains("facebook", true) || url.contains("fb.watch", true) -> "Facebook"
-            else -> Uri.parse(url).host?.removePrefix("www.") ?: "Link"
-        }
-        clipDialog = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
-            .setIcon(R.drawable.ic_link)
-            .setTitle("$site link copied")
-            .setMessage(url)
-            .setPositiveButton("Add to downloads") { _, _ -> showDownloadSheet(listOf(url)) }
-            .setNegativeButton("Not now", null)
-            .show()
-    }
-
-    private fun extractUrls(text: String): List<String> =
-        Regex("https?://\\S+").findAll(text).map { it.value }.distinct().take(MAX_SHARED_LINKS).toList()
-
-    /** Links shared from other apps (Share > RAINAX). */
-    private fun handleIntent(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val urls = extractUrls(intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty())
-        if (urls.isNotEmpty()) {
-            showDownloadSheet(urls)
-        }
-    }
-
-    private fun showDownloadSheet(
-        urls: List<String>, preferAudio: Boolean = false, knownTitle: String? = null,
-        /** shown by a page over the app (the browser) instead of the message bar, which would sit behind it */
-        onAdded: ((String) -> Unit)? = null
-    ) {
-        sheet?.dismiss()
-        val sb = SheetDownloadBinding.inflate(layoutInflater)
-        val dialog = BottomSheetDialog(this)
-        dialog.setContentView(sb.root)
-        dialog.behavior.skipCollapsed = true
-        sheet = dialog
-
-        val single = urls.size == 1
-        val firstUrl = urls[0]
-        val cookies = urls.associateWith<String, String?> { null }
-        val screenH = resources.displayMetrics.heightPixels
-
-        var current: PreviewState? = null
-        var mode = MODE_QUICK
-        // Video or Audio tab, each with its own selected format (the bar shows the one of the open tab)
-        var tabKind = if (preferAudio) KIND_AUDIO else KIND_VIDEO
-        var selVideo: String? = null
-        var selAudio: String? = if (preferAudio) "audio:m4a" else null
-        var selectedSub: String? = null
-        fun selectedSpecNow(): String? = if (tabKind == KIND_AUDIO) selAudio else selVideo
-        fun select(spec: String?) { if (tabKind == KIND_AUDIO) selAudio = spec else selVideo = spec }
-
-        var choiceAction: (FormatChoice) -> Unit = {}
-        var navAction: (String) -> Unit = {}
-        val adapter = FormatAdapter({ choiceAction(it) }, { navAction(it) })
-        val cards = DlCardAdapter({ choiceAction(it) }, { navAction("all") })
-        val grid = androidx.recyclerview.widget.GridLayoutManager(this, 2)
-        val linear = LinearLayoutManager(this)
-        sb.formatList.layoutManager = grid
-        sb.formatList.adapter = cards
-        sb.formatList.itemAnimator = null
-        sb.formatList.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(this, R.anim.rx_list_rise)
-        var cardsShown = false
-        sb.closeBtn.setOnClickListener { dialog.dismiss() }
-        sb.dlThumbBox.clipToOutline = true          // rounded picture corners
-        // our own rounded, softly tinted background (not the default white sheet)
-        dialog.setOnShowListener {
-            dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        }
-
-        fun group(list: List<FormatChoice>, detailed: Boolean): List<FormatRow> {
-            val out = mutableListOf<FormatRow>()
-            val mine = list.filter { it.kind == tabKind }
-            if (mine.isNotEmpty()) {
-                out += FormatRow.Section(if (tabKind == KIND_AUDIO) "Audio" else "Video")
-                mine.forEach { out += FormatRow.Choice(it, it.spec == selectedSpecNow(), detailed) }
-            }
-            return out
-        }
-
-        fun specHeight(spec: String) = spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
-
-        /** The card's words: "High Quality" / "720p" for video, "Original quality" / "M4A" for sound. */
-        fun cardOf(c: FormatChoice, recommended: Boolean): DlCard.Format {
-            val selected = c.spec == selectedSpecNow()
-            val size = c.size.ifBlank { "Size unknown" }
-            if (c.kind == KIND_AUDIO) {
-                val parts = c.spec.split(':')
-                val ext = parts.getOrNull(1).orEmpty()
-                val (tag, q) = when (ext) {
-                    "m4a" -> "Original · Instant" to "M4A"
-                    "mp3" -> {
-                        val kbps = parts.getOrNull(2)?.toIntOrNull() ?: 192
-                        (when {
-                            kbps <= 128 -> "MP3 · Small"
-                            kbps >= 320 -> "MP3 · Best"
-                            else -> "MP3 · Standard"
-                        }) to "${kbps}k"
-                    }
-                    "" -> "Sound only" to "Audio"
-                    else -> "Sound only" to ext.uppercase()
-                }
-                return DlCard.Format(c, tag, q, size, recommended, selected)
-            }
-            val h = specHeight(c.spec)
-            val q = when {
-                h >= 4320 -> "8K"
-                h >= 2160 -> "4K"
-                h >= 1440 -> "2K"
-                h > 0 -> "${h}p"
-                else -> "Best"
-            }
-            val tag = when {
-                h == 0 -> "MP4"
-                h < 720 -> "Fast"
-                h < 1440 -> "High Quality"
-                else -> "Ultra HD"
-            }
-            return DlCard.Format(c, tag, q, size, recommended, selected)
-        }
-
-        /** The suggested card of a list: 720p (or nearest) for video, M4A for sound. */
-        fun recommendedOf(list: List<FormatChoice>): FormatChoice? {
-            if (list.size < 2) return list.firstOrNull()
-            return if (tabKind == KIND_AUDIO) list.firstOrNull { it.spec == "audio:m4a" } ?: list.first()
-            else list.filter { specHeight(it.spec) > 0 }.minByOrNull { kotlin.math.abs(specHeight(it.spec) - 720) } ?: list.first()
-        }
-
-        /** "720p (280.0 MB)" for the bar. */
-        fun shortLabel(c: FormatChoice): String {
-            val card = cardOf(c, false)
-            return if (c.size.isBlank()) card.quality else "${card.quality} (${c.size})"
-        }
-
-        // Several videos (picked with +) and playlists: each video's own formats are looked up (4 at a time),
-        // and only the formats those videos really have are shown, with their sizes added up.
-        // A playlist uses its first videos and scales their sizes to the whole list (shown with ≈).
-        val found = java.util.concurrent.ConcurrentHashMap<String, PreviewState>()
-        var lookups: Job? = null
-        var sampled: List<PlaylistEntry> = emptyList()
-        var renderNow: () -> Unit = {}
-        // many picked videos: sizes come from the first few and are scaled up (≈), so YouTube isn't asked
-        // about hundreds of videos at once (that can get the connection blocked for a while)
-        val sampleUrls = if (single) urls else urls.take(Picks.SAMPLE)
-        val sampledMany = sampleUrls.size < urls.size
-        // many lookups finish close together: draw once per frame, not once per video
-        var renderQueued = false
-        val renderSoon = {
-            if (!renderQueued) {
-                renderQueued = true
-                b.root.post { renderQueued = false; if (sheet === dialog) renderNow() }
-            }
-        }
-
-        fun lookUp(list: List<String>) {
-            lookups?.cancel()
-            lookups = lifecycleScope.launch {
-                list.forEach { u ->
-                    launch {
-                        found[u] = vm.infoFor(u)
-                        renderSoon()
-                    }
-                }
-            }
-        }
-
-        fun heightOf(spec: String) = spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
-
-        /** What [spec] downloads for one video: that format, else its nearest lower video quality. */
-        fun bytesFor(st: PreviewState, spec: String): Long {
-            st.all.firstOrNull { it.spec == spec }?.let { return it.bytes }
-            if (!spec.startsWith("video")) return 0
-            val want = heightOf(spec).takeIf { it > 0 } ?: Int.MAX_VALUE
-            val videos = st.all.filter { it.kind == KIND_VIDEO }
-            return (videos.filter { heightOf(it.spec) <= want }.maxByOrNull { heightOf(it.spec) }
-                ?: videos.minByOrNull { heightOf(it.spec) })?.bytes ?: 0
-        }
-
-        /** The formats these videos have, each with the total size ([scale] > 1: a playlist estimate). */
-        fun combine(states: List<PreviewState>, scale: Double): Pair<List<FormatChoice>, List<FormatChoice>> {
-            val ok = states.filter { it.error == null && it.all.isNotEmpty() }
-            if (ok.isEmpty()) return emptyList<FormatChoice>() to emptyList()
-            val bySpec = LinkedHashMap<String, FormatChoice>()
-            ok.forEach { st -> st.all.forEach { c -> bySpec.putIfAbsent(c.spec, c) } }
-            val all = bySpec.values.map { c ->
-                val sum = (ok.sumOf { bytesFor(it, c.spec) } * scale).toLong()
-                c.copy(size = if (sum > 0) (if (scale > 1.01) "≈ " else "") + formatSize(sum) else "", bytes = sum)
-            }.sortedWith(compareBy<FormatChoice>({ if (it.kind == KIND_AUDIO) 0 else 1 }, { heightOf(it.spec) }))
-            val videos = all.filter { it.kind == KIND_VIDEO }
-            val quickVideo = listOfNotNull(
-                videos.minByOrNull { kotlin.math.abs(heightOf(it.spec) - 360) },
-                videos.minByOrNull { kotlin.math.abs(heightOf(it.spec) - 720) },
-                videos.minByOrNull { kotlin.math.abs(heightOf(it.spec) - 1080) }
-            ).distinctBy { it.spec }.sortedBy { heightOf(it.spec) }
-            return (all.filter { it.kind == KIND_AUDIO } + quickVideo) to all
-        }
-
-        fun render() {
-            val p = current
-            val isPlaylist = single && p?.playlist?.isNotEmpty() == true
-            if (isPlaylist && sampled.isEmpty()) {
-                sampled = p!!.playlist.take(6)
-                lookUp(sampled.map { it.url })
-            }
-            val waiting = when {
-                !single -> sampleUrls.count { found[it] == null }
-                isPlaylist -> sampled.count { found[it.url] == null }
-                else -> 0
-            }
-            val (quick, all) = when {
-                !single -> {
-                    val read = sampleUrls.mapNotNull { found[it] }
-                    val good = read.count { it.error == null && it.all.isNotEmpty() }
-                    combine(read, if (sampledMany && good > 0) urls.size.toDouble() / good else 1.0)
-                }
-                isPlaylist -> {
-                    val list = p!!.playlist
-                    val known = list.filter { it.seconds > 0 }
-                    val avg = if (known.isNotEmpty()) known.sumOf { it.seconds } / known.size else 240L
-                    fun len(e: PlaylistEntry) = if (e.seconds > 0) e.seconds else avg
-                    val done = sampled.filter { found[it.url]?.let { st -> st.error == null } == true }
-                    val scale = if (done.isEmpty()) 1.0
-                    else list.sumOf { len(it) }.toDouble() / done.sumOf { len(it) }.coerceAtLeast(1)
-                    combine(done.mapNotNull { found[it.url] }, scale.coerceAtLeast(1.0))
-                }
-                p == null || p.loading || p.error != null -> emptyList<FormatChoice>() to emptyList()
-                else -> p.quick to p.all
-            }
-            val loading = (single && !isPlaylist && (p == null || p.loading)) || (waiting > 0 && quick.isEmpty()) ||
-                (single && p == null)
-            val error = when {
-                single && !isPlaylist -> p?.error
-                !single && waiting == 0 && quick.isEmpty() -> "Couldn't read these videos. Check your internet, then tap Retry."
-                isPlaylist && waiting == 0 && quick.isEmpty() -> "Couldn't read this playlist's videos. Tap Retry."
-                else -> null
-            }
-            val subs = if (single && !isPlaylist) p?.subtitles.orEmpty() else emptyList()
-
-            // a link with only sound (or only video): that tab, and no tab switch
-            val hasVideo = (quick + all).any { it.kind == KIND_VIDEO }
-            val hasAudio = (quick + all).any { it.kind == KIND_AUDIO }
-            if (!hasVideo && hasAudio) tabKind = KIND_AUDIO
-            if (!hasAudio && hasVideo) tabKind = KIND_VIDEO
-            val tabQuick = quick.filter { it.kind == tabKind }
-            val tabAll = all.filter { it.kind == tabKind }
-
-            // picked while sizes were loading, but this video has no such format: select the closest real one,
-            // and nothing picked yet: the recommended one (so DOWNLOAD works at once)
-            val sel = selectedSpecNow()
-            if (tabQuick.isNotEmpty() && (sel == null || (tabQuick + tabAll).none { it.spec == sel })) {
-                select(if (sel == null || tabKind == KIND_AUDIO) recommendedOf(tabQuick)?.spec else {
-                    val want = specHeight(sel).takeIf { it > 0 } ?: Int.MAX_VALUE
-                    (tabQuick.filter { specHeight(it.spec) <= want }.maxByOrNull { specHeight(it.spec) } ?: recommendedOf(tabQuick))?.spec
-                })
-            }
-            val selectedSpec = selectedSpecNow()
-
-            // header: picture, title, a short line under it
-            val title = when {
-                !single -> "Download ${urls.size} videos"
-                else -> (p?.takeIf { !it.loading }?.title ?: knownTitle)?.takeIf { it.isNotBlank() } ?: "Download"
-            }
-            sb.sheetHeading.text = when (mode) {
-                MODE_ALL -> "More formats"
-                MODE_SUBS -> "Subtitles/CC"
-                else -> title
-            }
-            sb.backBtn.isVisible = mode != MODE_QUICK
-            sb.dlThumbBox.isVisible = mode == MODE_QUICK
-            val thumb = p?.thumbUrl ?: youtubeThumb(firstUrl) ?: found[firstUrl]?.thumbUrl
-            if (sb.dlThumb.getTag(R.id.img_url) != thumb) Img.load(sb.dlThumb, thumb, widthPx = 320)
-            val duration = if (single && !isPlaylist) p?.subtitle?.let { Regex("(\\d+:)?\\d{1,2}:\\d{2}$").find(it.trim())?.value } else null
-            sb.dlDuration.isVisible = duration != null
-            sb.dlDuration.text = duration
-            sb.sheetSub.text = when {
-                mode != MODE_QUICK -> title
-                !single && waiting > 0 -> "Getting sizes…  ${sampleUrls.size - waiting} of ${sampleUrls.size}"
-                !single && sampledMany -> "They download one after another  •  sizes estimated from ${sampleUrls.size} videos"
-                !single -> sampleUrls.count { found[it]?.error != null }.let { bad ->
-                    if (bad > 0) "They download one after another  •  $bad couldn't be read" else "They download one after another"
-                }
-                loading -> if (p?.title != null || knownTitle != null) "Getting sizes…" else "Fetching info…"
-                error != null -> Uri.parse(firstUrl).host.orEmpty()
-                isPlaylist -> "${p!!.subtitle.orEmpty()}  •  whole playlist".trimStart(' ', '•') + if (waiting > 0) "  •  getting sizes…" else ""
-                else -> "Choose a format to download"
-            }
-            sb.previewLoading.isVisible = loading || waiting > 0
-
-            // Video / Audio tabs
-            sb.dlTabs.isVisible = mode != MODE_SUBS && ((hasVideo && hasAudio) || (single && !isPlaylist && loading))
-            // icon and word side by side in the middle of each tab
-            fun styleTab(box: View, icon: android.widget.ImageView, text: android.widget.TextView, on: Boolean) {
-                val color = if (on) android.graphics.Color.WHITE else androidx.core.content.ContextCompat.getColor(this, R.color.dl_text2)
-                box.setBackgroundResource(if (on) R.drawable.bg_dl_tab_on else 0)
-                box.elevation = if (on) 4 * resources.displayMetrics.density else 0f
-                box.isSelected = on
-                text.setTextColor(color)
-                icon.imageTintList = android.content.res.ColorStateList.valueOf(color)
-            }
-            styleTab(sb.tabVideo, sb.tabVideoIcon, sb.tabVideoText, tabKind == KIND_VIDEO)
-            styleTab(sb.tabAudio, sb.tabAudioIcon, sb.tabAudioText, tabKind == KIND_AUDIO)
-
-            sb.errorBlock.isVisible = error != null
-            if (error != null) {
-                sb.errorText.text = error
-            }
-            sb.playlistBtn.isVisible = false
-
-            if (mode == MODE_QUICK) {
-                // the cards: this tab's main formats, then "More Formats"
-                val rec = recommendedOf(tabQuick)?.spec
-                val list = tabQuick.map { cardOf(it, it.spec == rec && tabQuick.size > 1) }.toMutableList<DlCard>()
-                val moreCount = tabAll.count { a -> tabQuick.none { it.spec == a.spec } }
-                if (tabAll.isNotEmpty() && (moreCount > 0 || (tabKind == KIND_VIDEO && subs.isNotEmpty()))) {
-                    list += DlCard.More(if (moreCount > 0) "View all ${tabAll.size}" else "Subtitles")
-                }
-                if (sb.formatList.adapter !== cards) { sb.formatList.layoutManager = grid; sb.formatList.adapter = cards }
-                val showing = if (loading || error != null) emptyList() else list
-                // the cards rise in when they first appear
-                if (showing.isNotEmpty() && !cardsShown) { cardsShown = true; sb.formatList.scheduleLayoutAnimation() }
-                cards.submit(showing)
-            } else if (sb.formatList.adapter !== adapter) {
-                sb.formatList.layoutManager = linear
-                sb.formatList.adapter = adapter
-            }
-            val selChoice = (quick + all).firstOrNull { it.spec == selectedSpec }
-            sb.selectedLabel.text = when {
-                selChoice != null -> shortLabel(selChoice) + if (tabKind == KIND_VIDEO && selectedSub != null) "  •  CC" else ""
-                loading || waiting > 0 -> "Getting sizes…"
-                else -> "Nothing selected"
-            }
-
-            val rows: List<FormatRow> = when (mode) {
-                MODE_SUBS -> {
-                    val list = mutableListOf<FormatRow>()
-                    list += FormatRow.Choice(FormatChoice("", "None", kind = KIND_NONE), selectedSub == null, false)
-                    subs.forEach {
-                        list += FormatRow.Choice(FormatChoice(it.code, it.label, kind = KIND_NONE), selectedSub == it.code, false)
-                    }
-                    list
-                }
-                MODE_ALL -> {
-                    val list = group(all, true).toMutableList()
-                    if (subs.isNotEmpty() && tabKind == KIND_VIDEO) {
-                        val label = subs.firstOrNull { it.code == selectedSub }?.label ?: "Off"
-                        list += FormatRow.Nav("subs", "Subtitles/CC", label, R.drawable.ic_cc)
-                    }
-                    list
-                }
-                else -> emptyList()
-            }
-            if (mode != MODE_QUICK) adapter.submitList(rows)
-            // only formats that are really shown can be downloaded
-            sb.downloadBtn.isEnabled = selectedSpec != null && (quick + all).any { it.spec == selectedSpec }
-            sb.downloadBtn.alpha = if (sb.downloadBtn.isEnabled) 1f else 0.5f
-
-            val fraction = if (mode == MODE_QUICK) 0.72 else 0.9
-            sb.root.minimumHeight = (screenH * fraction).toInt()
-        }
-
-        renderNow = { render() }
-        choiceAction = { c ->
-            if (mode == MODE_SUBS) {
-                selectedSub = c.spec.ifEmpty { null }
-                mode = MODE_ALL
-            } else {
-                select(c.spec)
-            }
-            render()
-        }
-        // switching Video / Audio: the other cards rise in
-        sb.tabVideo.setOnClickListener { if (tabKind != KIND_VIDEO) { tabKind = KIND_VIDEO; sb.formatList.scheduleLayoutAnimation(); render() } }
-        sb.tabAudio.setOnClickListener { if (tabKind != KIND_AUDIO) { tabKind = KIND_AUDIO; sb.formatList.scheduleLayoutAnimation(); render() } }
-        navAction = { id ->
-            mode = if (id == "all") MODE_ALL else MODE_SUBS
-            render()
-        }
-        sb.backBtn.setOnClickListener {
-            mode = if (mode == MODE_SUBS) MODE_ALL else MODE_QUICK
-            render()
-        }
-        sb.retryBtn.setOnClickListener {
-            when {
-                !single -> { found.clear(); lookUp(sampleUrls) }
-                current?.playlist?.isNotEmpty() == true -> { found.clear(); sampled = emptyList() }
-                else -> vm.fetchInfo(firstUrl, cookies[firstUrl])
-            }
-            render()
-        }
-        sb.playlistBtn.setOnClickListener {
-            val id = Uri.parse(firstUrl).getQueryParameter("list").orEmpty()
-            vm.fetchInfo("https://www.youtube.com/playlist?list=$id", cookies[firstUrl], forcePlaylist = true)
-        }
-
-        sb.downloadBtn.setOnClickListener {
-            val spec = selectedSpecNow() ?: return@setOnClickListener
-            val p = current
-            val sub = if (spec.startsWith("video")) selectedSub else null
-            val items = when {
-                !single -> urls.map { EnqueueItem(it, found[it]?.title.orEmpty(), cookies[it], found[it]?.thumbUrl ?: youtubeThumb(it)) }
-                p != null && p.playlist.isNotEmpty() ->
-                    p.playlist.map { EnqueueItem(it.url, it.title, cookies[firstUrl], it.thumbUrl) }
-                // never save a status text like "Connecting…" as the title (blank = looked up by the service)
-                else -> listOf(
-                    EnqueueItem(firstUrl, p?.takeIf { !it.loading }?.title ?: knownTitle.orEmpty(), cookies[firstUrl], youtubeThumb(firstUrl))
-                )
-            }
-            vm.enqueue(items, spec, sub)
-            sb.downloadBtn.isEnabled = false                 // (one tap: the ticket is being torn off)
-            // (no battery question: downloads run as a foreground service with a notification, which
-            // Android keeps running; the optional setting is in Settings for phones that still stop them)
-            val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
-            DlCardAdapter.tear(sb.formatList) {
-                if (isFinishing || isDestroyed) return@tear
-                dialog.dismiss()
-                if (onAdded != null) { onAdded(what); return@tear }
-                Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
-                    .setAnchorView(snackAnchor())
-                    .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
-                    .show()
-            }
-        }
-
-        var collectJob: Job? = null
-        if (!single) lookUp(sampleUrls)
-        if (single) {
-            vm.fetchInfo(firstUrl, cookies[firstUrl])
-            collectJob = lifecycleScope.launch {
-                vm.preview.collect { current = it; render() }
-            }
-        }
-        render()
-
-        dialog.setOnDismissListener {
-            collectJob?.cancel()
-            lookups?.cancel()
-            // A newer sheet may already be open (dismiss runs later): only clean up our own
-            if (sheet === dialog) {
-                sheet = null
-                vm.clearPreview()
-            }
-        }
-        dialog.show()
-    }
-
-    // =====================================================================
-    // Play tab (downloaded + downloading)
-    // =====================================================================
-
-    private fun setupPlay() {
-        // both sections in one recycling list: only the rows on screen are made, however many downloads there are
-        pl.playList.layoutManager = LinearLayoutManager(this)
-        (pl.playList.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
-        pl.playList.adapter = androidx.recyclerview.widget.ConcatAdapter(collectionHeader, activeHeader, activeAdapter, doneHeader, doneAdapter)
-        pl.shelfList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        pl.shelfList.adapter = shelf
-        pl.shelfList.isNestedScrollingEnabled = false
-
-        pl.emptySearchBtn.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_home }
-        pl.selectActiveBtn.setOnClickListener { selectAll(done = false) }
-        pl.selectDoneBtn.setOnClickListener { selectAll(done = true) }
-        pl.removeAllBtn.setOnClickListener { removeAllDone() }
-        pl.deleteAllBtn.setOnClickListener { deleteAllDone() }
-        pl.clearFailedBtn.setOnClickListener {
-            TaskRepository.removeFailed()
-            message("Removed failed downloads")
-        }
-
-        // selection bar
-        pl.closeSelBtn.setOnClickListener { exitSelection() }
-        pl.selAllBtn.setOnClickListener { toggleSelectAll() }
-        pl.actPause.setOnClickListener { pauseSelected() }
-        pl.actResume.setOnClickListener { resumeSelected() }
-        pl.actCancel.setOnClickListener { cancelSelected() }
-        pl.actRemove.setOnClickListener { removeSelected() }
-        pl.actDelete.setOnClickListener { deleteSelected() }
-    }
-
-    /** Library chips: Downloads shows the download manager, the others show your files. */
-    private fun onLibraryMode() {
-        if (selecting) exitSelection()
-        pl.emptyState.isVisible = latestTasks.isEmpty() && library.showingDownloads
-        pl.playScroll.isVisible = latestTasks.isNotEmpty() && library.showingDownloads
-    }
-
-    private fun renderTasks(all: List<DownloadTask>) {
-        latestTasks = all
-        val active = all.filter { it.status != Status.DONE }
-        val done = all.filter { it.status == Status.DONE }
-
-        // forget selected items that no longer exist
-        val before = selected.size
-        selected.retainAll(all.map { it.id }.toSet())
-        val selectionChanged = before != selected.size || (selecting && selected.isEmpty())
-        if (selecting && selected.isEmpty()) selecting = false
-
-        pl.emptyState.isVisible = all.isEmpty() && library.showingDownloads
-        pl.playScroll.isVisible = all.isNotEmpty() && library.showingDownloads
-        library.onTasks(all)
-        checkUpdateReady(all)
-        renderUpdatePill(all)
-        countForRating(done)
-
-        renderCollection(done)
-        activeHeader.visible = active.isNotEmpty()
-        pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
-        pl.activeTitle.text = "Downloading (${active.size})"
-        // Downloading now always on top, then the queue in the order it will download
-        // (oldest first, like the service), then paused and failed ones
-        val order = HashMap<String, Int>(all.size).apply { all.forEachIndexed { i, t -> put(t.id, all.size - i) } }
-        val newActive = active.sortedWith(
-            compareBy<DownloadTask> {
-                when (it.status) {
-                    Status.RUNNING -> 0
-                    Status.WAITING -> 1
-                    Status.QUEUED -> 2
-                    Status.PAUSED -> 3
-                    else -> 4
-                }
-            }.thenBy { order[it.id] ?: 0 }
-        )
-        val topChanged = newActive.firstOrNull()?.id != activeAdapter.currentList.firstOrNull()?.id
-        // show the new top download, unless you scrolled far down to look at something else
-        val nearTop = pl.playList.computeVerticalScrollOffset() < resources.displayMetrics.heightPixels / 2
-        activeAdapter.submitList(newActive) { if (topChanged && nearTop) pl.playList.scrollToPosition(0) }
-
-        doneHeader.visible = done.isNotEmpty()
-        pl.doneTitle.text = "Downloaded (${done.size})"
-        doneAdapter.submitList(done.sortedByDescending { it.createdAt })      // newest download first
-
-        val badge = b.bottomNav.getOrCreateBadge(R.id.nav_downloads)
-        badge.isVisible = active.isNotEmpty()
-        badge.number = active.size
-
-        if (selectionChanged) refreshSelectionUi() else updateSelectionBar()
-    }
-
-    // ----- multi-select -----
-
-    private fun startSelect(t: DownloadTask) {
-        selecting = true
-        selected.clear()
-        selected += t.id
-        refreshSelectionUi()
-    }
-
-    private fun toggleSelect(t: DownloadTask) {
-        if (!selected.add(t.id)) selected.remove(t.id)
-        if (selected.isEmpty()) selecting = false
-        refreshSelectionUi()
-    }
-
-    private fun toggleSelectAll() {
-        val all = latestTasks.map { it.id }
-        if (all.isEmpty() || selected.size == all.size) {
-            exitSelection()
-            return
-        }
-        selected.clear()
-        selected += all
-        selecting = true
-        refreshSelectionUi()
-    }
-
-    private fun exitSelection() {
-        selecting = false
-        selected.clear()
-        refreshSelectionUi()
-    }
-
-    private fun refreshSelectionUi() {
-        activeAdapter.setSelection(selecting, selected)
-        doneAdapter.setSelection(selecting, selected)
-        updateSelectionBar()
-        updateBack()
-    }
-
-    private fun updateSelectionBar() {
-        val wasSelecting = pl.selectionActions.isVisible
-        pl.selectionBar.isVisible = selecting
-        pl.selectionActions.isVisible = selecting
-        if (wasSelecting != selecting && b.miniPlayer.root.isVisible) pl.selectionActions.post { placeMiniPlayer() }    // move above / back
-        pl.selectionCount.text = "${selected.size} selected"
-        if (!selecting) return
-
-        // only show the actions that apply to what is selected
-        val sel = selectedTasks()
-        pl.actPause.isVisible = sel.any {
-            it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING
-        }
-        pl.actResume.isVisible = sel.any { it.status == Status.PAUSED || it.status == Status.FAILED }
-        pl.actCancel.isVisible = sel.any { it.status != Status.DONE }
-        pl.actRemove.isVisible = sel.any { it.status == Status.DONE }
-        pl.actDelete.isVisible = sel.any { it.status == Status.DONE }
-    }
-
-    private fun selectedTasks() = latestTasks.filter { it.id in selected }
-
-    private fun pauseSelected() {
-        val ids = selectedTasks().filter {
-            it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING
-        }.map { it.id }
-        if (ids.isEmpty()) message("Nothing to pause")
-        else DownloadService.send(this, DownloadService.ACTION_PAUSE_SEL, ids = ids.toTypedArray())
-        exitSelection()
-    }
-
-    private fun resumeSelected() {
-        val ids = selectedTasks().filter {
-            it.status == Status.PAUSED || it.status == Status.FAILED
-        }.map { it.id }
-        if (ids.isEmpty()) message("Nothing to resume")
-        else DownloadService.send(this, DownloadService.ACTION_RESUME_SEL, ids = ids.toTypedArray())
-        exitSelection()
-    }
-
-    /** Cancel: only for unfinished downloads (stops them and deletes partial files). */
-    private fun cancelSelected() {
-        val ids = selectedTasks().filter { it.status != Status.DONE }.map { it.id }
-        if (ids.isEmpty()) return
-        confirm("Cancel ${ids.size} download(s)?", "Partial files will be deleted.") {
-            DownloadService.send(this, DownloadService.ACTION_CANCEL_SEL, ids = ids.toTypedArray())
-            exitSelection()
-        }
-    }
-
-    /** Remove: finished items leave the list, the files stay in Downloads. */
-    private fun removeSelected() {
-        val ids = selectedTasks().filter { it.status == Status.DONE }.map { it.id }
-        if (ids.isEmpty()) return
-        TaskRepository.removeMany(ids)
-        exitSelection()
-        message("Removed ${ids.size} from the list")
-    }
-
-    /** Delete: finished items are removed from the list and their files deleted. */
-    private fun deleteSelected() {
-        val done = selectedTasks().filter { it.status == Status.DONE }
-        if (done.isEmpty()) return
-        confirm("Delete ${done.size} file(s)?", "They will be removed from your phone.") {
-            deleteFilesOf(done)
-            exitSelection()
-        }
-    }
-
-    private fun removeAllDone() {
-        val n = latestTasks.count { it.status == Status.DONE }
-        if (n == 0) return
-        confirm("Remove $n items from the list?", "The files stay in your Downloads folder.") {
-            TaskRepository.removeDone()
-        }
-    }
-
-    private fun deleteAllDone() {
-        val done = latestTasks.filter { it.status == Status.DONE }
-        if (done.isEmpty()) return
-        confirm("Delete all ${done.size} files?", "They will be removed from your phone.") {
-            deleteFilesOf(done)
-        }
-    }
-
-    /** Deletes the files (off the main thread); only rows whose file is really gone leave the list. */
-    private fun deleteFilesOf(tasks: List<DownloadTask>) {
-        val app = applicationContext
-        lifecycleScope.launch {
-            val gone = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                tasks.filter { t ->
-                    val uri = t.fileUri ?: return@filter true
-                    // the app's update is a file in the app's own folder, not in Downloads
-                    if (t.format.startsWith(AppUpdater.TASK_PREFIX)) java.io.File(uri).let { !it.exists() || it.delete() }
-                    else FileStore.delete(app, uri)
-                }.map { it.id }
-            }
-            TaskRepository.removeMany(gone)
-            val failed = tasks.size - gone.size
-            message(
-                if (failed == 0) (if (gone.size == 1) "File deleted" else "Deleted ${gone.size} files")
-                else "$failed file(s) couldn't be deleted. Use \"Remove from list\", or delete them in your Downloads folder"
-            )
-        }
-    }
-
-    /** Selects every unfinished (done = false) or finished (done = true) item. */
-    private fun selectAll(done: Boolean) {
-        val ids = latestTasks.filter { (it.status == Status.DONE) == done }.map { it.id }
-        if (ids.isEmpty()) return
-        selected.clear()
-        selected += ids
-        selecting = true
-        refreshSelectionUi()
-    }
-
-    private fun confirm(title: String, text: String, onYes: () -> Unit) {
-        RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
-            .setTitle(title)
-            .setMessage(text)
-            .setPositiveButton("Yes") { _, _ -> onYes() }
-            .setNegativeButton("No", null)
-            .show()
-    }
-
-    private fun onTaskAction(t: DownloadTask) {
-        when (t.status) {
-            Status.RUNNING, Status.QUEUED, Status.WAITING ->
-                DownloadService.send(this, DownloadService.ACTION_PAUSE, t.id)
-            Status.PAUSED, Status.FAILED ->
-                DownloadService.send(this, DownloadService.ACTION_RESUME, t.id)
-            Status.DONE -> if (t.format.startsWith(AppUpdater.TASK_PREFIX)) installUpdate(t) else openFile(t)
-        }
-    }
-
-    private fun installUpdate(t: DownloadTask) {
-        val path = t.fileUri ?: return
-        AppUpdater.installDownloaded(this, java.io.File(path), t.format.removePrefix(AppUpdater.TASK_PREFIX))
-    }
-
     /** Downloads that finished while the app is open (the ones already done at start don't count). */
-    private var doneSeen: HashSet<String>? = null
-
-    private fun countForRating(done: List<DownloadTask>) {
-        val ids = done.filter { !it.format.startsWith(AppUpdater.TASK_PREFIX) }.map { it.id }
-        val seen = doneSeen ?: run { doneSeen = HashSet(ids); return }
-        val fresh = ids.count { seen.add(it) }
-        if (fresh > 0) AppShare.onDownloadsDone(this, fresh, lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
-    }
-
-    /** A finished update that is already installed (or was refused) is cleaned away; the pill shows the rest. */
-    private fun checkUpdateReady(all: List<DownloadTask>) {
-        val t = all.firstOrNull { it.format.startsWith(AppUpdater.TASK_PREFIX) && it.status == Status.DONE } ?: return
-        val version = t.format.removePrefix(AppUpdater.TASK_PREFIX)
-        if (!AppUpdater.isNewer(this, version) || version == AppPrefs.badRelease(this)) {
-            // already installed: the finished update row and its file are not needed any more
-            t.fileUri?.let { java.io.File(it).delete() }
-            TaskRepository.remove(t.id)
-        }
-    }
+    internal var doneSeen: HashSet<String>? = null
 
     /** True in full screen (video, music): the update pill waits. */
-    private var pillHidden = false
+    internal var pillHidden = false
 
-    /**
-     * The update pill above the bottom bar: the new version downloads by itself ("v12.3 · 72%"), then
-     * "v12.3 READY" with INSTALL. Paused or failed: CONTINUE / RETRY. Nothing to show: hidden.
-     */
-    private fun renderUpdatePill(all: List<DownloadTask>) {
-        val pill = b.updatePill
-        val t = all.firstOrNull {
-            it.format.startsWith(AppUpdater.TASK_PREFIX) &&
-                it.format.removePrefix(AppUpdater.TASK_PREFIX).let { v -> AppUpdater.isNewer(this, v) && v != AppPrefs.badRelease(this) }
-        }
-        if (t == null || pillHidden) { pill.isVisible = false; return }
-        val v = t.format.removePrefix(AppUpdater.TASK_PREFIX)
-        val done = t.status == Status.DONE
-        b.updateDot.isVisible = done
-        b.updateRing.isVisible = !done
-        when (t.status) {
-            Status.DONE -> {
-                b.updateTitle.text = "v$v READY"
-                b.updateSub.text = "Tap Install to update"
-                b.updateAction.text = "Install"
-            }
-            Status.PAUSED, Status.FAILED -> {
-                b.updateRing.isIndeterminate = false
-                b.updateRing.setProgressCompat(t.progress.coerceIn(0, 100), false)
-                b.updateTitle.text = "v$v · ${t.progress.coerceIn(0, 100)}%"
-                b.updateSub.text = if (t.status == Status.FAILED) "Couldn't get the update" else "Update paused"
-                b.updateAction.text = if (t.status == Status.FAILED) "Retry" else "Continue"
-            }
-            else -> {
-                val known = t.progress in 1..100
-                if (b.updateRing.isIndeterminate != !known) {
-                    b.updateRing.visibility = View.INVISIBLE                  // (the indicator can't switch while shown)
-                    b.updateRing.isIndeterminate = !known
-                    b.updateRing.visibility = View.VISIBLE
-                }
-                if (known) b.updateRing.setProgressCompat(t.progress, true)
-                b.updateTitle.text = if (known) "v$v · ${t.progress}%" else "v$v"
-                b.updateSub.text = when (t.status) {
-                    Status.WAITING -> t.message.ifBlank { "Waiting for the internet" }
-                    Status.QUEUED -> "Update queued…"
-                    else -> "Getting the update…"
-                }
-                b.updateAction.text = "Install"
-            }
-        }
-        val actionOn = done || t.status == Status.PAUSED || t.status == Status.FAILED
-        b.updateAction.alpha = if (actionOn) 1f else 0.35f
-        val act = {
-            when (t.status) {
-                Status.DONE -> installUpdate(t)
-                Status.PAUSED, Status.FAILED -> DownloadService.send(this, DownloadService.ACTION_RESUME, t.id)
-                else -> message("The update is still downloading. Install shows when it's ready")
-            }
-        }
-        b.updateAction.setOnClickListener { act() }
-        pill.setOnClickListener { act() }
-        pill.contentDescription = "${b.updateTitle.text}. ${b.updateSub.text}"
-        if (!pill.isVisible) {
-            pill.isVisible = true
-            Motion.popIn(pill)
-        }
-    }
-
-    /** Hides a finished download in the Private folder (set it up first if needed). */
-    private fun moveToPrivate(t: DownloadTask) {
-        if (!PrivateVault.hasLock(this)) {
-            RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
-                .setTitle("Set up Private folder")
-                .setMessage("Choose a PIN, pattern or password first. Then tap “Move to Private folder” again.")
-                .setPositiveButton("Set up") { _, _ -> PrivateActivity.open(this) }
-                .setNegativeButton("Cancel", null)
-                .show()
-            return
-        }
-        message("Moving to Private folder…")
-        lifecycleScope.launch {
-            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { PrivateVault.moveIn(this@MainActivity, t) }.isSuccess }
-            message(if (ok) "Moved to Private folder" else "Couldn't move this file")
-        }
-    }
-
-    private fun onTaskClose(t: DownloadTask, anchor: View) {
-        if (t.status != Status.DONE) {
-            // with some progress, ask first: cancelling deletes what was downloaded
-            if (t.progress > 0) {
-                confirm("Cancel download?", "\"${t.title.ifBlank { "This download" }}\" stops and its downloaded part is deleted.") {
-                    DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
-                }
-            } else DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
-            return
-        }
-        if (t.format.startsWith(AppUpdater.TASK_PREFIX)) {
-            val menu = PopupMenu(this, anchor)
-            menu.menu.add(0, 1, 0, "Install")
-            menu.menu.add(0, 2, 1, "Delete")
-            menu.setOnMenuItemClickListener { item ->
-                if (item.itemId == 1) installUpdate(t) else deleteFilesOf(listOf(t))
-                true
-            }
-            menu.show()
-            return
-        }
-        val popup = PopupMenu(this, anchor)
-        popup.menu.add(0, 1, 0, "Play")
-        popup.menu.add(0, 6, 1, "Open with another app")
-        popup.menu.add(0, 2, 1, "Share")
-        popup.menu.add(0, 3, 2, "Copy link")
-        popup.menu.add(0, 7, 3, "Move to Private folder")
-        popup.menu.add(0, 4, 3, "Remove from list")
-        popup.menu.add(0, 5, 4, "Delete file")
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> openFile(t)
-                2 -> shareFile(t)
-                6 -> openWithOtherApp(t)
-                3 -> {
-                    val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    AppPrefs.setClipSeen(this, t.url)
-                    cm.setPrimaryClip(ClipData.newPlainText("link", t.url))
-                    message("Link copied")
-                }
-                4 -> TaskRepository.remove(t.id)
-                5 -> confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") { deleteFilesOf(listOf(t)) }
-                7 -> moveToPrivate(t)
-            }
-            true
-        }
-        popup.show()
-    }
-
-    /** YouTube thumbnail address from the video id (no lookup needed). */
-    private fun youtubeThumb(url: String): String? =
-        if (!FastExtractor.supports(url)) null else Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1)
-            ?.let { "https://i.ytimg.com/vi/$it/mqdefault.jpg" }
-
-    /** You page: the storage strip and the shelf of the newest downloads (updated when the finished list changes). */
-    private fun renderCollection(done: List<DownloadTask>) {
-        val playable = done.filter { it.fileUri != null && isPlayable(it) && !it.format.startsWith(AppUpdater.TASK_PREFIX) }
-        collectionHeader.visible = playable.isNotEmpty()
-        if (playable.isEmpty()) return
-        shelf.submit(playable.sortedByDescending { it.createdAt }.take(12))
-        val key = playable.joinToString(",") { it.id }
-        if (key == meterKey) return
-        meterKey = key
-        lifecycleScope.launch {
-            val u = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { StorageMeter.measure(applicationContext, playable) }
-            if (isFinishing || isDestroyed) return@launch
-            val all = (u.videoBytes + u.audioBytes + u.freeBytes).coerceAtLeast(1L)
-            fun weight(v: View, bytes: Long) {
-                (v.layoutParams as LinearLayout.LayoutParams).weight = bytes.toFloat() / all
-            }
-            weight(pl.meterVideo, u.videoBytes)
-            weight(pl.meterAudio, u.audioBytes)
-            weight(pl.meterFree, u.freeBytes)
-            pl.meterBar.requestLayout()
-            pl.meterTotal.text = "${StorageMeter.short(u.videoBytes + u.audioBytes)} USED"
-            pl.meterText.text = "Videos ${StorageMeter.short(u.videoBytes)}  ·  MP3 ${StorageMeter.short(u.audioBytes)}  ·  Free ${StorageMeter.short(u.freeBytes)}"
-            pl.meterBar.contentDescription = pl.meterText.text
-        }
-    }
-
-    private fun isPlayable(t: DownloadTask): Boolean {
-        val m = t.mime.orEmpty()
-        if (m.startsWith("video/") || m.startsWith("audio/")) return true
-        val name = (t.title + " " + t.fileUri.orEmpty()).lowercase()
-        return t.isAudio || listOf(".mp4", ".mkv", ".webm", ".mov", ".m4a", ".mp3", ".opus", ".ogg").any { name.contains(it) }
-    }
-
-    /** Finished videos and music always open in the RAINAX player (with the other downloads as a playlist). */
-    private fun openFile(t: DownloadTask) {
-        val uri = t.fileUri ?: return
-        if (isPlayable(t)) {
-            controller?.pause()                         // one thing plays at a time
-            val list = TaskRepository.tasks.value.filter { it.status == Status.DONE && it.fileUri != null && isPlayable(it) }
-            val index = list.indexOfFirst { it.id == t.id }.coerceAtLeast(0)
-            try {
-                if (list.isEmpty()) PlayerActivity.open(this, listOf(uri), listOf(t.title), 0)
-                else PlayerActivity.open(this, list.map { it.fileUri!! }, list.map { it.title }, index)
-                return
-            } catch (e: Exception) { /* fall back to another app */ }
-        }
-        openWithOtherApp(t)
-    }
-
-    private fun openWithOtherApp(t: DownloadTask) {
-        val uri = t.fileUri ?: return
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(Uri.parse(uri), t.mime ?: "*/*")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Notify.show(this, "Can't open this file")
-        }
-    }
-
-    private fun shareFile(t: DownloadTask) {
-        val uri = t.fileUri ?: return
-        val send = Intent(Intent.ACTION_SEND)
-            .setType(t.mime ?: "*/*")
-            .putExtra(Intent.EXTRA_STREAM, Uri.parse(uri))
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        try {
-            startActivity(Intent.createChooser(send, "Share"))
-        } catch (e: Exception) {
-            Notify.show(this, "Can't share this file")
-        }
-    }
-
-    // =====================================================================
-    // Settings tab
-    // =====================================================================
-
-    private fun setupSettings() {
-        st.wifiSwitch.isChecked = AppPrefs.wifiOnly(this)
-        st.wifiSwitch.setOnCheckedChangeListener { _, on ->
-            AppPrefs.setWifiOnly(this, on)
-            nudgeService()
-        }
-        st.themeGroup.check(
-            when (AppPrefs.themeMode(this)) {
-                1 -> R.id.themeLight
-                2 -> R.id.themeDark
-                3 -> R.id.themeAmoled
-                else -> R.id.themeSystem
-            }
-        )
-        st.themeGroup.setOnCheckedStateChangeListener { _, ids ->
-            val mode = when (ids.firstOrNull()) {
-                R.id.themeLight -> 1
-                R.id.themeDark -> 2
-                R.id.themeAmoled -> 3
-                else -> 0
-            }
-            val old = AppPrefs.themeMode(this)
-            if (mode != old) {
-                AppPrefs.setThemeMode(this, mode)
-                RainaxApp.applyTheme(mode)      // recreates the screen with the new colours
-                // Dark <-> AMOLED keeps night mode, so rebuild the screen ourselves
-                if (old == 3 || mode == 3) window.decorView.post { if (!isDestroyed) recreate() }
-            }
-        }
-
-        st.accentGroup.check(
-            when (AppPrefs.accent(this)) {
-                1 -> R.id.accentGold
-                2 -> R.id.accentTeal
-                3 -> R.id.accentPurple
-                else -> R.id.accentRed
-            }
-        )
-        st.accentGroup.setOnCheckedStateChangeListener { _, ids ->
-            val v = when (ids.firstOrNull()) {
-                R.id.accentGold -> 1
-                R.id.accentTeal -> 2
-                R.id.accentPurple -> 3
-                else -> 0
-            }
-            if (v != AppPrefs.accent(this)) {
-                AppPrefs.setAccent(this, v)
-                window.decorView.post { if (!isDestroyed) recreate() }      // every screen in the new colour
-            }
-        }
-
-        st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
-        st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
-        st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
-        st.bgPlaySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setBackgroundPlay(this, on) }
-        st.sponsorSwitch.isChecked = AppPrefs.sponsorBlock(this)
-        st.sponsorSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setSponsorBlock(this, on) }
-        st.resumeSwitch.isChecked = AppPrefs.resumeVideos(this)
-        st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
-        st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
-        st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
-        st.openingSwitch.isChecked = AppPrefs.openingTitle(this)
-        st.openingSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setOpeningTitle(this, on) }
-        // the whole row is tappable (ripple + a slight press), not only the small switch
-        listOf(st.wifiSwitch, st.autoClearSwitch, st.bgPlaySwitch, st.sponsorSwitch, st.resumeSwitch, st.clipSwitch, st.autoRetrySwitch, st.openingSwitch)
-            .forEach { sw ->
-                val row = sw.parent as? View ?: return@forEach
-                val tv = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
-                row.setBackgroundResource(tv.resourceId)
-                row.stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(this, R.animator.rx_press)
-                row.setOnClickListener { sw.toggle() }
-            }
-        st.batteryBtn.setOnClickListener { openBatterySettings() }
-        st.checkAppUpdateBtn.setOnClickListener { AppUpdater.check(this, manual = true) }
-        st.allFilesBtn.setOnClickListener { openAllFilesSettings(thenInstallAsk = false) }
-        st.privateFolderBtn.setOnClickListener { PrivateActivity.open(this) }
-        st.clearSearchBtn.setOnClickListener {
-            RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
-                .setTitle("Clear search history?")
-                .setMessage("Your recent searches will be removed from this phone.")
-                .setPositiveButton("Clear") { _, _ ->
-                    AppPrefs.clearSearchHistory(this)
-                    Notify.show(this, "Search history cleared")
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-        st.clearWatchBtn.setOnClickListener { askClearWatchHistory() }
-        st.historyPauseSwitch.isChecked = AppPrefs.historyPaused(this)
-        st.historyPauseSwitch.setOnCheckedChangeListener { _, on ->
-            AppPrefs.setHistoryPaused(this, on)
-            message(if (on) "Watch history paused" else "Watch history is on")
-        }
-        (st.historyPauseSwitch.parent as? View)?.setOnClickListener { st.historyPauseSwitch.toggle() }
-        st.unhideBtn.setOnClickListener {
-            val n = HiddenFeed.count()
-            HiddenFeed.clear(this)
-            message(if (n > 0) "Hidden videos and channels can show again" else "Nothing is hidden")
-        }
-        st.rateAppBtn.setOnClickListener { AppShare.rate(this) }
-        st.shareAppBtn.setOnClickListener { AppShare.share(this) }
-
-        st.autoClearSwitch.isChecked = AppPrefs.autoClear(this)
-        st.autoClearSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoClear(this, on) }
-
-        st.parallelGroup.check(
-            when (AppPrefs.maxParallel(this)) {
-                1 -> R.id.par1
-                3 -> R.id.par3
-                4 -> R.id.par4
-                else -> R.id.par2
-            }
-        )
-        st.autoplayGroup.check(
-            when (AppPrefs.feedAutoplay(this)) {
-                0 -> R.id.autoplayOff
-                1 -> R.id.autoplayWifi
-                else -> R.id.autoplayAlways
-            }
-        )
-        st.autoplayGroup.setOnCheckedStateChangeListener { _, ids ->
-            AppPrefs.setFeedAutoplay(this, when (ids.firstOrNull()) { R.id.autoplayOff -> 0; R.id.autoplayWifi -> 1; else -> 2 })
-            FeedAutoplay.refresh()
-        }
-        st.parallelGroup.setOnCheckedStateChangeListener { _, ids ->
-            val n = when (ids.firstOrNull()) {
-                R.id.par1 -> 1
-                R.id.par3 -> 3
-                R.id.par4 -> 4
-                else -> 2
-            }
-            AppPrefs.setMaxParallel(this, n)
-            nudgeService()
-        }
-
-        renderFolder()
-        val version = try {
-            packageManager.getPackageInfo(packageName, 0).versionName
-        } catch (e: Exception) {
-            ""
-        }
-        st.versionText.text = "RAINAX Tube  v$version"
-    }
-
-    private fun renderFolder() {
-        st.folderPath.text = FileStore.describe(this)
-        st.allFilesBtn.isVisible = needsAllFiles()
-        val mp3 = AppPrefs.lastMp3Report(this)
-        st.mp3Report.isVisible = mp3.isNotBlank()
-        st.mp3Report.text = "Last MP3: $mp3"
-    }
-
-    private fun nudgeService() {
-        val needs = TaskRepository.tasks.value.any {
-            it.status == Status.QUEUED || it.status == Status.WAITING || it.status == Status.RUNNING
-        }
-        if (needs) DownloadService.send(this, DownloadService.ACTION_PUMP)
-    }
+    internal var pillPadded = false
 
     // =====================================================================
     // Helpers
     // =====================================================================
 
     /** Messages sit above the ad banner (never over it) or above the bottom bar. */
-    private fun snackAnchor(): View = b.navCard
+    internal fun snackAnchor(): View = b.navCard
 
-    private fun message(text: String) {
+    internal fun message(text: String) {
         Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(snackAnchor()).show()
     }
 
     // ----- first run: storage access, then permission to install updates -----
 
-    private var permDialog: AlertDialog? = null
+    internal var permDialog: AlertDialog? = null
 
-    private val storagePermission =
+    internal val storagePermission =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             // Android 11+: then All files access (WhatsApp statuses), then the updates question
             if (needsAllFiles()) openAllFilesSettings(thenInstallAsk = true) else askInstallUpdates()
         }
     /** Android 10: storage asked from the status saver. */
-    private val legacyStoragePermission =
+    internal val legacyStoragePermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh() }
     /** Came back from the All files access screen: ask about updates next (first start only). */
-    private var installAskAfterSettings = false
+    internal var installAskAfterSettings = false
 
-    private fun needsAllFiles() = Build.VERSION.SDK_INT >= 30 && !android.os.Environment.isExternalStorageManager()
+    internal fun needsAllFiles() = Build.VERSION.SDK_INT >= 30 && !android.os.Environment.isExternalStorageManager()
 
-    private fun openAllFilesSettings(thenInstallAsk: Boolean) {
+    internal fun openAllFilesSettings(thenInstallAsk: Boolean) {
         installAskAfterSettings = thenInstallAsk
         val opened = runCatching {
             startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName")))
@@ -2559,13 +1312,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** File access for the status saver (and your files): All files access on Android 11+, storage on Android 10. */
-    private fun requestFileAccess(thenInstallAsk: Boolean) {
+    internal fun requestFileAccess(thenInstallAsk: Boolean) {
         if (Build.VERSION.SDK_INT >= 30) openAllFilesSettings(thenInstallAsk)
         else legacyStoragePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)     // (includes reading)
     }
 
     /** Pop-up 1: storage (with notifications on Android 13+, for download progress). */
-    private fun askStorage() {
+    internal fun askStorage() {
         if (isFinishing || isDestroyed) return
         // Android 11+: "All files access" covers saving and reading everything (no "Photos and videos" question);
         // Android 13+ also asks for notifications (download progress). Android 10: the storage permission.
@@ -2594,7 +1347,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Pop-up 2: allow installing RAINAX updates (Android asks once per app). */
-    private fun askInstallUpdates() {
+    internal fun askInstallUpdates() {
         if (isFinishing || isDestroyed) return
         AppPrefs.setFirstRunAsked(this)
         if (packageManager.canRequestPackageInstalls()) return
@@ -2613,7 +1366,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun requestNotificationPermission() {
+    internal fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
@@ -2627,7 +1380,7 @@ class MainActivity : AppCompatActivity() {
      * Settings > "Downloads stop with the screen off?": only for phones (some Xiaomi, Oppo, Vivo, Samsung)
      * whose battery saver closes apps even with a download notification. Never asked by itself.
      */
-    private fun openBatterySettings() {
+    internal fun openBatterySettings() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) {
             message("Already allowed: downloads keep going with the screen off")
@@ -2641,10 +1394,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val MODE_QUICK = 0
-        private const val MODE_ALL = 1
-        private const val MODE_SUBS = 2
+        internal const val MODE_QUICK = 0
+        internal const val MODE_ALL = 1
+        internal const val MODE_SUBS = 2
         /** Most links taken from one shared or pasted text. */
-        private const val MAX_SHARED_LINKS = 1000
+        internal const val MAX_SHARED_LINKS = 1000
     }
 }

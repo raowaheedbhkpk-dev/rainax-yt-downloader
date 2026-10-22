@@ -72,6 +72,12 @@ class VideoScreen(
         }
         vb.videoList.adapter = related
         vb.videoList.addOnItemTouchListener(cinemaTouch)
+        // reading the description or comments: the lights stay on; back at the top they may go down again
+        vb.videoList.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(rv: androidx.recyclerview.widget.RecyclerView, state: Int) {
+                if (state == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) wakeCinema()
+            }
+        })
         vb.videoClose.setOnClickListener { minimize() }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
         header.vDownload.setOnClickListener { url?.let { download(it, currentTitle(), false) } }
@@ -165,7 +171,7 @@ class VideoScreen(
         val head = android.widget.TextView(act).apply {
             text = "Mix - " + d.title
             setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
-            textSize = 18f
+            textSize = 20f
             setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
@@ -174,7 +180,7 @@ class VideoScreen(
         val sub = android.widget.TextView(act).apply {
             text = "Mixes are playlists made for you"
             setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text2))
-            textSize = 13f
+            textSize = 14f
             setPadding((18 * dp).toInt(), 0, (18 * dp).toInt(), (10 * dp).toInt())
         }
         val list = androidx.recyclerview.widget.RecyclerView(act)
@@ -352,6 +358,8 @@ class VideoScreen(
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) showPlaceholder(false)
             if (isPlaying) wakeCinema() else lightsOn()
+            vb.root.removeCallbacks(chapterTick)
+            if (isPlaying) chapterTick.run()
         }
 
         override fun onRenderedFirstFrame() = showPlaceholder(false)
@@ -671,54 +679,58 @@ class VideoScreen(
     private fun fillChapterStrip(d: VideoDetails) {
         val box = header.vChapterFrames
         box.removeAllViews()
+        markedChapter = -1
         header.vChapterStrip.isVisible = d.chapters.size >= 2
         if (d.chapters.size < 2) return
-        val dp = act.resources.displayMetrics.density
-        val display = runCatching { androidx.core.content.res.ResourcesCompat.getFont(act, R.font.rx_display) }.getOrNull()
         d.chapters.forEachIndexed { i, c ->
-            val frame = android.widget.LinearLayout(act).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                setBackgroundResource(R.drawable.bg_film_frame)
-                setPadding((10 * dp).toInt(), (14 * dp).toInt(), (10 * dp).toInt(), (14 * dp).toInt())
-                isClickable = true
-                isFocusable = true
-                tag = c.startMs
-                val name = c.title.ifBlank { "Chapter ${i + 1}" }
-                contentDescription = "Chapter ${i + 1}: $name"
-                addView(android.widget.TextView(act).apply {
-                    text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
-                    textSize = 15f
-                    typeface = display
-                    setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_gold))
-                })
-                addView(android.widget.TextView(act).apply {
-                    text = name
-                    textSize = 12.5f
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                    setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.film_text))
-                }, android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (2 * dp).toInt() })
-                setOnClickListener {
-                    player()?.takeIf { p -> p.currentMediaItem?.mediaId == d.url }?.let { p ->
-                        p.seekTo(c.startMs)
-                        p.play()
-                    }
-                    markChapterFrame(i)
+            val frame = act.layoutInflater.inflate(R.layout.item_chapter_frame, box, false)
+            val name = c.title.ifBlank { "Chapter ${i + 1}" }
+            frame.tag = c.startMs
+            frame.contentDescription = "Chapter ${i + 1}: $name"
+            frame.findViewById<android.widget.TextView>(R.id.frameTime).text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
+            frame.findViewById<android.widget.TextView>(R.id.frameName).text = name
+            frame.setOnClickListener {
+                player()?.takeIf { p -> p.currentMediaItem?.mediaId == d.url }?.let { p ->
+                    p.seekTo(c.startMs)
+                    p.play()
                 }
+                markChapterFrame(i)
             }
-            box.addView(frame, android.widget.LinearLayout.LayoutParams((140 * dp).toInt(), (86 * dp).toInt()).apply {
-                marginStart = (2 * dp).toInt(); marginEnd = (2 * dp).toInt()
-            })
+            box.addView(frame)
         }
         val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: 0L
         markChapterFrame(d.chapters.indexOfLast { it.startMs <= pos }.coerceAtLeast(0))
     }
 
-    /** Puts the red edge on the chapter frame [index]. */
+    private var markedChapter = -1
+
+    /** Puts the red edge on the chapter frame [index] and, when it changes, slides the strip to it. */
     private fun markChapterFrame(index: Int) {
         val box = header.vChapterFrames
         for (k in 0 until box.childCount) {
             box.getChildAt(k).setBackgroundResource(if (k == index) R.drawable.bg_film_frame_on else R.drawable.bg_film_frame)
+        }
+        if (index != markedChapter) {
+            markedChapter = index
+            box.getChildAt(index)?.let { f ->
+                header.vChapterStrip.post {
+                    header.vChapterStrip.smoothScrollTo((f.left - (header.vChapterStrip.width - f.width) / 2).coerceAtLeast(0), 0)
+                }
+            }
+        }
+    }
+
+    /** While playing, the red frame follows the chapter the video is in. */
+    private val chapterTick = object : Runnable {
+        override fun run() {
+            val d = details
+            val p = player()
+            if (d != null && d.chapters.size >= 2 && p != null && p.currentMediaItem?.mediaId == d.url &&
+                header.vChapterFrames.childCount == d.chapters.size) {
+                val i = d.chapters.indexOfLast { it.startMs <= p.currentPosition }.coerceAtLeast(0)
+                if (i != markedChapter) markChapterFrame(i)
+            }
+            if (isOpen && p?.isPlaying == true) vb.root.postDelayed(this, 1000)
         }
     }
 
@@ -1126,7 +1138,8 @@ class VideoScreen(
 
     /** After a few quiet seconds of playing (dark theme), everything under the player fades almost to black. */
     private val lightsDown = Runnable {
-        if (isOpen && !minimized && AppPrefs.cinemaMode(act) && isNight() && player()?.isPlaying == true) {
+        if (isOpen && !minimized && AppPrefs.cinemaMode(act) && isNight() && player()?.isPlaying == true &&
+            !vb.videoList.canScrollVertically(-1)) {
             vb.videoList.animate().alpha(0.06f).setDuration(1400).start()
         }
     }

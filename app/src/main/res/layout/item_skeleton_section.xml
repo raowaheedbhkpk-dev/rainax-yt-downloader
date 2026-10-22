@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingHorizontal="16dp"
+    android:paddingHorizontal="@dimen/rx_space_16"
     android:paddingTop="26dp"
     android:paddingBottom="10dp">
 
@@ -16,7 +16,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/rx_space_8"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -28,7 +28,7 @@
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/rx_space_12"
             android:layout_weight="1"
             android:background="@color/rx_divider" />
     </LinearLayout>

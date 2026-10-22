@@ -106,6 +106,7 @@ class DlCardAdapter(
 
         /** Download pressed: the chosen ticket lifts, tilts and fades like a stub torn off, then [then] runs. */
         fun tear(list: android.view.View, then: () -> Unit) {
+            Haptics.confirm(list)
             val t = list.findViewWithTag<android.view.View>(SELECTED_TAG)
             if (t == null || !android.animation.ValueAnimator.areAnimatorsEnabled()) { then(); return }
             val d = t.resources.displayMetrics.density

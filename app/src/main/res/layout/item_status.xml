@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
+    android:layout_margin="@dimen/rx_space_4"
     android:background="@drawable/bg_status_thumb"
     android:foreground="?attr/selectableItemBackground">
 
@@ -25,7 +25,7 @@
         android:padding="6dp"
         android:src="@drawable/ic_p_play"
         android:visibility="gone"
-        app:tint="#FFFFFF" />
+        app:tint="@color/rx_white" />
 
     <ImageButton
         android:id="@+id/statusSave"
@@ -35,8 +35,8 @@
         android:layout_margin="6dp"
         android:background="@drawable/bg_status_save"
         android:contentDescription="Save"
-        android:padding="8dp"
+        android:padding="@dimen/rx_space_8"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_download"
-        app:tint="#FFFFFF" />
+        app:tint="@color/rx_white" />
 </com.rainax.ytdownloader.SquareFrameLayout>

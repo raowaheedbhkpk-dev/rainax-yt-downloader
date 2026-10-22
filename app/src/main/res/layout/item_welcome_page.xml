@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
-    android:paddingHorizontal="32dp">
+    android:paddingHorizontal="@dimen/rx_space_32">
 
     <FrameLayout
         android:layout_width="168dp"
@@ -28,7 +28,7 @@
         android:fontFamily="@font/rx_display"
         android:gravity="center"
         android:textColor="@color/rx_text"
-        android:textSize="26sp" />
+        android:textSize="24sp" />
 
     <TextView
         android:id="@+id/pageText"
@@ -39,5 +39,5 @@
         android:gravity="center"
         android:lineSpacingMultiplier="1.25"
         android:textColor="@color/rx_text2"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 </LinearLayout>

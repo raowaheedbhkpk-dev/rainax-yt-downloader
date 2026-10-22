@@ -3,11 +3,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
+    android:layout_marginHorizontal="@dimen/rx_space_16"
     android:layout_marginTop="26dp"
     android:background="?attr/rxCard"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/rx_space_16">
 
     <TextView
         android:layout_width="wrap_content"
@@ -16,7 +16,7 @@
         android:text="Your week on RAINAX"
         android:textAllCaps="true"
         android:textColor="@color/rx_gold"
-        android:textSize="10.5sp"
+        android:textSize="10sp"
         android:textStyle="bold" />
 
     <View
@@ -34,22 +34,22 @@
 
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
             <TextView android:id="@+id/wkHours" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:fontFamily="@font/rx_display" android:includeFontPadding="false" android:textColor="@color/rx_text" android:textSize="34sp" />
-            <TextView android:id="@+id/wkHoursLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                android:fontFamily="@font/rx_display" android:includeFontPadding="false" android:textColor="@color/rx_text" android:textSize="32sp" />
+            <TextView android:id="@+id/wkHoursLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/rx_space_4"
                 android:letterSpacing="0.15" android:textAllCaps="true" android:textColor="@color/rx_text2" android:textSize="10sp" android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
             <TextView android:id="@+id/wkVideos" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:fontFamily="@font/rx_display" android:includeFontPadding="false" android:textColor="@color/rx_text" android:textSize="34sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                android:fontFamily="@font/rx_display" android:includeFontPadding="false" android:textColor="@color/rx_text" android:textSize="32sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/rx_space_4"
                 android:letterSpacing="0.15" android:text="Videos" android:textAllCaps="true" android:textColor="@color/rx_text2" android:textSize="10sp" android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
             <TextView android:id="@+id/wkDownloads" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:fontFamily="@font/rx_display" android:includeFontPadding="false" android:textColor="?attr/rxAccent" android:textSize="34sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                android:fontFamily="@font/rx_display" android:includeFontPadding="false" android:textColor="?attr/rxAccentText" android:textSize="32sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/rx_space_4"
                 android:letterSpacing="0.15" android:text="Downloads" android:textAllCaps="true" android:textColor="@color/rx_text2" android:textSize="10sp" android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
@@ -62,5 +62,5 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/rx_text2"
-        android:textSize="13sp" />
+        android:textSize="14sp" />
 </LinearLayout>

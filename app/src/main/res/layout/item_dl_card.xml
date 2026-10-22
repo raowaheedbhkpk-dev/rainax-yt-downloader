@@ -8,7 +8,7 @@
     android:clipChildren="false"
     android:clipToPadding="false"
     android:paddingHorizontal="6dp"
-    android:paddingBottom="12dp">
+    android:paddingBottom="@dimen/rx_space_12">
 
     <LinearLayout
         android:id="@+id/card"
@@ -20,7 +20,7 @@
         android:focusable="true"
         android:gravity="bottom"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/rx_space_16">
 
         <TextView
             android:id="@+id/cardTag"
@@ -39,19 +39,19 @@
             android:id="@+id/cardQuality"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:includeFontPadding="false"
             android:textColor="@color/dl_text"
-            android:textSize="28sp"
+            android:textSize="32sp"
             tools:text="720p" />
 
         <TextView
             android:id="@+id/cardSize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/rx_space_12"
             android:fontFamily="@font/rx_body"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             tools:text="280.0 MB" />
     </LinearLayout>
@@ -62,11 +62,11 @@
         android:layout_height="22dp"
         android:layout_gravity="end|top"
         android:layout_marginTop="23dp"
-        android:layout_marginEnd="12dp"
+        android:layout_marginEnd="@dimen/rx_space_12"
         android:background="@drawable/bg_dl_check"
         android:elevation="8dp"
         android:importantForAccessibility="no"
-        android:padding="4dp"
+        android:padding="@dimen/rx_space_4"
         android:src="@drawable/ic_dl_check"
         android:visibility="gone" />
 
@@ -79,10 +79,10 @@
         android:elevation="8dp"
         android:fontFamily="@font/rx_body"
         android:paddingHorizontal="10dp"
-        android:paddingVertical="4dp"
+        android:paddingVertical="@dimen/rx_space_4"
         android:text="Recommended"
-        android:textColor="#FFFFFF"
-        android:textSize="11sp"
+        android:textColor="@color/rx_white"
+        android:textSize="12sp"
         android:textStyle="bold"
         android:visibility="gone" />
 </FrameLayout>

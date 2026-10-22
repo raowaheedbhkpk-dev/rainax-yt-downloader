@@ -32,7 +32,7 @@
         android:layout_gravity="center"
         android:background="@drawable/bg_mini_button"
         android:importantForAccessibility="no"
-        android:padding="20dp"
+        android:padding="@dimen/rx_space_20"
         android:src="@drawable/ic_play"
         android:visibility="gone"
         app:tint="@color/rx_white" />
@@ -43,7 +43,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
-        android:padding="24dp"
+        android:padding="@dimen/rx_space_24"
         android:text="Couldn't play this Short. Swipe for the next one."
         android:textColor="@color/rx_white"
         android:visibility="gone" />
@@ -61,14 +61,14 @@
         android:layout_gravity="bottom"
         android:gravity="bottom"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
+        android:paddingStart="@dimen/rx_space_16"
         android:paddingEnd="10dp"
-        android:paddingBottom="20dp">
+        android:paddingBottom="@dimen/rx_space_20">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="@dimen/rx_space_12"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -78,10 +78,10 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:textColor="@color/rx_white"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -91,7 +91,7 @@
                 android:layout_marginTop="6dp"
                 android:ellipsize="end"
                 android:maxLines="3"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:textColor="@color/rx_white"
                 android:textSize="14sp" />
@@ -110,7 +110,7 @@
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_mini_button"
                 android:contentDescription="Like"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_thumb_up"
                 app:tint="@color/rx_white" />
@@ -120,7 +120,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:text="Like"
                 android:textColor="@color/rx_white"
@@ -133,7 +133,7 @@
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_mini_button"
                 android:contentDescription="Dislike"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_thumb_down"
                 app:tint="@color/rx_white" />
@@ -143,7 +143,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:text="Dislike"
                 android:textColor="@color/rx_white"
@@ -156,7 +156,7 @@
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_mini_button"
                 android:contentDescription="Comments"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_comment"
                 app:tint="@color/rx_white" />
@@ -166,7 +166,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:text="Comments"
                 android:textColor="@color/rx_white"
@@ -179,7 +179,7 @@
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_mini_button"
                 android:contentDescription="Download"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_download"
                 app:tint="@color/rx_white" />
@@ -189,7 +189,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:text="Download"
                 android:textColor="@color/rx_white"
@@ -202,7 +202,7 @@
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_mini_button"
                 android:contentDescription="Share"
-                android:padding="12dp"
+                android:padding="@dimen/rx_space_12"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_share"
                 app:tint="@color/rx_white" />
@@ -212,7 +212,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:shadowColor="#99000000"
+                android:shadowColor="@color/rx_scrim"
                 android:shadowRadius="3"
                 android:text="Share"
                 android:textColor="@color/rx_white"

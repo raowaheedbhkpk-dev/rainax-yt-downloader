@@ -43,10 +43,20 @@ import kotlin.math.min
 object OpeningCredits {
 
     private const val TOTAL = 6500L
+    private const val SHORT = 1300L
 
+    /**
+     * The full opening plays once after each install or update; every other start shows a 1.3 s short
+     * version (the finished title fades in, holds, and opens into the app) so nobody waits every day.
+     */
     fun show(root: ViewGroup) {
         if (!ValueAnimator.areAnimatorsEnabled()) return
         val activity = root.context as? Activity
+        val version = runCatching {
+            root.context.packageManager.getPackageInfo(root.context.packageName, 0).versionName
+        }.getOrNull().orEmpty()
+        if (AppPrefs.openingSeen(root.context) == version) { showShort(root); return }
+        AppPrefs.setOpeningSeen(root.context, version)
         val view = OpeningView(root.context)
         root.addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
@@ -82,6 +92,31 @@ object OpeningCredits {
         }
         anim.start()
     }
+
+    /** The finished title fades in (0.4 s), holds, then the normal fade-out runs (0.9 s). */
+    private fun showShort(root: ViewGroup) {
+        val view = OpeningView(root.context)
+        root.addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val outLen = TOTAL - OpeningView.OUT_START
+        var done = false
+        val anim = ValueAnimator.ofFloat(0f, SHORT.toFloat()).apply {
+            duration = SHORT
+            interpolator = null
+            addUpdateListener {
+                val r = it.animatedValue as Float
+                view.intro = (r / 400f).coerceIn(0f, 1f)
+                view.t = if (r < SHORT - outLen) 5100f else OpeningView.OUT_START + (r - (SHORT - outLen))
+                view.invalidate()
+            }
+        }
+        anim.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) {
+                if (!done) { done = true; root.removeView(view) }
+            }
+        })
+        view.setOnClickListener { anim.end() }
+        anim.start()
+    }
 }
 
 /** The whole opening drawn by hand; [t] is the time in ms (0..6500). */
@@ -93,6 +128,8 @@ private class OpeningView(context: Context) : View(context) {
 
     var t = 0f
     var hdr = false
+    /** 0..1 fade-in of the title (short opening); the backdrop is always solid so the app never shows through. */
+    var intro = 1f
 
     private val d = resources.displayMetrics.density
     private val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -214,8 +251,9 @@ private class OpeningView(context: Context) : View(context) {
         val h = height.toFloat()
         if (w == 0f) return
         val out = p(OUT_START, 6500L, ease)
-        val fade = 1f - out
-        val a255 = (255 * fade).toInt()
+        val bgFade = 1f - out
+        val a255 = (255 * bgFade).toInt()
+        val fade = bgFade * intro
 
         // ground
         fill.shader = null

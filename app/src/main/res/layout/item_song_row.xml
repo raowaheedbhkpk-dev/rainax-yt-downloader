@@ -7,7 +7,7 @@
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="8dp">
+    android:paddingStart="@dimen/rx_space_8">
 
     <FrameLayout
         android:id="@+id/songArtBox"
@@ -45,21 +45,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="sans-serif"
+            android:fontFamily="@font/rx_body"
             android:maxLines="1"
             android:textColor="@color/rx_text"
-            android:textSize="15.5sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/songSub"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/rx_text2"
-            android:textSize="13.5sp" />
+            android:textSize="14sp" />
     </LinearLayout>
 
     <ImageButton

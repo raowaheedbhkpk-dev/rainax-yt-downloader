@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Video page: one chapter as a film frame (start time in gold, its name); tap jumps there -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="140dp"
+    android:layout_height="86dp"
+    android:layout_marginHorizontal="@dimen/rx_space_2"
+    android:background="@drawable/bg_film_frame"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="14dp">
+
+    <TextView
+        android:id="@+id/frameTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/rx_display"
+        android:importantForAccessibility="no"
+        android:textColor="@color/rx_gold"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/frameName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/rx_space_2"
+        android:ellipsize="end"
+        android:importantForAccessibility="no"
+        android:maxLines="2"
+        android:textColor="@color/film_text"
+        android:textSize="12sp" />
+</LinearLayout>

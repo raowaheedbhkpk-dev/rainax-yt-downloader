@@ -24,7 +24,7 @@
         android:ellipsize="end"
         android:gravity="center_horizontal"
         android:maxLines="1"
-        android:paddingHorizontal="4dp"
+        android:paddingHorizontal="@dimen/rx_space_4"
         android:textColor="@color/rx_text"
         android:textSize="12sp" />
 </LinearLayout>

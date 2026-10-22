@@ -8,4 +8,5 @@
     android:textSize="14sp"
     app:checkedIconVisible="false"
     app:chipMinHeight="34dp"
-    app:ensureMinTouchTargetSize="false" />
+    app:chipMinTouchTargetSize="44dp"
+    app:ensureMinTouchTargetSize="true" />

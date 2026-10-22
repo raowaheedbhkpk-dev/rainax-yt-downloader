@@ -20,16 +20,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/rx_space_8"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="20dp">
+        android:paddingHorizontal="@dimen/rx_space_20">
 
         <ImageView
             android:id="@+id/backBtn"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="@dimen/rx_space_8"
             android:background="@drawable/bg_dl_close"
             android:clickable="true"
             android:contentDescription="Back"
@@ -63,9 +63,9 @@
                 android:background="@drawable/bg_dl_duration"
                 android:fontFamily="@font/rx_body"
                 android:paddingHorizontal="6dp"
-                android:paddingVertical="2dp"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:paddingVertical="@dimen/rx_space_2"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:visibility="gone"
                 tools:text="12:45" />
@@ -88,19 +88,19 @@
                 android:lineSpacingMultiplier="1.1"
                 android:maxLines="2"
                 android:textColor="@color/dl_text"
-                android:textSize="19sp"
+                android:textSize="20sp"
                 tools:text="Mangroves Fishing | Karachi" />
 
             <TextView
                 android:id="@+id/sheetSub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/rx_space_4"
                 android:ellipsize="end"
                 android:fontFamily="@font/rx_body"
                 android:maxLines="2"
                 android:textColor="@color/dl_text2"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 tools:text="Choose a format to download" />
         </LinearLayout>
 
@@ -108,7 +108,7 @@
             android:id="@+id/closeBtn"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/rx_space_8"
             android:background="@drawable/bg_dl_close"
             android:clickable="true"
             android:contentDescription="Close"
@@ -121,8 +121,8 @@
         android:id="@+id/previewLoading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginHorizontal="@dimen/rx_space_20"
+        android:layout_marginTop="@dimen/rx_space_12"
         android:indeterminate="true"
         android:visibility="gone"
         app:indicatorColor="@color/dl_accent"
@@ -134,7 +134,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="20dp"
+        android:paddingHorizontal="@dimen/rx_space_20"
         android:visibility="gone">
 
         <TextView
@@ -151,7 +151,7 @@
             style="@style/Widget.Rainax.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:text="Retry" />
     </LinearLayout>
 
@@ -161,7 +161,7 @@
         style="@style/Widget.Rainax.Button.Tonal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
+        android:layout_marginHorizontal="@dimen/rx_space_20"
         android:text="Download whole playlist"
         android:visibility="gone" />
 
@@ -170,17 +170,17 @@
         android:id="@+id/dlTabs"
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="@dimen/rx_space_20"
+        android:layout_marginTop="@dimen/rx_space_20"
         android:background="@drawable/bg_dl_tabs"
         android:orientation="horizontal"
-        android:padding="4dp">
+        android:padding="@dimen/rx_space_4">
 
         <LinearLayout
             android:id="@+id/tabVideo"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginEnd="2dp"
+            android:layout_marginEnd="@dimen/rx_space_2"
             android:layout_weight="1"
             android:clickable="true"
             android:contentDescription="Video"
@@ -199,10 +199,10 @@
                 android:id="@+id/tabVideoText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:text="Video"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -210,7 +210,7 @@
             android:id="@+id/tabAudio"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="2dp"
+            android:layout_marginStart="@dimen/rx_space_2"
             android:layout_weight="1"
             android:clickable="true"
             android:contentDescription="Audio"
@@ -229,10 +229,10 @@
                 android:id="@+id/tabAudioText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
                 android:text="Audio"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -246,8 +246,8 @@
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingHorizontal="14dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp" />
+        android:paddingTop="@dimen/rx_space_12"
+        android:paddingBottom="@dimen/rx_space_12" />
 
     <!-- Selected + DOWNLOAD -->
     <LinearLayout
@@ -258,14 +258,14 @@
         android:elevation="6dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="20dp">
+        android:paddingHorizontal="@dimen/rx_space_20"
+        android:paddingTop="@dimen/rx_space_16"
+        android:paddingBottom="@dimen/rx_space_20">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="@dimen/rx_space_16"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -282,7 +282,7 @@
                 android:id="@+id/selectedLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="@dimen/rx_space_2"
                 android:ellipsize="end"
                 android:fontFamily="@font/rx_body"
                 android:maxLines="1"
@@ -304,14 +304,14 @@
             android:letterSpacing="0.07"
             android:paddingHorizontal="28dp"
             android:text="DOWNLOAD"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
+            android:textColor="@color/rx_white"
+            android:textSize="14sp"
             android:textStyle="bold"
             app:cornerRadius="2dp"
             app:icon="@drawable/ic_dl_download"
             app:iconGravity="textStart"
             app:iconPadding="10dp"
             app:iconSize="18dp"
-            app:iconTint="#FFFFFF" />
+            app:iconTint="@color/rx_white" />
     </LinearLayout>
 </LinearLayout>

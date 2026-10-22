@@ -8,8 +8,8 @@
     android:gravity="center_vertical"
     android:minHeight="68dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="4dp"
-    android:paddingVertical="8dp">
+    android:paddingHorizontal="@dimen/rx_space_4"
+    android:paddingVertical="@dimen/rx_space_8">
 
     <ImageView
         android:id="@+id/fIcon"
@@ -41,10 +41,10 @@
                 android:id="@+id/fBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/rx_space_8"
                 android:background="@drawable/bg_chip_small"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
+                android:paddingHorizontal="@dimen/rx_space_8"
+                android:paddingVertical="@dimen/rx_space_2"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="12sp"
                 android:textStyle="bold"
@@ -55,7 +55,7 @@
             android:id="@+id/fDesc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
@@ -65,7 +65,7 @@
         android:id="@+id/fSize"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="@dimen/rx_space_8"
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 

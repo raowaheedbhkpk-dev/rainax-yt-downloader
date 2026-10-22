@@ -6,7 +6,7 @@
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
+    android:paddingHorizontal="@dimen/rx_space_16"
     android:paddingVertical="10dp">
 
     <ImageView
@@ -20,7 +20,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
+        android:layout_marginStart="@dimen/rx_space_16"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -29,7 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/rx_body_semibold"
             android:maxLines="1"
             android:textColor="@color/rx_text"
             android:textSize="16sp" />
@@ -38,11 +38,11 @@
             android:id="@+id/chMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/rx_text2"
-            android:textSize="13sp" />
+            android:textSize="14sp" />
     </LinearLayout>
 
     <ImageView

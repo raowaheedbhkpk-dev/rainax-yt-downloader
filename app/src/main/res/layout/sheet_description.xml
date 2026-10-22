@@ -10,7 +10,7 @@
         android:orientation="vertical"
         android:paddingHorizontal="18dp"
         android:paddingTop="10dp"
-        android:paddingBottom="32dp">
+        android:paddingBottom="@dimen/rx_space_32">
 
         <View
             android:layout_width="40dp"
@@ -21,10 +21,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/rx_space_16"
             android:letterSpacing="0.08"
             android:text="DESCRIPTION"
-            android:textColor="?attr/rxAccent"
+            android:textColor="?attr/rxAccentText"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -33,15 +33,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/rx_body_semibold"
             android:lineSpacingExtra="2dp"
             android:textColor="@color/rx_text"
-            android:textSize="18sp" />
+            android:textSize="20sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/rx_space_16"
             android:background="@drawable/bg_desc_card"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -60,14 +60,14 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:text="Likes"
                     android:textColor="@color/rx_text2"
                     android:textSize="12sp" />
@@ -91,14 +91,14 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:text="Views"
                     android:textColor="@color/rx_text2"
                     android:textSize="12sp" />
@@ -122,14 +122,14 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:text="Uploaded"
                     android:textColor="@color/rx_text2"
                     android:textSize="12sp" />
@@ -141,17 +141,17 @@
             android:id="@+id/descChapterBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/rx_space_20"
             android:orientation="vertical"
             android:visibility="gone">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="@dimen/rx_space_8"
                 android:letterSpacing="0.08"
                 android:text="CHAPTERS"
-                android:textColor="?attr/rxAccent"
+                android:textColor="?attr/rxAccentText"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -167,11 +167,11 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginTop="@dimen/rx_space_20"
+            android:layout_marginBottom="@dimen/rx_space_8"
             android:letterSpacing="0.08"
             android:text="ABOUT THIS VIDEO"
-            android:textColor="?attr/rxAccent"
+            android:textColor="?attr/rxAccentText"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -181,9 +181,9 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_desc_card"
             android:lineSpacingExtra="5dp"
-            android:padding="16dp"
+            android:padding="@dimen/rx_space_16"
             android:textColor="@color/rx_text"
             android:textColorLink="?attr/rxAccent"
-            android:textSize="14.5sp" />
+            android:textSize="14sp" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

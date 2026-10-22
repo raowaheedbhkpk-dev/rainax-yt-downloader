@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="8dp"
+            android:layout_margin="@dimen/rx_space_8"
             android:background="@drawable/bg_duration"
             android:paddingHorizontal="5dp"
             android:paddingVertical="1dp"
@@ -50,8 +50,8 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingTop="12dp"
+        android:paddingStart="@dimen/rx_space_12"
+        android:paddingTop="@dimen/rx_space_12"
         android:paddingEnd="6dp">
 
         <ImageView
@@ -66,7 +66,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/rx_space_12"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -79,7 +79,7 @@
                 android:maxLines="2"
                 android:textColor="@color/rx_text"
                 android:textSize="16sp"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/rx_body_semibold" />
 
             <TextView
                 android:id="@+id/meta"
@@ -89,7 +89,7 @@
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:textColor="@color/rx_text2"
-                android:textSize="12.5sp" />
+                android:textSize="12sp" />
         </LinearLayout>
 
         <!-- + : pick several videos, then download them together -->
@@ -97,7 +97,7 @@
             android:id="@+id/pick"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="@dimen/rx_space_4"
             android:background="@drawable/bg_circle_btn"
             android:contentDescription="Select for download"
             android:padding="10dp"
@@ -122,7 +122,7 @@
             android:id="@+id/more"
             android:layout_width="28dp"
             android:layout_height="42dp"
-            android:layout_marginStart="2dp"
+            android:layout_marginStart="@dimen/rx_space_2"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="More"
             android:scaleType="center"

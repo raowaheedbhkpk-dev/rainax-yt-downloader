@@ -65,13 +65,13 @@ object PicksSheet {
         }
         val title = android.widget.TextView(act).apply {
             setTextColor(text)
-            textSize = 18f
+            textSize = 20f
             setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
         }
         val clear = android.widget.TextView(act).apply {
             this.text = "Clear all"
-            setTextColor(Ui.accent(act))
-            textSize = 15f
+            setTextColor(Ui.accentText(act))
+            textSize = 14f
             setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
             setPadding((14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())
             val tv = android.util.TypedValue()

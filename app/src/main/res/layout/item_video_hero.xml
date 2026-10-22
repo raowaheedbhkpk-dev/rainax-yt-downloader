@@ -29,10 +29,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="top|end"
-            android:layout_margin="12dp"
+            android:layout_margin="@dimen/rx_space_12"
             android:background="@drawable/bg_duration"
             android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp"
+            android:paddingVertical="@dimen/rx_space_2"
             android:textColor="@color/rx_white"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -60,12 +60,12 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_hero_tag"
                 android:letterSpacing="0.15"
-                android:paddingHorizontal="8dp"
+                android:paddingHorizontal="@dimen/rx_space_8"
                 android:paddingVertical="3dp"
                 android:text="Top pick"
                 android:textAllCaps="true"
                 android:textColor="@color/rx_black"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -85,7 +85,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/rx_space_8"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -93,7 +93,7 @@
                     android:id="@+id/avatar"
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="@dimen/rx_space_8"
                     android:background="@drawable/bg_avatar"
                     android:importantForAccessibility="no"
                     android:scaleType="centerCrop" />
@@ -105,8 +105,8 @@
                     android:layout_weight="1"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#CCFFFFFF"
-                    android:textSize="13sp" />
+                    android:textColor="@color/rx_on_picture_strong"
+                    android:textSize="14sp" />
 
                 <ImageButton
                     android:id="@+id/more"
@@ -122,7 +122,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/rx_space_16"
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton

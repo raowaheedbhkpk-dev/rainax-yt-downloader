@@ -6,7 +6,7 @@
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingHorizontal="20dp">
+    android:paddingHorizontal="@dimen/rx_space_20">
 
     <ImageView
         android:id="@+id/optIcon"
@@ -23,13 +23,13 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textColor="@color/rx_text"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 
     <TextView
         android:id="@+id/optValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:textColor="@color/rx_text2"
         android:textSize="14sp" />
 
@@ -37,7 +37,7 @@
         android:id="@+id/optCheck"
         android:layout_width="22dp"
         android:layout_height="22dp"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_check"
         android:visibility="gone"

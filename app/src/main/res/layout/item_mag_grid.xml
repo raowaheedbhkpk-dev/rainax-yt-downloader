@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="312dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="16dp">
+    android:paddingHorizontal="@dimen/rx_space_16">
 
     <FrameLayout
         android:layout_width="0dp"
@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:padding="@dimen/rx_space_12">
 
                 <TextView
                     android:id="@+id/g0Tag"
@@ -45,7 +45,7 @@
                     android:letterSpacing="0.18"
                     android:maxLines="1"
                     android:textAllCaps="true"
-                    android:textColor="#E8B44A"
+                    android:textColor="@color/rx_cinema_gold"
                     android:textSize="10sp"
                     android:textStyle="bold" />
 
@@ -59,17 +59,17 @@
                     android:textAllCaps="true"
                     android:maxLines="4"
                     android:textColor="@color/rx_white"
-                    android:textSize="21sp" />
+                    android:textSize="20sp" />
 
                 <TextView
                     android:id="@+id/g0Meta"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/rx_space_4"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#BDBDBD"
-                    android:textSize="11sp" />
+                    android:textColor="@color/rx_cinema_text2"
+                    android:textSize="12sp" />
             </LinearLayout>
         </FrameLayout>
     </FrameLayout>
@@ -114,8 +114,8 @@
                     android:letterSpacing="0.18"
                     android:maxLines="1"
                     android:textAllCaps="true"
-                    android:textColor="#E8B44A"
-                    android:textSize="9sp"
+                    android:textColor="@color/rx_cinema_gold"
+                    android:textSize="10sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -127,17 +127,17 @@
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:textColor="@color/rx_white"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/g1Meta"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/rx_space_4"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#BDBDBD"
-                    android:textSize="11sp" />
+                    android:textColor="@color/rx_cinema_text2"
+                    android:textSize="12sp" />
             </LinearLayout>
         </FrameLayout>
 
@@ -179,8 +179,8 @@
                     android:letterSpacing="0.18"
                     android:maxLines="1"
                     android:textAllCaps="true"
-                    android:textColor="#E8B44A"
-                    android:textSize="9sp"
+                    android:textColor="@color/rx_cinema_gold"
+                    android:textSize="10sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -192,17 +192,17 @@
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:textColor="@color/rx_white"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/g2Meta"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/rx_space_4"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#BDBDBD"
-                    android:textSize="11sp" />
+                    android:textColor="@color/rx_cinema_text2"
+                    android:textSize="12sp" />
             </LinearLayout>
         </FrameLayout>
     </LinearLayout>

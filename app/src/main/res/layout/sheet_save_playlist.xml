@@ -5,19 +5,19 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingBottom="12dp">
+    android:paddingBottom="@dimen/rx_space_12">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAllCaps="true"
         android:fontFamily="@font/rx_display"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="8dp"
+        android:paddingHorizontal="@dimen/rx_space_20"
+        android:paddingTop="@dimen/rx_space_20"
+        android:paddingBottom="@dimen/rx_space_8"
         android:text="Save video to…"
         android:textColor="@color/rx_text"
-        android:textSize="19sp" />
+        android:textSize="20sp" />
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/spLoading"
@@ -31,8 +31,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fontFamily="@font/rx_body"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="12dp"
+        android:paddingHorizontal="@dimen/rx_space_20"
+        android:paddingVertical="@dimen/rx_space_12"
         android:textColor="@color/rx_text2"
         android:textSize="14sp"
         android:visibility="gone" />
@@ -51,7 +51,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="@dimen/rx_space_4"
         android:background="@color/rx_divider" />
 
     <com.google.android.material.button.MaterialButton
@@ -59,12 +59,12 @@
         style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="52dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="@dimen/rx_space_8"
         android:fontFamily="@font/rx_body"
         android:text="New playlist"
         android:textAllCaps="false"
         android:textColor="@color/rx_text"
-        android:textSize="15sp"
+        android:textSize="14sp"
         app:icon="@drawable/ic_add"
         app:iconTint="@color/rx_text" />
 </LinearLayout>

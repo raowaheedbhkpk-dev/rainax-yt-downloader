@@ -4,12 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="4dp"
-    android:layout_marginVertical="4dp"
+    android:layout_marginHorizontal="@dimen/rx_space_4"
+    android:layout_marginVertical="@dimen/rx_space_4"
     android:background="@drawable/bg_glass_card"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="8dp">
+    android:padding="@dimen/rx_space_8">
 
     <FrameLayout
         android:id="@+id/libThumbBox"
@@ -28,7 +28,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -39,18 +39,18 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:textColor="@color/rx_text"
-            android:textSize="14.5sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/libMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/rx_text2"
-            android:textSize="12.5sp" />
+            android:textSize="12sp" />
     </LinearLayout>
 
     <ImageButton

@@ -17,8 +17,8 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
+        android:layout_marginTop="@dimen/rx_space_20"
         android:fontFamily="@font/rx_display"
         android:includeFontPadding="false"
         android:text="Settings"
@@ -29,15 +29,15 @@
     <View
         android:layout_width="44dp"
         android:layout_height="3dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginStart="@dimen/rx_space_20"
+        android:layout_marginTop="@dimen/rx_space_12"
         android:background="@color/rx_primary" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginStart="@dimen/rx_space_20"
+        android:layout_marginTop="@dimen/rx_space_12"
         android:text="Make RAINAX Tube work your way"
         android:textColor="@color/rx_text2"
         android:textSize="14sp" />
@@ -45,13 +45,13 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:letterSpacing="0.25"
         android:text="01 — APPEARANCE"
         android:textColor="@color/rx_gold"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -63,19 +63,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Theme"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -83,12 +83,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="How RAINAX looks. System follows your phone"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
         <com.google.android.material.chip.ChipGroup
@@ -96,9 +96,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="12dp"
+            android:paddingStart="@dimen/rx_space_20"
+            android:paddingEnd="@dimen/rx_space_20"
+            android:paddingBottom="@dimen/rx_space_12"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
             app:singleSelection="true">
@@ -134,7 +134,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -142,19 +142,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Accent"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -162,12 +162,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="The colour of buttons, bars and switches"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
         <com.google.android.material.chip.ChipGroup
@@ -175,9 +175,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="12dp"
+            android:paddingStart="@dimen/rx_space_20"
+            android:paddingEnd="@dimen/rx_space_20"
+            android:paddingBottom="@dimen/rx_space_12"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
             app:singleSelection="true">
@@ -213,7 +213,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -221,19 +221,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Opening title"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -241,12 +241,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="A one-second RAINAX title card when the app starts"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -257,20 +257,20 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:letterSpacing="0.25"
         android:text="02 — DOWNLOADS"
         android:textColor="@color/rx_gold"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -282,19 +282,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Wi-Fi only"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -302,12 +302,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Wait for Wi-Fi instead of using mobile data"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -318,7 +318,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -326,19 +326,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Simultaneous downloads"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -346,12 +346,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="How many files download at the same time"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
         <com.google.android.material.chip.ChipGroup
@@ -359,9 +359,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="12dp"
+            android:paddingStart="@dimen/rx_space_20"
+            android:paddingEnd="@dimen/rx_space_20"
+            android:paddingBottom="@dimen/rx_space_12"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
             app:singleSelection="true">
@@ -397,7 +397,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -405,19 +405,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Auto-retry failed downloads"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -425,12 +425,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Tries again after 1, 3 and 10 minutes, and when the internet comes back"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -441,7 +441,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -449,19 +449,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Auto-clear finished list"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -469,12 +469,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Finished items leave the list after 7 days (the files stay)"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -485,7 +485,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/batteryBtn"
@@ -497,19 +497,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Downloads stop when the screen is off?"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -517,12 +517,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Let RAINAX run in the background"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -539,28 +539,28 @@
             android:layout_height="wrap_content"
             android:background="?attr/rxSurfaceAlt"
             android:lineSpacingMultiplier="1.15"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp"
+            android:paddingHorizontal="@dimen/rx_space_16"
+            android:paddingVertical="@dimen/rx_space_12"
             android:textColor="@color/rx_text2"
-            android:textSize="11.5sp"
+            android:textSize="12sp"
             android:visibility="gone" />
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:letterSpacing="0.25"
         android:text="03 — PLAYBACK"
         android:textColor="@color/rx_gold"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -572,19 +572,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Autoplay in feed"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -592,12 +592,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="The video you stop on plays silently in the list"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
         <com.google.android.material.chip.ChipGroup
@@ -605,9 +605,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-4dp"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="12dp"
+            android:paddingStart="@dimen/rx_space_20"
+            android:paddingEnd="@dimen/rx_space_20"
+            android:paddingBottom="@dimen/rx_space_12"
             app:chipSpacingHorizontal="8dp"
             app:selectionRequired="true"
             app:singleSelection="true">
@@ -636,7 +636,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -644,19 +644,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Background play"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -664,12 +664,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Keeps playing as sound when you press Home or lock the screen"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -680,7 +680,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -688,19 +688,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Skip sponsors"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -708,12 +708,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Jumps over sponsor ads and subscribe reminders (SponsorBlock)"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -724,7 +724,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -732,19 +732,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Continue where you left off"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -752,12 +752,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Videos start again where you stopped"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -768,7 +768,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -776,19 +776,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Detect copied links"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -796,12 +796,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Copy a YouTube, TikTok, Instagram or Facebook link and RAINAX offers to download it"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -812,20 +812,20 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:letterSpacing="0.25"
         android:text="04 — STORAGE"
         android:textColor="@color/rx_gold"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -837,19 +837,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Saved in"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -858,18 +858,18 @@
                     android:id="@+id/folderPath"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Video, Audio and Status folders"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/allFilesBtn"
@@ -881,19 +881,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Allow all files access"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -901,12 +901,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Needed to save in your Downloads folder"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -920,7 +920,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/privateFolderBtn"
@@ -932,19 +932,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Private folder"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -952,12 +952,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Hidden videos behind your PIN"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -971,20 +971,20 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:letterSpacing="0.25"
         android:text="05 — PRIVACY"
         android:textColor="@color/rx_gold"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -996,19 +996,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Pause watch history"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -1016,12 +1016,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Nothing you watch is saved, here or on your YouTube account"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -1032,7 +1032,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/clearSearchBtn"
@@ -1044,19 +1044,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Clear search history"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -1073,7 +1073,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/unhideBtn"
@@ -1085,19 +1085,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Bring back hidden videos"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -1105,12 +1105,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Videos and channels you said Not interested to"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -1124,7 +1124,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/clearWatchBtn"
@@ -1136,19 +1136,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Clear watch history"
                     android:textColor="@color/rx_primary"
                     android:textSize="16sp" />
@@ -1156,12 +1156,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Continue watching and resume points"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -1175,20 +1175,20 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="30dp"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="@dimen/rx_space_4"
         android:letterSpacing="0.25"
         android:text="06 — ABOUT"
         android:textColor="@color/rx_gold"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -1204,19 +1204,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Check for app update"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -1233,7 +1233,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/rateAppBtn"
@@ -1245,19 +1245,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Rate us on APKPure"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -1265,12 +1265,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="A good review helps a lot"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -1284,7 +1284,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
         <LinearLayout
             android:id="@+id/shareAppBtn"
@@ -1296,19 +1296,19 @@
             android:gravity="center_vertical"
             android:minHeight="66dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp">
+            android:paddingHorizontal="@dimen/rx_space_20"
+            android:paddingVertical="@dimen/rx_space_12">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/rx_body_semibold"
                     android:text="Share RAINAX Tube"
                     android:textColor="@color/rx_text"
                     android:textSize="16sp" />
@@ -1316,12 +1316,12 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="@dimen/rx_space_2"
                     android:fontFamily="@font/rx_body"
                     android:lineSpacingMultiplier="1.1"
                     android:text="Send the app to a friend"
                     android:textColor="@color/rx_text2"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
@@ -1335,7 +1335,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginHorizontal="20dp"
+            android:layout_marginHorizontal="@dimen/rx_space_20"
             android:background="@color/rx_divider" />
     </LinearLayout>
 
@@ -1347,7 +1347,7 @@
         android:fontFamily="@font/rx_body"
         android:gravity="center"
         android:textColor="@color/rx_text2"
-        android:textSize="13sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
@@ -1359,6 +1359,6 @@
         android:paddingHorizontal="36dp"
         android:text="Only download content you have the right to download. Not affiliated with YouTube, Google or any video site."
         android:textColor="@color/rx_text2"
-        android:textSize="11.5sp" />
+        android:textSize="12sp" />
 </LinearLayout>
 </ScrollView>

@@ -4,7 +4,7 @@
     android:layout_width="108dp"
     android:layout_height="156dp"
     android:layout_marginHorizontal="5dp"
-    android:background="#1A1A1A"
+    android:background="@color/rx_cinema_case"
     android:elevation="3dp"
     android:foreground="?attr/selectableItemBackground">
 
@@ -38,8 +38,8 @@
         android:letterSpacing="0.1"
         android:paddingHorizontal="5dp"
         android:paddingVertical="1dp"
-        android:textColor="#000000"
-        android:textSize="9sp"
+        android:textColor="@color/rx_black"
+        android:textSize="10sp"
         android:textStyle="bold" />
 
     <TextView
@@ -53,7 +53,7 @@
         android:includeFontPadding="false"
         android:maxLines="3"
         android:padding="7dp"
-        android:textAllCaps="true"
-        android:textColor="#FFFFFF"
-        android:textSize="12.5sp" />
+        android:textAllCaps="false"
+        android:textColor="@color/rx_white"
+        android:textSize="12sp" />
 </FrameLayout>

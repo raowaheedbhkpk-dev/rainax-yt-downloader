@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="18dp"
-        android:paddingTop="20dp"
+        android:paddingTop="@dimen/rx_space_20"
         android:paddingBottom="120dp">
 
         <TextView
@@ -24,7 +24,7 @@
             android:text="All-in-one downloader"
             android:textAllCaps="true"
             android:textColor="@color/rx_gold"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
@@ -37,12 +37,12 @@
             android:text="Save any\nvideo."
             android:textAllCaps="true"
             android:textColor="@color/rx_text"
-            android:textSize="42sp" />
+            android:textSize="44sp" />
 
         <View
             android:layout_width="44dp"
             android:layout_height="3dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/rx_space_12"
             android:background="?attr/rxAccent" />
 
         <!-- the sites: filled in code (real app icon when installed, else a coloured tag), tap opens the app -->
@@ -68,7 +68,7 @@
             android:text="Paste a link"
             android:textAllCaps="true"
             android:textColor="@color/rx_text2"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -78,9 +78,9 @@
             android:background="@drawable/bg_social_box"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="8dp"
-            android:paddingEnd="4dp"
-            android:paddingBottom="2dp">
+            android:paddingStart="@dimen/rx_space_8"
+            android:paddingEnd="@dimen/rx_space_4"
+            android:paddingBottom="@dimen/rx_space_2">
 
             <!-- the app the link is from (its icon or a coloured tag), or a link icon -->
             <FrameLayout
@@ -103,8 +103,8 @@
                     android:layout_gravity="center"
                     android:gravity="center"
                     android:importantForAccessibility="no"
-                    android:textColor="#FFFFFF"
-                    android:textSize="11sp"
+                    android:textColor="@color/rx_white"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
             </FrameLayout>
@@ -123,7 +123,7 @@
                 android:maxLines="1"
                 android:textColor="@color/rx_text"
                 android:textColorHint="@color/rx_text2"
-                android:textSize="15sp" />
+                android:textSize="14sp" />
 
             <ImageButton
                 android:id="@+id/socialClear"
@@ -140,7 +140,7 @@
             android:id="@+id/socialDetected"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:letterSpacing="0.04"
             android:textColor="@color/rx_gold"
             android:textSize="12sp"
@@ -157,7 +157,7 @@
                 android:id="@+id/socialPaste"
                 android:layout_width="0dp"
                 android:layout_height="52dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="@dimen/rx_space_8"
                 android:layout_weight="1"
                 android:background="@drawable/bg_social_outline_btn"
                 android:clickable="true"
@@ -176,12 +176,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:letterSpacing="0.15"
                     android:text="Paste"
                     android:textAllCaps="true"
                     android:textColor="@color/rx_text"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -202,17 +202,17 @@
                     android:layout_height="18dp"
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_download"
-                    app:tint="#FFFFFF" />
+                    app:tint="@color/rx_white" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/rx_space_8"
                     android:letterSpacing="0.15"
                     android:text="Download"
                     android:textAllCaps="true"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
+                    android:textColor="@color/rx_white"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
@@ -226,7 +226,7 @@
             android:background="@drawable/bg_social_ticket"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="12dp"
+            android:paddingStart="@dimen/rx_space_12"
             android:visibility="gone">
 
             <TextView
@@ -235,22 +235,22 @@
                 android:layout_height="30dp"
                 android:gravity="center"
                 android:importantForAccessibility="no"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/socialClipText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
+                android:layout_marginHorizontal="@dimen/rx_space_12"
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:letterSpacing="0.06"
                 android:maxLines="1"
                 android:textAllCaps="true"
                 android:textColor="@color/rx_gold"
-                android:textSize="11.5sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <View
@@ -271,8 +271,8 @@
                 android:letterSpacing="0.1"
                 android:text="Get it"
                 android:textAllCaps="true"
-                android:textColor="?attr/rxAccent"
-                android:textSize="15sp"
+                android:textColor="?attr/rxAccentText"
+                android:textSize="14sp"
                 app:cornerRadius="2dp" />
         </LinearLayout>
 
@@ -280,7 +280,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="@dimen/rx_space_24"
             android:background="@color/rx_divider" />
 
         <LinearLayout
@@ -304,13 +304,13 @@
                     android:layout_height="40dp"
                     android:background="@drawable/bg_status_wa"
                     android:importantForAccessibility="no"
-                    android:padding="8dp"
+                    android:padding="@dimen/rx_space_8"
                     android:src="@drawable/ic_status_ring" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="@dimen/rx_space_12"
                     android:layout_weight="1"
                     android:orientation="vertical">
 
@@ -322,7 +322,7 @@
                         android:text="WhatsApp status saver"
                         android:textAllCaps="true"
                         android:textColor="@color/rx_text"
-                        android:textSize="18sp" />
+                        android:textSize="20sp" />
 
                     <TextView
                         android:id="@+id/statusSub"
@@ -331,7 +331,7 @@
                         android:layout_marginTop="1dp"
                         android:text="Save photos and videos from statuses you've seen"
                         android:textColor="@color/rx_text2"
-                        android:textSize="12.5sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageButton
@@ -351,7 +351,7 @@
                 android:id="@+id/statusApps"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/rx_space_12"
                 app:selectionRequired="true"
                 app:singleSelection="true">
 
@@ -397,34 +397,34 @@
                     android:lineSpacingExtra="3dp"
                     android:text="1. View the statuses in WhatsApp first.\n2. Tap Allow access, then tap “Use this folder” on the next screen.\nRAINAX only reads the status folder, nothing else."
                     android:textColor="@color/rx_text2"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/statusAllow"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/rx_space_12"
                     android:backgroundTint="#25D366"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:text="Allow access"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/rx_white"
                     app:cornerRadius="2dp"
                     app:icon="@drawable/ic_check"
-                    app:iconTint="#FFFFFF" />
+                    app:iconTint="@color/rx_white" />
 
                 <TextView
                     android:id="@+id/statusPickFolder"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/rx_space_4"
                     android:background="?attr/selectableItemBackground"
                     android:gravity="center"
-                    android:paddingHorizontal="12dp"
+                    android:paddingHorizontal="@dimen/rx_space_12"
                     android:text="Or choose only the status folder"
                     android:textColor="@color/rx_text2"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -432,11 +432,11 @@
                 android:id="@+id/statusEmpty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/rx_space_12"
                 android:gravity="center"
                 android:paddingVertical="18dp"
                 android:textColor="@color/rx_text2"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:visibility="gone" />
 
             <ProgressBar
@@ -451,7 +451,7 @@
                 android:id="@+id/statusList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/rx_space_12"
                 android:nestedScrollingEnabled="false"
                 android:visibility="gone" />
 
@@ -480,18 +480,18 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/rx_space_20"
             android:letterSpacing="0.25"
             android:text="How it works"
             android:textAllCaps="true"
             android:textColor="@color/rx_gold"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:orientation="horizontal">
 
             <TextView
@@ -500,7 +500,7 @@
                 android:fontFamily="@font/rx_display"
                 android:importantForAccessibility="no"
                 android:text="01"
-                android:textColor="?attr/rxAccent"
+                android:textColor="?attr/rxAccentText"
                 android:textSize="14sp" />
 
             <TextView
@@ -509,13 +509,13 @@
                 android:layout_weight="1"
                 android:text="Copy the link in TikTok, Instagram, Facebook or YouTube (Share › Copy link)"
                 android:textColor="@color/rx_text"
-                android:textSize="13.5sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:orientation="horizontal">
 
             <TextView
@@ -524,7 +524,7 @@
                 android:fontFamily="@font/rx_display"
                 android:importantForAccessibility="no"
                 android:text="02"
-                android:textColor="?attr/rxAccent"
+                android:textColor="?attr/rxAccentText"
                 android:textSize="14sp" />
 
             <TextView
@@ -533,13 +533,13 @@
                 android:layout_weight="1"
                 android:text="Paste it here, or share it straight to RAINAX"
                 android:textColor="@color/rx_text"
-                android:textSize="13.5sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             android:orientation="horizontal">
 
             <TextView
@@ -548,7 +548,7 @@
                 android:fontFamily="@font/rx_display"
                 android:importantForAccessibility="no"
                 android:text="03"
-                android:textColor="?attr/rxAccent"
+                android:textColor="?attr/rxAccentText"
                 android:textSize="14sp" />
 
             <TextView
@@ -557,7 +557,7 @@
                 android:layout_weight="1"
                 android:text="Pick HD or MP3 and download"
                 android:textColor="@color/rx_text"
-                android:textSize="13.5sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <TextView

@@ -13,8 +13,8 @@
         android:layout_height="60dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="4dp"
-        android:paddingEnd="8dp">
+        android:paddingStart="@dimen/rx_space_4"
+        android:paddingEnd="@dimen/rx_space_8">
 
         <ImageButton
             android:id="@+id/notifBack"
@@ -28,13 +28,13 @@
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/rx_space_8"
             android:layout_weight="1"
             android:textAllCaps="true"
             android:fontFamily="@font/rx_display"
             android:text="Notifications"
             android:textColor="@color/rx_text"
-            android:textSize="22sp" />
+            android:textSize="24sp" />
 
         <ImageButton
             android:id="@+id/notifRefresh"
@@ -87,7 +87,7 @@
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:paddingTop="6dp"
-                android:paddingBottom="24dp" />
+                android:paddingBottom="@dimen/rx_space_24" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
@@ -128,11 +128,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:textAllCaps="true"
+                android:textAllCaps="false"
                 android:fontFamily="@font/rx_display"
                 android:gravity="center"
                 android:textColor="@color/rx_text"
-                android:textSize="19sp" />
+                android:textSize="20sp" />
 
             <TextView
                 android:id="@+id/notifEmptySub"
@@ -149,7 +149,7 @@
                 style="@style/Widget.Rainax.Button.Tonal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/rx_space_16"
                 android:text="Try again"
                 android:visibility="gone" />
         </LinearLayout>

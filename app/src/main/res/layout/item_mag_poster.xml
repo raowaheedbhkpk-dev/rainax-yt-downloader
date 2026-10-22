@@ -3,7 +3,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="132dp"
     android:layout_height="196dp"
-    android:layout_marginHorizontal="4dp"
+    android:layout_marginHorizontal="@dimen/rx_space_4"
     android:background="@drawable/bg_thumb_big"
     android:foreground="?attr/selectableItemBackground">
 
@@ -26,9 +26,9 @@
         android:layout_gravity="top|end"
         android:layout_margin="6dp"
         android:background="@drawable/bg_duration"
-        android:paddingHorizontal="4dp"
+        android:paddingHorizontal="@dimen/rx_space_4"
         android:textColor="@color/rx_white"
-        android:textSize="10.5sp"
+        android:textSize="10sp"
         android:textStyle="bold" />
 
     <LinearLayout
@@ -46,18 +46,18 @@
             android:fontFamily="@font/rx_display"
             android:includeFontPadding="false"
             android:maxLines="3"
-            android:textAllCaps="true"
+            android:textAllCaps="false"
             android:textColor="@color/rx_white"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/meta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="@dimen/rx_space_4"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="#BDBDBD"
-            android:textSize="10.5sp" />
+            android:textColor="@color/rx_cinema_text2"
+            android:textSize="10sp" />
     </LinearLayout>
 </FrameLayout>

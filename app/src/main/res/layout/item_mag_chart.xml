@@ -7,9 +7,9 @@
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="16dp"
+    android:paddingStart="@dimen/rx_space_16"
     android:paddingTop="10dp"
-    android:paddingEnd="8dp"
+    android:paddingEnd="@dimen/rx_space_8"
     android:paddingBottom="10dp">
 
     <TextView
@@ -38,18 +38,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="4dp"
+            android:layout_margin="@dimen/rx_space_4"
             android:background="@drawable/bg_duration"
-            android:paddingHorizontal="4dp"
+            android:paddingHorizontal="@dimen/rx_space_4"
             android:textColor="@color/rx_white"
-            android:textSize="10.5sp"
+            android:textSize="10sp"
             android:textStyle="bold" />
     </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -58,10 +58,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/rx_body_semibold"
             android:maxLines="2"
             android:textColor="@color/rx_text"
-            android:textSize="14.5sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/meta"

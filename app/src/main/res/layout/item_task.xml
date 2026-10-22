@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="4dp"
+    android:layout_marginHorizontal="@dimen/rx_space_4"
     android:layout_marginVertical="5dp"
     android:clickable="true"
     android:focusable="true"
@@ -15,13 +15,13 @@
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="12dp">
+    android:padding="@dimen/rx_space_12">
 
     <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/selectBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="4dp"
+        android:layout_marginEnd="@dimen/rx_space_4"
         android:clickable="false"
         android:focusable="false"
         android:visibility="gone" />
@@ -44,7 +44,7 @@
             android:id="@+id/reelBox"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#99000000"
+            android:background="@color/rx_scrim"
             android:gravity="center"
             android:importantForAccessibility="no"
             android:orientation="vertical"
@@ -55,7 +55,7 @@
                 android:layout_width="26dp"
                 android:layout_height="26dp"
                 android:src="@drawable/ic_film_reel"
-                app:tint="#FFFFFF" />
+                app:tint="@color/rx_white" />
 
             <TextView
                 android:id="@+id/reelPct"
@@ -64,8 +64,8 @@
                 android:layout_marginTop="3dp"
                 android:fontFamily="@font/rx_display"
                 android:includeFontPadding="false"
-                android:textColor="#E8B44A"
-                android:textSize="13sp" />
+                android:textColor="@color/rx_cinema_gold"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- pops in for a moment when a download finishes -->
@@ -77,7 +77,7 @@
             android:background="@drawable/bg_dl_check"
             android:elevation="4dp"
             android:importantForAccessibility="no"
-            android:padding="8dp"
+            android:padding="@dimen/rx_space_8"
             android:src="@drawable/ic_dl_check"
             android:visibility="gone" />
     </FrameLayout>
@@ -85,7 +85,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="@dimen/rx_space_12"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -101,7 +101,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="@dimen/rx_space_4"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -110,11 +110,11 @@
                 android:id="@+id/statusPill"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="@dimen/rx_space_8"
                 android:fontFamily="@font/rx_body"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:textSize="11sp"
+                android:paddingHorizontal="@dimen/rx_space_8"
+                android:paddingVertical="@dimen/rx_space_2"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -132,7 +132,7 @@
             android:id="@+id/progress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/rx_space_8"
             app:indicatorColor="?attr/rxAccent"
             app:trackColor="?attr/rxSurfaceAlt"
             app:trackCornerRadius="0dp"

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingHorizontal="6dp"
-    android:paddingBottom="12dp">
+    android:paddingBottom="@dimen/rx_space_12">
 
     <LinearLayout
         android:id="@+id/more"
@@ -16,14 +16,14 @@
         android:clickable="true"
         android:focusable="true"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/rx_space_16">
 
         <ImageView
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:background="@drawable/bg_dl_more_icon"
             android:importantForAccessibility="no"
-            android:padding="8dp"
+            android:padding="@dimen/rx_space_8"
             android:src="@drawable/ic_dl_grid" />
 
         <Space
@@ -43,13 +43,13 @@
                 android:fontFamily="@font/rx_body"
                 android:text="More Formats"
                 android:textColor="@color/dl_text"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <ImageView
                 android:layout_width="14dp"
                 android:layout_height="14dp"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="@dimen/rx_space_4"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_dl_chevron" />
         </LinearLayout>
@@ -58,11 +58,11 @@
             android:id="@+id/moreSub"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="@dimen/rx_space_2"
             android:fontFamily="@font/rx_body"
             android:text="View All"
             android:textColor="@color/dl_accent_text"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
 </FrameLayout>

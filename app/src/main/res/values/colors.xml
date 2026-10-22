@@ -11,10 +11,12 @@
     <color name="rx_outline">#1F000000</color>
     <color name="rx_divider">#1A000000</color>
     <color name="rx_primary">#C81E33</color>
+    <!-- film red for small text (dark theme uses a lighter red so it stays readable on black) -->
+    <color name="rx_primary_text">#C81E33</color>
     <color name="rx_on_primary">#FFFFFF</color>
     <color name="rx_primary_container">#14C81E33</color>
     <color name="rx_on_primary_container">#A3172A</color>
-    <color name="rx_accent">#A87A1F</color>
+    <color name="rx_accent">#8A6418</color>
     <color name="rx_error">#CC0000</color>
     <color name="rx_error_container">#FFE3E3</color>
 
@@ -68,14 +70,14 @@
     <color name="menu_fill">#0D000000</color>
     <color name="menu_stroke">#14000000</color>
     <color name="menu_label">#8C000000</color>
-    <color name="rx_gold">#A87A1F</color>
+    <color name="rx_gold">#8A6418</color>
     <color name="rx_switch_off">#D6D1C7</color>
     <color name="rx_snack_bg">#E6000000</color>
     <color name="rx_snack_text">#F3CF7F</color>
     <color name="rx_snack_action">#FF5A6C</color>
     <!-- accent choices (Settings › Accent) -->
-    <color name="rx_accent_gold">#A87A1F</color>
-    <color name="rx_accent_teal">#0E8C80</color>
+    <color name="rx_accent_gold">#8A6418</color>
+    <color name="rx_accent_teal">#0B7A70</color>
     <color name="rx_accent_purple">#7C4DDB</color>
     <!-- voice search page and film-strip surfaces (follow light / dark) -->
     <color name="voice_bg">#F6F4F0</color>
@@ -89,4 +91,22 @@
     <color name="film_bg">#E4DFD5</color>
     <color name="film_track">#CFC8BC</color>
     <color name="film_text">#111111</color>
+
+    <!-- cinema surfaces that stay dark in both themes on purpose (Now Showing, lyrics, tickets, labels on pictures) -->
+    <color name="rx_cinema_bg">#0A0A0A</color>
+    <color name="rx_cinema_deep">#050505</color>
+    <color name="rx_cinema_card">#262626</color>
+    <color name="rx_cinema_line">#333333</color>
+    <color name="rx_cinema_gold">#E8B44A</color>
+    <color name="rx_cinema_gold_glow">#99E8B44A</color>
+    <color name="rx_cinema_text">#F2F2F2</color>
+    <color name="rx_cinema_text2">#BDBDBD</color>
+    <color name="rx_cinema_text3">#9A9A9A</color>
+    <color name="rx_on_picture">#FFFFFF</color>
+    <color name="rx_on_picture2">#B3FFFFFF</color>
+    <color name="rx_scrim">#99000000</color>
+    <color name="rx_on_picture_strong">#CCFFFFFF</color>
+    <color name="rx_cinema_text4">#7A7A7A</color>
+    <color name="rx_cinema_case">#1A1A1A</color>
+    <color name="rx_cinema_track">#2A2A2A</color>
 </resources>
