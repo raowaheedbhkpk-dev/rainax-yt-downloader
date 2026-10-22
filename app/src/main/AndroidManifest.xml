@@ -62,15 +62,61 @@
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!-- the home-screen icon: one per accent (Settings › Accent); only the chosen one is turned on -->
+        <activity-alias
+            android:name=".LauncherRed"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherGold"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_gold"
+            android:roundIcon="@mipmap/ic_launcher_gold"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherTeal"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_teal"
+            android:roundIcon="@mipmap/ic_launcher_teal"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherPurple"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_purple"
+            android:roundIcon="@mipmap/ic_launcher_purple"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- YouTube sign-in (Google's own page) -->
         <activity

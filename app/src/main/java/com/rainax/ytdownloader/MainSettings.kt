@@ -88,6 +88,7 @@ internal fun MainActivity.setupSettings() {
         }
         if (v != AppPrefs.accent(this)) {
             AppPrefs.setAccent(this, v)
+            android.widget.Toast.makeText(this, "The app icon changes to this colour when you leave the app", android.widget.Toast.LENGTH_LONG).show()
             window.decorView.post { if (!isDestroyed) recreate() }      // every screen in the new colour
         }
     }

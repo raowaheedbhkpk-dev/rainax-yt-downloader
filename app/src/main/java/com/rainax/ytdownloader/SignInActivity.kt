@@ -33,6 +33,7 @@ class SignInActivity : AppCompatActivity() {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
         Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
+        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         b = ActivitySignInBinding.inflate(layoutInflater)
         setContentView(b.root)
         b.signInClose.setOnClickListener { finish() }

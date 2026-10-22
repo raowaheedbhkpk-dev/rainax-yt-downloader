@@ -238,7 +238,7 @@
                     android:max="1000"
                     android:paddingVertical="10dp"
                     android:progressBackgroundTint="#66FFFFFF"
-                    android:progressTint="@color/rx_grad_start"
+                    android:progressTint="?attr/rxAccent"
                     android:secondaryProgressTint="#99FFFFFF"
                     android:thumbTint="@color/rx_white" />
 

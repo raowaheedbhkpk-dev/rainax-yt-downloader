@@ -79,17 +79,18 @@ class DlCardAdapter(
             tag.text = item.tag
             quality.text = item.quality
             size.text = item.size
-            size.setTextColor(col(if (item.selected) R.color.dl_accent_text else R.color.dl_text2))
+            size.setTextColor(if (item.selected) Ui.accentText(c) else col(R.color.dl_text2))
             check.isVisible = item.selected
             badge.isVisible = item.recommended
             // a ticket: the size sits on the tear-off stub. Selected: red edge on a soft card; recommended: gold edge
             val shape = when {
-                item.selected -> TicketDrawable(col(R.color.dl_card_selected_bg), col(R.color.dl_accent), 2 * d, d, 40 * d)
+                item.selected -> TicketDrawable(androidx.core.graphics.ColorUtils.compositeColors(
+                    androidx.core.graphics.ColorUtils.setAlphaComponent(Ui.accent(c), 0x14), col(R.color.dl_card_bg)), Ui.accent(c), 2 * d, d, 40 * d)
                 item.recommended -> TicketDrawable(col(R.color.dl_card_bg), col(R.color.dl_card_recommended), 2 * d, d, 40 * d)
                 else -> TicketDrawable(col(R.color.dl_card_bg), col(R.color.dl_card_stroke), 1.5f * d, d, 40 * d)
             }
             val mask = GradientDrawable().apply { cornerRadius = 2 * d; setColor(0xFFFFFFFF.toInt()) }
-            card.background = RippleDrawable(ColorStateList.valueOf(0x22D42A35), shape, mask)
+            card.background = RippleDrawable(ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(Ui.accent(c), 0x22)), shape, mask)
             card.tag = if (item.selected) SELECTED_TAG else null
             card.elevation = 0f                       // (a ticket has notches: no square shadow behind it)
             card.contentDescription = listOf(item.quality, item.tag, item.size, if (item.recommended) "Recommended" else "",

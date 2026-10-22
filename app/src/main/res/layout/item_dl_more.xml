@@ -61,7 +61,7 @@
             android:layout_marginTop="@dimen/rx_space_2"
             android:fontFamily="@font/rx_body"
             android:text="View All"
-            android:textColor="@color/dl_accent_text"
+            android:textColor="?attr/rxAccentText"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>

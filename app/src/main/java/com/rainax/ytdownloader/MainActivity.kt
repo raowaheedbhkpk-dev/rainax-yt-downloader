@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         super.onCreate(savedInstanceState)
+        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
         if (savedInstanceState == null && AppPrefs.openingTitle(this)) OpeningCredits.show(b.root)

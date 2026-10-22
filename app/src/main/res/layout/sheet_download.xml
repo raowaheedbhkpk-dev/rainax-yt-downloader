@@ -125,7 +125,7 @@
         android:layout_marginTop="@dimen/rx_space_12"
         android:indeterminate="true"
         android:visibility="gone"
-        app:indicatorColor="@color/dl_accent"
+        app:indicatorColor="?attr/rxAccent"
         app:trackColor="@color/dl_tabs_bg"
         app:trackCornerRadius="2dp" />
 
@@ -296,7 +296,7 @@
             android:id="@+id/downloadBtn"
             android:layout_width="wrap_content"
             android:layout_height="54dp"
-            android:backgroundTint="@color/dl_accent"
+            android:backgroundTint="?attr/rxAccent"
             android:enabled="false"
             android:fontFamily="@font/rx_body"
             android:insetTop="0dp"

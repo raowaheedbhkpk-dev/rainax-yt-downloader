@@ -31,7 +31,7 @@
         android:layout_height="3dp"
         android:layout_marginStart="@dimen/rx_space_20"
         android:layout_marginTop="@dimen/rx_space_12"
-        android:background="@color/rx_primary" />
+        android:background="?attr/rxAccent" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -1150,7 +1150,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/rx_body_semibold"
                     android:text="Clear watch history"
-                    android:textColor="@color/rx_primary"
+                    android:textColor="@color/rx_primary_text"
                     android:textSize="16sp" />
 
                 <TextView

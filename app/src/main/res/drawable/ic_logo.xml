@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- RAINAX mark in the app: white download arrow on a red rounded square -->
+<!-- RAINAX mark in the app: white download arrow on a rounded square in the accent colour -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <gradient android:angle="315" android:endColor="@color/rx_logo_end" android:startColor="@color/rx_logo_start" />
+            <solid android:color="?attr/rxAccent" />
             <corners android:radius="9dp" />
         </shape>
     </item>

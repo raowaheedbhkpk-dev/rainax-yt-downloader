@@ -42,6 +42,13 @@
 
     <color name="ic_launcher_bg_start">#FF1744</color>
     <color name="ic_launcher_bg_end">#C4001D</color>
+    <!-- the app icon in the other accents (Settings › Accent changes the icon on the home screen too) -->
+    <color name="ic_launcher_gold_start">#F2C14E</color>
+    <color name="ic_launcher_gold_end">#A8761C</color>
+    <color name="ic_launcher_teal_start">#2EC4B6</color>
+    <color name="ic_launcher_teal_end">#0B7A70</color>
+    <color name="ic_launcher_purple_start">#A78BFA</color>
+    <color name="ic_launcher_purple_end">#6D3FD1</color>
     <color name="rx_amoled_bg">#000000</color>
     <color name="rx_amoled_card">#0F0F0F</color>
     <color name="rx_amoled_alt">#1F1F1F</color>

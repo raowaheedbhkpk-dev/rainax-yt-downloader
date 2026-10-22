@@ -148,6 +148,7 @@ class ShortsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
+        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         items.addAll(ShortsFeed.items)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         b = ActivityShortsBinding.inflate(layoutInflater)
