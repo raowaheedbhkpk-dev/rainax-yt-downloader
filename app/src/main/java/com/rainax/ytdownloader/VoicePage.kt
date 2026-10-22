@@ -48,8 +48,7 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
             val bg = androidx.core.content.ContextCompat.getColor(act, R.color.voice_bg)
             w.statusBarColor = bg
             w.navigationBarColor = bg
-            val night = (act.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val night = Ui.isDark(act)
             WindowInsetsControllerCompat(w, w.decorView).apply {
                 isAppearanceLightStatusBars = !night
                 isAppearanceLightNavigationBars = !night

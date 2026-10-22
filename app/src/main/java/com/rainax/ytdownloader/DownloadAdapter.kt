@@ -76,7 +76,7 @@ class DownloadAdapter(
 
         // small coloured pill: what the download is doing right now (finished ones need none)
         val pill: Pair<String, Int>? = when (t.status) {
-            Status.RUNNING -> "Downloading" to 0xFFE5203A.toInt()
+            Status.RUNNING -> "Downloading" to Ui.accent(b.root.context)
             Status.QUEUED -> "Queued" to 0xFF6E6E79.toInt()
             Status.PAUSED -> "Paused" to 0xFFE08A00.toInt()
             Status.WAITING -> "Waiting" to 0xFF3D7BE0.toInt()

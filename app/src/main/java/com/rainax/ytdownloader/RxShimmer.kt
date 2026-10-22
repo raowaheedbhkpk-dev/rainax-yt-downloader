@@ -33,8 +33,7 @@ class RxShimmer @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val night = Ui.isDark(context)
         val light = if (night) 0x26FFFFFF else 0x8CFFFFFF.toInt()
         val band = w * 0.45f
         paint.shader = LinearGradient(0f, 0f, band, 0f, intArrayOf(0, light, 0), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)

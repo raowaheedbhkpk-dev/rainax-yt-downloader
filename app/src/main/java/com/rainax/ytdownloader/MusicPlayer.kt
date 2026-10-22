@@ -866,7 +866,7 @@ class MusicPlayer(
     }
 
     private fun showLike() {
-        val on = ContextCompat.getColor(act, R.color.rx_grad_start)
+        val on = Ui.accent(act)
         val off = ContextCompat.getColor(act, R.color.rx_white)
         pg.mpLikeIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (likeStatus == "LIKE") on else off)
         pg.mpDislikeIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (likeStatus == "DISLIKE") on else off)

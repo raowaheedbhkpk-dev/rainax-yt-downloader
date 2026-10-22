@@ -65,7 +65,8 @@ object OpeningCredits {
         var hdr = false
         if (Build.VERSION.SDK_INT >= 34 && activity != null) {
             val display = activity.display
-            if (display != null && display.isHdrSdrRatioAvailable) {
+            // (dark theme only: the light theme has no glow to brighten, so it stays in normal range)
+            if (display != null && display.isHdrSdrRatioAvailable && Ui.isDark(activity)) {
                 runCatching { activity.window.colorMode = ActivityInfo.COLOR_MODE_HDR; hdr = true }
             }
         }
@@ -132,7 +133,7 @@ private class OpeningView(context: Context) : View(context) {
     var intro = 1f
 
     private val d = resources.displayMetrics.density
-    private val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    private val dark = Ui.isDark(context)
     private val accent = Ui.accent(context)
     private val ink = if (dark) Color.WHITE else 0xFF111111.toInt()
     private val gold = if (dark) 0xFFE8B44A.toInt() else 0xFF8A6418.toInt()

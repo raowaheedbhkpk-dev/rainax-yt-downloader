@@ -1122,8 +1122,7 @@ class VideoScreen(
     private var ambientAnim: android.animation.ValueAnimator? = null
     private var ambientBase: android.graphics.drawable.Drawable? = null
 
-    private fun isNight() = (act.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-        android.content.res.Configuration.UI_MODE_NIGHT_YES
+    private fun isNight() = Ui.isDark(act)
 
     private val ambientTick = object : Runnable {
         override fun run() {

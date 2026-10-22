@@ -86,6 +86,13 @@
     <color name="rx_accent_gold">#8A6418</color>
     <color name="rx_accent_teal">#0B7A70</color>
     <color name="rx_accent_purple">#7C4DDB</color>
+    <!-- soft accent backgrounds (tonal buttons, small chips) and the text on them -->
+    <color name="rx_accent_gold_container">#1F8A6418</color>
+    <color name="rx_accent_teal_container">#1A0B7A70</color>
+    <color name="rx_accent_purple_container">#177C4DDB</color>
+    <color name="rx_on_accent_gold_container">#6B4D10</color>
+    <color name="rx_on_accent_teal_container">#075C54</color>
+    <color name="rx_on_accent_purple_container">#5B32B8</color>
     <!-- voice search page and film-strip surfaces (follow light / dark) -->
     <color name="voice_bg">#F6F4F0</color>
     <color name="voice_glow">#26C81E33</color>

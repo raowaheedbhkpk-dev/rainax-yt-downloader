@@ -12,6 +12,21 @@ object Ui {
     @JvmStatic var pillExtra = 0
 
     /**
+     * True when the screen is really drawn dark. Read from the theme's own background colour, not the phone's
+     * night mode: with Settings › Theme set to Light on a phone in dark mode (or the other way round) the two
+     * differ, and screens that asked the phone drew themselves in the wrong theme.
+     */
+    fun isDark(c: android.content.Context): Boolean {
+        val tv = android.util.TypedValue()
+        if (!c.theme.resolveAttribute(R.attr.rxBg, tv, true)) {
+            return (c.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        val color = if (tv.resourceId != 0) ContextCompat.getColor(c, tv.resourceId) else tv.data
+        return androidx.core.graphics.ColorUtils.calculateLuminance(color) < 0.5
+    }
+
+    /**
      * Makes a small button easier to hit: its touch area grows to at least [minDp] square (the picture stays
      * the same size). Uses the parent's TouchDelegate, so it suits one small button per parent.
      */

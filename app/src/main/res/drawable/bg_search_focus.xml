@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- the search box while typing: a red border and a soft red glow ring around it -->
+<!-- the search box while typing: an accent border and a soft accent glow ring around it -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape>
-            <solid android:color="#1FD7263D" />
+            <solid android:color="?attr/rxAccentContainer" />
             <corners android:radius="2dp" />
         </shape>
     </item>

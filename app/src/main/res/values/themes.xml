@@ -22,7 +22,7 @@
         <item name="elevation">0dp</item>
     </style>
     <style name="Widget.Rainax.SnackbarButton" parent="Widget.Material3.Button.TextButton.Snackbar">
-        <item name="android:textColor">@color/rx_snack_action</item>
+        <item name="android:textColor">@color/rx_cinema_gold</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.12</item>
@@ -49,6 +49,8 @@
         <!-- Surface colours as theme attributes, so the AMOLED theme can turn them pure black -->
         <item name="rxAccent">@color/rx_primary</item>
         <item name="rxAccentText">@color/rx_primary_text</item>
+        <item name="rxAccentContainer">@color/rx_primary_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_primary_container</item>
         <item name="rxBg">@color/rx_bg</item>
         <item name="rxSurface">@color/rx_surface</item>
         <item name="rxCard">@color/rx_card</item>
@@ -70,12 +72,12 @@
         <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Rainax.Type.Headline</item>
         <item name="colorPrimary">?attr/rxAccent</item>
         <item name="colorOnPrimary">@color/rx_on_primary</item>
-        <item name="colorPrimaryContainer">@color/rx_primary_container</item>
-        <item name="colorOnPrimaryContainer">@color/rx_on_primary_container</item>
+        <item name="colorPrimaryContainer">?attr/rxAccentContainer</item>
+        <item name="colorOnPrimaryContainer">?attr/rxOnAccentContainer</item>
         <item name="colorSecondary">@color/rx_accent</item>
         <item name="colorOnSecondary">@color/rx_on_primary</item>
-        <item name="colorSecondaryContainer">@color/rx_primary_container</item>
-        <item name="colorOnSecondaryContainer">@color/rx_on_primary_container</item>
+        <item name="colorSecondaryContainer">?attr/rxAccentContainer</item>
+        <item name="colorOnSecondaryContainer">?attr/rxOnAccentContainer</item>
         <item name="colorTertiary">@color/rx_accent</item>
         <item name="colorSurface">?attr/rxSurface</item>
         <item name="colorOnSurface">@color/rx_text</item>
@@ -334,9 +336,9 @@
     </style>
 
     <style name="Widget.Rainax.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
-        <item name="backgroundTint">@color/rx_primary_container</item>
-        <item name="android:textColor">@color/rx_on_primary_container</item>
-        <item name="iconTint">@color/rx_on_primary_container</item>
+        <item name="backgroundTint">?attr/rxAccentContainer</item>
+        <item name="android:textColor">?attr/rxOnAccentContainer</item>
+        <item name="iconTint">?attr/rxOnAccentContainer</item>
         <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
         <item name="strokeColor">?attr/rxOutline</item>
         <item name="strokeWidth">1dp</item>
@@ -448,14 +450,20 @@
     <style name="ThemeOverlay.Rainax.Accent.Gold" parent="">
         <item name="rxAccent">@color/rx_accent_gold</item>
         <item name="rxAccentText">@color/rx_accent_gold</item>
+        <item name="rxAccentContainer">@color/rx_accent_gold_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_gold_container</item>
     </style>
     <style name="ThemeOverlay.Rainax.Accent.Teal" parent="">
         <item name="rxAccent">@color/rx_accent_teal</item>
         <item name="rxAccentText">@color/rx_accent_teal</item>
+        <item name="rxAccentContainer">@color/rx_accent_teal_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_teal_container</item>
     </style>
     <style name="ThemeOverlay.Rainax.Accent.Purple" parent="">
         <item name="rxAccent">@color/rx_accent_purple</item>
         <item name="rxAccentText">@color/rx_accent_purple</item>
+        <item name="rxAccentContainer">@color/rx_accent_purple_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_purple_container</item>
     </style>
 
     <!--

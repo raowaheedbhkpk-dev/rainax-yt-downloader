@@ -1,3 +1,4 @@
+Accent everywhere: Shuffle, Save all and other soft buttons, small chips, the search box glow, notification dots, voice search and the downloading label now use your accent colour; screens follow your chosen Light or Dark theme even when the phone uses the other one
 The app icon and the RAINAX logo now take your accent colour (Film red, Gold, Teal or Purple); every open screen updates to your new theme and accent straight away
 Accent fixes: your chosen accent (Gold, Teal, Purple) now shows everywhere, also when the theme is set to Light or Dark: settings chips and switches, the download sheet, the + button and voice search
 Tablets: finished downloads now show in 2 or 3 columns; tidier spacing and building blocks under the hood for faster, safer updates
