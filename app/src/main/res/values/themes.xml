@@ -599,7 +599,7 @@
     </style>
 
     <!-- the theme popup's rows (Home's sun button) -->
-    <style name="Widget.Rainax.ThemeRow">
+    <style name="Widget.Rainax.ThemeRow" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">48dp</item>
         <item name="android:orientation">horizontal</item>
@@ -610,7 +610,7 @@
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>
-    <style name="Widget.Rainax.ThemeRowText">
+    <style name="Widget.Rainax.ThemeRowText" parent="">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
@@ -618,7 +618,7 @@
         <item name="android:textColor">@color/rx_text</item>
         <item name="android:textSize">16sp</item>
     </style>
-    <style name="Widget.Rainax.ThemeRowCheck">
+    <style name="Widget.Rainax.ThemeRowCheck" parent="">
         <item name="android:layout_width">20dp</item>
         <item name="android:layout_height">20dp</item>
         <item name="android:importantForAccessibility">no</item>
