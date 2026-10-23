@@ -56,28 +56,15 @@ internal fun MainActivity.setupSettings() {
         }
     )
     st.themeGroup.setOnCheckedStateChangeListener { _, ids ->
-        val mode = when (ids.firstOrNull()) {
+        chooseTheme(when (ids.firstOrNull()) {
             R.id.themeLight -> 1
             R.id.themeDark -> 2
             R.id.themeAmoled -> 3
             else -> 0
-        }
-        val old = AppPrefs.themeMode(this)
-        if (mode != old) {
-            AppPrefs.setThemeMode(this, mode)
-            RainaxApp.applyTheme(mode)      // recreates the screen with the new colours
-            // Dark <-> AMOLED keeps night mode, so rebuild the screen ourselves
-            if (old == 3 || mode == 3) window.decorView.post { if (!isDestroyed) recreate() }
-        }
+        })
     }
 
-    AccentSwatch.fill(st.accentGrid, AppPrefs.accent(this)) { v ->
-        if (v != AppPrefs.accent(this)) {
-            AppPrefs.setAccent(this, v)
-            android.widget.Toast.makeText(this, "${Accents.of(v).name} · the app icon changes when you leave the app", android.widget.Toast.LENGTH_LONG).show()
-            window.decorView.postDelayed({ if (!isDestroyed) recreate() }, 180)      // every screen in the new colour
-        }
-    }
+    AccentSwatch.fill(st.accentGrid, AppPrefs.accent(this)) { v -> chooseAccent(v) }
 
     st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
     st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
@@ -186,4 +173,65 @@ internal fun MainActivity.nudgeService() {
         it.status == Status.QUEUED || it.status == Status.WAITING || it.status == Status.RUNNING
     }
     if (needs) DownloadService.send(this, DownloadService.ACTION_PUMP)
+}
+
+/** 0 follow the phone, 1 light, 2 dark, 3 AMOLED black: saved, and every screen redraws in it. */
+internal fun MainActivity.chooseTheme(mode: Int) {
+    val old = AppPrefs.themeMode(this)
+    if (mode == old) return
+    AppPrefs.setThemeMode(this, mode)
+    // (the Settings chips follow when the change came from the Home popup)
+    st.themeGroup.check(when (mode) { 1 -> R.id.themeLight; 2 -> R.id.themeDark; 3 -> R.id.themeAmoled; else -> R.id.themeSystem })
+    RainaxApp.applyTheme(mode)      // recreates the screen with the new colours
+    // Dark <-> AMOLED keeps night mode, so rebuild the screen ourselves
+    if (old == 3 || mode == 3) window.decorView.post { if (!isDestroyed) recreate() }
+}
+
+/** One of the sixteen accents: saved, every screen redraws in it, and the app icon follows later. */
+internal fun MainActivity.chooseAccent(v: Int) {
+    if (v == AppPrefs.accent(this)) return
+    AppPrefs.setAccent(this, v)
+    android.widget.Toast.makeText(this, "${Accents.of(v).name} · the app icon changes when you leave the app", android.widget.Toast.LENGTH_LONG).show()
+    window.decorView.postDelayed({ if (!isDestroyed) recreate() }, 180)      // every screen in the new colour
+}
+
+/**
+ * Home's sun button: a small popup with System / Light / Dark and Theme. Theme turns the popup into the
+ * sixteen accent rings (with a back arrow); picking one closes it and the app redraws in that colour.
+ */
+internal fun MainActivity.showThemePopup(anchor: View) {
+    val d = resources.displayMetrics.density
+    val pb = com.rainax.ytdownloader.databinding.PopupThemeBinding.inflate(layoutInflater)
+    val width = (288 * d).toInt()
+    val pw = android.widget.PopupWindow(pb.root, width, ViewGroup.LayoutParams.WRAP_CONTENT, true)
+    pw.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+    pw.isOutsideTouchable = true
+    pw.elevation = 12 * d
+    val mode = AppPrefs.themeMode(this)
+    pb.tpSystemCheck.visibility = if (mode == 0) View.VISIBLE else View.INVISIBLE
+    pb.tpLightCheck.visibility = if (mode == 1) View.VISIBLE else View.INVISIBLE
+    pb.tpDarkCheck.visibility = if (mode == 2 || mode == 3) View.VISIBLE else View.INVISIBLE
+    pb.tpThemeName.text = Accents.of(AppPrefs.accent(this)).name
+    pb.tpSystem.setOnClickListener { pw.dismiss(); chooseTheme(0) }
+    pb.tpLight.setOnClickListener { pw.dismiss(); chooseTheme(1) }
+    pb.tpDark.setOnClickListener { pw.dismiss(); if (mode != 3) chooseTheme(2) }      // AMOLED already is dark
+    fun resize() {
+        pb.root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        pw.update(width, pb.root.measuredHeight)
+    }
+    pb.tpTheme.setOnClickListener {
+        Haptics.tick(it)
+        AccentSwatch.fill(pb.tpGrid, AppPrefs.accent(this)) { v ->
+            pb.root.postDelayed({ pw.dismiss(); chooseAccent(v) }, 140)    // the ring shows as chosen for a moment
+        }
+        pb.tpModes.visibility = View.GONE
+        pb.tpAccents.visibility = View.VISIBLE
+        resize()
+    }
+    pb.tpBack.setOnClickListener {
+        pb.tpAccents.visibility = View.GONE
+        pb.tpModes.visibility = View.VISIBLE
+        resize()
+    }
+    pw.showAsDropDown(anchor, 0, 0, android.view.Gravity.END)
 }

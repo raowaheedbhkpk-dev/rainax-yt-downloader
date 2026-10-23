@@ -84,6 +84,18 @@
                 android:src="@drawable/ic_bell"
                 app:tint="@color/rx_text" />
 
+            <!-- sun / moon: System, Light, Dark and the accent colours, in a small popup -->
+            <ImageButton
+                android:id="@+id/homeTheme"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Theme"
+                android:padding="13dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_brightness"
+                app:tint="@color/rx_text" />
+
             <!-- Search (hold it to speak): opens the glowing search box -->
             <ImageButton
                 android:id="@+id/searchOpen"

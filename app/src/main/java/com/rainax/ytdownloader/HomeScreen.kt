@@ -233,6 +233,8 @@ class HomeScreen(
 
     /** The ≡ button (side menu) and the mic (voice search): handled by the main screen. */
     var onMenu: () -> Unit = {}
+    /** The sun / moon button (the theme popup, set by the main screen). */
+    var onTheme: (View) -> Unit = {}
     var onVoice: () -> Unit = {}
 
     /** All on the channels row: the Subscriptions tab (set by the main screen). */
@@ -294,6 +296,9 @@ class HomeScreen(
         hm.homeSearchMic.setOnClickListener { onVoice() }
         hm.homeMenu.setOnClickListener { onMenu() }
         hm.homeBell.setOnClickListener { openNotifications() }
+        // sun in the light theme, moon in the dark one; opens System / Light / Dark and the accent colours
+        hm.homeTheme.setImageResource(if (Ui.isDark(act)) R.drawable.ic_moon else R.drawable.ic_brightness)
+        hm.homeTheme.setOnClickListener { onTheme(it) }
         hm.searchMic.setOnClickListener { onVoice() }
         Ui.expandTouch(hm.searchClear)
         hm.searchInput.setOnFocusChangeListener { _, focused -> if (focused) startTyping() }

@@ -218,6 +218,7 @@ class MainActivity : AppCompatActivity() {
         FeedAutoplay.attach(sb.subsList)
         FeedAutoplay.blocked = { video.isOpen || (::music.isInitialized && music.expanded) }
         home.onMenu = { openExplore() }
+        home.onTheme = { showThemePopup(it) }
         home.onVoice = { startVoiceSearch() }
         home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
 
