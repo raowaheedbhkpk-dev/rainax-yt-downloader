@@ -203,6 +203,14 @@ class VideoAdapter(
         val out = ArrayList<Slot>()
         val n = items.size
         fun video(i: Int, normal: Int = ITEM) = Slot.Video(i, if (items[i].isChannel) CHANNEL else normal)
+        // magazine: a channel among the first videos used to drop the whole page back to the plain layout;
+        // now the first nine videos move up (channels keep their order after them)
+        if (magazine && n >= 9 && items.take(9).any { it.isChannel } && items.count { !it.isChannel } >= 9) {
+            val vids = items.filter { !it.isChannel }
+            val first = vids.take(9)
+            val rest = items.filter { it !in first }
+            items.clear(); items.addAll(first); items.addAll(rest)
+        }
         if (magazine && n >= 9 && items.take(9).none { it.isChannel }) {
             var chapterNo = 0
             fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t.uppercase()) }

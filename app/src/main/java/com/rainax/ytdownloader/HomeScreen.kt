@@ -342,6 +342,7 @@ class HomeScreen(
         }
 
         buildTabs()
+        applyListAdapter()
         load(reset = true)
     }
 
@@ -938,6 +939,9 @@ class HomeScreen(
             val cached = vm.feedCache[cacheKey()]
             if (cached != null) {
                 hm.feedRefresh.isRefreshing = false
+                // the saved list (after a theme / accent change the screen is rebuilt and shows it at once):
+                // set the magazine, shelf and adapter first, or Home fell back to the old "Top pick" layout
+                applyListAdapter()
                 a.submit(cached.first)
                 next = cached.second
                 a.loadingMore = next != null
