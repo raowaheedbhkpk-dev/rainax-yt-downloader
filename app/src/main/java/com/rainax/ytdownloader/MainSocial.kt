@@ -209,6 +209,16 @@ internal fun MainActivity.extractUrls(text: String): List<String> =
 
 /** Links shared from other apps (Share > RAINAX). */
 internal fun MainActivity.handleIntent(intent: Intent?) {
+    // "N new WhatsApp statuses saved" tapped: the Social page at the status saver
+    if (intent?.getBooleanExtra(StatusAutoSave.EXTRA_OPEN_STATUS, false) == true) {
+        intent.removeExtra(StatusAutoSave.EXTRA_OPEN_STATUS)
+        b.bottomNav.selectedItemId = R.id.nav_social
+        so.root.post {
+            so.socialScroll.smoothScrollTo(0, so.statusCard.top)
+            so.statusApps.check(R.id.statusSaved)
+        }
+        return
+    }
     if (intent?.action != Intent.ACTION_SEND) return
     val urls = extractUrls(intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString().orEmpty())
     if (urls.isNotEmpty()) {

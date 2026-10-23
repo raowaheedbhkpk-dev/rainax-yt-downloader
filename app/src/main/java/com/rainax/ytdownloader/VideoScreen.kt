@@ -116,6 +116,8 @@ class VideoScreen(
             downloadMany(list)
         }
         vb.playerUnlock.setOnClickListener { setLocked(false) }
+        vb.videoLock.setOnClickListener { setLocked(true) }
+        setupGestures()
     }
 
     /** Download for the videos picked with + (set by the main screen). */
@@ -209,6 +211,140 @@ class VideoScreen(
         dialog.setContentView(box)
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         dialog.show()
+    }
+
+    // ---------- player gestures ----------
+
+    private var seekSum = 0                     // seconds added by a run of double taps (10, 20, 30...)
+    private var seekSide = 0                    // -1 back, 1 forward
+    private val seekReset = Runnable { seekSum = 0; seekSide = 0 }
+    private var swipeMode = 0                   // 0 none yet, 1 brightness, 2 volume, -1 not ours
+    private var swipeStart = 0f
+    private val hudHide = Runnable { vb.gestureHud.animate().alpha(0f).setDuration(250).withEndAction { vb.gestureHud.isVisible = false }.start() }
+
+    /**
+     * On the video:
+     *  - one tap shows or hides the controls (as before);
+     *  - double tap on the left / right goes back / forward 10 s (keep tapping for 20, 30 s...);
+     *  - full screen: swipe up or down on the left half for brightness, on the right half for volume.
+     */
+    private fun setupGestures() {
+        val d = act.resources.displayMetrics.density
+        val detector = android.view.GestureDetector(act, object : android.view.GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: android.view.MotionEvent): Boolean {
+                swipeMode = 0
+                return true
+            }
+
+            override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean {
+                if (seekSum > 0) { doubleSeek(e.x); return true }     // a quick extra tap after a double tap: 10 s more
+                val pv = vb.playerView
+                if (pv.isControllerFullyVisible) pv.hideController() else pv.showController()
+                return true
+            }
+
+            override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
+                doubleSeek(e.x)
+                return true
+            }
+
+            override fun onScroll(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, dx: Float, dy: Float): Boolean {
+                if (!fullscreen || e1 == null) return false
+                val h = vb.playerBox.height.toFloat()
+                val w = vb.playerBox.width.toFloat()
+                if (swipeMode == 0) {
+                    val totalX = e2.x - e1.x
+                    val totalY = e2.y - e1.y
+                    if (kotlin.math.abs(totalY) < 16 * d) return false
+                    // starts near the top or bottom edge: that's Android's own swipe (status / navigation bar)
+                    swipeMode = if (kotlin.math.abs(totalY) < kotlin.math.abs(totalX) || e1.y < 48 * d || e1.y > h - 48 * d) -1
+                    else if (e1.x < w / 2) 1 else 2
+                    swipeStart = if (swipeMode == 1) brightness() else volume()
+                }
+                if (swipeMode <= 0) return false
+                // a swipe over 60% of the height goes from nothing to full
+                val value = (swipeStart + (e1.y - e2.y) / (h * 0.6f)).coerceIn(0f, 1f)
+                if (swipeMode == 1) setBrightness(value) else setVolume(value)
+                showHud(swipeMode, value)
+                return true
+            }
+        })
+        // (the player's own tap handling is replaced: one tap still shows / hides the controls, see above)
+        vb.playerView.setOnTouchListener { _, ev -> detector.onTouchEvent(ev) }
+    }
+
+    /** Double tap at [x]: back 10 s on the left, forward 10 s on the right (taps in a row add up). */
+    private fun doubleSeek(x: Float) {
+        val p = player() ?: return
+        val side = if (x < vb.playerBox.width / 2f) -1 else 1
+        if (side != seekSide) seekSum = 0
+        seekSide = side
+        seekSum += 10
+        val dur = p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
+        p.seekTo((p.currentPosition + side * 10_000L).coerceIn(0L, dur))
+        Haptics.tick(vb.playerView)
+        val hint = if (side < 0) vb.seekHintBack else vb.seekHintFwd
+        val other = if (side < 0) vb.seekHintFwd else vb.seekHintBack
+        other.alpha = 0f
+        hint.text = if (side < 0) "«  ${seekSum}s" else "${seekSum}s  »"
+        hint.animate().cancel()
+        hint.alpha = 1f
+        hint.scaleX = 0.9f; hint.scaleY = 0.9f
+        hint.animate().scaleX(1f).scaleY(1f).setDuration(120).withEndAction {
+            hint.animate().alpha(0f).setStartDelay(550).setDuration(250).start()
+        }.start()
+        vb.playerView.removeCallbacks(seekReset)
+        vb.playerView.postDelayed(seekReset, 800)
+    }
+
+    private fun audio() = act.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+
+    private fun volume(): Float {
+        val am = audio()
+        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        return am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) / max.toFloat()
+    }
+
+    private fun setVolume(v: Float) {
+        val am = audio()
+        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+        runCatching { am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * max).roundToIntSafe(), 0) }
+    }
+
+    private fun Float.roundToIntSafe() = kotlin.math.round(this).toInt()
+
+    /** This screen's brightness (0..1); the phone's own level until it was changed here. */
+    private fun brightness(): Float {
+        val own = act.window.attributes.screenBrightness
+        if (own >= 0f) return own
+        val sys = runCatching { android.provider.Settings.System.getInt(act.contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) }.getOrDefault(128)
+        return (sys / 255f).coerceIn(0f, 1f)
+    }
+
+    private fun setBrightness(v: Float) {
+        val lp = act.window.attributes
+        lp.screenBrightness = v.coerceAtLeast(0.01f)
+        act.window.attributes = lp
+    }
+
+    /** Back to the phone's own brightness (leaving full screen). */
+    private fun resetBrightness() {
+        val lp = act.window.attributes
+        if (lp.screenBrightness < 0f) return
+        lp.screenBrightness = android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        act.window.attributes = lp
+    }
+
+    private fun showHud(mode: Int, value: Float) {
+        val pct = (value * 100).toInt()
+        vb.gestureIcon.setImageResource(if (mode == 1) R.drawable.ic_brightness else if (pct == 0) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
+        vb.gestureBar.setProgressCompat(pct, false)
+        vb.gestureText.text = "$pct%"
+        vb.gestureHud.removeCallbacks(hudHide)
+        vb.gestureHud.animate().cancel()
+        vb.gestureHud.alpha = 1f
+        vb.gestureHud.isVisible = true
+        vb.gestureHud.postDelayed(hudHide, 700)
     }
 
     // ---------- Lock screen ----------
@@ -1238,11 +1374,15 @@ class VideoScreen(
         val action: () -> Unit
     )
 
+    /**
+     * The gear menus (Settings, Quality, Playback speed). Upright: a sheet from the bottom, fully open.
+     * Sideways / full screen: a panel that slides in on the right of the video, like YouTube, so it fits the
+     * short screen, scrolls, and keeps the video full screen (no status or navigation bar popping up).
+     */
     private fun optionsSheet(title: String, opts: List<Opt>) {
         val sb = com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding.inflate(act.layoutInflater)
-        val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
         sb.optTitle.text = title
+        var close: () -> Unit = {}
         opts.forEach { o ->
             val row = com.rainax.ytdownloader.databinding.ItemOptionBinding.inflate(act.layoutInflater, sb.optList, false)
             row.optText.text = o.text
@@ -1254,12 +1394,68 @@ class VideoScreen(
                 row.optIcon.isVisible = true
             }
             row.root.setOnClickListener {
-                dialog.dismiss()
+                close()
                 o.action()
             }
             sb.optList.addView(row.root)
         }
+        val sideways = fullscreen ||
+            act.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (sideways) {
+            close = sidePanel(sb)
+            return
+        }
+        val dialog = BottomSheetDialog(act)
+        dialog.setContentView(sb.root)
+        dialog.behavior.skipCollapsed = true
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        close = { dialog.dismiss() }
         dialog.show()
+    }
+
+    /** Shows [sb] as a panel on the right over the full-screen video. Returns what closes it. */
+    private fun sidePanel(sb: com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding): () -> Unit {
+        val dm = act.resources.displayMetrics
+        val d = dm.density
+        val width = minOf((380 * d).toInt(), (dm.widthPixels * 0.5f).toInt()).coerceAtLeast((280 * d).toInt())
+        val dialog = android.app.Dialog(act)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        // the panel fills the screen's height; its list scrolls inside it
+        sb.root.layoutParams = ViewGroup.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT)
+        (sb.optList.parent as? View)?.layoutParams =
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+        sb.root.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(sb.root, R.attr.rxSurface))
+        dialog.setContentView(sb.root)
+        dialog.setCanceledOnTouchOutside(true)
+        val w = dialog.window ?: return { dialog.dismiss() }
+        w.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        w.setLayout(width, ViewGroup.LayoutParams.MATCH_PARENT)
+        w.setGravity(android.view.Gravity.END)
+        w.setDimAmount(0.35f)
+        w.attributes = w.attributes.apply {
+            layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+        // a notch or rounded corner on the right: keep the rows clear of it
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(sb.root) { v, insets ->
+            val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.systemBars())
+            v.setPadding(0, cut.top + (8 * d).toInt(), cut.right, cut.bottom + (16 * d).toInt())
+            insets
+        }
+        // shown without taking focus first, so the video stays full screen (the bars don't come back)
+        w.setFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        dialog.show()
+        WindowCompat.getInsetsController(w, w.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+        w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        // slides in from the right edge
+        if (android.animation.ValueAnimator.areAnimatorsEnabled()) {
+            sb.root.translationX = width.toFloat()
+            sb.root.animate().translationX(0f).setDuration(220)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+        }
+        return { dialog.dismiss() }
     }
 
     private fun youtubeThumb(u: String): String? =
@@ -1299,6 +1495,8 @@ class VideoScreen(
         vb.playerBox.layoutParams = lp
         vb.videoList.isVisible = !on
         vb.videoClose.isVisible = !on
+        vb.videoLock.isVisible = on
+        if (!on) resetBrightness()
         vb.playerTitle.visibility = if (on) View.VISIBLE else View.INVISIBLE
         vb.playerTitle.text = currentTitle().orEmpty()
         if (on) { vb.vNextBar.isVisible = false; vb.vPickBar.isVisible = false } else showPicks()

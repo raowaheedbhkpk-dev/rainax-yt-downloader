@@ -90,6 +90,19 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
 
+            <!-- lock the screen (full screen only): touches do nothing until Unlock -->
+            <ImageButton
+                android:id="@+id/videoLock"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Lock screen"
+                android:padding="11dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_lock"
+                android:visibility="gone"
+                app:tint="@color/rx_white" />
+
             <ImageButton
                 android:id="@+id/videoSettings"
                 android:layout_width="44dp"
@@ -117,6 +130,78 @@
             android:textColor="@color/rx_white"
             android:textSize="10sp"
             android:visibility="gone" />
+
+        <!-- double tap on the left / right: back or forward 10 s (the hint fades in on that side) -->
+        <TextView
+            android:id="@+id/seekHintBack"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="start|center_vertical"
+            android:layout_marginStart="@dimen/rx_space_24"
+            android:alpha="0"
+            android:background="@drawable/bg_seek_hint"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:textColor="@color/rx_white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/seekHintFwd"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="@dimen/rx_space_24"
+            android:alpha="0"
+            android:background="@drawable/bg_seek_hint"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:textColor="@color/rx_white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- swipe up / down in full screen: brightness (left half) or volume (right half) -->
+        <LinearLayout
+            android:id="@+id/gestureHud"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_gesture_hud"
+            android:gravity="center_vertical"
+            android:importantForAccessibility="no"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/rx_space_16"
+            android:paddingVertical="@dimen/rx_space_12"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/gestureIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_brightness"
+                app:tint="@color/rx_white" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/gestureBar"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/rx_space_12"
+                android:max="100"
+                app:indicatorColor="?attr/rxAccent"
+                app:trackColor="#4DFFFFFF"
+                app:trackCornerRadius="0dp"
+                app:trackThickness="4dp" />
+
+            <TextView
+                android:id="@+id/gestureText"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/rx_space_8"
+                android:gravity="end"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <!-- Lock screen (from the gear menu): touches do nothing until Unlock -->
         <FrameLayout

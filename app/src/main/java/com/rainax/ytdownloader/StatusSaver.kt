@@ -69,6 +69,16 @@ class StatusSaver(
         so.statusPickFolder.setOnClickListener { pickFolder(initialUri(tab)) }
         so.statusRefresh.setOnClickListener { refresh() }
         so.statusSaveAll.setOnClickListener { saveAll() }
+        so.statusAutoSwitch.isChecked = AppPrefs.statusAuto(act)
+        so.statusAutoRow.setOnClickListener { so.statusAutoSwitch.toggle() }
+        so.statusAutoSwitch.setOnCheckedChangeListener { _, on ->
+            if (on == AppPrefs.statusAuto(act)) return@setOnCheckedChangeListener
+            StatusAutoSave.setEnabled(act, on)
+            if (on) {
+                Notify.show(act, "Auto-save on: new statuses are saved to Rainax Tube/Status")
+                StatusAutoSave.runSoon(act) { n -> if (n > 0) Notify.show(act, if (n == 1) "Saved 1 status" else "Saved $n statuses"); refresh() }
+            } else Notify.show(act, "Auto-save off")
+        }
     }
 
     /** WhatsApp chosen from the apps grid: show its statuses. */
@@ -159,6 +169,8 @@ class StatusSaver(
     // ---------- listing ----------
 
     fun refresh() {
+        // auto-save on: anything new is saved first (in the background), then the list shows it ticked
+        StatusAutoSave.runSoon(act) { n -> if (n > 0) { savedNames = savedNames + AppPrefs.savedStatuses(act); adapter.notifyDataSetChanged() } }
         loadJob?.cancel()
         val t = tab
         val direct = t != 2 && fileAccess()

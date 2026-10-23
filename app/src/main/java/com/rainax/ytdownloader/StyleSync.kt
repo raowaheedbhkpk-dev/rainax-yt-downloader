@@ -23,7 +23,6 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
     private val drawnWith = WeakHashMap<Activity, String>()
     private var started = 0
 
-    private val ALIASES = listOf("LauncherRed", "LauncherGold", "LauncherTeal", "LauncherPurple")   // = accent 0..3
 
     fun install(app: Application) {
         app.registerActivityLifecycleCallbacks(this)
@@ -35,11 +34,13 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
     /** Turns on the launcher entry of the current accent and turns the others off (only what differs). */
     fun applyIcon(c: Context) {
         val pm = c.packageManager
-        val want = AppPrefs.accent(c).coerceIn(0, ALIASES.size - 1)
-        ALIASES.forEachIndexed { i, name ->
+        val want = Accents.of(AppPrefs.accent(c)).alias
+        Accents.ALL.forEach { acc ->
+            val name = acc.alias
+            val i = acc.id
             val cn = ComponentName(c.packageName, "${c.packageName}.$name")
-            val target = if (i == want) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            val now = runCatching { pm.getComponentEnabledSetting(cn) }.getOrNull() ?: return@forEachIndexed
+            val target = if (name == want) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            val now = runCatching { pm.getComponentEnabledSetting(cn) }.getOrNull() ?: return@forEach
             // "default" means what the manifest says: Red on, the others off
             val effective = if (now == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
                 if (i == 0) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED

@@ -71,25 +71,11 @@ internal fun MainActivity.setupSettings() {
         }
     }
 
-    st.accentGroup.check(
-        when (AppPrefs.accent(this)) {
-            1 -> R.id.accentGold
-            2 -> R.id.accentTeal
-            3 -> R.id.accentPurple
-            else -> R.id.accentRed
-        }
-    )
-    st.accentGroup.setOnCheckedStateChangeListener { _, ids ->
-        val v = when (ids.firstOrNull()) {
-            R.id.accentGold -> 1
-            R.id.accentTeal -> 2
-            R.id.accentPurple -> 3
-            else -> 0
-        }
+    AccentSwatch.fill(st.accentGrid, AppPrefs.accent(this)) { v ->
         if (v != AppPrefs.accent(this)) {
             AppPrefs.setAccent(this, v)
-            android.widget.Toast.makeText(this, "The app icon changes to this colour when you leave the app", android.widget.Toast.LENGTH_LONG).show()
-            window.decorView.post { if (!isDestroyed) recreate() }      // every screen in the new colour
+            android.widget.Toast.makeText(this, "${Accents.of(v).name} · the app icon changes when you leave the app", android.widget.Toast.LENGTH_LONG).show()
+            window.decorView.postDelayed({ if (!isDestroyed) recreate() }, 180)      // every screen in the new colour
         }
     }
 

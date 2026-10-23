@@ -38,6 +38,10 @@ object AppPrefs {
     fun setStatusFolder(c: Context, pkg: String, tree: String?, doc: String?) =
         p(c).edit().putString("status_tree_$pkg", tree).putString("status_doc_$pkg", doc).apply()
 
+    /** Social › Status saver › Auto-save: every status you view is saved by itself (off by default). */
+    fun statusAuto(c: Context) = p(c).getBoolean("status_auto", false)
+    fun setStatusAuto(c: Context, v: Boolean) = p(c).edit().putBoolean("status_auto", v).apply()
+
     /** Names of statuses already saved (newest last, at most 1000). */
     fun savedStatuses(c: Context): Set<String> =
         p(c).getString("status_saved", "").orEmpty().split('\n').filter { it.isNotBlank() }.toSet()

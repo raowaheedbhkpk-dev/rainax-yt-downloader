@@ -525,4 +525,76 @@
         <item name="android:fontFamily">@font/rx_display</item>
         <item name="fontFamily">@font/rx_display</item>
     </style>
+    <style name="ThemeOverlay.Rainax.Accent.Violet" parent="">
+        <item name="rxAccent">@color/rx_accent_violet</item>
+        <item name="rxAccentText">@color/rx_accent_violet</item>
+        <item name="rxAccentContainer">@color/rx_accent_violet_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_violet_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Green" parent="">
+        <item name="rxAccent">@color/rx_accent_green</item>
+        <item name="rxAccentText">@color/rx_accent_green</item>
+        <item name="rxAccentContainer">@color/rx_accent_green_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_green_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Blue" parent="">
+        <item name="rxAccent">@color/rx_accent_blue</item>
+        <item name="rxAccentText">@color/rx_accent_blue</item>
+        <item name="rxAccentContainer">@color/rx_accent_blue_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_blue_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Pink" parent="">
+        <item name="rxAccent">@color/rx_accent_pink</item>
+        <item name="rxAccentText">@color/rx_accent_pink</item>
+        <item name="rxAccentContainer">@color/rx_accent_pink_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_pink_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Orange" parent="">
+        <item name="rxAccent">@color/rx_accent_orange</item>
+        <item name="rxAccentText">@color/rx_accent_orange</item>
+        <item name="rxAccentContainer">@color/rx_accent_orange_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_orange_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Slate" parent="">
+        <item name="rxAccent">@color/rx_accent_slate</item>
+        <item name="rxAccentText">@color/rx_accent_slate</item>
+        <item name="rxAccentContainer">@color/rx_accent_slate_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_slate_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Brown" parent="">
+        <item name="rxAccent">@color/rx_accent_brown</item>
+        <item name="rxAccentText">@color/rx_accent_brown</item>
+        <item name="rxAccentContainer">@color/rx_accent_brown_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_brown_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Indigo" parent="">
+        <item name="rxAccent">@color/rx_accent_indigo</item>
+        <item name="rxAccentText">@color/rx_accent_indigo</item>
+        <item name="rxAccentContainer">@color/rx_accent_indigo_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_indigo_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Forest" parent="">
+        <item name="rxAccent">@color/rx_accent_forest</item>
+        <item name="rxAccentText">@color/rx_accent_forest</item>
+        <item name="rxAccentContainer">@color/rx_accent_forest_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_forest_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Steel" parent="">
+        <item name="rxAccent">@color/rx_accent_steel</item>
+        <item name="rxAccentText">@color/rx_accent_steel</item>
+        <item name="rxAccentContainer">@color/rx_accent_steel_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_steel_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Plum" parent="">
+        <item name="rxAccent">@color/rx_accent_plum</item>
+        <item name="rxAccentText">@color/rx_accent_plum</item>
+        <item name="rxAccentContainer">@color/rx_accent_plum_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_plum_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Rose" parent="">
+        <item name="rxAccent">@color/rx_accent_rose</item>
+        <item name="rxAccentText">@color/rx_accent_rose</item>
+        <item name="rxAccentContainer">@color/rx_accent_rose_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_rose_container</item>
+    </style>
 </resources>

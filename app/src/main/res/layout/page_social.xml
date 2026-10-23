@@ -381,6 +381,49 @@
                     android:text="Saved" />
             </com.google.android.material.chip.ChipGroup>
 
+            <!-- auto-save: every status you view is copied to Rainax Tube/Status by itself -->
+            <LinearLayout
+                android:id="@+id/statusAutoRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_8"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto-save new statuses"
+                        android:textColor="@color/rx_text"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusAutoSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/rx_space_2"
+                        android:text="Every status you view is saved before it disappears"
+                        android:textColor="@color/rx_text2"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/statusAutoSwitch"
+                    style="@style/Widget.Rainax.Switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/rx_space_12"
+                    android:contentDescription="Auto-save new statuses" />
+            </LinearLayout>
+
             <!-- no access yet: what to do -->
             <LinearLayout
                 android:id="@+id/statusAsk"
