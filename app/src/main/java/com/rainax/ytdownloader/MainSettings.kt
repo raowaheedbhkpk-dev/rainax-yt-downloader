@@ -76,7 +76,10 @@ internal fun MainActivity.setupSettings() {
     st.resumeSwitch.isChecked = AppPrefs.resumeVideos(this)
     st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
     st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
-    st.clipSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setClipDetect(this, on) }
+    st.clipSwitch.setOnCheckedChangeListener { _, on ->
+        AppPrefs.setClipDetect(this, on)
+        if (on) offerClipTile()        // copied links while RAINAX is closed: the quick settings tile
+    }
     st.openingSwitch.isChecked = AppPrefs.openingTitle(this)
     st.openingSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setOpeningTitle(this, on) }
     // the whole row is tappable (ripple + a slight press), not only the small switch
@@ -379,4 +382,28 @@ internal fun MainActivity.setupSettingsLook() {
             st.settingsNoMatch.isVisible = searching && !any
         }
     })
+}
+
+/**
+ * Android 13+: offers to put the "Download link" tile in the phone's quick settings (Android's own small
+ * question, Add / Don't add). Asked once; on older phones a short tip says where to add it.
+ */
+internal fun MainActivity.offerClipTile() {
+    val prefs = getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+    if (prefs.getBoolean("clip_tile_offered", false)) return
+    prefs.edit().putBoolean("clip_tile_offered", true).apply()
+    if (android.os.Build.VERSION.SDK_INT >= 33) {
+        val sbm = getSystemService(android.app.StatusBarManager::class.java) ?: return
+        runCatching {
+            sbm.requestAddTileService(
+                android.content.ComponentName(this, ClipTileService::class.java),
+                "Download link",
+                android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_stat_download),
+                ContextCompat.getMainExecutor(this)
+            ) { }
+        }
+    } else {
+        android.widget.Toast.makeText(this, "Tip: add the “Download link” tile to your quick settings (pull down twice, tap ✎)",
+            android.widget.Toast.LENGTH_LONG).show()
+    }
 }

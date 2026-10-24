@@ -70,6 +70,7 @@ class PlayerActivity : AppCompatActivity() {
     private var titles = arrayListOf<String>()
     private var shuffleRequest: Boolean? = null          // "Shuffle" or "Play all" from the Library
     private var watching: String? = null           // download being watched while it downloads
+    private var external = false                   // a file another app handed over ("Open with")
     private var partialRetries = 0
 
     private fun stopWatching() {
@@ -176,12 +177,21 @@ class PlayerActivity : AppCompatActivity() {
         shuffleRequest = null
         // This screen is open to other apps ("Open with"). Lists and downloads-in-progress are only taken from
         // RAINAX itself (signed with a key only the app knows); other apps can only hand over one shared file.
-        if (!isOurs(this, i)) {
+        external = !isOurs(this, i)
+        if (external) {
             val data = i.data ?: return false
             if (data.scheme != "content") return false
             stopWatching()
             uris = arrayListOf(data.toString())
             titles = arrayListOf(displayName(data))
+            return true
+        }
+        // the notification of background play: the same list again (onStart takes over its position)
+        if (i.getBooleanExtra(EXTRA_FROM_BACKGROUND, false)) {
+            if (LocalHandoff.uris.isEmpty()) return uris.isNotEmpty()
+            stopWatching()
+            uris = ArrayList(LocalHandoff.uris)
+            titles = ArrayList(LocalHandoff.titles)
             return true
         }
         val partial = i.getStringExtra(EXTRA_PARTIAL)
@@ -926,6 +936,20 @@ class PlayerActivity : AppCompatActivity() {
 
     // ---------- lifecycle ----------
 
+    override fun onStart() {
+        super.onStart()
+        // back from the lock screen or another app: the sound that went on in the background comes back here
+        if (LocalHandoff.active) {
+            val sameList = LocalHandoff.uris == uris
+            val st = LocalHandoff.takeBack()
+            val p = player
+            if (st != null && p != null && sameList) {
+                if (st.index in 0 until p.mediaItemCount) p.seekTo(st.index, st.positionMs)
+                if (st.playing) p.play() else p.pause()
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         internalNav = false
@@ -938,12 +962,24 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Closed the small window or left the app: stop the sound
-        player?.pause()
         // The picture-in-picture window was closed: end the player instead of leaving it hidden
         // (turning the screen off while in the small window keeps it)
         val screenOn = (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
-        if (screenOn && (wasInPip || System.currentTimeMillis() - pipExitAt < 1500)) finish()
+        val closedPip = screenOn && (wasInPip || System.currentTimeMillis() - pipExitAt < 1500)
+        val p = player
+        // Screen locked or app left while it plays, Background play on: the sound carries on in the
+        // background service (lock-screen controls), from this very second. Not for a closed small window,
+        // Back (leaving the player), a file from another app, or a download still in progress.
+        if (p != null && p.playWhenReady && !closedPip && !isFinishing && !isChangingConfigurations && !external && watching == null &&
+            AppPrefs.backgroundPlay(this) && p.mediaItemCount > 0) {
+            savePosition()
+            LocalHandoff.start(
+                this, (0 until p.mediaItemCount).map { p.getMediaItemAt(it) }, uris, titles,
+                p.currentMediaItemIndex, p.currentPosition, p.playbackParameters.speed, p.repeatMode, p.shuffleModeEnabled
+            )
+        }
+        player?.pause()
+        if (closedPip) finish()
     }
 
     override fun onDestroy() {
@@ -971,6 +1007,8 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_SHUFFLE = "shuffle"
         const val EXTRA_PARTIAL = "partial_task"
         const val EXTRA_PARTIAL_TITLE = "partial_title"
+        /** Opened from the background-play notification (the list comes from [LocalHandoff]). */
+        const val EXTRA_FROM_BACKGROUND = "from_background"
         private const val EXTRA_KEY = "rx_key"
 
         /** Marks [i] as coming from RAINAX (the key is made once and kept in the app's private settings). */

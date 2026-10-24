@@ -1,3 +1,4 @@
+Downloaded videos keep playing as sound when you lock the phone or leave the app (with lock-screen controls), and continue on screen when you come back. Download straight from TikTok, Instagram or YouTube: Share › RAINAX opens a download popup right over that app, or add the new Download link tile to your quick settings to download a copied link
 Keep RAINAX running: a short popup (with Don't show again) leads to Android's own Allow, so downloads, background play and status auto-save keep going with the screen off
 The screen no longer turns off while you watch a video or a live stream (also in the floating player and in Shorts); it can sleep again when the video is paused
 New Settings: search settings, big quick tiles for Wi-Fi only, Background play, Skip sponsors and Copied links, theme previews and accent rings at the top

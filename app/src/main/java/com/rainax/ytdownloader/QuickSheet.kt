@@ -54,10 +54,11 @@ object DlCardText {
  */
 object QuickSheet {
 
-    fun show(act: AppCompatActivity, url: String, knownTitle: String?, thumb: String?, onAdded: () -> Unit = {}) {
+    fun show(act: AppCompatActivity, url: String, knownTitle: String?, thumb: String?, onClosed: () -> Unit = {}, onAdded: () -> Unit = {}) {
         val sb = SheetDownloadBinding.inflate(act.layoutInflater)
         val dialog = BottomSheetDialog(act)
         dialog.setContentView(sb.root)
+        dialog.setOnDismissListener { onClosed() }
         dialog.behavior.skipCollapsed = true
         dialog.setOnShowListener {
             dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
