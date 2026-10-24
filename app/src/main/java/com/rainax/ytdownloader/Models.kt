@@ -36,7 +36,9 @@ data class FormatChoice(
     val size: String = "",
     val kind: Int = KIND_VIDEO,
     val badge: String? = null,
-    val bytes: Long = 0          // the real size behind [size] (sizes of several videos are added up)
+    val bytes: Long = 0,         // the real size behind [size] (sizes of several videos are added up)
+    /** The quality as people know it (720, 1080...). For an upright video it is the short side, not the height. */
+    val quality: Int = 0
 )
 
 data class SubtitleOption(val code: String, val label: String)

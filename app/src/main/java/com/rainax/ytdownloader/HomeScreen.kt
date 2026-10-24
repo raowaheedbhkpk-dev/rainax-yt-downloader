@@ -75,7 +75,10 @@ class HomeScreen(
     private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
     private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
-    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) }).also { it.hero = true }
+    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) }).also {
+        it.hero = true
+        it.hideShorts = true          // Home's tabs and magazine: videos only; Shorts live in the Shorts feed
+    }
     private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
     /** Continue watching + Shorts, on top of the first Home tab. */
     private val shelf = HomeShelf(act, openVideo)
@@ -144,7 +147,7 @@ class HomeScreen(
     /** A chapter's posters: from the saved tab list when there is one, otherwise its first page. */
     private fun loadChapter(id: String) {
         fun pick(list: List<VideoItem>): List<VideoItem> {
-            val videos = list.filter { !it.isChannel && !it.isPlaylist }
+            val videos = list.filter { !it.isChannel && !it.isPlaylist && !it.isShort && !it.url.contains("/shorts/") }
             if (id != MAG_MOVIES) return videos.take(12)
             // the cinema: real films only (an hour or longer) and not ones almost nobody watched
             val films = videos.filter { it.seconds >= 3600 && (it.views < 0 || it.views >= 10_000) }

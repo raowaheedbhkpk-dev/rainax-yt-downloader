@@ -107,7 +107,14 @@ class VideoAdapter(
     /** Home and Up next: leave out videos and channels you said "Not interested" to. */
     var filterHidden = false
 
-    private fun keep(list: List<VideoItem>) = if (filterHidden) list.filter { HiddenFeed.allowed(it) } else list
+    /** Home: Shorts stay in the Shorts feed (and the Shorts strip), never in the list of videos. */
+    var hideShorts = false
+
+    private fun keep(list: List<VideoItem>): List<VideoItem> {
+        var out = if (filterHidden) list.filter { HiddenFeed.allowed(it) } else list
+        if (hideShorts) out = out.filter { !it.isShort && !it.url.contains("/shorts/") }
+        return out
+    }
 
     fun submit(list: List<VideoItem>) {
         items.clear()

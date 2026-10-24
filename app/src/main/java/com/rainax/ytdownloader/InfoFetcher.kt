@@ -43,17 +43,22 @@ object InfoFetcher {
 
         // ----- Video -----
         val heights = (progressive.keys + videoOnly.keys).filter { it >= 144 }.toSortedSet().toList()
+        // An upright video (Shorts, phone videos) comes as 1080x1920: its "height" 1920 was shown as 2K and
+        // 3840 as 5K. People know it by its short side (1080p), so that is what the sheet says.
+        val portrait = heights.any { it in PORTRAIT_ONLY }
+        fun shown(h: Int) = if (!portrait) h else PORTRAIT[h] ?: (h * 9 / 16)
         val videos = if (heights.isEmpty()) {
             listOf(FormatChoice("video:0", "Best quality", "MP4", "", KIND_VIDEO))
         } else heights.map { h ->
             val total = progressive[h]?.takeIf { it > 0 }
                 ?: ((videoOnly[h] ?: 0L).let { if (it > 0) it + bestAudio else 0L })
+            val q = shown(h)
             FormatChoice(
-                "video:$h", videoTitle(h), videoDesc(h), formatSize(total), KIND_VIDEO,
-                badge = if (h <= 144) "Low" else null, bytes = total
+                "video:$h", videoTitle(q), videoDesc(q), formatSize(total), KIND_VIDEO,
+                badge = if (q <= 144) "Low" else null, bytes = total, quality = q
             )
         }
-        fun heightOf(c: FormatChoice) = c.spec.substringAfter(":").toIntOrNull() ?: 0
+        fun heightOf(c: FormatChoice) = c.quality.takeIf { it > 0 } ?: (c.spec.substringAfter(":").toIntOrNull() ?: 0)
         val quickVideo = if (heights.isEmpty()) videos else listOfNotNull(
             videos.minByOrNull { abs(heightOf(it) - 360) },
             videos.minByOrNull { abs(heightOf(it) - 720) },
@@ -67,9 +72,14 @@ object InfoFetcher {
         )
     }
 
+    /** Upright videos: their height to the quality name (1920 tall = 1080p). */
+    private val PORTRAIT = mapOf(256 to 144, 426 to 240, 640 to 360, 854 to 480, 1280 to 720, 1920 to 1080,
+        2560 to 1440, 3840 to 2160, 7680 to 4320)
+    /** Heights only an upright video has (a wide one is 144, 240, 360, 480...). */
+    private val PORTRAIT_ONLY = setOf(256, 426, 640, 854)
+
     private fun videoTitle(h: Int) = when {
         h >= 4320 -> "High quality (8K)"
-        h >= 2880 -> "High quality (5K)"
         h >= 2160 -> "High quality (4K)"
         h >= 1440 -> "High quality (2K)"
         h >= 720 -> "High quality (${h}p)"

@@ -19,6 +19,9 @@ import kotlinx.coroutines.withContext
 object DlCardText {
     fun height(spec: String) = spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
 
+    /** The quality people know ([FormatChoice.quality]: an upright video's short side), else the height. */
+    fun height(c: FormatChoice) = c.quality.takeIf { it > 0 } ?: height(c.spec)
+
     /** (small line, big line) for [c]. */
     fun of(c: FormatChoice): Pair<String, String> {
         if (c.kind == KIND_AUDIO) {
@@ -33,7 +36,7 @@ object DlCardText {
                 else -> "Sound only" to ext.uppercase()
             }
         }
-        val h = height(c.spec)
+        val h = height(c)
         val q = when { h >= 4320 -> "8K"; h >= 2160 -> "4K"; h >= 1440 -> "2K"; h > 0 -> "${h}p"; else -> "Best" }
         val tag = when { h == 0 -> "MP4"; h < 720 -> "Fast"; h < 1440 -> "High Quality"; else -> "Ultra HD" }
         return tag to q
@@ -43,7 +46,7 @@ object DlCardText {
     fun recommended(list: List<FormatChoice>, kind: Int): FormatChoice? {
         if (list.size < 2) return list.firstOrNull()
         return if (kind == KIND_AUDIO) list.firstOrNull { it.spec == "audio:m4a" } ?: list.first()
-        else list.filter { height(it.spec) > 0 }.minByOrNull { kotlin.math.abs(height(it.spec) - 720) } ?: list.first()
+        else list.filter { height(it) > 0 }.minByOrNull { kotlin.math.abs(height(it) - 720) } ?: list.first()
     }
 }
 
