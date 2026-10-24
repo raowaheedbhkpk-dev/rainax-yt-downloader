@@ -131,6 +131,12 @@ object AppPrefs {
     fun setClipSeen(c: Context, v: String) = p(c).edit().putString("clip_seen", v).apply()
 
     /** The first-run questions (storage, app updates) were shown. */
+    /** The "keep RAINAX running in the background" popup: never again, and when it was last shown. */
+    fun bgAskNever(c: Context) = p(c).getBoolean("bg_ask_never", false)
+    fun setBgAskNever(c: Context, v: Boolean) = p(c).edit().putBoolean("bg_ask_never", v).apply()
+    fun bgAskedAt(c: Context) = p(c).getLong("bg_asked_at", 0L)
+    fun setBgAskedAt(c: Context, v: Long) = p(c).edit().putLong("bg_asked_at", v).apply()
+
     fun firstRunAsked(c: Context) = p(c).getBoolean("first_run_asked", false)
     fun setFirstRunAsked(c: Context) = p(c).edit().putBoolean("first_run_asked", true).apply()
 

@@ -159,7 +159,9 @@ class MainActivity : AppCompatActivity() {
                 !AppPrefs.firstRunAsked(this) && !AppPrefs.guideSeen(this) ->
                     welcomeGuide.launch(Intent(this, WelcomeActivity::class.java))
                 !AppPrefs.firstRunAsked(this) -> b.root.post { askStorage() }
-                else -> requestNotificationPermission()
+                // later runs: notifications first; when those are fine, maybe the background-run popup
+                // (after the short opening title)
+                !requestNotificationPermission() -> b.root.postDelayed({ maybeAskBackgroundRun() }, 1600)
             }
         }
 
@@ -375,6 +377,11 @@ class MainActivity : AppCompatActivity() {
         FeedAutoplay.onResume()
         if (tab == 3 && ::statusSaver.isInitialized) statusSaver.refresh()     // new statuses (or access just given)
         renderFolder()                        // All files access may have just been given
+        if (bgAskPending) {
+            bgAskPending = false
+            message(if (canRunInBackground()) "Done: RAINAX keeps running with the screen off"
+                else "Not allowed. You can turn it on later in Settings › Downloads")
+        }
         if (installAskAfterSettings) {
             installAskAfterSettings = false
             b.root.post { askInstallUpdates() }
@@ -1368,14 +1375,73 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    internal fun requestNotificationPermission() {
+    /** Asks for notifications (Android 13+) when they are off. True when it asked. */
+    internal fun requestNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return true
+        }
+        return false
+    }
+
+    /** RAINAX may already run in the background (battery optimisation off). */
+    internal fun canRunInBackground(): Boolean =
+        (getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
+
+    /**
+     * "Keep RAINAX running": a short popup (with Don't show again), then Android's own
+     * "Let app always run in background? Deny / Allow". Shown at most every 3 days until it is allowed.
+     */
+    internal fun maybeAskBackgroundRun() {
+        if (isFinishing || isDestroyed || blocked) return
+        if (canRunInBackground() || AppPrefs.bgAskNever(this)) return
+        val now = System.currentTimeMillis()
+        if (now - AppPrefs.bgAskedAt(this) < 3L * 24 * 3600 * 1000) return
+        if (permDialog?.isShowing == true) return
+        AppPrefs.setBgAskedAt(this, now)
+        val d = resources.displayMetrics.density
+        val never = com.google.android.material.checkbox.MaterialCheckBox(this).apply {
+            text = "Don't show again"
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.rx_text))
+        }
+        val wrap = android.widget.FrameLayout(this).apply {
+            setPadding((20 * d).toInt(), (4 * d).toInt(), (20 * d).toInt(), 0)
+            addView(never)
+        }
+        permDialog = RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            .setIcon(R.drawable.ic_set_battery)
+            .setTitle("Keep RAINAX running")
+            .setMessage("Downloads, background play and WhatsApp status auto-save need RAINAX to keep running " +
+                "when the screen is off. Tap Continue, then Allow on the next screen.")
+            .setView(wrap)
+            .setPositiveButton("Continue") { _, _ ->
+                if (never.isChecked) AppPrefs.setBgAskNever(this, true)
+                requestBackgroundRun()
+            }
+            .setNegativeButton("Not now") { _, _ -> if (never.isChecked) AppPrefs.setBgAskNever(this, true) }
+            .show()
+    }
+
+    /** Android's own "Let app always run in background?" (falls back to the battery settings list). */
+    internal fun requestBackgroundRun() {
+        bgAskPending = true
+        try {
+            startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+        } catch (e: Exception) {
+            try {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (e2: Exception) {
+                bgAskPending = false
+                message("Open Settings > Apps > RAINAX Tube > Battery and choose Unrestricted")
+            }
         }
     }
+
+    /** Coming back from Android's question: say how it went. */
+    internal var bgAskPending = false
 
     /** One-time prompt so the system doesn't kill background downloads. Returns true if shown. */
     /**
@@ -1383,16 +1449,11 @@ class MainActivity : AppCompatActivity() {
      * whose battery saver closes apps even with a download notification. Never asked by itself.
      */
     internal fun openBatterySettings() {
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+        if (canRunInBackground()) {
             message("Already allowed: downloads keep going with the screen off")
             return
         }
-        try {
-            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        } catch (e: Exception) {
-            message("Open Settings > Apps > RAINAX Tube > Battery and choose Unrestricted")
-        }
+        requestBackgroundRun()
     }
 
     companion object {

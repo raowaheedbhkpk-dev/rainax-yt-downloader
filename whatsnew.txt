@@ -1,3 +1,4 @@
+Keep RAINAX running: a short popup (with Don't show again) leads to Android's own Allow, so downloads, background play and status auto-save keep going with the screen off
 The screen no longer turns off while you watch a video or a live stream (also in the floating player and in Shorts); it can sleep again when the video is paused
 New Settings: search settings, big quick tiles for Wi-Fi only, Background play, Skip sponsors and Copied links, theme previews and accent rings at the top
 Home keeps its magazine layout after you change the theme or accent (it no longer falls back to the old Top pick layout)

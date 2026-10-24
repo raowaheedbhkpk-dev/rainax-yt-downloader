@@ -21,6 +21,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- background play keeps the phone (and Wi-Fi) awake while sound plays with the screen off -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- "Let app always run in background?" (Android's own Allow / Deny), asked from RAINAX's popup -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- In-app updates: opens the Android installer for a new RAINAX version -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Voice search (RAINAX's own listening screen): the mic is used only while that screen is open -->
