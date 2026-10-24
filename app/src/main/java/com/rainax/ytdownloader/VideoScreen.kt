@@ -491,7 +491,12 @@ class VideoScreen(
 
     /** Hides the picture placeholder once the video really plays. */
     private val playerListener = object : Player.Listener {
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = updateScreenOn()
+
+        override fun onPlaybackStateChanged(state: Int) = updateScreenOn()
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            updateScreenOn()
             if (isPlaying) showPlaceholder(false)
             if (isPlaying) wakeCinema() else lightsOn()
             vb.root.removeCallbacks(chapterTick)
@@ -677,6 +682,7 @@ class VideoScreen(
         lightsOn()
         url = null
         details = null
+        act.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         player()?.run {
             // songs of the Music player (a video was opened over them and didn't start): leave them
             if (!MusicPlayer.isMusic(currentMediaItem)) {
@@ -685,6 +691,20 @@ class VideoScreen(
             }
         }
         onChanged()
+    }
+
+    /**
+     * The screen stays on while a video plays here (also live streams, also in the floating player, also while
+     * it buffers), and may sleep again when it is paused, ends or is closed. Songs of the Music player are
+     * left alone: they are often heard with the screen off.
+     */
+    private fun updateScreenOn() {
+        val p = player()
+        val on = isOpen && p != null && p.playWhenReady && !MusicPlayer.isMusic(p.currentMediaItem) &&
+            (p.playbackState == Player.STATE_READY || p.playbackState == Player.STATE_BUFFERING)
+        val w = act.window
+        if (on) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     fun showError(text: String) {

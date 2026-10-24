@@ -342,11 +342,14 @@ class ShortsActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         player?.pause()
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onResume() {
         super.onResume()
         if (current >= 0 && !userPaused) player?.play()
+        // Shorts play one after another without touching the screen: keep it awake while they are open
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onDestroy() {

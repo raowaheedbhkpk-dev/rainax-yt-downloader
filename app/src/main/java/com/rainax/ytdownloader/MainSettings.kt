@@ -64,7 +64,8 @@ internal fun MainActivity.setupSettings() {
         })
     }
 
-    AccentSwatch.fill(st.accentGrid, AppPrefs.accent(this)) { v -> chooseAccent(v) }
+    AccentSwatch.fill(st.accentGrid, AppPrefs.accent(this), R.attr.rxSurface) { v -> chooseAccent(v) }
+    setupSettingsLook()
 
     st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
     st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
@@ -158,6 +159,7 @@ internal fun MainActivity.setupSettings() {
         ""
     }
     st.versionText.text = "RAINAX Tube  v$version"
+    st.setVersion.text = "v$version"
 }
 
 internal fun MainActivity.renderFolder() {
@@ -221,7 +223,7 @@ internal fun MainActivity.showThemePopup(anchor: View) {
     }
     pb.tpTheme.setOnClickListener {
         Haptics.tick(it)
-        AccentSwatch.fill(pb.tpGrid, AppPrefs.accent(this)) { v ->
+        AccentSwatch.fill(pb.tpGrid, AppPrefs.accent(this), R.attr.rxSurface) { v ->
             pb.root.postDelayed({ pw.dismiss(); chooseAccent(v) }, 140)    // the ring shows as chosen for a moment
         }
         pb.tpModes.visibility = View.GONE
@@ -234,4 +236,147 @@ internal fun MainActivity.showThemePopup(anchor: View) {
         resize()
     }
     pw.showAsDropDown(anchor, 0, 0, android.view.Gravity.END)
+}
+
+// ---------- Settings "control center" (style A): quick tiles, theme screens, accent rings, search ----------
+
+private fun MainActivity.themeColor(attr: Int): Int {
+    val tv = android.util.TypedValue()
+    if (!theme.resolveAttribute(attr, tv, true)) return android.graphics.Color.GRAY
+    return if (tv.resourceId != 0) androidx.core.content.ContextCompat.getColor(this, tv.resourceId) else tv.data
+}
+
+/** The new top of Settings: wired to the very same switches and choices as the rows below always were. */
+internal fun MainActivity.setupSettingsLook() {
+    val d = resources.displayMetrics.density
+    val accent = Ui.accent(this)
+    val text = androidx.core.content.ContextCompat.getColor(this, R.color.rx_text)
+    val text2 = androidx.core.content.ContextCompat.getColor(this, R.color.rx_text2)
+
+    // quick tiles: on = filled with the accent, off = the plain surface
+    class Tile(val box: View, val icon: android.widget.ImageView, val title: android.widget.TextView,
+               val state: android.widget.TextView, val sw: com.google.android.material.materialswitch.MaterialSwitch, val prefix: String)
+    val tiles = listOf(
+        Tile(st.qtWifi, st.qtWifiIcon, st.qtWifiTitle, st.qtWifiState, st.wifiSwitch, ""),
+        Tile(st.qtBg, st.qtBgIcon, st.qtBgTitle, st.qtBgState, st.bgPlaySwitch, ""),
+        Tile(st.qtSponsor, st.qtSponsorIcon, st.qtSponsorTitle, st.qtSponsorState, st.sponsorSwitch, ""),
+        Tile(st.qtClip, st.qtClipIcon, st.qtClipTitle, st.qtClipState, st.clipSwitch, "Detect · ")
+    )
+    fun paint(t: Tile) {
+        val on = t.sw.isChecked
+        if (on) {
+            t.box.background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x33FFFFFF),
+                android.graphics.drawable.GradientDrawable().apply { setColor(accent); cornerRadius = 2 * d }, null)
+        } else t.box.setBackgroundResource(R.drawable.bg_quick_tile)
+        val fg = if (on) android.graphics.Color.WHITE else text
+        t.title.setTextColor(fg)
+        t.icon.imageTintList = android.content.res.ColorStateList.valueOf(fg)
+        t.state.setTextColor(if (on) 0xD9FFFFFF.toInt() else text2)
+        t.state.text = t.prefix + if (on) "On" else "Off"
+        t.box.contentDescription = "${t.title.text}, ${if (on) "on" else "off"}"
+    }
+    tiles.forEach { t ->
+        paint(t)
+        t.box.setOnClickListener {
+            t.sw.toggle()                      // the switch's own listener saves it, exactly as before
+            Haptics.tick(it)
+            paint(t)
+        }
+    }
+
+    // theme: four little screens, the chosen one framed in the accent
+    val previews = listOf(0 to st.themePrevSystem, 1 to st.themePrevLight, 2 to st.themePrevDark, 3 to st.themePrevAmoled)
+    val boxes = mapOf(0 to st.themePrevSystemBox, 1 to st.themePrevLightBox, 2 to st.themePrevDarkBox, 3 to st.themePrevAmoledBox)
+    val labels = mapOf(0 to st.themePrevSystemLabel, 1 to st.themePrevLightLabel, 2 to st.themePrevDarkLabel, 3 to st.themePrevAmoledLabel)
+    fun paintPreviews() {
+        val mode = AppPrefs.themeMode(this)
+        previews.forEach { (m, _) ->
+            val chosen = m == mode
+            boxes[m]?.foreground = android.graphics.drawable.GradientDrawable().apply {
+                setColor(android.graphics.Color.TRANSPARENT)
+                setStroke(((if (chosen) 2.5f else 1f) * d).toInt(), if (chosen) accent else themeColor(R.attr.rxOutline))
+                cornerRadius = 2 * d
+            }
+            labels[m]?.setTextColor(if (chosen) Ui.accentText(this) else text2)
+            labels[m]?.setTypeface(null, if (chosen) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+        }
+    }
+    paintPreviews()
+    previews.forEach { (m, v) ->
+        v.contentDescription = "${labels[m]?.text} theme"
+        v.setOnClickListener {
+            Haptics.tick(it)
+            chooseTheme(m)
+            paintPreviews()
+        }
+    }
+
+    // accent: the current ring and the next few, then ALL 16 opens every ring
+    fun fillMini() {
+        val box = st.accentMini
+        box.removeAllViews()
+        val cur = AppPrefs.accent(this)
+        val grid = Accents.GRID
+        val start = grid.indexOf(cur).coerceAtLeast(0)
+        val ids = (0 until 5).map { grid[(start + it) % grid.size] }
+        val hole = themeColor(R.attr.rxSurface)
+        ids.forEach { id ->
+            val acc = Accents.of(id)
+            val sw = AccentSwatch(this, androidx.core.content.ContextCompat.getColor(this, acc.color), hole)
+            sw.chosen = id == cur
+            sw.contentDescription = acc.name + if (id == cur) ", chosen" else ""
+            sw.setOnClickListener { if (id != cur) { sw.chosen = true; chooseAccent(id) } }
+            box.addView(sw, android.widget.LinearLayout.LayoutParams((44 * d).toInt(), (44 * d).toInt()))
+        }
+    }
+    fillMini()
+    st.accentAll.setOnClickListener {
+        val open = !st.accentGrid.isVisible
+        st.accentGrid.isVisible = open
+        st.accentAll.text = if (open) "LESS  ‹" else "ALL 16  ›"
+    }
+
+    // search: only the rows whose words match (the tiles and the look card step aside while searching)
+    val content = (st.root as? android.view.ViewGroup)?.getChildAt(0) as? android.view.ViewGroup ?: return
+    val cards = ArrayList<android.view.ViewGroup>()
+    val sectionLabels = ArrayList<View>()
+    for (i in 0 until content.childCount) {
+        val v = content.getChildAt(i)
+        if (v.tag == "settingsCard" && v is android.view.ViewGroup) cards += v
+        if (v.tag == "settingsLabel") sectionLabels += v
+    }
+    val alwaysHidden = HashSet<View>()
+    cards.forEach { c -> for (i in 0 until c.childCount) c.getChildAt(i).let { if (it.visibility == View.GONE) alwaysHidden += it } }
+    fun words(v: View): String = when (v) {
+        is android.widget.TextView -> v.text.toString()
+        is android.view.ViewGroup -> (0 until v.childCount).joinToString(" ") { words(v.getChildAt(it)) }
+        else -> ""
+    }
+    st.settingsSearch.addTextChangedListener(object : android.text.TextWatcher {
+        override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+        override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+        override fun afterTextChanged(e: android.text.Editable?) {
+            val q = e?.toString()?.trim().orEmpty()
+            val searching = q.isNotEmpty()
+            st.quickTiles.isVisible = !searching
+            st.appearanceCard.isVisible = !searching
+            var any = false
+            cards.forEachIndexed { ci, c ->
+                var cardHas = false
+                for (i in 0 until c.childCount) {
+                    val row = c.getChildAt(i)
+                    if (row in alwaysHidden) continue
+                    if (row.javaClass == View::class.java) { row.isVisible = !searching; continue }   // the thin lines
+                    val match = !searching || words(row).contains(q, ignoreCase = true)
+                    row.isVisible = match
+                    if (match) cardHas = true
+                }
+                c.isVisible = cardHas
+                sectionLabels.getOrNull(ci)?.isVisible = cardHas && !searching
+                if (cardHas) any = true
+            }
+            st.settingsNoMatch.isVisible = searching && !any
+        }
+    })
 }

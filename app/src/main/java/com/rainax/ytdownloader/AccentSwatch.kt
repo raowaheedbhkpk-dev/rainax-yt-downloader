@@ -53,12 +53,12 @@ class AccentSwatch(context: Context, val color: Int, private val hole: Int) : Vi
          * Fills [box] (a vertical LinearLayout) with the sixteen accents in rows of four, ticks [current],
          * and calls [onPick] with the accent's number when one is tapped.
          */
-        fun fill(box: LinearLayout, current: Int, onPick: (Int) -> Unit) {
+        fun fill(box: LinearLayout, current: Int, holeAttr: Int = R.attr.rxBg, onPick: (Int) -> Unit) {
             val c = box.context
             val d = c.resources.displayMetrics.density
             box.removeAllViews()
             val tv = android.util.TypedValue()
-            val hole = if (c.theme.resolveAttribute(R.attr.rxBg, tv, true)) {
+            val hole = if (c.theme.resolveAttribute(holeAttr, tv, true)) {
                 if (tv.resourceId != 0) androidx.core.content.ContextCompat.getColor(c, tv.resourceId) else tv.data
             } else android.graphics.Color.WHITE
             val swatches = ArrayList<AccentSwatch>()

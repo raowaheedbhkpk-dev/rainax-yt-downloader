@@ -1,3 +1,5 @@
+The screen no longer turns off while you watch a video or a live stream (also in the floating player and in Shorts); it can sleep again when the video is paused
+New Settings: search settings, big quick tiles for Wi-Fi only, Background play, Skip sponsors and Copied links, theme previews and accent rings at the top
 Home keeps its magazine layout after you change the theme or accent (it no longer falls back to the old Top pick layout)
 New sun / moon button on Home: switch between System, Light and Dark in one tap, and tap Theme to pick one of 16 accent colours
 16 accent colours: pick yours from a new grid of colour rings in Settings (violet, green, blue, pink, orange, slate, brown, indigo and more); the app icon follows your colour
