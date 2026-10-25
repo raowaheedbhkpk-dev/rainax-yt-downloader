@@ -7,7 +7,7 @@ plugins {
 // so the app always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+(\.\d+)?/
-def rxVersionName = isTag ? tagVersion : "15.6"
+def rxVersionName = isTag ? tagVersion : "15.7"
 def rxParts = (rxVersionName.tokenize('.').collect { it.toInteger() } + [0, 0, 0]).take(3)
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 

@@ -205,7 +205,7 @@ internal fun MainActivity.checkClipboard() {
 }
 
 internal fun MainActivity.extractUrls(text: String): List<String> =
-    Regex("https?://\\S+").findAll(text).map { it.value }.distinct().take(MAX_SHARED_LINKS).toList()
+    LinkText.find(text, MAX_SHARED_LINKS)
 
 /** Links shared from other apps (Share > RAINAX). */
 internal fun MainActivity.handleIntent(intent: Intent?) {

@@ -605,7 +605,7 @@ class HomeScreen(
         val q = text.trim()
         if (q.isEmpty()) return
         // a pasted link (YouTube, TikTok, Facebook, Instagram...): straight to the download sheet
-        val link = Regex("https?://\\S+").find(q)?.value
+        val link = LinkText.find(q).firstOrNull()
         if (link != null) {
             stopTyping()
             hm.searchInput.setText("")

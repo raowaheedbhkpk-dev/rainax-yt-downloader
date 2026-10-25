@@ -1,3 +1,4 @@
+Fix: links shared from TikTok Lite (and other apps that add a "get the app" link) no longer add a second download that keeps failing
 Fix: the app icon now really changes to your accent colour about a minute after you leave the app
 Theme fix for good: on Android 12 and newer, Light / Dark is now set by Android itself for RAINAX, so lists can no longer show a mix of light and dark rows or white text on a light page
 Fix: with Theme set to Light on a phone in dark mode (or the other way round), titles and numbers on Home no longer turn white and invisible after a while

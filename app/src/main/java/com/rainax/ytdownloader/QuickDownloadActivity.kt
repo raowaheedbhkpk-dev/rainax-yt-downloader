@@ -104,7 +104,7 @@ class QuickDownloadActivity : AppCompatActivity() {
         const val EXTRA_FROM_CLIPBOARD = "from_clipboard"
 
         fun links(text: String): List<String> =
-            Regex("https?://\\S+").findAll(text).map { it.value.trimEnd('.', ',', ')', ']', '"', '\'') }.distinct().take(1000).toList()
+            LinkText.find(text)
     }
 }
 
