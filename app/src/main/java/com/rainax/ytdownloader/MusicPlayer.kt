@@ -244,6 +244,10 @@ class MusicPlayer(
         handler.removeCallbacksAndMessages(null)
         ticking = false
         toneAnim?.cancel()
+        // the turning record never stops by itself: without this, every rebuilt screen (theme or colour change
+        // while music played) left an old one spinning in memory
+        vinylSpin?.cancel()
+        vinylSpin = null
         attached?.removeListener(listener)
         attached = null
     }

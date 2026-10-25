@@ -124,9 +124,7 @@ internal fun MainActivity.renderTasks(all: List<DownloadTask>) {
     pl.doneTitle.text = "Downloaded (${done.size})"
     doneAdapter.submitList(done.sortedByDescending { it.createdAt })      // newest download first
 
-    val badge = b.bottomNav.getOrCreateBadge(R.id.nav_downloads)
-    badge.isVisible = active.isNotEmpty()
-    badge.number = active.size
+    // (the You badge is drawn by renderYouBadge above: only downloads in progress, not paused or failed ones)
 
     if (selectionChanged) refreshSelectionUi() else updateSelectionBar()
 }

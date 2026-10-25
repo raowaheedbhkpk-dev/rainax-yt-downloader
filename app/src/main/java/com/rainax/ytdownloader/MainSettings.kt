@@ -42,9 +42,14 @@ import kotlinx.coroutines.launch
 // These are MainActivity's own functions, kept in their own file so each part stays small.
 
 internal fun MainActivity.setupSettings() {
+    // Settings come from the saved choices only. Android's own "put the screen back as it was" (after a theme
+    // or colour change rebuilds the screen) used to replay old switch and chip states on top of them, and
+    // could save the wrong value; it is turned off for every switch, chip and box on this page.
+    Ui.noRestore(st.root)
     st.wifiSwitch.isChecked = AppPrefs.wifiOnly(this)
     st.wifiSwitch.setOnCheckedChangeListener { _, on ->
         AppPrefs.setWifiOnly(this, on)
+        paintTiles?.invoke()
         nudgeService()
     }
     st.themeGroup.check(
@@ -56,6 +61,7 @@ internal fun MainActivity.setupSettings() {
         }
     )
     st.themeGroup.setOnCheckedStateChangeListener { _, ids ->
+        if (ids.isEmpty()) return@setOnCheckedStateChangeListener      // a moment with nothing chosen: never save a default
         chooseTheme(when (ids.firstOrNull()) {
             R.id.themeLight -> 1
             R.id.themeDark -> 2
@@ -65,19 +71,19 @@ internal fun MainActivity.setupSettings() {
     }
 
     AccentSwatch.fill(st.accentGrid, AppPrefs.accent(this), R.attr.rxSurface) { v -> chooseAccent(v) }
-    setupSettingsLook()
 
     st.autoRetrySwitch.isChecked = AppPrefs.autoRetry(this)
     st.autoRetrySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setAutoRetry(this, on) }
     st.bgPlaySwitch.isChecked = AppPrefs.backgroundPlay(this)
-    st.bgPlaySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setBackgroundPlay(this, on) }
+    st.bgPlaySwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setBackgroundPlay(this, on); paintTiles?.invoke() }
     st.sponsorSwitch.isChecked = AppPrefs.sponsorBlock(this)
-    st.sponsorSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setSponsorBlock(this, on) }
+    st.sponsorSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setSponsorBlock(this, on); paintTiles?.invoke() }
     st.resumeSwitch.isChecked = AppPrefs.resumeVideos(this)
     st.resumeSwitch.setOnCheckedChangeListener { _, on -> AppPrefs.setResumeVideos(this, on) }
     st.clipSwitch.isChecked = AppPrefs.clipDetect(this)
     st.clipSwitch.setOnCheckedChangeListener { _, on ->
         AppPrefs.setClipDetect(this, on)
+        paintTiles?.invoke()
         if (on) offerClipTile()        // copied links while RAINAX is closed: the quick settings tile
     }
     st.openingSwitch.isChecked = AppPrefs.openingTitle(this)
@@ -141,10 +147,12 @@ internal fun MainActivity.setupSettings() {
         }
     )
     st.autoplayGroup.setOnCheckedStateChangeListener { _, ids ->
+        if (ids.isEmpty()) return@setOnCheckedStateChangeListener      // a moment with nothing chosen: never save a default
         AppPrefs.setFeedAutoplay(this, when (ids.firstOrNull()) { R.id.autoplayOff -> 0; R.id.autoplayWifi -> 1; else -> 2 })
         FeedAutoplay.refresh()
     }
     st.parallelGroup.setOnCheckedStateChangeListener { _, ids ->
+        if (ids.isEmpty()) return@setOnCheckedStateChangeListener      // a moment with nothing chosen: never save a default
         val n = when (ids.firstOrNull()) {
             R.id.par1 -> 1
             R.id.par3 -> 3
@@ -163,6 +171,10 @@ internal fun MainActivity.setupSettings() {
     }
     st.versionText.text = "RAINAX Tube  v$version"
     st.setVersion.text = "v$version"
+    // last: the quick tiles show the switches only once every switch holds its saved value (they were drawn
+    // earlier, from the layout's "off", so Background play / Skip sponsors / Detect links looked turned off
+    // after every theme or colour change)
+    setupSettingsLook()
 }
 
 internal fun MainActivity.renderFolder() {
@@ -196,7 +208,7 @@ internal fun MainActivity.chooseTheme(mode: Int) {
 internal fun MainActivity.chooseAccent(v: Int) {
     if (v == AppPrefs.accent(this)) return
     AppPrefs.setAccent(this, v)
-    android.widget.Toast.makeText(this, "${Accents.of(v).name} · the app icon changes when you leave the app", android.widget.Toast.LENGTH_LONG).show()
+    android.widget.Toast.makeText(this, "${Accents.of(v).name} · the app icon changes a minute after you leave the app", android.widget.Toast.LENGTH_LONG).show()
     window.decorView.postDelayed({ if (!isDestroyed) recreate() }, 180)      // every screen in the new colour
 }
 
@@ -279,12 +291,12 @@ internal fun MainActivity.setupSettingsLook() {
         t.state.text = t.prefix + if (on) "On" else "Off"
         t.box.contentDescription = "${t.title.text}, ${if (on) "on" else "off"}"
     }
+    paintTiles = { tiles.forEach { paint(it) } }
     tiles.forEach { t ->
         paint(t)
         t.box.setOnClickListener {
-            t.sw.toggle()                      // the switch's own listener saves it, exactly as before
+            t.sw.toggle()                      // the switch's own listener saves it (and repaints the tiles)
             Haptics.tick(it)
-            paint(t)
         }
     }
 
@@ -349,8 +361,9 @@ internal fun MainActivity.setupSettingsLook() {
         if (v.tag == "settingsCard" && v is android.view.ViewGroup) cards += v
         if (v.tag == "settingsLabel") sectionLabels += v
     }
+    // rows hidden at the moment the search starts (e.g. "Last MP3" with nothing to show) stay hidden
     val alwaysHidden = HashSet<View>()
-    cards.forEach { c -> for (i in 0 until c.childCount) c.getChildAt(i).let { if (it.visibility == View.GONE) alwaysHidden += it } }
+    var wasSearching = false
     fun words(v: View): String = when (v) {
         is android.widget.TextView -> v.text.toString()
         is android.view.ViewGroup -> (0 until v.childCount).joinToString(" ") { words(v.getChildAt(it)) }
@@ -362,6 +375,11 @@ internal fun MainActivity.setupSettingsLook() {
         override fun afterTextChanged(e: android.text.Editable?) {
             val q = e?.toString()?.trim().orEmpty()
             val searching = q.isNotEmpty()
+            if (searching && !wasSearching) {
+                alwaysHidden.clear()
+                cards.forEach { c -> for (i in 0 until c.childCount) c.getChildAt(i).let { if (it.visibility == View.GONE) alwaysHidden += it } }
+            }
+            wasSearching = searching
             st.quickTiles.isVisible = !searching
             st.appearanceCard.isVisible = !searching
             var any = false

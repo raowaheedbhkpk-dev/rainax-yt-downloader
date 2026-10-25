@@ -38,6 +38,7 @@ class RxNavBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         private set
 
     private var selectedId = 0
+    private var retries = 0
     private var markX = -1f           // centre of the red bar now
     private var anim: ValueAnimator? = null
     private val settle = PathInterpolator(0.2f, 0f, 0f, 1f)
@@ -82,7 +83,9 @@ class RxNavBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     /** The tab [itemId] was chosen: the red bar slides over to it (or is simply placed there when [animate] is false). */
     fun select(itemId: Int, animate: Boolean = true) {
         selectedId = itemId
-        val to = centreOf(itemId) ?: run { post { select(itemId, false) }; return }
+        // not laid out yet: try on the next frames (a hidden bar used to retry every frame for ever)
+        val to = centreOf(itemId) ?: run { if (retries++ < 20) post { select(itemId, false) }; return }
+        retries = 0
         anim?.cancel()
         val from = markX
         if (!animate || from < 0f || !ValueAnimator.areAnimatorsEnabled() || kotlin.math.abs(to - from) < 1f) {

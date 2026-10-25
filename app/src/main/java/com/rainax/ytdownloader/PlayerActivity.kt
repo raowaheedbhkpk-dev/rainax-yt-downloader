@@ -967,10 +967,11 @@ class PlayerActivity : AppCompatActivity() {
         val screenOn = (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
         val closedPip = screenOn && (wasInPip || System.currentTimeMillis() - pipExitAt < 1500)
         val p = player
-        // Screen locked or app left while it plays, Background play on: the sound carries on in the
-        // background service (lock-screen controls), from this very second. Not for a closed small window,
-        // Back (leaving the player), a file from another app, or a download still in progress.
-        if (p != null && p.playWhenReady && !closedPip && !isFinishing && !isChangingConfigurations && !external && watching == null &&
+        // Screen locked, app left, or the small window closed while it plays, Background play on: the sound
+        // carries on in the background service (lock-screen and notification controls), from this very second.
+        // Not for Back (leaving the player), a file from another app, or a download still in progress.
+        // (not while our own subtitle picker or share screen is open on top: the video just waits there)
+        if (p != null && p.playWhenReady && !isFinishing && !isChangingConfigurations && !external && watching == null && !internalNav &&
             AppPrefs.backgroundPlay(this) && p.mediaItemCount > 0) {
             savePosition()
             LocalHandoff.start(
@@ -1010,6 +1011,7 @@ class PlayerActivity : AppCompatActivity() {
         /** Opened from the background-play notification (the list comes from [LocalHandoff]). */
         const val EXTRA_FROM_BACKGROUND = "from_background"
         private const val EXTRA_KEY = "rx_key"
+        private const val MAX_LIST = 300
 
         /** Marks [i] as coming from RAINAX (the key is made once and kept in the app's private settings). */
         fun sign(context: Context, i: Intent): Intent = i.putExtra(EXTRA_KEY, AppPrefs.innerKey(context))
@@ -1033,10 +1035,15 @@ class PlayerActivity : AppCompatActivity() {
 
         /** Plays [uris] as a list from [index]; [shuffle] null = the last shuffle setting. */
         fun open(context: Context, uris: List<String>, titles: List<String>, index: Int, shuffle: Boolean? = null) {
+            // A list travels inside the Intent, and Android refuses (closes the app) one bigger than about 1 MB:
+            // a long download history could pass that. The player gets at most MAX_LIST around the chosen file.
+            val at = index.coerceIn(0, (uris.size - 1).coerceAtLeast(0))
+            val from = (at - MAX_LIST / 2).coerceIn(0, (uris.size - MAX_LIST).coerceAtLeast(0))
+            val to = minOf(uris.size, from + MAX_LIST)
             val i = Intent(context, PlayerActivity::class.java)
-                .putStringArrayListExtra(EXTRA_URIS, ArrayList(uris))
-                .putStringArrayListExtra(EXTRA_TITLES, ArrayList(titles))
-                .putExtra(EXTRA_INDEX, index)
+                .putStringArrayListExtra(EXTRA_URIS, ArrayList(uris.subList(from, to)))
+                .putStringArrayListExtra(EXTRA_TITLES, ArrayList(titles.subList(from.coerceAtMost(titles.size), to.coerceAtMost(titles.size))))
+                .putExtra(EXTRA_INDEX, at - from)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (shuffle != null) i.putExtra(EXTRA_SHUFFLE, shuffle)
             context.startActivity(sign(context, i))

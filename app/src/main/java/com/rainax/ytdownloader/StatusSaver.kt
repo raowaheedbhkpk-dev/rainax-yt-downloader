@@ -56,7 +56,7 @@ class StatusSaver(
     private val thumbs = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
-    private val decoder = java.util.concurrent.Executors.newFixedThreadPool(3)
+    private val decoder get() = DECODER
 
     fun setup() {
         so.statusList.layoutManager = GridLayoutManager(act, 3)
@@ -69,6 +69,7 @@ class StatusSaver(
         so.statusPickFolder.setOnClickListener { pickFolder(initialUri(tab)) }
         so.statusRefresh.setOnClickListener { refresh() }
         so.statusSaveAll.setOnClickListener { saveAll() }
+        so.statusAutoSwitch.isSaveEnabled = false                  // always from the saved choice, never replayed
         so.statusAutoSwitch.isChecked = AppPrefs.statusAuto(act)
         so.statusAutoRow.setOnClickListener { so.statusAutoSwitch.toggle() }
         so.statusAutoSwitch.setOnCheckedChangeListener { _, on ->
@@ -475,6 +476,8 @@ class StatusSaver(
         const val WA = "com.whatsapp"
         const val WAB = "com.whatsapp.w4b"
         private const val STORAGE = "com.android.externalstorage.documents"
+        /** One set of picture threads for the app (a new set per screen rebuild piled up after theme changes). */
+        private val DECODER = java.util.concurrent.Executors.newFixedThreadPool(3)
         private val SAVE_PATH = "${Environment.DIRECTORY_DOWNLOADS}/${FileStore.ROOT}/${FileStore.STATUS}/"
     }
 }

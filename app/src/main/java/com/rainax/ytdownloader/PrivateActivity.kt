@@ -220,7 +220,7 @@ class PrivateActivity : AppCompatActivity() {
                 if (wait > 0) { tooManyTries(wait); return }
                 setBusy(true)
                 lifecycleScope.launch {
-                    val ok = withContext(Dispatchers.Default) { PrivateVault.check(this@PrivateActivity, secret) }
+                    val ok = withContext(Dispatchers.Default) { runCatching { PrivateVault.check(this@PrivateActivity, secret) }.getOrDefault(false) }
                     setBusy(false)
                     when {
                         ok && step == Step.CHECK_OLD -> startCreate()        // changing the lock: now the new one
@@ -342,7 +342,7 @@ class PrivateActivity : AppCompatActivity() {
                     .setMessage("\"${item.title}\" is deleted from your phone. This can't be undone.")
                     .setPositiveButton("Delete") { _, _ ->
                         lifecycleScope.launch {
-                            withContext(Dispatchers.IO) { PrivateVault.remove(this@PrivateActivity, item) }
+                            withContext(Dispatchers.IO) { runCatching { PrivateVault.remove(this@PrivateActivity, item) } }
                             refresh()
                         }
                     }

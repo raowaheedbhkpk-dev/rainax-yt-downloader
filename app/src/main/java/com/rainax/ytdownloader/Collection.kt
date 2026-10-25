@@ -38,7 +38,7 @@ class ShelfAdapter(private val onOpen: (DownloadTask) -> Unit) : RecyclerView.Ad
             val path = t.thumbPath
             if (path != null && File(path).exists()) Img.loadFile(thumb, path) else Img.load(thumb, t.thumbUrl, widthPx = 360)
             kind.text = when {
-                t.isAudio -> "MP3"
+                t.isAudio -> if (t.format.contains("mp3") || t.mime == "audio/mpeg") "MP3" else "AUDIO"     // (M4A isn't MP3)
                 t.format.substringAfter(':').toIntOrNull()?.let { it >= 720 } == true -> "HD"
                 else -> "VIDEO"
             }

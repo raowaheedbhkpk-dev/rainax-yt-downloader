@@ -61,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var library: LibraryScreen
     internal lateinit var music: MusicPlayer
     internal lateinit var subs: SubsScreen
+    /** Settings' quick tiles repaint from their switches (set by setupSettingsLook). */
+    internal var paintTiles: (() -> Unit)? = null
     internal var pendingVideo: String? = null     // reopen this video page once the player is connected
 
     internal var latestTasks: List<DownloadTask> = emptyList()
@@ -140,6 +142,7 @@ class MainActivity : AppCompatActivity() {
         }
         super.onCreate(savedInstanceState)
         Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
+        Ui.pillExtra = 0                      // (a rebuilt screen starts without the update pill's extra room)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
         if (savedInstanceState == null && AppPrefs.openingTitle(this)) OpeningCredits.show(b.root)
@@ -249,6 +252,7 @@ class MainActivity : AppCompatActivity() {
         // the red square "+" in the middle of the bar: Add (download from a link)
         b.navCard.fab?.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_social }
 
+        Ui.noRestore(b.root)        // every page: chips and switches come from the app, not from a replay
         // Anything left in the queue (app or service was killed) continues automatically
         val pending = TaskRepository.tasks.value.any {
             it.status == Status.QUEUED || it.status == Status.RUNNING || it.status == Status.WAITING

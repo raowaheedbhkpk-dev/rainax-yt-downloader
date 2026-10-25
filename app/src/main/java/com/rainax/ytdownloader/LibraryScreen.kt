@@ -243,10 +243,14 @@ class LibraryScreen(
         }
     }
 
-    private fun playList(files: List<DownloadTask>, index: Int, shuffle: Boolean) {
+    private fun playList(all: List<DownloadTask>, index: Int, shuffle: Boolean) {
+        // (a file whose address was lost is skipped instead of closing the app)
+        val wanted = all.getOrNull(index)
+        val files = all.filter { it.fileUri != null }
         if (files.isEmpty()) return
+        val at = files.indexOf(wanted).coerceAtLeast(0)
         try {
-            PlayerActivity.open(act, files.map { it.fileUri!! }, files.map { it.title }, index, shuffle)
+            PlayerActivity.open(act, files.map { it.fileUri!! }, files.map { it.title }, at, shuffle)
         } catch (e: Exception) {
             Notify.show(act, "Can't play these files")
         }

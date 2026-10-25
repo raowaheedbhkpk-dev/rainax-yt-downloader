@@ -101,6 +101,17 @@ object Ui {
         }
     }
 
+    /**
+     * Switches, chips and text boxes under [v] are filled by the app, never by Android's "put the screen back"
+     * after a theme or colour change. That replay matched views by number; chips made in code get new numbers
+     * every time, so an old choice could land on a different chip (Home jumped to another feed, a switch
+     * flipped) and its listener saved or loaded the wrong thing.
+     */
+    fun noRestore(v: android.view.View) {
+        if (v is android.widget.CompoundButton || v is com.google.android.material.chip.ChipGroup || v is android.widget.EditText) v.isSaveEnabled = false
+        if (v is android.view.ViewGroup && v !is androidx.recyclerview.widget.RecyclerView) for (i in 0 until v.childCount) noRestore(v.getChildAt(i))
+    }
+
     /** The accent colour chosen in Settings (one of the sixteen in [Accents]), as a colour resource. */
     fun accentRes(c: android.content.Context): Int = Accents.of(AppPrefs.accent(c)).color
 

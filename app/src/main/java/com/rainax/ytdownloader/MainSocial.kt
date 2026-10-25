@@ -284,51 +284,18 @@ internal fun MainActivity.showDownloadSheet(
 
     fun specHeight(spec: String) = spec.split(':').getOrNull(1)?.toIntOrNull() ?: 0
 
-    /** The card's words: "High Quality" / "720p" for video, "Original quality" / "M4A" for sound. */
+    /**
+     * The card's words: "High Quality" / "720p" for video, "Original · Instant" / "M4A" for sound. The same words
+     * as every other download sheet (an upright video is named by its short side: 1080x1920 is 1080p, not 2K;
+     * this sheet used to read the height and showed upright videos as 2K or 5K).
+     */
     fun cardOf(c: FormatChoice, recommended: Boolean): DlCard.Format {
-        val selected = c.spec == selectedSpecNow()
-        val size = c.size.ifBlank { "Size unknown" }
-        if (c.kind == KIND_AUDIO) {
-            val parts = c.spec.split(':')
-            val ext = parts.getOrNull(1).orEmpty()
-            val (tag, q) = when (ext) {
-                "m4a" -> "Original · Instant" to "M4A"
-                "mp3" -> {
-                    val kbps = parts.getOrNull(2)?.toIntOrNull() ?: 192
-                    (when {
-                        kbps <= 128 -> "MP3 · Small"
-                        kbps >= 320 -> "MP3 · Best"
-                        else -> "MP3 · Standard"
-                    }) to "${kbps}k"
-                }
-                "" -> "Sound only" to "Audio"
-                else -> "Sound only" to ext.uppercase()
-            }
-            return DlCard.Format(c, tag, q, size, recommended, selected)
-        }
-        val h = specHeight(c.spec)
-        val q = when {
-            h >= 4320 -> "8K"
-            h >= 2160 -> "4K"
-            h >= 1440 -> "2K"
-            h > 0 -> "${h}p"
-            else -> "Best"
-        }
-        val tag = when {
-            h == 0 -> "MP4"
-            h < 720 -> "Fast"
-            h < 1440 -> "High Quality"
-            else -> "Ultra HD"
-        }
-        return DlCard.Format(c, tag, q, size, recommended, selected)
+        val (tag, q) = DlCardText.of(c)
+        return DlCard.Format(c, tag, q, c.size.ifBlank { "Size unknown" }, recommended, c.spec == selectedSpecNow())
     }
 
     /** The suggested card of a list: 720p (or nearest) for video, M4A for sound. */
-    fun recommendedOf(list: List<FormatChoice>): FormatChoice? {
-        if (list.size < 2) return list.firstOrNull()
-        return if (tabKind == KIND_AUDIO) list.firstOrNull { it.spec == "audio:m4a" } ?: list.first()
-        else list.filter { specHeight(it.spec) > 0 }.minByOrNull { kotlin.math.abs(specHeight(it.spec) - 720) } ?: list.first()
-    }
+    fun recommendedOf(list: List<FormatChoice>): FormatChoice? = DlCardText.recommended(list, tabKind)
 
     /** "720p (280.0 MB)" for the bar. */
     fun shortLabel(c: FormatChoice): String {

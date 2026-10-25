@@ -29,7 +29,27 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
         // (never switched here: the app may have just been opened from the old icon)
     }
 
-    private fun signature(c: Context) = "${AppPrefs.accent(c)}/${AppPrefs.themeMode(c)}"
+    /**
+     * What a screen was drawn with: accent, theme, and (for "follow the phone") whether the phone was dark.
+     * Screens that handle dark-mode changes themselves (Private folder, sign-in, welcome) missed the phone
+     * switching to dark while they were open and stayed in the old colours; now they redraw when you return.
+     * The player and Shorts are left alone (always dark, and a redraw would stop the video).
+     */
+    private fun signature(a: Activity): String {
+        val night = if (a is PlayerActivity || a is ShortsActivity || AppPrefs.themeMode(a) != 0) ""
+            else "/" + (a.applicationContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+        return "${AppPrefs.accent(a)}/${AppPrefs.themeMode(a)}$night"
+    }
+
+    /**
+     * True while RAINAX downloads or plays in the background (a foreground service is on). Some phones close
+     * the whole app when its launcher icon changes, which would cut the download or the music: wait then.
+     */
+    private fun busy(c: Context): Boolean = runCatching {
+        val am = c.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        @Suppress("DEPRECATION")
+        am.getRunningServices(20).any { it.service.packageName == c.packageName && it.foreground }
+    }.getOrDefault(true)
 
     /** Turns on the launcher entry of the current accent and turns the others off (only what differs). */
     fun applyIcon(c: Context) {
@@ -59,13 +79,34 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
         }
     }
 
-    override fun onActivityStarted(a: Activity) { started++ }
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private var iconJob: Runnable? = null
+
+    override fun onActivityStarted(a: Activity) {
+        started++
+        iconJob?.let { main.removeCallbacks(it) }       // back in the app before the switch: not now
+        iconJob = null
+    }
 
     override fun onActivityStopped(a: Activity) {
         started--
         if (started <= 0 && !a.isChangingConfigurations) {
             started = 0
-            applyIcon(a.applicationContext)          // the app went to the background: safe to switch the icon
+            // The icon switches a minute after RAINAX went to the background, not at once: some phones close an
+            // app whose launcher entry changes, and switching right away made a quick trip out (to copy a link,
+            // read a message) bring you back to a freshly started app, as if everything had been reset.
+            val app = a.applicationContext
+            iconJob?.let { main.removeCallbacks(it) }
+            val job = object : Runnable {
+                override fun run() {
+                    if (started > 0) { iconJob = null; return }
+                    if (busy(app)) { main.postDelayed(this, 60_000); return }    // downloading / playing: later
+                    iconJob = null
+                    applyIcon(app)
+                }
+            }
+            iconJob = job
+            main.postDelayed(job, 60_000)
         }
     }
 

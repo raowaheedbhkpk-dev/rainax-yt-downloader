@@ -82,12 +82,17 @@ object FileStore {
 
     /** "name.mp4", or "name (2).mp4" when that exists. */
     private fun unique(dir: File, name: String): File {
-        var f = File(dir, name)
-        if (!f.exists()) return f
+        // the name is taken at once (createNewFile), so two downloads of the same video finishing together
+        // never write into the same file
         val base = name.substringBeforeLast('.')
         val ext = name.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }
+        var f = File(dir, name)
         var n = 2
-        while (f.exists()) f = File(dir, "$base ($n)$ext").also { n++ }
+        while (!f.createNewFile()) {
+            if (n > 999) error("Can't make a new file in $ROOT")
+            f = File(dir, "$base ($n)$ext")
+            n++
+        }
         return f
     }
 

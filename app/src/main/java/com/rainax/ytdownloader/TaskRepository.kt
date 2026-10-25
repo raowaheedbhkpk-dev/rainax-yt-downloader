@@ -15,7 +15,11 @@ import java.io.File
  */
 object TaskRepository {
     private const val KEY = "tasks"
-    private const val MAX_DONE = 50
+    /**
+     * Finished downloads kept in the list (and so in Library and the player's playlist). It was 50: from the
+     * 51st download on, the oldest videos silently left the app although the files were still on the phone.
+     */
+    private const val MAX_DONE = 2000
 
     private lateinit var prefs: SharedPreferences
     private lateinit var filesRoot: File
