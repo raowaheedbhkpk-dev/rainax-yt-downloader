@@ -376,6 +376,12 @@
             </intent-filter>
         </service>
 
+        <!-- switches the home-screen icon to the chosen accent a minute after you leave the app -->
+        <service
+            android:name=".IconJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <service
             android:name=".DownloadService"
             android:exported="false"

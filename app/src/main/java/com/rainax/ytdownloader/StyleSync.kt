@@ -106,12 +106,49 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
     }
 
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
-    private var iconJob: Runnable? = null
+    private const val ICON_JOB = 7102
+
+    /** True when the launcher entry that is on isn't the one for the chosen accent. */
+    fun iconOutOfDate(c: Context): Boolean {
+        val pm = c.packageManager
+        val want = Accents.of(AppPrefs.accent(c)).alias
+        return Accents.ALL.any { acc ->
+            val cn = ComponentName(c.packageName, "${c.packageName}.${acc.alias}")
+            val now = runCatching { pm.getComponentEnabledSetting(cn) }.getOrNull() ?: return@any false
+            val on = if (now == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) acc.id == 0
+                else now == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            on != (acc.alias == want)
+        }
+    }
+
+    /** Ask Android to switch the icon in about [delayMs] (runs even if the app is asleep or closed by then). */
+    fun scheduleIcon(c: Context, delayMs: Long = 60_000) {
+        runCatching {
+            val js = c.getSystemService(android.app.job.JobScheduler::class.java) ?: return
+            js.schedule(
+                android.app.job.JobInfo.Builder(ICON_JOB, ComponentName(c, IconJob::class.java))
+                    .setMinimumLatency(delayMs)
+                    .setOverrideDeadline(delayMs + 5 * 60_000)
+                    .build()
+            )
+        }
+    }
+
+    private fun cancelIcon(c: Context) {
+        runCatching { c.getSystemService(android.app.job.JobScheduler::class.java)?.cancel(ICON_JOB) }
+    }
+
+    /** Called by [IconJob]: switch now, unless the app is open again or busy (then try again later). */
+    internal fun iconJobRun(c: Context) {
+        if (started > 0) return                                   // back in the app: waits for the next exit
+        if (!iconOutOfDate(c)) return
+        if (busy(c)) { scheduleIcon(c); return }                 // downloading / playing: a minute later
+        applyIcon(c)
+    }
 
     override fun onActivityStarted(a: Activity) {
         started++
-        iconJob?.let { main.removeCallbacks(it) }       // back in the app before the switch: not now
-        iconJob = null
+        cancelIcon(a.applicationContext)       // back in the app before the switch: not now
     }
 
     override fun onActivityStopped(a: Activity) {
@@ -121,18 +158,10 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
             // The icon switches a minute after RAINAX went to the background, not at once: some phones close an
             // app whose launcher entry changes, and switching right away made a quick trip out (to copy a link,
             // read a message) bring you back to a freshly started app, as if everything had been reset.
+            // (A JobScheduler job, not a timer in the app: Android freezes apps in the background within
+            // seconds, so the old one-minute timer never ran and the icon never changed.)
             val app = a.applicationContext
-            iconJob?.let { main.removeCallbacks(it) }
-            val job = object : Runnable {
-                override fun run() {
-                    if (started > 0) { iconJob = null; return }
-                    if (busy(app)) { main.postDelayed(this, 60_000); return }    // downloading / playing: later
-                    iconJob = null
-                    applyIcon(app)
-                }
-            }
-            iconJob = job
-            main.postDelayed(job, 60_000)
+            if (iconOutOfDate(app)) scheduleIcon(app)
         }
     }
 
@@ -150,4 +179,14 @@ object StyleSync : Application.ActivityLifecycleCallbacks {
         }
     }
     override fun onActivitySaveInstanceState(a: Activity, out: Bundle) {}
+}
+
+/** Switches the home-screen icon to the chosen accent, a minute after RAINAX went to the background. */
+class IconJob : android.app.job.JobService() {
+    override fun onStartJob(params: android.app.job.JobParameters): Boolean {
+        runCatching { StyleSync.iconJobRun(applicationContext) }
+        return false
+    }
+
+    override fun onStopJob(params: android.app.job.JobParameters) = false
 }
