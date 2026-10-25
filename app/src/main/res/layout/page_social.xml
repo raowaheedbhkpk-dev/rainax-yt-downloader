@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Social downloader, Cinema Pro "Box Office": a big headline, the sites as tags (each with the real app's own
+     icon from the phone when it is installed), one sharp link box, Paste and Download, the copied link as a ticket,
+     the WhatsApp status saver, and three steps like film credits -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/socialScroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="@dimen/rx_space_20"
+        android:paddingBottom="120dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.25"
+            android:text="All-in-one downloader"
+            android:textAllCaps="true"
+            android:textColor="@color/rx_gold"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/rx_display"
+            android:includeFontPadding="false"
+            android:lineSpacingMultiplier="0.95"
+            android:text="Save any\nvideo."
+            android:textAllCaps="true"
+            android:textColor="@color/rx_text"
+            android:textSize="44sp" />
+
+        <View
+            android:layout_width="44dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="@dimen/rx_space_12"
+            android:background="?attr/rxAccent" />
+
+        <!-- the sites: filled in code (real app icon when installed, else a coloured tag), tap opens the app -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/socialApps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:labelFor="@+id/socialInput"
+            android:letterSpacing="0.15"
+            android:text="Paste a link"
+            android:textAllCaps="true"
+            android:textColor="@color/rx_text2"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_social_box"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/rx_space_8"
+            android:paddingEnd="@dimen/rx_space_4"
+            android:paddingBottom="@dimen/rx_space_2">
+
+            <!-- the app the link is from (its icon or a coloured tag), or a link icon -->
+            <FrameLayout
+                android:layout_width="36dp"
+                android:layout_height="36dp">
+
+                <ImageView
+                    android:id="@+id/socialLinkIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_link"
+                    app:tint="@color/rx_text2" />
+
+                <TextView
+                    android:id="@+id/socialLinkBadge"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:textColor="@color/rx_white"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <EditText
+                android:id="@+id/socialInput"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="https://…"
+                android:imeOptions="actionGo"
+                android:importantForAutofill="no"
+                android:inputType="textUri"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textColorHint="@color/rx_text2"
+                android:textSize="14sp" />
+
+            <ImageButton
+                android:id="@+id/socialClear"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Clear"
+                android:src="@drawable/ic_close"
+                android:visibility="gone"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/socialDetected"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_8"
+            android:letterSpacing="0.04"
+            android:textColor="@color/rx_gold"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/socialPaste"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="@dimen/rx_space_8"
+                android:layout_weight="1"
+                android:background="@drawable/bg_social_outline_btn"
+                android:clickable="true"
+                android:contentDescription="Paste"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_paste"
+                    app:tint="@color/rx_text" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/rx_space_8"
+                    android:letterSpacing="0.15"
+                    android:text="Paste"
+                    android:textAllCaps="true"
+                    android:textColor="@color/rx_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/socialDownload"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1.6"
+                android:background="@drawable/bg_social_red_btn"
+                android:clickable="true"
+                android:contentDescription="Download"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_download"
+                    app:tint="@color/rx_white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/rx_space_8"
+                    android:letterSpacing="0.15"
+                    android:text="Download"
+                    android:textAllCaps="true"
+                    android:textColor="@color/rx_white"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- a link is on the clipboard: a ticket with "GET IT" on its tear-off stub -->
+        <LinearLayout
+            android:id="@+id/socialClipStrip"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_social_ticket"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/rx_space_12"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/socialClipBadge"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:importantForAccessibility="no"
+                android:textColor="@color/rx_white"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/socialClipText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/rx_space_12"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:letterSpacing="0.06"
+                android:maxLines="1"
+                android:textAllCaps="true"
+                android:textColor="@color/rx_gold"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="2dp"
+                android:layout_height="match_parent"
+                android:layout_marginVertical="6dp"
+                android:background="@drawable/bg_dash_vertical"
+                android:layerType="software" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/socialClipGo"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="88dp"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/rx_display"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:letterSpacing="0.1"
+                android:text="Get it"
+                android:textAllCaps="true"
+                android:textColor="?attr/rxAccentText"
+                android:textSize="14sp"
+                app:cornerRadius="2dp" />
+        </LinearLayout>
+
+        <!-- ===== WhatsApp status saver ===== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="@dimen/rx_space_24"
+            android:background="@color/rx_divider" />
+
+        <LinearLayout
+            android:id="@+id/statusCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- WhatsApp's own icon from the phone (code), else the status ring -->
+                <ImageView
+                    android:id="@+id/statusAppIcon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_status_wa"
+                    android:importantForAccessibility="no"
+                    android:padding="@dimen/rx_space_8"
+                    android:src="@drawable/ic_status_ring" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/rx_space_12"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/rx_display"
+                        android:letterSpacing="0.02"
+                        android:text="WhatsApp status saver"
+                        android:textAllCaps="true"
+                        android:textColor="@color/rx_text"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/statusSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:text="Save photos and videos from statuses you've seen"
+                        android:textColor="@color/rx_text2"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/statusRefresh"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Refresh"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_refresh"
+                    android:visibility="gone"
+                    app:tint="@color/rx_text" />
+            </LinearLayout>
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/statusApps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_12"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/statusWa"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:checked="true"
+                    android:text="WhatsApp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/statusWab"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="WA Business" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/statusSaved"
+                    style="@style/Widget.Rainax.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="Saved" />
+            </com.google.android.material.chip.ChipGroup>
+
+            <!-- auto-save: every status you view is copied to Rainax Tube/Status by itself -->
+            <LinearLayout
+                android:id="@+id/statusAutoRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_8"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto-save new statuses"
+                        android:textColor="@color/rx_text"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusAutoSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/rx_space_2"
+                        android:text="Every status you view is saved before it disappears"
+                        android:textColor="@color/rx_text2"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/statusAutoSwitch"
+                    style="@style/Widget.Rainax.Switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/rx_space_12"
+                    android:contentDescription="Auto-save new statuses" />
+            </LinearLayout>
+
+            <!-- no access yet: what to do -->
+            <LinearLayout
+                android:id="@+id/statusAsk"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/statusAskText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="3dp"
+                    android:text="1. View the statuses in WhatsApp first.\n2. Tap Allow access, then tap “Use this folder” on the next screen.\nRAINAX only reads the status folder, nothing else."
+                    android:textColor="@color/rx_text2"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/statusAllow"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="@dimen/rx_space_12"
+                    android:backgroundTint="#25D366"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Allow access"
+                    android:textColor="@color/rx_white"
+                    app:cornerRadius="2dp"
+                    app:icon="@drawable/ic_check"
+                    app:iconTint="@color/rx_white" />
+
+                <TextView
+                    android:id="@+id/statusPickFolder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/rx_space_4"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center"
+                    android:paddingHorizontal="@dimen/rx_space_12"
+                    android:text="Or choose only the status folder"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/statusEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_12"
+                android:gravity="center"
+                android:paddingVertical="18dp"
+                android:textColor="@color/rx_text2"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/statusLoading"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:layout_marginVertical="18dp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/statusList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_12"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/statusSaveAll"
+                style="@style/Widget.Rainax.Button.Tonal"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="Save all"
+                android:visibility="gone"
+                app:cornerRadius="2dp"
+                app:icon="@drawable/ic_download"
+                app:iconTint="@color/rx_text" />
+        </LinearLayout>
+
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/rx_divider" />
+
+        <!-- ===== 3 steps, like film credits ===== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_20"
+            android:letterSpacing="0.25"
+            android:text="How it works"
+            android:textAllCaps="true"
+            android:textColor="@color/rx_gold"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_8"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/rx_display"
+                android:importantForAccessibility="no"
+                android:text="01"
+                android:textColor="?attr/rxAccentText"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Copy the link in TikTok, Instagram, Facebook or YouTube (Share › Copy link)"
+                android:textColor="@color/rx_text"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_8"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/rx_display"
+                android:importantForAccessibility="no"
+                android:text="02"
+                android:textColor="?attr/rxAccentText"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Paste it here, or share it straight to RAINAX"
+                android:textColor="@color/rx_text"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_8"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/rx_display"
+                android:importantForAccessibility="no"
+                android:text="03"
+                android:textColor="?attr/rxAccentText"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Pick HD or MP3 and download"
+                android:textColor="@color/rx_text"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:lineSpacingExtra="4dp"
+            android:text="Private accounts and paid videos can't be saved. If a link fails, copy it again: some links expire. Only save what you have the right to, and respect the creators."
+            android:textColor="@color/rx_text2"
+            android:textSize="12sp" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

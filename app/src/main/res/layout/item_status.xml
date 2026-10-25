@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One WhatsApp status: square picture, video length badge, save button (a tick once saved) -->
+<com.rainax.ytdownloader.SquareFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/rx_space_4"
+    android:background="@drawable/bg_status_thumb"
+    android:foreground="?attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/statusThumb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
+
+    <ImageView
+        android:id="@+id/statusPlay"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_status_save"
+        android:importantForAccessibility="no"
+        android:padding="6dp"
+        android:src="@drawable/ic_p_play"
+        android:visibility="gone"
+        app:tint="@color/rx_white" />
+
+    <ImageButton
+        android:id="@+id/statusSave"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="6dp"
+        android:background="@drawable/bg_status_save"
+        android:contentDescription="Save"
+        android:padding="@dimen/rx_space_8"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_download"
+        app:tint="@color/rx_white" />
+</com.rainax.ytdownloader.SquareFrameLayout>

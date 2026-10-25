@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RAINAX voice search: status pill, your words as you speak, a hint, and the glowing orb with the mic -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_voice_page"
+    android:fitsSystemWindows="true">
+
+    <ImageButton
+        android:id="@+id/vClose"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="@dimen/rx_space_8"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Close"
+        android:src="@drawable/ic_close"
+        app:tint="@color/voice_text" />
+
+    <!-- ● Listening / Searching / Tap to try again -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_voice_status"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp">
+
+        <View
+            android:id="@+id/vDot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/bg_voice_dot" />
+
+        <TextView
+            android:id="@+id/vStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/rx_space_8"
+            android:fontFamily="@font/rx_body"
+            android:letterSpacing="0.06"
+            android:text="LISTENING"
+            android:textColor="@color/voice_text"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- your words, live -->
+    <TextView
+        android:id="@+id/vText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="28dp"
+        android:layout_marginTop="120dp"
+        android:textAllCaps="true"
+        android:fontFamily="@font/rx_display"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.1"
+        android:maxLines="4"
+        android:ellipsize="start"
+        android:text="Speak now…"
+        android:textColor="@color/voice_hint"
+        android:textSize="32sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingBottom="40dp">
+
+        <TextView
+            android:id="@+id/vHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/rx_space_32"
+            android:fontFamily="@font/rx_body"
+            android:gravity="center"
+            android:textColor="@color/voice_text2"
+            android:textSize="14sp" />
+
+        <FrameLayout
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_marginTop="@dimen/rx_space_8">
+
+            <com.rainax.ytdownloader.VoiceOrb
+                android:id="@+id/vOrb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <FrameLayout
+                android:id="@+id/vMic"
+                android:layout_width="84dp"
+                android:layout_height="84dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_nav_fab"
+                android:clickable="true"
+                android:contentDescription="Microphone"
+                android:elevation="10dp"
+                android:focusable="true"
+                android:outlineAmbientShadowColor="?attr/rxAccent"
+                android:outlineSpotShadowColor="?attr/rxAccent"
+                android:stateListAnimator="@animator/rx_press">
+
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_mic"
+                    app:tint="@color/rx_white" />
+            </FrameLayout>
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/vLang"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_4"
+            android:fontFamily="@font/rx_body"
+            android:textColor="@color/voice_muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+</FrameLayout>

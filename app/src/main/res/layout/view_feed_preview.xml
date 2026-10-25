@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Feed autoplay: the video plays silently inside its picture (like YouTube), with a mute button and a thin bar -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/previewPlayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:resize_mode="zoom"
+        app:shutter_background_color="@android:color/transparent"
+        app:surface_type="texture_view"
+        app:use_controller="false" />
+
+    <ImageButton
+        android:id="@+id/previewMute"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="@dimen/rx_space_8"
+        android:background="@drawable/bg_preview_btn"
+        android:contentDescription="Sound"
+        android:padding="@dimen/rx_space_8"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_volume_off"
+        app:tint="@color/rx_white" />
+
+    <ProgressBar
+        android:id="@+id/previewBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="bottom"
+        android:max="1000"
+        android:progressDrawable="@drawable/bg_watch_bar" />
+</FrameLayout>

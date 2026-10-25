@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Top of the Home feed: Continue watching and a strip of Shorts (each part hides when empty) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- your channels (signed in), like the top of YouTube's Home -->
+    <LinearLayout
+        android:id="@+id/subsBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="6dp"
+        android:visibility="gone">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/subsRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingHorizontal="6dp" />
+
+        <TextView
+            android:id="@+id/subsRowAll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:paddingHorizontal="@dimen/rx_space_16"
+            android:text="All"
+            android:textColor="@color/rx_accent"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/continueBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:fontFamily="@font/rx_display"
+            android:textAllCaps="true"
+            android:letterSpacing="0.02"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="@dimen/rx_space_16"
+            android:paddingTop="6dp"
+            android:paddingBottom="10dp"
+            android:text="Continue watching"
+            android:textColor="@color/rx_text"
+            android:textSize="24sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/continueList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/rx_space_12"
+            android:paddingBottom="22dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/shortsBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/rx_space_16"
+            android:paddingTop="@dimen/rx_space_2"
+            android:paddingBottom="@dimen/rx_space_12">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_shorts"
+                app:tint="?attr/rxAccent" />
+
+            <TextView
+                android:fontFamily="@font/rx_display"
+                android:textAllCaps="true"
+                android:letterSpacing="0.02"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/rx_space_8"
+                android:text="Shorts"
+                android:textColor="@color/rx_text"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/shortsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/rx_space_12" />
+
+        <!-- clear gap and a thin line before the next video, like YouTube -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="@dimen/rx_space_16"
+            android:background="?attr/rxSurfaceAlt" />
+    </LinearLayout>
+</LinearLayout>

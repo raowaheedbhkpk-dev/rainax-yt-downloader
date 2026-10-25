@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the raised "+" button: RAINAX red, square, with a touch ripple -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#40FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="2dp" />
+            <gradient android:angle="315" android:endColor="?attr/rxAccent" android:startColor="?attr/rxAccent" />
+        </shape>
+    </item>
+</ripple>

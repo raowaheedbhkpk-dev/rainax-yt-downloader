@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Music tab: mood chips (Relax, Energize, Romance...), like YouTube Music: a lighter row with space above,
+     so it never touches the Home chips (All, Music, Live...) -->
+<HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false"
+    android:paddingHorizontal="@dimen/rx_space_12"
+    android:paddingTop="@dimen/rx_space_12"
+    android:paddingBottom="10dp"
+    android:scrollbars="none">
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/moodChips"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:chipSpacingHorizontal="8dp"
+        app:selectionRequired="false"
+        app:singleLine="true"
+        app:singleSelection="true" />
+</HorizontalScrollView>

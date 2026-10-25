@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Side menu (≡ on Home): a floating frosted-glass card. Header with bell and close, your account,
+     search, then MENU / DISCOVER / GENERAL with a red bar on the open place. Swipe it left, tap outside, Back or ✕ to close. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="gone">
+
+    <View
+        android:id="@+id/exploreScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:clickable="true"
+        android:contentDescription="Close menu"
+        android:focusable="true" />
+
+    <com.rainax.ytdownloader.SwipeCloseLayout
+        android:id="@+id/explorePanel"
+        android:layout_width="292dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="34dp"
+        android:layout_marginBottom="18dp"
+        android:clickable="true"
+        android:clipToOutline="true"
+        android:elevation="24dp"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <!-- header: logo, name, bell, Collapse -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="62dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="18dp"
+            android:paddingEnd="10dp">
+
+            <ImageView
+                android:id="@+id/menuLogo"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_logo" />
+
+            <TextView
+                android:id="@+id/menuBrand"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:textAllCaps="true"
+                android:fontFamily="@font/rx_display"
+                android:maxLines="1"
+                android:text="RAINAX Tube"
+                android:textColor="@color/rx_text"
+                android:textSize="20sp" />
+
+            <FrameLayout
+                android:id="@+id/menuBell"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Notifications">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_bell"
+                    app:tint="@color/rx_text" />
+            </FrameLayout>
+
+            <ImageButton
+                android:id="@+id/menuClose"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="@dimen/rx_space_2"
+                android:background="@drawable/bg_menu_icon"
+                android:contentDescription="Close menu"
+                android:padding="9dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_close"
+                app:tint="@color/rx_text" />
+        </LinearLayout>
+
+        <!-- your account -->
+        <LinearLayout
+            android:id="@+id/menuProfile"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/rx_space_16">
+
+            <ImageView
+                android:id="@+id/menuAvatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_menu_icon"
+                android:importantForAccessibility="no"
+                android:padding="@dimen/rx_space_8"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_person"
+                app:tint="@color/rx_text2" />
+
+            <LinearLayout
+                android:id="@+id/menuProfileText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/rx_space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/menuName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/rx_body"
+                    android:maxLines="1"
+                    android:textColor="@color/rx_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/menuAccountHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/rx_body"
+                    android:maxLines="1"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/menuChevron"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:rotation="-90"
+                android:src="@drawable/ic_chevron_down"
+                app:tint="@color/rx_text2" />
+        </LinearLayout>
+
+        <!-- search -->
+        <LinearLayout
+            android:id="@+id/menuSearch"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_menu_search"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/rx_space_12">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_search"
+                app:tint="@color/rx_text2" />
+
+            <TextView
+                android:id="@+id/menuSearchText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:fontFamily="@font/rx_body"
+                android:letterSpacing="0.08"
+                android:text="SEARCH…"
+                android:textColor="@color/rx_text2"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="6dp"
+            android:layout_weight="1"
+            android:fadingEdgeLength="24dp"
+            android:requiresFadingEdge="vertical"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/exploreList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="10dp" />
+        </ScrollView>
+
+        <TextView
+            android:id="@+id/exploreVersion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingVertical="@dimen/rx_space_12"
+            android:textColor="@color/rx_text2"
+            android:textSize="12sp" />
+    </com.rainax.ytdownloader.SwipeCloseLayout>
+</FrameLayout>

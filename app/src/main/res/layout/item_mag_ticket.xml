@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- one cinema ticket: the poster and title on the left, a tear-off "ADMIT ONE" stub with the running time -->
+<com.rainax.ytdownloader.TicketLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="284dp"
+    android:layout_height="188dp"
+    android:layout_marginHorizontal="6dp"
+    android:foreground="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="220dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="@dimen/rx_space_8">
+
+        <FrameLayout
+            android:id="@+id/tkPoster"
+            android:layout_width="match_parent"
+            android:layout_height="114dp"
+            android:background="@color/rx_cinema_card">
+
+            <ImageView
+                android:id="@+id/thumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_8"
+            android:ellipsize="end"
+            android:fontFamily="@font/rx_display"
+            android:includeFontPadding="false"
+            android:maxLines="2"
+            android:textAllCaps="false"
+            android:textColor="@color/rx_white"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/rx_cinema_gold"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- the stub -->
+    <FrameLayout
+        android:layout_width="64dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end">
+
+        <TextView
+            android:layout_width="150dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:fontFamily="@font/rx_display"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:letterSpacing="0.3"
+            android:rotation="-90"
+            android:text="Admit one"
+            android:textAllCaps="true"
+            android:textColor="?attr/rxAccentText"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/duration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="14dp"
+            android:gravity="center"
+            android:textColor="@color/rx_on_picture2"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+</com.rainax.ytdownloader.TicketLayout>

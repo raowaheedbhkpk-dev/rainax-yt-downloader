@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/rx_space_4"
+    android:layout_marginVertical="5dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:stateListAnimator="@animator/rx_press"
+    app:cardCornerRadius="2dp">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/rx_space_12">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/selectBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/rx_space_4"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:layout_width="84dp"
+        android:layout_height="64dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/thumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_thumb"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            app:shapeAppearance="@style/ShapeAppearance.Rainax.Sharp" />
+
+        <!-- while downloading: a film reel turning over the picture, like a projector, with the percent -->
+        <LinearLayout
+            android:id="@+id/reelBox"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/rx_scrim"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/reel"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_film_reel"
+                app:tint="@color/rx_white" />
+
+            <TextView
+                android:id="@+id/reelPct"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:fontFamily="@font/rx_display"
+                android:includeFontPadding="false"
+                android:textColor="@color/rx_cinema_gold"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- pops in for a moment when a download finishes -->
+        <ImageView
+            android:id="@+id/doneCheck"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_dl_check"
+            android:elevation="4dp"
+            android:importantForAccessibility="no"
+            android:padding="@dimen/rx_space_8"
+            android:src="@drawable/ic_dl_check"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/rx_space_12"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            android:textColor="?attr/colorOnSurface" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_4"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Downloading / Queued / Paused / Failed (not shown when done) -->
+            <TextView
+                android:id="@+id/statusPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/rx_space_8"
+                android:fontFamily="@font/rx_body"
+                android:paddingHorizontal="@dimen/rx_space_8"
+                android:paddingVertical="@dimen/rx_space_2"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textAppearance="?attr/textAppearanceBodySmall" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/actionBtn"
+        style="@style/Widget.Rainax.Button.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:iconTint="?attr/rxAccent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/closeBtn"
+        style="@style/Widget.Rainax.Button.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="Remove"
+        app:icon="@drawable/ic_close"
+        app:iconTint="?attr/colorOnSurfaceVariant" />
+</LinearLayout>
+
+    <!-- while downloading: the numbers people look for, in three columns (style A "stat strip") -->
+    <LinearLayout
+        android:id="@+id/statsRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/rx_space_12"
+        android:background="@drawable/bg_dash_top"
+        android:orientation="horizontal"
+        android:paddingTop="@dimen/rx_space_8"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:importantForAccessibility="no"
+                android:letterSpacing="0.2"
+                android:text="SPEED"
+                android:textColor="@color/rx_text2"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/statSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_2"
+                android:fontFamily="@font/rx_display_semibold"
+                android:importantForAccessibility="no"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:importantForAccessibility="no"
+                android:letterSpacing="0.2"
+                android:text="TIME LEFT"
+                android:textColor="@color/rx_text2"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/statLeft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_2"
+                android:fontFamily="@font/rx_display_semibold"
+                android:importantForAccessibility="no"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:importantForAccessibility="no"
+                android:letterSpacing="0.2"
+                android:text="SIZE"
+                android:textColor="@color/rx_text2"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/statSize"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/rx_space_2"
+                android:fontFamily="@font/rx_display_semibold"
+                android:importantForAccessibility="no"
+                android:maxLines="1"
+                android:textColor="@color/rx_text"
+                android:textSize="20sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- the bar across the whole card, with the percent at its end -->
+    <LinearLayout
+        android:id="@+id/progressRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/rx_space_8"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:indicatorColor="?attr/rxAccent"
+            app:trackColor="?attr/rxSurfaceAlt"
+            app:trackCornerRadius="0dp"
+            app:trackThickness="4dp" />
+
+        <TextView
+            android:id="@+id/progressPct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/rx_space_8"
+            android:fontFamily="@font/rx_display_semibold"
+            android:importantForAccessibility="no"
+            android:textColor="?attr/rxAccentText"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

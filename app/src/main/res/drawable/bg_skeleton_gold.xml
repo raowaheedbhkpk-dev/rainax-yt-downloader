@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- placeholder for a gold label (chapter numbers, bylines) while the magazine loads -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#59E8B44A" />
+    <corners android:radius="1dp" />
+</shape>

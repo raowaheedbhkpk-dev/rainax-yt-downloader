@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingHorizontal="@dimen/rx_space_16"
+    android:paddingVertical="10dp">
+
+    <ImageView
+        android:id="@+id/cAvatar"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_avatar"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/rx_space_12"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/cAuthor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/rx_text2"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/cText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_2"
+            android:autoLink="web"
+            android:textColor="@color/rx_text"
+            android:textColorLink="@color/rx_accent"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/cLikes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_4"
+            android:textColor="@color/rx_text2"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <!-- like / dislike / reply -->
+        <LinearLayout
+            android:id="@+id/cActions"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="-10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/cLike"
+                android:contentDescription="Like"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp">
+
+                <ImageView
+                    android:id="@+id/cLikeIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_thumb_up"
+                    app:tint="@color/rx_text" />
+
+                <TextView
+                    android:id="@+id/cLikeCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="@color/rx_text2"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/cDislike"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Dislike"
+                android:padding="10dp"
+                android:src="@drawable/ic_thumb_down"
+                app:tint="@color/rx_text" />
+
+            <ImageView
+                android:id="@+id/cReply"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/rx_space_8"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Reply"
+                android:padding="9dp"
+                android:src="@drawable/ic_reply"
+                app:tint="@color/rx_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/cReplies"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="@dimen/rx_space_4"
+            android:textColor="@color/rx_accent"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

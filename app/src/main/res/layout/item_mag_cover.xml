@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Magazine Home: the cover story. Big picture, gold byline, huge Oswald headline, meta and Download -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/rx_space_8">
+
+    <com.rainax.ytdownloader.RatioFrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
+        android:background="@drawable/bg_thumb_big">
+
+        <ImageView
+            android:id="@+id/thumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <TextView
+            android:id="@+id/duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="@dimen/rx_space_8"
+            android:background="@drawable/bg_duration"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="1dp"
+            android:textColor="@color/rx_white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/watchBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_gravity="bottom"
+            android:max="1000"
+            android:progressDrawable="@drawable/bg_watch_bar"
+            android:visibility="gone" />
+    </com.rainax.ytdownloader.RatioFrameLayout>
+
+    <TextView
+        android:id="@+id/magTag"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
+        android:layout_marginTop="@dimen/rx_space_12"
+        android:ellipsize="end"
+        android:letterSpacing="0.2"
+        android:maxLines="1"
+        android:textAllCaps="true"
+        android:textColor="@color/rx_gold"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/rx_space_16"
+        android:layout_marginTop="@dimen/rx_space_4"
+        android:ellipsize="end"
+        android:fontFamily="@font/rx_display"
+        android:includeFontPadding="false"
+        android:lineSpacingMultiplier="1.04"
+        android:maxLines="3"
+        android:textAllCaps="true"
+        android:textColor="@color/rx_text"
+        android:textSize="32sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/rx_space_8"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/rx_space_16"
+        android:paddingEnd="10dp">
+
+        <TextView
+            android:id="@+id/meta"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/rx_text2"
+            android:textSize="12sp" />
+
+        <ImageButton
+            android:id="@+id/more"
+            android:layout_width="32dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="More"
+            android:src="@drawable/ic_more"
+            android:visibility="gone"
+            app:tint="@color/rx_text2" />
+
+        <ImageButton
+            android:id="@+id/download"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="@dimen/rx_space_4"
+            android:background="@drawable/bg_mag_square"
+            android:contentDescription="Download"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_download"
+            app:tint="@color/rx_white" />
+    </LinearLayout>
+</LinearLayout>

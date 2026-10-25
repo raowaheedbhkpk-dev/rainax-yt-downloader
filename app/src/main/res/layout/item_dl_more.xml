@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "More Formats / View All" card of the download sheet (dashed border). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="6dp"
+    android:paddingBottom="@dimen/rx_space_12">
+
+    <LinearLayout
+        android:id="@+id/more"
+        android:stateListAnimator="@animator/rx_press"
+        android:layout_width="match_parent"
+        android:layout_height="118dp"
+        android:layout_marginTop="11dp"
+        android:background="@drawable/bg_dl_more"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical"
+        android:padding="@dimen/rx_space_16">
+
+        <ImageView
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_dl_more_icon"
+            android:importantForAccessibility="no"
+            android:padding="@dimen/rx_space_8"
+            android:src="@drawable/ic_dl_grid" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/rx_body"
+                android:text="More Formats"
+                android:textColor="@color/dl_text"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="@dimen/rx_space_4"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_dl_chevron" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/moreSub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rx_space_2"
+            android:fontFamily="@font/rx_body"
+            android:text="View All"
+            android:textColor="?attr/rxAccentText"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</FrameLayout>
