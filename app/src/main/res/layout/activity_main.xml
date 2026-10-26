@@ -21,9 +21,11 @@
                 android:id="@+id/homePage"
                 layout="@layout/page_home" />
 
-            <include
+            <!-- You: a Jetpack Compose screen (YouScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/playPage"
-                layout="@layout/page_play"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:visibility="gone" />
 
             <include

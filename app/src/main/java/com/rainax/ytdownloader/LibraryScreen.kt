@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.rainax.ytdownloader.databinding.PagePlayBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -106,10 +105,12 @@ object LocalPlaylists {
 /**
  * Library tab: Downloads (the download manager) plus Music, Videos and Playlists, made from your finished
  * downloads. Search, Play all and Shuffle; the RAINAX player plays them as a list (repeat in its menu).
+ *
+ * The page itself is drawn by YouScreen.kt (Compose); this class keeps the choices ([YouState]) and does the work.
  */
 class LibraryScreen(
     private val act: AppCompatActivity,
-    private val pl: PagePlayBinding,
+    private val s: YouState,
     private val onModeChanged: () -> Unit,
     private val shareFile: (DownloadTask) -> Unit,
     private val deleteFile: (DownloadTask) -> Unit
@@ -117,81 +118,34 @@ class LibraryScreen(
     /** ⋮ > Move to Private folder (set by the main screen). */
     var onMoveToPrivate: (DownloadTask) -> Unit = {}
 
-    private val modes = listOf("Downloads", "Music", "Videos", "Playlists")
-    var mode = 0
-        private set
-    val showingDownloads get() = mode == 0
+    val mode get() = s.libMode
+    val showingDownloads get() = s.libMode == 0
 
-    private var openPlaylist: LocalPlaylists.Playlist? = null
-    private var tasks: List<DownloadTask> = emptyList()
-    private var query = ""
-    private val adapter = Adapter()
-
-    fun setup() {
-        modes.forEachIndexed { i, t ->
-            val chip = LayoutInflater.from(act).inflate(R.layout.item_chip, pl.libChips, false) as Chip
-            chip.id = View.generateViewId()
-            chip.text = t
-            pl.libChips.addView(chip)
-            if (i == 0) chip.isChecked = true
-        }
-        pl.libChips.setOnCheckedStateChangeListener { group, ids ->
-            val index = ids.firstOrNull()?.let { id -> (0 until group.childCount).firstOrNull { group.getChildAt(it).id == id } }
-                ?: return@setOnCheckedStateChangeListener
-            setMode(index)
-        }
-        pl.libList.layoutManager = LinearLayoutManager(act)
-        pl.libList.adapter = adapter
-        pl.libSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                query = s?.toString().orEmpty().trim()
-                pl.libSearchClear.isVisible = query.isNotEmpty()
-                render()
-            }
-        })
-        pl.libSearchClear.setOnClickListener { pl.libSearch.setText("") }
-        pl.libPlayAll.setOnClickListener { playList(currentFiles(), 0, shuffle = false) }
-        pl.libShuffle.setOnClickListener {
-            val files = currentFiles()
-            if (files.isNotEmpty()) playList(files, files.indices.random(), shuffle = true)
-        }
-        pl.libNewPlaylist.setOnClickListener { askName("New playlist", "") { LocalPlaylists.create(act, it); render() } }
-        pl.libPlaylistBack.setOnClickListener { back() }
-        pl.libPlaylistMore.setOnClickListener { v -> openPlaylist?.let { playlistMenu(it, v) } }
-    }
-
-    private fun setMode(index: Int) {
-        if (mode == index) return
-        mode = index
-        openPlaylist = null
-        pl.libraryBox.isVisible = mode != 0
+    fun setMode(index: Int) {
+        if (s.libMode == index) return
+        s.libMode = index
+        s.openPlaylistId = null
+        s.libQuery = ""
         onModeChanged()
-        render()
     }
 
     /** Back inside the Library: playlist -> playlists. True when it went back. */
     fun back(): Boolean {
-        if (openPlaylist != null) {
-            openPlaylist = null
-            render()
+        if (s.openPlaylistId != null) {
+            s.openPlaylistId = null
             return true
         }
         return false
     }
 
-    /** New list of downloads from the download manager. */
-    fun onTasks(all: List<DownloadTask>) {
-        tasks = all
-        // only finished files matter here: skip the many progress updates of running downloads
-        val key = all.filter { it.status == Status.DONE }.joinToString { it.id + it.title + it.thumbPath }.hashCode()
-        if (key == shownKey) return
-        shownKey = key
-        if (mode != 0) render()
+    fun openPlaylist(): LocalPlaylists.Playlist? = s.openPlaylistId?.let { id -> LocalPlaylists.all(act).firstOrNull { it.id == id } }
+
+    fun openPlaylist(p: LocalPlaylists.Playlist) {
+        s.openPlaylistId = p.id
+        s.libQuery = ""
     }
 
-    private var shownKey = 0
+    private fun changed() { s.playlistsTick++ }
 
     private fun playable(t: DownloadTask): Boolean {
         if (t.status != Status.DONE || t.fileUri == null) return false
@@ -200,50 +154,26 @@ class LibraryScreen(
             listOf(".mp4", ".mkv", ".webm", ".mov", ".m4a", ".mp3", ".opus", ".ogg").any { t.fileUri.lowercase().contains(it) }
     }
 
-    private fun matches(t: DownloadTask) = query.isEmpty() || t.title.contains(query, ignoreCase = true)
+    /** Songs and videos of a playlist that are still on the phone. */
+    fun countIn(p: LocalPlaylists.Playlist): Int {
+        val have = s.tasks.filter { playable(it) }.mapTo(HashSet()) { it.id }
+        return p.items.count { it in have }
+    }
 
     /** The files shown now (Music, Videos, or the open playlist), newest first. */
-    private fun currentFiles(): List<DownloadTask> {
-        val done = tasks.filter { playable(it) }
-        val list = when (mode) {
+    fun currentFiles(): List<DownloadTask> {
+        val q = s.libQuery.trim()
+        val done = s.tasks.filter { playable(it) }
+        val list = when (s.libMode) {
             1 -> done.filter { it.isAudio }.sortedByDescending { it.createdAt }
             2 -> done.filter { !it.isAudio }.sortedByDescending { it.createdAt }
-            3 -> openPlaylist?.let { p -> val byId = done.associateBy { it.id }; p.items.mapNotNull { byId[it] } }.orEmpty()
+            3 -> openPlaylist()?.let { p -> val byId = done.associateBy { it.id }; p.items.mapNotNull { byId[it] } }.orEmpty()
             else -> emptyList()
         }
-        return list.filter { matches(it) }
+        return list.filter { q.isEmpty() || it.title.contains(q, ignoreCase = true) }
     }
 
-    private fun render() {
-        if (mode == 0) return
-        val p = openPlaylist
-        val showPlaylists = mode == 3 && p == null
-        pl.libPlaylistBar.isVisible = p != null
-        p?.let { pl.libPlaylistName.text = it.name }
-        pl.libNewPlaylist.isVisible = showPlaylists
-        pl.libPlayAll.isVisible = !showPlaylists
-        pl.libShuffle.isVisible = !showPlaylists
-        pl.libSearch.hint = if (showPlaylists) "Search playlists" else "Search your downloads"
-        val rows: List<Row> = if (showPlaylists) {
-            LocalPlaylists.all(act).filter { query.isEmpty() || it.name.contains(query, true) }.map { Row(null, it) }
-        } else {
-            currentFiles().map { Row(it, null) }
-        }
-        adapter.submit(rows)
-        val files = !showPlaylists && rows.isNotEmpty()
-        pl.libPlayAll.isEnabled = files
-        pl.libShuffle.isEnabled = files
-        pl.libEmpty.isVisible = rows.isEmpty()
-        pl.libEmpty.text = when {
-            query.isNotEmpty() -> "Nothing found for \"$query\""
-            showPlaylists -> "No playlists yet. Tap New playlist, then add songs or videos with their ⋮ button."
-            p != null -> "This playlist is empty. Open Music or Videos and add songs with their ⋮ button."
-            mode == 1 -> "No music yet. Download a song as M4A or MP3 and it shows here."
-            else -> "No videos yet. Downloaded videos show here."
-        }
-    }
-
-    private fun playList(all: List<DownloadTask>, index: Int, shuffle: Boolean) {
+    fun playList(all: List<DownloadTask>, index: Int, shuffle: Boolean) {
         // (a file whose address was lost is skipped instead of closing the app)
         val wanted = all.getOrNull(index)
         val files = all.filter { it.fileUri != null }
@@ -258,26 +188,16 @@ class LibraryScreen(
 
     // ---------- menus ----------
 
-    private fun fileMenu(t: DownloadTask, anchor: View) {
-        val p = openPlaylist
-        val menu = PopupMenu(act, anchor)
-        menu.menu.add(0, 1, 0, "Add to playlist")
-        if (p != null) menu.menu.add(0, 2, 1, "Remove from this playlist")
-        menu.menu.add(0, 3, 2, "Share")
-        menu.menu.add(0, 5, 3, "Move to Private folder")
-        menu.menu.add(0, 4, 4, "Delete file")
-        menu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> addToPlaylist(t)
-                2 -> if (p != null) { LocalPlaylists.remove(act, p, t.id); render() }
-                3 -> shareFile(t)
-                4 -> deleteFile(t)
-                5 -> onMoveToPrivate(t)
-            }
-            true
-        }
-        menu.show()
+    /** A file's ⋮ menu: label and what it does. */
+    fun fileMenu(t: DownloadTask, p: LocalPlaylists.Playlist?): List<Pair<String, () -> Unit>> = buildList {
+        add("Add to playlist" to { addToPlaylist(t) })
+        if (p != null) add("Remove from this playlist" to { LocalPlaylists.remove(act, p, t.id); changed() })
+        add("Share" to { shareFile(t) })
+        add("Move to Private folder" to { onMoveToPrivate(t) })
+        add("Delete file" to { deleteFile(t) })
     }
+
+    fun newPlaylist() = askName("New playlist", "") { LocalPlaylists.create(act, it); changed() }
 
     private fun addToPlaylist(t: DownloadTask) {
         val lists = LocalPlaylists.all(act)
@@ -290,39 +210,32 @@ class LibraryScreen(
                         val p = LocalPlaylists.create(act, name)
                         LocalPlaylists.add(act, p, t.id)
                         Notify.show(act, "Added to ${p.name}")
-                        render()
+                        changed()
                     }
                 } else {
                     val p = lists[which - 1]
                     val added = LocalPlaylists.add(act, p, t.id)
                     Notify.show(act, if (added) "Added to ${p.name}" else "Already in ${p.name}")
-                    render()
+                    changed()
                 }
             }
             .show()
     }
 
-    private fun playlistMenu(p: LocalPlaylists.Playlist, anchor: View) {
-        val menu = PopupMenu(act, anchor)
-        menu.menu.add(0, 1, 0, "Rename")
-        menu.menu.add(0, 2, 1, "Delete playlist")
-        menu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> askName("Rename playlist", p.name) { LocalPlaylists.rename(act, p, it); render() }
-                2 -> RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
-                    .setTitle("Delete \"${p.name}\"?")
-                    .setMessage("The songs and videos stay in your downloads.")
-                    .setPositiveButton("Delete") { _, _ ->
-                        LocalPlaylists.delete(act, p)
-                        if (openPlaylist?.id == p.id) openPlaylist = null
-                        render()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
+    fun renamePlaylist(p: LocalPlaylists.Playlist) =
+        askName("Rename playlist", p.name) { LocalPlaylists.rename(act, p, it); changed() }
+
+    fun deletePlaylist(p: LocalPlaylists.Playlist) {
+        RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
+            .setTitle("Delete \"${p.name}\"?")
+            .setMessage("The songs and videos stay in your downloads.")
+            .setPositiveButton("Delete") { _, _ ->
+                LocalPlaylists.delete(act, p)
+                if (s.openPlaylistId == p.id) s.openPlaylistId = null
+                changed()
             }
-            true
-        }
-        menu.show()
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun askName(title: String, current: String, onName: (String) -> Unit) {
@@ -344,83 +257,5 @@ class LibraryScreen(
             .setPositiveButton("Save") { _, _ -> onName(input.text.toString()) }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    // ---------- list ----------
-
-    private class Row(val file: DownloadTask?, val playlist: LocalPlaylists.Playlist?)
-
-    private inner class Adapter : RecyclerView.Adapter<Adapter.VH>() {
-        private var rows: List<Row> = emptyList()
-
-        fun submit(list: List<Row>) {
-            rows = list
-            notifyDataSetChanged()
-        }
-
-        override fun getItemCount() = rows.size
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_library, parent, false))
-
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            val row = rows[position]
-            val t = row.file
-            val p = row.playlist
-            if (p != null) {
-                holder.square(true)
-                holder.thumb.setImageResource(R.drawable.ic_playlist)
-                holder.thumb.scaleType = ImageView.ScaleType.CENTER
-                holder.title.text = p.name
-                val have = tasks.filter { playable(it) }.mapTo(HashSet()) { it.id }
-                val n = p.items.count { it in have }
-                holder.meta.text = if (n == 1) "1 item" else "$n items"
-                holder.itemView.setOnClickListener {
-                    openPlaylist = p
-                    render()
-                }
-                holder.more.setOnClickListener { playlistMenu(p, it) }
-                return
-            }
-            if (t == null) return
-            holder.square(t.isAudio)
-            holder.thumb.scaleType = ImageView.ScaleType.CENTER_CROP
-            val path = t.thumbPath
-            if (path != null && File(path).exists()) {
-                Img.loadFile(holder.thumb, path)
-            } else {
-                Img.load(holder.thumb, null)
-                holder.thumb.scaleType = ImageView.ScaleType.CENTER
-                holder.thumb.setImageResource(if (t.isAudio) R.drawable.ic_audio else R.drawable.ic_video)
-            }
-            holder.title.text = t.title.ifBlank { "Download" }
-            val kind = when {
-                t.mime?.contains("mpeg") == true -> "MP3"
-                t.isAudio -> "Music"
-                else -> "Video"
-            }
-            holder.meta.text = kind + "  •  " + android.text.format.DateUtils.getRelativeTimeSpanString(t.createdAt)
-            holder.itemView.setOnClickListener {
-                val files = currentFiles()
-                playList(files, files.indexOfFirst { it.id == t.id }.coerceAtLeast(0), shuffle = false)
-            }
-            holder.more.setOnClickListener { fileMenu(t, it) }
-        }
-
-        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val box: View = v.findViewById(R.id.libThumbBox)
-            val thumb: ImageView = v.findViewById(R.id.libThumb)
-            val title: TextView = v.findViewById(R.id.libTitle)
-            val meta: TextView = v.findViewById(R.id.libMeta)
-            val more: ImageButton = v.findViewById(R.id.libMore)
-
-            init { box.clipToOutline = true }
-
-            /** Music and playlists get a square picture, videos a wide one. */
-            fun square(on: Boolean) {
-                val d = itemView.resources.displayMetrics.density
-                box.updateLayoutParams { width = ((if (on) 56 else 96) * d).toInt() }
-            }
-        }
     }
 }

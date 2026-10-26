@@ -11,44 +11,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 
-/** The collection shelf on the You page: the newest downloaded files as DVD cases. Tap plays the file. */
-class ShelfAdapter(private val onOpen: (DownloadTask) -> Unit) : RecyclerView.Adapter<ShelfAdapter.VH>() {
-
-    private var list: List<DownloadTask> = emptyList()
-
-    fun submit(l: List<DownloadTask>) {
-        if (l.map { it.id } == list.map { it.id }) return
-        list = l
-        notifyDataSetChanged()
-    }
-
-    override fun getItemCount() = list.size
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        VH(LayoutInflater.from(parent.context).inflate(R.layout.item_shelf_case, parent, false))
-
-    override fun onBindViewHolder(h: VH, position: Int) = h.bind(list[position])
-
-    inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-        private val thumb: ImageView = v.findViewById(R.id.caseThumb)
-        private val kind: TextView = v.findViewById(R.id.caseKind)
-        private val title: TextView = v.findViewById(R.id.caseTitle)
-
-        fun bind(t: DownloadTask) {
-            val path = t.thumbPath
-            if (path != null && File(path).exists()) Img.loadFile(thumb, path) else Img.load(thumb, t.thumbUrl, widthPx = 360)
-            kind.text = when {
-                t.isAudio -> if (t.format.contains("mp3") || t.mime == "audio/mpeg") "MP3" else "AUDIO"     // (M4A isn't MP3)
-                t.format.substringAfter(':').toIntOrNull()?.let { it >= 720 } == true -> "HD"
-                else -> "VIDEO"
-            }
-            title.text = t.title
-            itemView.contentDescription = "Play ${t.title}"
-            itemView.setOnClickListener { onOpen(t) }
-        }
-    }
-}
-
 /** Blocking. How much room downloads take (videos, sound) and how much is free on the phone. */
 object StorageMeter {
 

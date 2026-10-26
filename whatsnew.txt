@@ -1,3 +1,4 @@
+New: the You page (downloads, storage, collection, Music, Videos, Playlists) rebuilt with Jetpack Compose: smoother lists and live download numbers
 New: Settings rebuilt with Jetpack Compose. Same look, and every switch and choice now always shows what is really saved, even after a theme or colour change
 New: RAINAX starts moving to Jetpack Compose, Android's modern design system, one screen at a time. First: the welcome guide
 Fix: links shared from TikTok Lite (and other apps that add a "get the app" link) no longer add a second download that keeps failing

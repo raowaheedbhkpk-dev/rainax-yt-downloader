@@ -70,14 +70,8 @@ class MainActivity : AppCompatActivity() {
     internal val selected = linkedSetOf<String>()
     internal var sheet: BottomSheetDialog? = null
 
-    internal val activeAdapter = DownloadAdapter(
-        { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openOrWatch(it) },
-        { toggleSelect(it) }, { startSelect(it) }
-    )
-    internal val doneAdapter = DownloadAdapter(
-        { onTaskAction(it) }, { t, v -> onTaskClose(t, v) }, { openOrWatch(it) },
-        { toggleSelect(it) }, { startSelect(it) }
-    )
+    /** What the You page (Compose, YouScreen.kt) shows. */
+    internal val you = YouState()
 
     internal lateinit var statusSaver: StatusSaver
     /** Android's folder screen, for the WhatsApp status folder. */
@@ -85,11 +79,6 @@ class MainActivity : AppCompatActivity() {
         if (::statusSaver.isInitialized) statusSaver.onFolderPicked(uri)
     }
 
-    internal val collectionHeader by lazy { SectionHeader(pl.collectionSection) }
-    internal val shelf = ShelfAdapter { openFile(it) }
-    internal var meterKey = ""
-    internal val activeHeader by lazy { SectionHeader(pl.activeSection) }
-    internal val doneHeader by lazy { SectionHeader(pl.doneSection) }
 
     internal val signIn =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
@@ -200,11 +189,10 @@ class MainActivity : AppCompatActivity() {
         home.musicPlayPlaylist = { music.playPlaylist(it) }
         setupMiniPlayer()
         setupPlay()
-        library = LibraryScreen(this, pl, { onLibraryMode() }, { shareFile(it) }) { t ->
+        library = LibraryScreen(this, you, { onLibraryMode() }, { shareFile(it) }) { t ->
             confirm("Delete this file?", "\"${t.title}\" will be removed from your phone.") { deleteFilesOf(listOf(t)) }
         }
         library.onMoveToPrivate = { moveToPrivate(it) }
-        library.setup()
         setupSettings()
         setupSocial()
         setupYou()
@@ -329,36 +317,6 @@ class MainActivity : AppCompatActivity() {
         lp.gravity = android.view.Gravity.CENTER_HORIZONTAL
         b.bottomNav.layoutParams = lp
         if (::home.isInitialized) home.applyColumns()
-        if (pl.playList.adapter != null) applyPlayColumns()
-    }
-
-    /**
-     * Tablets and wide screens: finished downloads sit in 2 columns (3 on very wide screens); the
-     * collection, the section titles and the rows still downloading keep the full width.
-     */
-    internal fun applyPlayColumns() {
-        val w = resources.configuration.screenWidthDp
-        val cols = when {
-            w >= 1000 -> 3
-            w >= 600 -> 2
-            else -> 1
-        }
-        val list = pl.playList
-        if (cols == 1) {
-            if (list.layoutManager is androidx.recyclerview.widget.GridLayoutManager || list.layoutManager == null) {
-                list.layoutManager = LinearLayoutManager(this)
-            }
-            return
-        }
-        val grid = (list.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)
-            ?: androidx.recyclerview.widget.GridLayoutManager(this, cols).also { list.layoutManager = it }
-        grid.spanCount = cols
-        grid.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
-            override fun getSpanSize(position: Int): Int {
-                val before = collectionHeader.itemCount + activeHeader.itemCount + activeAdapter.itemCount + doneHeader.itemCount
-                return if (position >= before) 1 else cols
-            }
-        }
     }
 
     override fun onStart() {
@@ -644,7 +602,7 @@ class MainActivity : AppCompatActivity() {
         if (index != 1 && selecting) exitSelection()
         val old = tab
         tab = index
-        val pages = listOf(hm.root, pl.root, st, so.root, sb.root)
+        val pages = listOf(hm.root, pl, st, so.root, sb.root)
         pages.forEachIndexed { i, page ->
             page.animate().cancel()
             page.alpha = 1f
@@ -790,10 +748,10 @@ class MainActivity : AppCompatActivity() {
             (loc[1] - rootLoc[1]).toFloat()
         } else root.height - (insets?.bottom ?: 0).toFloat()
         // stay above the Library's selection buttons (Delete / Remove) while selecting
-        val bottomLimit = if (tab == 1 && pl.selectionActions.isVisible && pl.selectionActions.height > 0) {
-            val loc = IntArray(2); val rootLoc = IntArray(2)
-            pl.selectionActions.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
-            minOf(navTop, (loc[1] - rootLoc[1]).toFloat())
+        val bottomLimit = if (tab == 1 && you.selecting && you.actionsTop > 0) {
+            val rootLoc = IntArray(2)
+            root.getLocationInWindow(rootLoc)
+            minOf(navTop, you.actionsTop - rootLoc[1])
         } else navTop
         val maxX = (root.width - m.width - margin).coerceAtLeast(margin)
         val maxY = (bottomLimit - m.height - margin).coerceAtLeast(top)
@@ -867,37 +825,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun setupYou() {
-        pl.youSettings.setOnClickListener { showTab(2) }
-        pl.youAccounts.setOnClickListener { onAccountClick() }
-        pl.youProfile.setOnClickListener { onAccountClick() }
-        pl.youBell.setOnClickListener { home.openNotifications() }
-        pl.youSearch.setOnClickListener {
-            goHome()
-            b.root.post { home.openSearch() }
-        }
-        pl.youSecondBtn.setOnClickListener { askSignOut() }
-        pl.youSignInBtn.setOnClickListener { signIn.launch(Intent(this, SignInActivity::class.java)) }
-        // shortcuts after Downloads / Music / Videos / Playlists, like YouTube's Library
-        listOf(
-            "Private folder" to { PrivateActivity.open(this) },
-            "History" to { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") },
-            "Liked videos" to { openHomeList("Liked videos", "acc:VLLL") },
-            "Watch later" to { openHomeList("Watch later", "acc:VLWL") }
-        ).forEach { (title, action) ->
-            val chip = layoutInflater.inflate(R.layout.item_chip, pl.libChips, false) as com.google.android.material.chip.Chip
-            chip.id = View.generateViewId()
-            chip.text = title
-            chip.isCheckable = false
-            if (title == "Private folder") {
-                chip.chipIcon = ContextCompat.getDrawable(this, R.drawable.ic_lock)
-                chip.isChipIconVisible = true
-                chip.chipIconTint = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text))
-            }
-            chip.setOnClickListener { action() }
-            pl.libChips.addView(chip)
-        }
-        // the row starts at Downloads (it used to open scrolled to the end, hiding Downloads / Music / Videos)
-        pl.libChipsScroll.post { pl.libChipsScroll.scrollTo(0, 0) }
+        // the header, chips and shortcuts are drawn by YouScreen.kt
         refreshYou()
     }
 
@@ -905,27 +833,11 @@ class MainActivity : AppCompatActivity() {
     internal fun refreshYou() {
         val signedIn = YtAccount.isSignedIn(this)
         updateNavAvatar()
-        // signed in: Sign out; signed out: one red Sign in button
-        pl.youSecondBtn.isVisible = signedIn
-        pl.youSignInBtn.isVisible = !signedIn
-        pl.youAccounts.isVisible = signedIn
         val p = if (signedIn) YtAccount.profile(this) else null
-        if (p != null && !p.avatar.isNullOrBlank()) {
-            pl.youName.text = p.name.ifBlank { "You" }
-            pl.youHandle.text = p.handle?.takeIf { it.isNotBlank() } ?: "Signed in to YouTube"
-            pl.youAvatar.imageTintList = null
-            pl.youAvatar.setPadding(0, 0, 0, 0)
-            Img.load(pl.youAvatar, p.avatar, circle = true, widthPx = 160)
-        } else {
-            pl.youName.text = p?.name?.takeIf { it.isNotBlank() } ?: "You"
-            pl.youHandle.text = if (signedIn) (p?.handle?.takeIf { it.isNotBlank() } ?: "Signed in to YouTube")
-            else "Not signed in"
-            Img.load(pl.youAvatar, null)
-            pl.youAvatar.setImageResource(R.drawable.ic_person)
-            val pad = (10 * resources.displayMetrics.density).toInt()
-            pl.youAvatar.setPadding(pad, pad, pad, pad)
-            pl.youAvatar.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text2))
-        }
+        you.signedIn = signedIn
+        you.name = p?.name?.takeIf { it.isNotBlank() } ?: "You"
+        you.handle = if (signedIn) (p?.handle?.takeIf { it.isNotBlank() } ?: "Signed in to YouTube") else "Not signed in"
+        you.avatar = p?.avatar?.takeIf { it.isNotBlank() }
     }
 
     internal var navAvatarUrl: String? = null

@@ -42,45 +42,18 @@ import kotlinx.coroutines.launch
 // These are MainActivity's own functions, kept in their own file so each part stays small.
 
 internal fun MainActivity.setupPlay() {
-    // both sections in one recycling list: only the rows on screen are made, however many downloads there are
-    pl.playList.layoutManager = LinearLayoutManager(this)
-    (pl.playList.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
-    pl.playList.adapter = androidx.recyclerview.widget.ConcatAdapter(collectionHeader, activeHeader, activeAdapter, doneHeader, doneAdapter)
-    applyPlayColumns()                       // tablets: finished downloads in 2-3 columns
-    pl.shelfList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-    pl.shelfList.adapter = shelf
-    pl.shelfList.isNestedScrollingEnabled = false
-
-    pl.emptySearchBtn.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_home }
-    pl.selectActiveBtn.setOnClickListener { selectAll(done = false) }
-    pl.selectDoneBtn.setOnClickListener { selectAll(done = true) }
-    pl.removeAllBtn.setOnClickListener { removeAllDone() }
-    pl.deleteAllBtn.setOnClickListener { deleteAllDone() }
-    pl.clearFailedBtn.setOnClickListener {
-        TaskRepository.removeFailed()
-        message("Removed failed downloads")
-    }
-
-    // selection bar
-    pl.closeSelBtn.setOnClickListener { exitSelection() }
-    pl.selAllBtn.setOnClickListener { toggleSelectAll() }
-    pl.actPause.setOnClickListener { pauseSelected() }
-    pl.actResume.setOnClickListener { resumeSelected() }
-    pl.actCancel.setOnClickListener { cancelSelected() }
-    pl.actRemove.setOnClickListener { removeSelected() }
-    pl.actDelete.setOnClickListener { deleteSelected() }
+    // The You page is a Compose screen (YouScreen.kt): it draws what [you] holds.
+    pl.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+    pl.setContent { RxTheme { YouScreen(this, you) } }
 }
 
 /** Library chips: Downloads shows the download manager, the others show your files. */
 internal fun MainActivity.onLibraryMode() {
     if (selecting) exitSelection()
-    pl.emptyState.isVisible = latestTasks.isEmpty() && library.showingDownloads
-    pl.playScroll.isVisible = latestTasks.isNotEmpty() && library.showingDownloads
 }
 
 internal fun MainActivity.renderTasks(all: List<DownloadTask>) {
     latestTasks = all
-    val active = all.filter { it.status != Status.DONE }
     val done = all.filter { it.status == Status.DONE }
 
     // forget selected items that no longer exist
@@ -89,44 +62,13 @@ internal fun MainActivity.renderTasks(all: List<DownloadTask>) {
     val selectionChanged = before != selected.size || (selecting && selected.isEmpty())
     if (selecting && selected.isEmpty()) selecting = false
 
-    pl.emptyState.isVisible = all.isEmpty() && library.showingDownloads
-    pl.playScroll.isVisible = all.isNotEmpty() && library.showingDownloads
-    library.onTasks(all)
+    you.tasks = all                      // the You page redraws itself (lists, sections, collection)
     checkUpdateReady(all)
     renderUpdatePill(all)
     renderYouBadge(all)
     countForRating(done)
 
-    renderCollection(done)
-    activeHeader.visible = active.isNotEmpty()
-    pl.clearFailedBtn.isVisible = active.any { it.status == Status.FAILED }
-    pl.activeTitle.text = "Downloading (${active.size})"
-    // Downloading now always on top, then the queue in the order it will download
-    // (oldest first, like the service), then paused and failed ones
-    val order = HashMap<String, Int>(all.size).apply { all.forEachIndexed { i, t -> put(t.id, all.size - i) } }
-    val newActive = active.sortedWith(
-        compareBy<DownloadTask> {
-            when (it.status) {
-                Status.RUNNING -> 0
-                Status.WAITING -> 1
-                Status.QUEUED -> 2
-                Status.PAUSED -> 3
-                else -> 4
-            }
-        }.thenBy { order[it.id] ?: 0 }
-    )
-    val topChanged = newActive.firstOrNull()?.id != activeAdapter.currentList.firstOrNull()?.id
-    // show the new top download, unless you scrolled far down to look at something else
-    val nearTop = pl.playList.computeVerticalScrollOffset() < resources.displayMetrics.heightPixels / 2
-    activeAdapter.submitList(newActive) { if (topChanged && nearTop) pl.playList.scrollToPosition(0) }
-
-    doneHeader.visible = done.isNotEmpty()
-    pl.doneTitle.text = "Downloaded (${done.size})"
-    doneAdapter.submitList(done.sortedByDescending { it.createdAt })      // newest download first
-
-    // (the You badge is drawn by renderYouBadge above: only downloads in progress, not paused or failed ones)
-
-    if (selectionChanged) refreshSelectionUi() else updateSelectionBar()
+    if (selectionChanged) refreshSelectionUi()
 }
 
 // ----- multi-select -----
@@ -163,29 +105,12 @@ internal fun MainActivity.exitSelection() {
 }
 
 internal fun MainActivity.refreshSelectionUi() {
-    activeAdapter.setSelection(selecting, selected)
-    doneAdapter.setSelection(selecting, selected)
-    updateSelectionBar()
+    val was = you.selecting
+    you.selecting = selecting
+    you.selected = selected.toSet()
+    // the floating mini player moves above the selection buttons (and back) once they are drawn
+    if (was != selecting && b.miniPlayer.root.isVisible) pl.postDelayed({ placeMiniPlayer() }, 120)
     updateBack()
-}
-
-internal fun MainActivity.updateSelectionBar() {
-    val wasSelecting = pl.selectionActions.isVisible
-    pl.selectionBar.isVisible = selecting
-    pl.selectionActions.isVisible = selecting
-    if (wasSelecting != selecting && b.miniPlayer.root.isVisible) pl.selectionActions.post { placeMiniPlayer() }    // move above / back
-    pl.selectionCount.text = "${selected.size} selected"
-    if (!selecting) return
-
-    // only show the actions that apply to what is selected
-    val sel = selectedTasks()
-    pl.actPause.isVisible = sel.any {
-        it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING
-    }
-    pl.actResume.isVisible = sel.any { it.status == Status.PAUSED || it.status == Status.FAILED }
-    pl.actCancel.isVisible = sel.any { it.status != Status.DONE }
-    pl.actRemove.isVisible = sel.any { it.status == Status.DONE }
-    pl.actDelete.isVisible = sel.any { it.status == Status.DONE }
 }
 
 internal fun MainActivity.selectedTasks() = latestTasks.filter { it.id in selected }
@@ -456,75 +381,38 @@ internal fun MainActivity.onTaskClose(t: DownloadTask, anchor: View) {
         } else DownloadService.send(this, DownloadService.ACTION_CANCEL, t.id)
         return
     }
+    val menu = PopupMenu(this, anchor)
+    val items = taskMenu(t)
+    items.forEachIndexed { i, (label, _) -> menu.menu.add(0, i, i, label) }
+    menu.setOnMenuItemClickListener { item -> items.getOrNull(item.itemId)?.second?.invoke(); true }
+    menu.show()
+}
+
+/** A finished download's ⋮ menu: label and what it does. */
+internal fun MainActivity.taskMenu(t: DownloadTask): List<Pair<String, () -> Unit>> {
     if (t.format.startsWith(AppUpdater.TASK_PREFIX)) {
-        val menu = PopupMenu(this, anchor)
-        menu.menu.add(0, 1, 0, "Install")
-        menu.menu.add(0, 2, 1, "Delete")
-        menu.setOnMenuItemClickListener { item ->
-            if (item.itemId == 1) installUpdate(t) else deleteFilesOf(listOf(t))
-            true
-        }
-        menu.show()
-        return
+        return listOf("Install" to { installUpdate(t) }, "Delete" to { deleteFilesOf(listOf(t)) })
     }
-    val popup = PopupMenu(this, anchor)
-    popup.menu.add(0, 1, 0, "Play")
-    popup.menu.add(0, 6, 1, "Open with another app")
-    popup.menu.add(0, 2, 1, "Share")
-    popup.menu.add(0, 3, 2, "Copy link")
-    popup.menu.add(0, 7, 3, "Move to Private folder")
-    popup.menu.add(0, 4, 3, "Remove from list")
-    popup.menu.add(0, 5, 4, "Delete file")
-    popup.setOnMenuItemClickListener { item ->
-        when (item.itemId) {
-            1 -> openFile(t)
-            2 -> shareFile(t)
-            6 -> openWithOtherApp(t)
-            3 -> {
-                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                AppPrefs.setClipSeen(this, t.url)
-                cm.setPrimaryClip(ClipData.newPlainText("link", t.url))
-                message("Link copied")
-            }
-            4 -> TaskRepository.remove(t.id)
-            5 -> confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") { deleteFilesOf(listOf(t)) }
-            7 -> moveToPrivate(t)
-        }
-        true
-    }
-    popup.show()
+    return listOf(
+        "Play" to { openFile(t) },
+        "Open with another app" to { openWithOtherApp(t) },
+        "Share" to { shareFile(t) },
+        "Copy link" to {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            AppPrefs.setClipSeen(this, t.url)
+            cm.setPrimaryClip(ClipData.newPlainText("link", t.url))
+            message("Link copied")
+        },
+        "Move to Private folder" to { moveToPrivate(t) },
+        "Remove from list" to { TaskRepository.remove(t.id) },
+        "Delete file" to { confirm("Delete file?", "\"${t.title}\" is deleted from your phone.") { deleteFilesOf(listOf(t)) } }
+    )
 }
 
 /** YouTube thumbnail address from the video id (no lookup needed). */
 internal fun MainActivity.youtubeThumb(url: String): String? =
     if (!FastExtractor.supports(url)) null else Regex("(?:[?&]v=|youtu\\.be/|shorts/)([\\w-]{6,})").find(url)?.groupValues?.get(1)
         ?.let { "https://i.ytimg.com/vi/$it/mqdefault.jpg" }
-
-/** You page: the storage strip and the shelf of the newest downloads (updated when the finished list changes). */
-internal fun MainActivity.renderCollection(done: List<DownloadTask>) {
-    val playable = done.filter { it.fileUri != null && isPlayable(it) && !it.format.startsWith(AppUpdater.TASK_PREFIX) }
-    collectionHeader.visible = playable.isNotEmpty()
-    if (playable.isEmpty()) return
-    shelf.submit(playable.sortedByDescending { it.createdAt }.take(12))
-    val key = playable.joinToString(",") { it.id }
-    if (key == meterKey) return
-    meterKey = key
-    lifecycleScope.launch {
-        val u = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { StorageMeter.measure(applicationContext, playable) }
-        if (isFinishing || isDestroyed) return@launch
-        val all = (u.videoBytes + u.audioBytes + u.freeBytes).coerceAtLeast(1L)
-        fun weight(v: View, bytes: Long) {
-            (v.layoutParams as LinearLayout.LayoutParams).weight = bytes.toFloat() / all
-        }
-        weight(pl.meterVideo, u.videoBytes)
-        weight(pl.meterAudio, u.audioBytes)
-        weight(pl.meterFree, u.freeBytes)
-        pl.meterBar.requestLayout()
-        pl.meterTotal.text = "${StorageMeter.short(u.videoBytes + u.audioBytes)} USED"
-        pl.meterText.text = "Videos ${StorageMeter.short(u.videoBytes)}  ·  MP3 ${StorageMeter.short(u.audioBytes)}  ·  Free ${StorageMeter.short(u.freeBytes)}"
-        pl.meterBar.contentDescription = pl.meterText.text
-    }
-}
 
 internal fun MainActivity.isPlayable(t: DownloadTask): Boolean {
     val m = t.mime.orEmpty()
