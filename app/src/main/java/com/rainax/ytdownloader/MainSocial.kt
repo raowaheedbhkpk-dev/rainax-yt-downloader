@@ -121,7 +121,7 @@ internal fun MainActivity.handleIntent(intent: Intent?) {
         b.bottomNav.selectedItemId = R.id.nav_social
         so.post {
             social.showStatus++
-            if (::statusSaver.isInitialized) statusSaver.selectTab(2)
+            statusSaverOrNull()?.selectTab(2)
         }
         return
     }

@@ -76,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     internal val statusUi = StatusUi()
 
     internal lateinit var statusSaver: StatusSaver
+    /** The status saver once the Social page is set up (an extension function can't ask a lateinit itself). */
+    internal fun statusSaverOrNull(): StatusSaver? = if (::statusSaver.isInitialized) statusSaver else null
     /** Android's folder screen, for the WhatsApp status folder. */
     internal val statusFolderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (::statusSaver.isInitialized) statusSaver.onFolderPicked(uri)
