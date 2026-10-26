@@ -37,6 +37,60 @@ import java.lang.ref.WeakReference
  * the card scrolls away, a video or song plays, the app goes to the background, or Settings turn it off.
  * One small player (about 360p) is shared by every list. Everything here runs on the main thread.
  */
+/** A card whose picture can show the preview (a big video row of a list). */
+interface PreviewCard {
+    /** The picture's frame: the playing video is put inside it. */
+    val thumbBox: ViewGroup
+    /** The video this card shows now. */
+    val item: VideoItem?
+    /** Normal videos only (not playlists, channels, Shorts or live streams). */
+    val canPreview: Boolean
+    /** The time on the duration badge (the preview shows the time left in it). */
+    var badgeText: CharSequence
+}
+
+/** A list of cards that can play their videos while it rests (a RecyclerView or a Compose list). */
+interface PreviewList {
+    val view: View
+    val idle: Boolean
+    val padTop: Int
+    val padBottom: Int
+    fun cards(): List<PreviewCard>
+}
+
+/** A RecyclerView of [VideoAdapter] rows. */
+private class RecyclerPreviewList(val rv: RecyclerView) : PreviewList {
+    override val view: View get() = rv
+    override val idle get() = rv.scrollState == RecyclerView.SCROLL_STATE_IDLE
+    override val padTop get() = rv.paddingTop
+    override val padBottom get() = rv.paddingBottom
+    override fun cards(): List<PreviewCard> =
+        (0 until rv.childCount).mapNotNull { rv.getChildViewHolder(rv.getChildAt(it)) as? VideoAdapter.Row }
+}
+
+/**
+ * A Compose list (Home's feed): its video cards register themselves while they are on screen, and the list
+ * tells when it scrolls and rests.
+ */
+class ComposePreviewList(override val view: View) : PreviewList {
+    private val shown = LinkedHashSet<PreviewCard>()
+    override var idle = true
+        private set
+    override val padTop get() = 0
+    override var padBottom = 0
+    override fun cards(): List<PreviewCard> = shown.filter { it.thumbBox.isAttachedToWindow }
+
+    fun add(c: PreviewCard) { shown += c; FeedAutoplay.listChanged(this) }
+    fun remove(c: PreviewCard) { shown -= c; FeedAutoplay.listChanged(this) }
+
+    /** Called as the list moves ([scrolling] = true) and once when it rests. */
+    fun setScrolling(scrolling: Boolean) {
+        val wasIdle = idle
+        idle = !scrolling
+        if (scrolling) FeedAutoplay.listScrolled(this) else if (!wasIdle) FeedAutoplay.listChanged(this)
+    }
+}
+
 @OptIn(UnstableApi::class)
 object FeedAutoplay {
 
@@ -49,7 +103,7 @@ object FeedAutoplay {
 
     private val main = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val lists = mutableListOf<WeakReference<RecyclerView>>()
+    private val lists = mutableListOf<WeakReference<PreviewList>>()
 
     private var app: Context? = null
     private var player: ExoPlayer? = null
@@ -58,8 +112,8 @@ object FeedAutoplay {
     private var muteBtn: ImageButton? = null
     private var bar: ProgressBar? = null
 
-    private var host: VideoAdapter.Row? = null
-    private var hostList: RecyclerView? = null
+    private var host: PreviewCard? = null
+    private var hostList: PreviewList? = null
     private var url: String? = null
     private var savedBadge: CharSequence? = null
     private var job: Job? = null
@@ -84,7 +138,7 @@ object FeedAutoplay {
             val pos = p.currentPosition
             if (dur > 0) {
                 bar?.progress = (pos * 1000 / dur).toInt()
-                host?.duration?.text = YtCatalog.duration(((dur - pos) / 1000).coerceAtLeast(0))
+                host?.badgeText = YtCatalog.duration(((dur - pos) / 1000).coerceAtLeast(0))
             }
             if (p.isPlaying) { lastUrl = url; lastPos = pos }
             main.postDelayed(this, 500)
@@ -94,15 +148,16 @@ object FeedAutoplay {
     /** Lets [rv] (a list of big video cards) play its videos while it rests. */
     fun attach(rv: RecyclerView) {
         if (app == null) app = rv.context.applicationContext
-        lists.removeAll { it.get() == null || it.get() === rv }
-        lists += WeakReference(rv)
+        lists.removeAll { it.get() == null || (it.get() as? RecyclerPreviewList)?.rv === rv }
+        val list = RecyclerPreviewList(rv)
+        lists += WeakReference(list)
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) schedule() else main.removeCallbacks(pick)
             }
 
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (hostList === recyclerView) verify()
+                if (hostList === list) verify()
                 if (recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE) schedule()      // moved by the app
             }
         })
@@ -114,12 +169,31 @@ object FeedAutoplay {
             override fun onChildViewDetachedFromWindow(view: View) {}
         })
         // rows are bound again after list changes: keep the video with its card
-        rv.viewTreeObserver.addOnGlobalLayoutListener { if (hostList === rv) verify() }
+        rv.viewTreeObserver.addOnGlobalLayoutListener { if (hostList === list) verify() }
+    }
+
+    /** A Compose list (see [ComposePreviewList]). */
+    fun attach(list: ComposePreviewList) {
+        if (app == null) app = list.view.context.applicationContext
+        lists.removeAll { it.get() == null || it.get() === list }
+        lists += WeakReference(list)
+    }
+
+    /** The Compose list moved: follow (or stop) the playing card; no new choice while it scrolls. */
+    internal fun listScrolled(list: ComposePreviewList) {
+        main.removeCallbacks(pick)
+        if (hostList === list) verify()
+    }
+
+    /** The Compose list rests, or its cards changed: choose again a moment later. */
+    internal fun listChanged(list: ComposePreviewList) {
+        if (hostList === list) verify()
+        if (list.idle) schedule()
     }
 
     /** Something changed (tab, video page, settings): stop or start as needed. */
     fun refresh() {
-        if (url != null && (!allowed() || hostList?.isShown != true)) stop()
+        if (url != null && (!allowed() || hostList?.view?.isShown != true)) stop()
         schedule()
     }
 
@@ -175,30 +249,28 @@ object FeedAutoplay {
         }
     }
 
-    private fun rows(rv: RecyclerView): List<VideoAdapter.Row> =
-        (0 until rv.childCount).mapNotNull { rv.getChildViewHolder(rv.getChildAt(it)) as? VideoAdapter.Row }
-
     /** How much of [box] (0..1) is on screen inside the list (not under its top or bottom padding). */
-    private fun shown(rv: RecyclerView, box: View): Float {
+    private fun shown(list: PreviewList, box: View): Float {
         if (!box.isShown || box.height == 0) return 0f
         val r = Rect()
         if (!box.getGlobalVisibleRect(r)) return 0f
         val area = Rect()
-        if (!rv.getGlobalVisibleRect(area)) return 0f
-        area.top += rv.paddingTop
-        area.bottom -= rv.paddingBottom
+        if (!list.view.getGlobalVisibleRect(area)) return 0f
+        area.top += list.padTop
+        area.bottom -= list.padBottom
         if (!r.intersect(area)) return 0f
         return r.height().toFloat() / box.height
     }
 
     private fun pickNow() {
         if (!allowed()) { stop(); return }
-        val rv = lists.mapNotNull { it.get() }.firstOrNull { it.isShown && it.isAttachedToWindow } ?: run { stop(); return }
-        if (rv.scrollState != RecyclerView.SCROLL_STATE_IDLE) return
+        val rv = lists.mapNotNull { it.get() }.firstOrNull { it.view.isShown && it.view.isAttachedToWindow } ?: run { stop(); return }
+        if (!rv.idle) return
         // the topmost card that is fully in view, else the one most in view
-        val seen = rows(rv).filter { it.canPreview }.map { it to shown(rv, it.thumbBox) }.filter { it.second >= MIN_SHOWN }
-        fun fresh(r: VideoAdapter.Row) = r.item?.url?.let { it !in skip } == true
-        val best = seen.filter { it.second >= 0.95f && fresh(it.first) }.minByOrNull { it.first.itemView.top }?.first
+        val seen = rv.cards().filter { it.canPreview }.map { it to shown(rv, it.thumbBox) }.filter { it.second >= MIN_SHOWN }
+        fun fresh(r: PreviewCard) = r.item?.url?.let { it !in skip } == true
+        fun top(r: PreviewCard): Int { val a = IntArray(2); r.thumbBox.getLocationInWindow(a); return a[1] }
+        val best = seen.filter { it.second >= 0.95f && fresh(it.first) }.minByOrNull { top(it.first) }?.first
             ?: seen.filter { fresh(it.first) }.maxByOrNull { it.second }?.first
         val now = url
         if (now != null && hostList === rv && seen.any { it.first.item?.url == now }) {
@@ -264,7 +336,7 @@ object FeedAutoplay {
     }
 
     /** Puts the preview inside [row]'s picture (above the picture, under the duration badge). */
-    private fun place(row: VideoAdapter.Row) {
+    private fun place(row: PreviewCard) {
         val v = preview ?: return
         val box = row.thumbBox
         if (v.parent === box) return
@@ -272,16 +344,16 @@ object FeedAutoplay {
         box.addView(v, 1.coerceAtMost(box.childCount), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
-    private fun start(rv: RecyclerView, row: VideoAdapter.Row) {
+    private fun start(rv: PreviewList, row: PreviewCard) {
         val item = row.item ?: return
         val c = app ?: return
         stop()
         val p = ensurePlayer(c)
-        val v = ensureView(rv.context)
+        val v = ensureView(rv.view.context)
         url = item.url
         host = row
         hostList = rv
-        savedBadge = row.duration.text
+        savedBadge = row.badgeText
         v.alpha = 0f
         bar?.progress = 0
         showMute()
@@ -319,13 +391,14 @@ object FeedAutoplay {
     private fun verify() {
         val rv = hostList ?: return
         val u = url ?: return
-        if (!rv.isShown) { stop(); return }
+        if (!rv.view.isShown) { stop(); return }
         var row = host
-        if (row == null || row.item?.url != u || !row.itemView.isAttachedToWindow || row.itemView.parent !== rv) {
-            row = rows(rv).firstOrNull { it.item?.url == u && it.canPreview }
+        val cards = rv.cards()
+        if (row == null || row.item?.url != u || !row.thumbBox.isAttachedToWindow || row !in cards) {
+            row = cards.firstOrNull { it.item?.url == u && it.canPreview }
             if (row == null) { stop(); return }
             host = row
-            savedBadge = row.duration.text
+            savedBadge = row.badgeText
             place(row)
         }
         if (shown(rv, row.thumbBox) < KEEP_SHOWN) stop()
@@ -347,7 +420,7 @@ object FeedAutoplay {
             v.alpha = 0f
             (v.parent as? ViewGroup)?.removeView(v)
         }
-        host?.let { h -> if (u != null && h.item?.url == u) savedBadge?.let { h.duration.text = it } }
+        host?.let { h -> if (u != null && h.item?.url == u) savedBadge?.let { h.badgeText = it } }
         host = null
         hostList = null
         savedBadge = null

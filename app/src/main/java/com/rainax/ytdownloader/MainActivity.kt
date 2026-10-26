@@ -209,7 +209,7 @@ class MainActivity : AppCompatActivity() {
         )
         subs.setup()
         // Autoplay in feed (like YouTube): the video you stop on plays silently in the list
-        FeedAutoplay.attach(hm.feedList)
+        // (Home's lists attach themselves to Autoplay in feed: HomeScreen.setup)
         FeedAutoplay.blocked = { video.isOpen || (::music.isInitialized && music.expanded) }
         home.onMenu = { openExplore() }
         home.onTheme = { showThemePopup(it) }

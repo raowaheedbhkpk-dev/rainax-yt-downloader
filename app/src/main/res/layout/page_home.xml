@@ -349,13 +349,26 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/feedList"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingTop="0dp"
-                android:paddingBottom="@dimen/rx_space_16" />
+                android:layout_height="match_parent">
+
+                <!-- the Music tab's rows -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/feedList"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="@dimen/rx_space_16"
+                    android:visibility="gone" />
+
+                <!-- every other Home list: Jetpack Compose (FeedCompose.kt) -->
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/feedCompose"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </FrameLayout>
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <!-- pull to refresh: a film countdown (3 · 2 · 1) while the new list loads -->

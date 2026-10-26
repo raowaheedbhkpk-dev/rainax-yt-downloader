@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,7 +84,12 @@ internal fun VideoCard(
     item: VideoItem,
     onOpen: (VideoItem) -> Unit,
     onDownload: (VideoItem) -> Unit,
-    onMore: ((VideoItem, android.view.View) -> Unit)? = null
+    onMore: ((VideoItem, android.view.View) -> Unit)? = null,
+    /** Autoplay in feed: the list this card can play its video in (null = no preview). */
+    preview: ComposePreviewList? = null,
+    /** + button: pick several videos, then download them together (null = no + button). */
+    onPick: ((VideoItem) -> Unit)? = null,
+    isPicked: (String) -> Boolean = { false }
 ) {
     val rx = LocalRx.current
     val ctx = LocalContext.current
@@ -97,8 +104,23 @@ internal fun VideoCard(
             .combinedClickable(onClick = { onOpen(item) }, onLongClick = menu?.let { m -> { m(item, view) } })
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).rxDrawableBg(R.drawable.bg_thumb_big)) {
-            RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 720)
-            val badge = videoBadge(item)
+            val card = if (preview != null) androidx.compose.runtime.remember(item.url) { ComposeCard(ctx, item) } else null
+            if (card != null && preview != null) {
+                card.item = item
+                // the picture inside a real frame, so the playing preview can be put over it
+                AndroidView(
+                    factory = { (card.box.parent as? android.view.ViewGroup)?.removeView(card.box); card.box },
+                    update = { Img.load(card.image, item.thumb, widthPx = 720) },
+                    modifier = Modifier.fillMaxSize()
+                )
+                androidx.compose.runtime.DisposableEffect(card, preview) {
+                    preview.add(card)
+                    onDispose { preview.remove(card) }
+                }
+            } else {
+                RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 720)
+            }
+            val badge = card?.badge?.toString() ?: videoBadge(item)
             if (badge.isNotEmpty()) {
                 Text(
                     badge,
@@ -125,6 +147,16 @@ internal fun VideoCard(
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(videoMeta(item), Modifier.padding(top = 3.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            if (onPick != null && !item.isPlaylist && !item.isChannel && item.seconds >= 0) {
+                val on = isPicked(item.url)
+                Box(
+                    Modifier.padding(start = 4.dp).size(40.dp).rxDrawableBg(R.drawable.bg_circle_btn).clickable { onPick(item) }
+                        .semantics { contentDescription = if (on) "Selected. Tap to unselect" else "Select for download" }.padding(10.dp)
+                ) {
+                    Image(painterResource(if (on) R.drawable.ic_check else R.drawable.ic_add), null, Modifier.fillMaxSize(),
+                        colorFilter = ColorFilter.tint(if (on) rx.accent else rx.text))
+                }
             }
             Box(
                 Modifier.padding(start = 6.dp).size(42.dp).rxDrawableBg(R.drawable.bg_circle_btn).clickable { onDownload(item) }
@@ -158,4 +190,20 @@ internal fun ChannelAvatar(item: VideoItem, onOpen: (VideoItem) -> Unit) {
         Text(item.title, Modifier.fillMaxWidth().padding(top = 6.dp, start = 4.dp, end = 4.dp), color = rx.text, fontSize = 12.sp,
             fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
+}
+
+/** A big card that feed autoplay can play in: a real picture frame and the duration badge's text. */
+internal class ComposeCard(ctx: android.content.Context, first: VideoItem) : PreviewCard {
+    val image = ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+    val box = android.widget.FrameLayout(ctx).apply {
+        addView(image, android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+    override val thumbBox: android.view.ViewGroup get() = box
+    override var item: VideoItem? = first
+    override val canPreview: Boolean
+        get() = item?.let { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds > 0 } == true
+    var badge by androidx.compose.runtime.mutableStateOf<CharSequence>(videoBadge(first))
+    override var badgeText: CharSequence
+        get() = badge
+        set(v) { badge = v }
 }

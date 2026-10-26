@@ -301,7 +301,7 @@ class VideoAdapter(
         }
     }
 
-    inner class Row(v: View, private val isHero: Boolean = false) : RecyclerView.ViewHolder(v) {
+    inner class Row(v: View, private val isHero: Boolean = false) : RecyclerView.ViewHolder(v), PreviewCard {
         private val thumb: ImageView = v.findViewById(R.id.thumb)
         /** The duration badge (feed autoplay shows the time left in it). */
         val duration: TextView = v.findViewById(R.id.duration)
@@ -316,12 +316,15 @@ class VideoAdapter(
         private val more: ImageButton? = v.findViewById(R.id.more)
 
         /** The picture's frame: feed autoplay puts the playing video in it. */
-        val thumbBox: ViewGroup get() = thumb.parent as ViewGroup
+        override val thumbBox: ViewGroup get() = thumb.parent as ViewGroup
+        override var badgeText: CharSequence
+            get() = duration.text
+            set(v) { duration.text = v }
         /** The video this row shows now. */
-        var item: VideoItem? = null
+        override var item: VideoItem? = null
             private set
         /** Big rows of normal videos can play in the list (not playlists, channels or live streams). */
-        val canPreview get() = big && !isHero && item?.let { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds > 0 } == true
+        override val canPreview get() = big && !isHero && item?.let { !it.isPlaylist && !it.isChannel && !it.isShort && it.seconds > 0 } == true
 
         init {
             (thumb.parent as View).clipToOutline = true      // rounded corners from the background shape

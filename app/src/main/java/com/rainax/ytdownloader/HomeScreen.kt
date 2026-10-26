@@ -44,7 +44,10 @@ class HomeScreen(
     private var tabs: List<Pair<String, String>> = YtCatalog.TABS
     /** List keys where For you is showing popular videos (more pages come from the popular list). */
     private val popularFallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-    private val skeleton = SkeletonAdapter()
+    /** The video lists (Compose, FeedCompose.kt); the Music tab still uses the RecyclerView [hm.feedList]. */
+    private val feed = FeedHost(hm.feedCompose)
+    /** Autoplay in feed for Home's lists. */
+    val feedPreview get() = feed.preview
 
     private fun computeTabs(): List<Pair<String, String>> =
         if (YtAccount.isSignedIn(act)) listOf(
@@ -73,16 +76,16 @@ class HomeScreen(
     /** The channel tab shown ("Videos", "Shorts"…); null until the channel's first page came. */
     private var channelTab: String? = null
     private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
-    private val channelAdapter = VideoAdapter(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
+    private val channelAdapter = FeedModel(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
 
-    private val bigAdapter = VideoAdapter(true, { open(it) }, { download(it) }).also {
+    private val bigAdapter = FeedModel(true, { open(it) }, { download(it) }).also {
         it.hero = true
         it.hideShorts = true          // Home's tabs and magazine: videos only; Shorts live in the Shorts feed
     }
-    private val smallAdapter = VideoAdapter(false, { open(it) }, { download(it) })
+    private val smallAdapter = FeedModel(false, { open(it) }, { download(it) })
     /** Continue watching + Shorts, on top of the first Home tab. */
     private val shelf = HomeShelf(act, openVideo)
-    private val playlistAdapter = VideoAdapter(false, { open(it) }, { download(it) })
+    private val playlistAdapter = FeedModel(false, { open(it) }, { download(it) })
     /** The Music tab (YouTube Music style). What its buttons do is set by the main screen (the Music player). */
     var musicPlay: (List<VideoItem>, Int, String, Boolean) -> Unit = { _, _, _, _ -> }
     var musicSongMenu: (VideoItem) -> Unit = {}
@@ -109,7 +112,7 @@ class HomeScreen(
      * "acc:<YouTube list>" (needs the account), "q:<topic search>" or "local:history".
      */
     private var special: String? = null
-    private val specialAdapter = VideoAdapter(true, { open(it) }, { download(it) })
+    private val specialAdapter = FeedModel(true, { open(it) }, { download(it) })
 
     init {
         // ⋮ on every video, like YouTube. Home's own lists also get Not interested / Don't recommend channel.
@@ -155,7 +158,7 @@ class HomeScreen(
         }
         val cached = vm.feedCache["tab:$id"]
         if (cached != null) {
-            hm.feedList.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
+            hm.root.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
             return
         }
         act.lifecycleScope.launch {
@@ -167,7 +170,7 @@ class HomeScreen(
                 null
             }
             if (res != null && res.items.isNotEmpty()) vm.feedCache["tab:$id"] = res.items to res.next
-            hm.feedList.post { bigAdapter.setChapter(id, pick(res?.items.orEmpty())) }
+            hm.root.post { bigAdapter.setChapter(id, pick(res?.items.orEmpty())) }
         }
     }
 
@@ -199,10 +202,16 @@ class HomeScreen(
         bigAdapter.magazine = shelfHere            // the first tab reads like a magazine
         if (shelfHere) shelf.refresh()
         if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
-        val want: RecyclerView.Adapter<*> = if (isMusic) musicHome else adapter
-        if (hm.feedList.adapter !== want) hm.feedList.adapter = want
-        val bg = if (isMusic) musicGlow else null
-        if (hm.feedList.background !== bg) hm.feedList.background = bg
+        // Music: the RecyclerView (its own rows); every other list: the Compose feed
+        hm.feedList.isVisible = isMusic
+        hm.feedCompose.isVisible = !isMusic
+        if (isMusic) {
+            if (hm.feedList.adapter !== musicHome) hm.feedList.adapter = musicHome
+            if (hm.feedList.background !== musicGlow) hm.feedList.background = musicGlow
+        } else {
+            feed.show(adapter)
+        }
+        FeedAutoplay.refresh()
     }
     private val suggestAdapter = SuggestAdapter(
         onPick = { submit(it) },
@@ -251,16 +260,16 @@ class HomeScreen(
         updateAccountIcon()
         hm.root.isFocusableInTouchMode = true
         applyColumns()
-        hm.feedList.adapter = bigAdapter
-        hm.feedList.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(act, R.anim.rx_list_rise)
+        hm.feedList.adapter = musicHome
         hm.feedList.setHasFixedSize(true)
-        hm.feedList.setItemViewCacheSize(8)
-        hm.feedList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                val lm = rv.layoutManager as LinearLayoutManager
-                if (dy > 0 && lm.findLastVisibleItemPosition() >= lm.itemCount - 5) load(reset = false)
-            }
-        })
+        hm.feedCompose.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        hm.feedCompose.setContent { RxTheme { FeedScreen(feed) } }
+        feed.onNearEnd = { load(reset = false) }
+        FeedAutoplay.attach(feed.preview)
+        // pull to refresh only when the list showing is at its top
+        hm.feedRefresh.setOnChildScrollUpCallback { _, _ ->
+            if (hm.feedList.isVisible) hm.feedList.canScrollVertically(-1) else feed.canScrollUp()
+        }
         hm.suggestList.layoutManager = LinearLayoutManager(act)
         hm.suggestList.adapter = suggestAdapter
 
@@ -383,7 +392,7 @@ class HomeScreen(
         if (tabIndex != 0) {
             (hm.homeChips.getChildAt(0) as? Chip)?.isChecked = true
             hm.chipsScroll.smoothScrollTo(0, 0)
-            hm.feedList.scrollToPosition(0)
+            if (isMusic) hm.feedList.scrollToPosition(0) else feed.scrollToTop()
             return true
         }
         return false
@@ -400,8 +409,8 @@ class HomeScreen(
         hm.pickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
         hm.pickDownload.text = if (n > 1) "Download $n" else "Download"
         val d = act.resources.displayMetrics.density
-        hm.feedList.setPadding(hm.feedList.paddingLeft, hm.feedList.paddingTop, hm.feedList.paddingRight, ((if (n > 0) 88 else 16) * d).toInt() + Ui.pillExtra)
-        hm.feedList.adapter?.notifyDataSetChanged()
+        feed.bottomPad = (if (n > 0) 88 else 16) + (Ui.pillExtra / d).toInt()
+        feed.redraw()
     }
 
     /** Back with videos picked: clear the picks first. */
@@ -416,45 +425,15 @@ class HomeScreen(
      * normal size instead of stretching across the whole screen. Called again when the screen turns.
      */
     fun applyColumns() {
-        val w = act.resources.configuration.screenWidthDp
-        val cols = when {
-            w >= 1000 -> 3
-            w >= 600 -> 2
-            else -> 1
-        }
-        val cur = hm.feedList.layoutManager
-        // columns: a small gap between the full-width pictures
-        if (cols > 1 && hm.feedList.itemDecorationCount == 0) hm.feedList.addItemDecoration(columnGap)
-        if (cols == 1 && hm.feedList.itemDecorationCount > 0) hm.feedList.removeItemDecoration(columnGap)
-        if (cols == 1) {
-            if (cur !is LinearLayoutManager || cur is androidx.recyclerview.widget.GridLayoutManager) {
-                hm.feedList.layoutManager = LinearLayoutManager(act)
-            }
-            return
-        }
-        val grid = (cur as? androidx.recyclerview.widget.GridLayoutManager)
-            ?: androidx.recyclerview.widget.GridLayoutManager(act, cols).also { hm.feedList.layoutManager = it }
-        grid.spanCount = cols
-        grid.spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
-            override fun getSpanSize(position: Int): Int {
-                val a = hm.feedList.adapter
-                return if (a is VideoAdapter && !a.isFullWidth(position)) 1 else cols
-            }
-        }
-    }
-
-    private val columnGap = object : RecyclerView.ItemDecoration() {
-        override fun getItemOffsets(out: android.graphics.Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
-            val g = (6 * act.resources.displayMetrics.density).toInt()
-            out.set(g, 0, g, 0)
-        }
+        // the Compose feed lays out its own columns (FeedScreen); the Music tab's rows are one list
+        if (hm.feedList.layoutManager == null) hm.feedList.layoutManager = LinearLayoutManager(act)
     }
 
     /** Home is on screen again: newest Continue watching row and watched bars. */
     fun onShown() {
         if (bigAdapter.header != null) shelf.refresh()
         if (isMusic && hm.feedList.adapter === musicHome) refreshListenAgain()
-        if (hm.feedList.adapter === bigAdapter || hm.feedList.adapter === smallAdapter) hm.feedList.adapter?.notifyDataSetChanged()
+        if (!isMusic) feed.redraw()
     }
 
     /** Open the search box (the You page's search button). */
@@ -809,11 +788,11 @@ class HomeScreen(
     }
 
     /** Where each list was scrolled to, so Back returns to the same place. */
-    private val scrollMemory = HashMap<String, android.os.Parcelable?>()
+    private val scrollMemory = HashMap<String, Pair<Int, Int>?>()
 
     private fun rememberScroll() {
         if (isMusic) return
-        scrollMemory[cacheKey()] = hm.feedList.layoutManager?.onSaveInstanceState()
+        scrollMemory[cacheKey()] = feed.saveScroll()
     }
 
     private fun cacheKey(): String = special?.let { "sp:$it" } ?: channelUrl?.let { "ch:$it:${channelTab.orEmpty()}" } ?: playlistUrl?.let { "pl:$it" } ?: query?.let { "q:$it:$searchKind" }
@@ -951,8 +930,8 @@ class HomeScreen(
                 hm.feedLoading.isVisible = false
                 // back to a list seen before: the same place in it, not the top
                 val saved = scrollMemory.remove(cacheKey())
-                if (saved != null) hm.feedList.layoutManager?.onRestoreInstanceState(saved)
-                else hm.feedList.scrollToPosition(0)
+                if (saved != null) feed.restoreScroll(saved)
+                else feed.scrollToTop()
                 return
             }
             if (!pulled) {
@@ -1011,7 +990,7 @@ class HomeScreen(
                     (tabId == FOR_YOU || tabId == YtCatalog.HOME)
                 val res = if (fresh) FeedPage(FeedFreshen.apply(act, got.items), got.next) else got
                 // a fresh list: its first videos rise in one after another
-                if (reset && res.items.isNotEmpty()) hm.feedList.scheduleLayoutAnimation()
+                if (reset && res.items.isNotEmpty()) feed.rise()
                 val added = if (reset) { a.submit(res.items); res.items.size } else a.append(res.items)
                 next = if (added == 0 && !reset) null else res.next      // a page with nothing new: stop (mixes repeat)
                 a.loadingMore = next != null
@@ -1019,12 +998,12 @@ class HomeScreen(
                 hm.feedLoading.isVisible = false
                 applyListAdapter()
                 hm.feedRefresh.isRefreshing = false
-                if (reset) hm.feedList.scrollToPosition(0)
+                if (reset) feed.scrollToTop()
                 if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else emptyText(sp ?: tabId))
                 // a short page that doesn't fill the screen can't be scrolled: load the next one by itself
-                if (added > 0 && next != null) hm.feedList.post {
-                    if (loadJob?.isActive != true && !hm.feedList.canScrollVertically(1)) load(reset = false)
-                }
+                if (added > 0 && next != null) hm.root.postDelayed({
+                    if (loadJob?.isActive != true && !isMusic && !feed.canScrollDown()) load(reset = false)
+                }, 300)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1064,9 +1043,8 @@ class HomeScreen(
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
     private fun showSkeleton() {
         hm.feedLoading.isVisible = false
-        skeleton.magazine = adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
-            channelUrl == null && special == null
-        if (hm.feedList.adapter !== skeleton) hm.feedList.adapter = skeleton
+        feed.showSkeleton(adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
+            channelUrl == null && special == null)
     }
 
     /** Signed in or out: new chips and lists. */
@@ -1115,27 +1093,6 @@ class HomeScreen(
         hm.feedErrorText.text = if (offline) "No internet connection\nTurn on Wi-Fi or mobile data, then tap Try again." else friendlyError(text)
         hm.feedSettings.isVisible = offline
         hm.feedError.isVisible = true
-    }
-
-    /** Five grey rows with a band of light sweeping across them (the row root is an RxShimmer). */
-    /** Grey placeholders in the shape of what is coming: the magazine (cover, section, Top 5) or a video list. */
-    private class SkeletonAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        var magazine = false
-            set(value) {
-                if (field == value) return
-                field = value
-                notifyDataSetChanged()
-            }
-        override fun getItemCount() = if (magazine) 6 else 5
-        override fun getItemViewType(position: Int) = when {
-            !magazine -> R.layout.item_skeleton
-            position == 0 -> R.layout.item_skeleton_cover
-            position == 1 -> R.layout.item_skeleton_section
-            else -> R.layout.item_skeleton_chart
-        }
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
-            object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(viewType, parent, false)) {}
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = Unit
     }
 
     private companion object {
