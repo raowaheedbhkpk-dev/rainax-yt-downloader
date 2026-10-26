@@ -46,117 +46,24 @@ import com.rainax.ytdownloader.MainActivity.Companion.MODE_SUBS
 
 internal fun MainActivity.setupSocial() {
     statusSaver = StatusSaver(
-        this, so,
+        this, statusUi,
         pickFolder = { initial ->
             try { statusFolderPicker.launch(initial) } catch (e: Exception) { message("This phone has no folder picker") }
         },
         askFileAccess = { requestFileAccess(thenInstallAsk = false) }
     )
     statusSaver.setup()
-    fillSocialApps()
-
-    so.socialPaste.setOnClickListener {
-        val text = clipText()
-        val url = text?.let { extractUrls(it).firstOrNull() }
-        if (url == null) message("Copy a video link first, then tap Paste") else so.socialInput.setText(url)
-    }
-    so.socialClear.setOnClickListener { so.socialInput.setText("") }
-    so.socialInput.addTextChangedListener(object : android.text.TextWatcher {
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        override fun afterTextChanged(s: android.text.Editable?) {
-            so.socialClear.isVisible = !s.isNullOrEmpty()
-            showDetectedApp(s?.toString().orEmpty())
-            if (so.socialClipStrip.isVisible) refreshClipStrip()      // pasted the copied link: the strip goes
-        }
-    })
-    val go = {
-        val urls = extractUrls(so.socialInput.text.toString())
-        if (urls.isEmpty()) message("Paste a video link first")
-        else {
-            (getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
-                .hideSoftInputFromWindow(so.socialInput.windowToken, 0)
-            AppPrefs.setClipSeen(this, urls.first())
-            showDownloadSheet(urls)
-        }
-    }
-    so.socialDownload.setOnClickListener { go() }
-    so.socialInput.setOnEditorActionListener { _, actionId, event ->
-        if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO ||
-            event?.action == android.view.KeyEvent.ACTION_UP
-        ) go()
-        true
-    }
+    // the page itself is a Compose screen (SocialScreen.kt)
+    so.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+    so.setContent { RxTheme { SocialScreen(this, social, statusUi) } }
 }
 
-/** The link the copied-link strip was used for (it hides for that link afterwards). */
-/**
- * The site tags under the headline (TikTok, Instagram, Facebook, YouTube): the real app's icon from the phone
- * when installed, else its coloured tag; tapping one opens that app (to copy a link) or its website.
- * WhatsApp's own icon goes on the status saver too.
- */
-internal fun MainActivity.fillSocialApps() {
-    so.socialApps.removeAllViews()
-    listOf("TikTok", "Instagram", "Facebook", "YouTube").mapNotNull { n -> SocialApps.ALL.firstOrNull { it.name == n } }.forEach { app ->
-        val tag = layoutInflater.inflate(R.layout.item_social_tag, so.socialApps, false)
-        tag.contentDescription = "Open ${app.name}"
-        tag.setOnClickListener { if (!SocialApps.open(this@fillSocialApps, app)) message("Couldn't open ${app.name}") }
-        SocialApps.showOn(tag.findViewById(R.id.tagBadge), app)
-        tag.findViewById<TextView>(R.id.tagName).text = app.name
-        so.socialApps.addView(tag)
-    }
-    SocialApps.icon(this, SocialApps.WHATSAPP)?.let { wa ->
-        so.statusAppIcon.background = null
-        so.statusAppIcon.setPadding(0, 0, 0, 0)
-        so.statusAppIcon.setImageDrawable(wa)
-    }
-}
-
-/** Social page: a video link is on the clipboard → a strip "TikTok link copied · Download". */
+/** Social page: a video link is on the clipboard → a ticket "Copied · TikTok · Get it". */
 internal fun MainActivity.refreshClipStrip() {
     if (isFinishing || isDestroyed) return
     val url = clipText()?.let { extractUrls(it).firstOrNull() }
-    val typed = extractUrls(so.socialInput.text.toString()).firstOrNull()
-    val show = url != null && url != clipStripDone && url != typed
-    if (!show) { so.socialClipStrip.isVisible = false; return }
-    val app = SocialApps.of(url!!)
-    if (app != null) {
-        SocialApps.showOn(so.socialClipBadge, app)
-    } else {
-        so.socialClipBadge.background = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = 4 * resources.displayMetrics.density
-            setColor(Ui.accent(this@refreshClipStrip))
-        }
-        so.socialClipBadge.text = "\u2193"
-    }
-    so.socialClipText.text = "Copied · ${app?.name ?: "video link"}"
-    so.socialClipGo.setOnClickListener {
-        clipStripDone = url
-        AppPrefs.setClipSeen(this, url)
-        so.socialClipStrip.animate().alpha(0f).setDuration(180).withEndAction {
-            so.socialClipStrip.isVisible = false; so.socialClipStrip.alpha = 1f
-        }.start()
-        showDownloadSheet(listOf(url))
-    }
-    if (!so.socialClipStrip.isVisible) {
-        so.socialClipStrip.isVisible = true
-        Motion.popIn(so.socialClipStrip)
-    }
-}
-
-/** Names the app a typed or pasted link is from, with its badge in the link box. */
-internal fun MainActivity.showDetectedApp(text: String) {
-    val link = extractUrls(text).firstOrNull()
-    val app = link?.let { SocialApps.of(it) }
-    so.socialLinkBadge.isVisible = app != null
-    so.socialLinkIcon.isVisible = app == null
-    so.socialDetected.isVisible = link != null
-    if (app != null) {
-        SocialApps.showOn(so.socialLinkBadge, app)
-        so.socialDetected.text = "${app.name} link  ·  ${app.what}"
-    } else if (link != null) {
-        so.socialDetected.text = "Link from ${Uri.parse(link).host?.removePrefix("www.").orEmpty()}  ·  RAINAX will look for the video"
-    }
+    val typed = extractUrls(social.input).firstOrNull()
+    social.clipUrl = if (url != null && url != clipStripDone && url != typed) url else null
 }
 
 internal fun MainActivity.clipText(): String? = runCatching {
@@ -212,9 +119,9 @@ internal fun MainActivity.handleIntent(intent: Intent?) {
     if (intent?.getBooleanExtra(StatusAutoSave.EXTRA_OPEN_STATUS, false) == true) {
         intent.removeExtra(StatusAutoSave.EXTRA_OPEN_STATUS)
         b.bottomNav.selectedItemId = R.id.nav_social
-        so.root.post {
-            so.socialScroll.smoothScrollTo(0, so.statusCard.top)
-            so.statusApps.check(R.id.statusSaved)
+        so.post {
+            social.showStatus++
+            if (::statusSaver.isInitialized) statusSaver.selectTab(2)
         }
         return
     }

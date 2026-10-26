@@ -1,11 +1,48 @@
 package com.rainax.ytdownloader
 
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.rainax.ytdownloader.databinding.PageSubsBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,46 +53,44 @@ import org.schabi.newpipe.extractor.Page
 /**
  * Subscriptions tab, like YouTube: the round pictures of your channels (tap one for its page, All for the
  * list) and the newest videos from them, each with its Download button. Needs the YouTube account.
+ * Drawn with Jetpack Compose (it replaced page_subs.xml).
  */
 class SubsScreen(
     private val act: AppCompatActivity,
-    private val b: PageSubsBinding,
+    private val view: ComposeView,
     private val openVideo: (VideoItem) -> Unit,
     private val download: (VideoItem) -> Unit,
     private val openChannel: (VideoItem) -> Unit,
     private val openAllChannels: () -> Unit,
     private val signIn: () -> Unit
 ) {
-    private val adapter = VideoAdapter(true, { openVideo(it) }, { download(it) })
-    private val channels = ChannelAvatarAdapter { openChannel(it) }
+    /** What the page shows. */
+    private inner class UiState {
+        var videos by mutableStateOf<List<VideoItem>>(emptyList())
+        var channels by mutableStateOf<List<VideoItem>>(emptyList())
+        var loading by mutableStateOf(false)
+        var refreshing by mutableStateOf(false)
+        var loadingMore by mutableStateOf(false)
+        var emptyText by mutableStateOf<String?>(null)
+        var emptyAction by mutableStateOf<String?>(null)
+        /** Bumped to scroll back to the top (a fresh list). */
+        var toTop by mutableIntStateOf(0)
+    }
+
+    private val ui = UiState()
     private var next: Page? = null
     private var job: Job? = null
     private var loadedFor: Boolean? = null           // signed-in state the list was loaded for
 
     fun setup() {
-        b.subsList.layoutManager = LinearLayoutManager(act)
-        b.subsList.adapter = adapter
-        b.subsChannels.layoutManager = LinearLayoutManager(act, LinearLayoutManager.HORIZONTAL, false)
-        b.subsChannels.adapter = channels
-        b.subsList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                val lm = rv.layoutManager as LinearLayoutManager
-                if (dy > 0 && lm.findLastVisibleItemPosition() >= lm.itemCount - 5) load(reset = false)
-            }
-        })
-        b.subsSwipe.setColorSchemeColors(Ui.accent(act))
-        b.subsSwipe.setOnRefreshListener { load(reset = true, fresh = true) }
-        b.subsRefresh.setOnClickListener { load(reset = true, fresh = true) }
-        b.subsAll.setOnClickListener { openAllChannels() }
-        b.subsAction.setOnClickListener {
-            if (YtAccount.isSignedIn(act)) load(reset = true, fresh = true) else signIn()
-        }
+        view.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        view.setContent { RxTheme { SubsPage() } }
     }
 
     /** The tab is on screen: load once (again after signing in or out). */
     fun onShown() {
         val signedIn = YtAccount.isSignedIn(act)
-        if (loadedFor == signedIn && (adapter.count > 0 || job?.isActive == true)) return
+        if (loadedFor == signedIn && (ui.videos.isNotEmpty() || job?.isActive == true)) return
         load(reset = true)
     }
 
@@ -63,15 +98,13 @@ class SubsScreen(
     fun onAccountChanged() {
         loadedFor = null
         SubsChannels.clear()
-        adapter.submit(emptyList())
-        channels.submit(emptyList())
+        ui.videos = emptyList()
+        ui.channels = emptyList()
     }
 
     private fun showEmpty(text: String?, action: String? = null) {
-        b.subsEmpty.isVisible = text != null
-        b.subsEmptyText.text = text.orEmpty()
-        b.subsAction.isVisible = action != null
-        b.subsAction.text = action.orEmpty()
+        ui.emptyText = text
+        ui.emptyAction = action
     }
 
     private fun load(reset: Boolean, fresh: Boolean = false) {
@@ -79,10 +112,10 @@ class SubsScreen(
         loadedFor = signedIn
         if (!signedIn) {
             job?.cancel()
-            b.subsSwipe.isRefreshing = false
-            b.subsLoading.isVisible = false
-            b.subsChannelsBox.isVisible = false
-            adapter.submit(emptyList())
+            ui.refreshing = false
+            ui.loading = false
+            ui.channels = emptyList()
+            ui.videos = emptyList()
             showEmpty("Sign in to YouTube to see new videos\nfrom the channels you subscribe to.", "Sign in")
             return
         }
@@ -90,7 +123,7 @@ class SubsScreen(
             job?.cancel()
             next = null
             showEmpty(null)
-            if (adapter.count == 0 && !b.subsSwipe.isRefreshing) b.subsLoading.isVisible = true
+            if (ui.videos.isEmpty() && !ui.refreshing) ui.loading = true
         } else if (job?.isActive == true || next == null) {
             return
         }
@@ -99,29 +132,108 @@ class SubsScreen(
             try {
                 if (reset) {
                     val ch = withContext(Dispatchers.IO) { runCatching { SubsChannels.load(fresh) }.getOrDefault(emptyList()) }
-                    channels.submit(ch)
-                    b.subsChannelsBox.isVisible = ch.isNotEmpty()
+                    ui.channels = ch.distinctBy { it.url }
                 }
                 val res = withContext(Dispatchers.IO) { YtAccount.browse("FEsubscriptions", page) }
-                val items = res.items.filter { !it.isChannel }
-                val added = if (reset) { adapter.submit(items); items.size } else adapter.append(items)
+                val items = res.items.filter { !it.isChannel }.distinctBy { it.url }
+                val added = if (reset) {
+                    ui.videos = items
+                    items.size
+                } else {
+                    val have = ui.videos.map { it.url }.toHashSet()
+                    val fresh2 = items.filter { have.add(it.url) }
+                    ui.videos = ui.videos + fresh2
+                    fresh2.size
+                }
                 next = if (added == 0 && !reset) null else res.next
-                adapter.loadingMore = next != null
-                if (reset) b.subsList.scrollToPosition(0)
+                ui.loadingMore = next != null
+                if (reset) ui.toTop++
                 if (reset && items.isEmpty()) showEmpty("No videos from your subscriptions yet.\nSubscribe to channels and their new videos show here.")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                adapter.loadingMore = false
-                if (reset || adapter.count == 0) {
+                ui.loadingMore = false
+                if (reset || ui.videos.isEmpty()) {
                     val offline = !Net.online(act)
                     showEmpty(if (offline) NO_INTERNET else friendlyError(e.message ?: "Couldn't load"), "Try again")
                 }
             } finally {
                 // (a load replaced by a newer one leaves the spinner to that one)
                 if (job === coroutineContext[Job]) {
-                    b.subsLoading.isVisible = false
-                    b.subsSwipe.isRefreshing = false
+                    ui.loading = false
+                    ui.refreshing = false
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun SubsPage() {
+        val rx = LocalRx.current
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().height(56.dp).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("SUBSCRIPTIONS", Modifier.weight(1f), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+                IconButton(onClick = { load(reset = true, fresh = true) }) {
+                    Image(painterResource(R.drawable.ic_refresh), "Refresh", Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
+                }
+            }
+            if (ui.channels.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    LazyRow(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                        items(ui.channels, key = { it.url }) { c -> ChannelAvatar(c) { openChannel(it) } }
+                    }
+                    Text(
+                        "All", Modifier.height(48.dp).clickable { openAllChannels() }.padding(horizontal = 16.dp, vertical = 14.dp),
+                        color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body
+                    )
+                }
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                val list = rememberLazyListState()
+                LaunchedEffect(ui.toTop) { if (ui.toTop > 0) list.scrollToItem(0) }
+                // more videos when the end comes near
+                val nearEnd by remember {
+                    derivedStateOf {
+                        val last = list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        last >= list.layoutInfo.totalItemsCount - 5
+                    }
+                }
+                LaunchedEffect(nearEnd, ui.videos.size) { if (nearEnd && ui.videos.isNotEmpty()) load(reset = false) }
+
+                PullToRefreshBox(
+                    isRefreshing = ui.refreshing,
+                    onRefresh = { ui.refreshing = true; load(reset = true, fresh = true) },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
+                        items(ui.videos, key = { it.url }) { v -> VideoCard(v, openVideo, download) }
+                        if (ui.loadingMore && ui.videos.isNotEmpty()) {
+                            item(key = "more") {
+                                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(Modifier.size(28.dp), color = rx.accent, strokeWidth = 3.dp)
+                                }
+                            }
+                        }
+                    }
+                }
+                if (ui.loading) {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center), color = rx.accent)
+                }
+                val empty = ui.emptyText
+                if (empty != null) {
+                    Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(painterResource(R.drawable.ic_nav_subs), null, Modifier.size(64.dp), colorFilter = ColorFilter.tint(rx.text2))
+                        Text(empty, Modifier.padding(top = 14.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center)
+                        val action = ui.emptyAction
+                        if (action != null) {
+                            Button(
+                                onClick = { if (YtAccount.isSignedIn(act)) load(reset = true, fresh = true) else signIn() },
+                                modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(2.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+                            ) { Text(action, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
+                        }
+                    }
                 }
             }
         }

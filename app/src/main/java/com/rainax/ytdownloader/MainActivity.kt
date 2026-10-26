@@ -71,6 +71,9 @@ class MainActivity : AppCompatActivity() {
 
     /** What the You page (Compose, YouScreen.kt) shows. */
     internal val you = YouState()
+    /** What the Social page (Compose, SocialScreen.kt) and its status saver show. */
+    internal val social = SocialState()
+    internal val statusUi = StatusUi()
 
     internal lateinit var statusSaver: StatusSaver
     /** Android's folder screen, for the WhatsApp status folder. */
@@ -207,7 +210,6 @@ class MainActivity : AppCompatActivity() {
         subs.setup()
         // Autoplay in feed (like YouTube): the video you stop on plays silently in the list
         FeedAutoplay.attach(hm.feedList)
-        FeedAutoplay.attach(sb.subsList)
         FeedAutoplay.blocked = { video.isOpen || (::music.isInitialized && music.expanded) }
         home.onMenu = { openExplore() }
         home.onTheme = { showThemePopup(it) }
@@ -601,7 +603,7 @@ class MainActivity : AppCompatActivity() {
         if (index != 1 && selecting) exitSelection()
         val old = tab
         tab = index
-        val pages = listOf(hm.root, pl, st, so.root, sb.root)
+        val pages = listOf(hm.root, pl, st, so, sb)
         pages.forEachIndexed { i, page ->
             page.animate().cancel()
             page.alpha = 1f

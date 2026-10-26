@@ -28,14 +28,18 @@
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
-            <include
+            <!-- Social: a Jetpack Compose screen (SocialScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/socialPage"
-                layout="@layout/page_social"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:visibility="gone" />
 
-            <include
+            <!-- Subscriptions: a Jetpack Compose screen (SubsScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/subsPage"
-                layout="@layout/page_subs"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:visibility="gone" />
 
             <!-- Settings: a Jetpack Compose screen (SettingsScreen.kt) -->

@@ -1,6 +1,8 @@
 package com.rainax.ytdownloader
 
 import android.content.ContentValues
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -22,7 +24,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.rainax.ytdownloader.databinding.PageSocialBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -35,9 +36,27 @@ import kotlinx.coroutines.withContext
  * without it, you can instead pick just that folder once on Android's folder screen.
  * Saved statuses go to Internal storage/Rainax Tube/Status.
  */
+/** What the status saver part of the Social page shows (drawn by SocialScreen.kt). */
+class StatusUi {
+    var tab by androidx.compose.runtime.mutableIntStateOf(0)
+    var items by androidx.compose.runtime.mutableStateOf<List<StatusSaver.Item>>(emptyList())
+    var loading by androidx.compose.runtime.mutableStateOf(false)
+    var emptyText by androidx.compose.runtime.mutableStateOf<String?>(null)
+    var ask by androidx.compose.runtime.mutableStateOf(false)
+    var askText by androidx.compose.runtime.mutableStateOf("")
+    var refreshShown by androidx.compose.runtime.mutableStateOf(false)
+    var sub by androidx.compose.runtime.mutableStateOf("Save photos and videos from statuses you've seen")
+    var saveAllShown by androidx.compose.runtime.mutableStateOf(false)
+    var saveAllText by androidx.compose.runtime.mutableStateOf("Save all")
+    var saveAllEnabled by androidx.compose.runtime.mutableStateOf(true)
+    var auto by androidx.compose.runtime.mutableStateOf(false)
+    /** Bumped when a status was saved (the ticks redraw). */
+    var savedTick by androidx.compose.runtime.mutableIntStateOf(0)
+}
+
 class StatusSaver(
     private val act: AppCompatActivity,
-    private val so: PageSocialBinding,
+    val ui: StatusUi,
     /** Opens Android's folder screen at [initial] (the activity owns the result). */
     private val pickFolder: (Uri) -> Unit,
     /** Asks for file access (All files access on Android 11+, storage on Android 10). */
@@ -51,7 +70,6 @@ class StatusSaver(
     private var tab = 0
     private var items: List<Item> = emptyList()
     private var loadJob: Job? = null
-    private val adapter = Adapter()
 
     private val thumbs = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
@@ -59,32 +77,33 @@ class StatusSaver(
     private val decoder get() = DECODER
 
     fun setup() {
-        so.statusList.layoutManager = GridLayoutManager(act, 3)
-        so.statusList.adapter = adapter
-        so.statusApps.setOnCheckedStateChangeListener { _, ids ->
-            tab = when (ids.firstOrNull()) { R.id.statusWab -> 1; R.id.statusSaved -> 2; else -> 0 }
-            refresh()
-        }
-        so.statusAllow.setOnClickListener { askFileAccess() }
-        so.statusPickFolder.setOnClickListener { pickFolder(initialUri(tab)) }
-        so.statusRefresh.setOnClickListener { refresh() }
-        so.statusSaveAll.setOnClickListener { saveAll() }
-        so.statusAutoSwitch.isSaveEnabled = false                  // always from the saved choice, never replayed
-        so.statusAutoSwitch.isChecked = AppPrefs.statusAuto(act)
-        so.statusAutoRow.setOnClickListener { so.statusAutoSwitch.toggle() }
-        so.statusAutoSwitch.setOnCheckedChangeListener { _, on ->
-            if (on == AppPrefs.statusAuto(act)) return@setOnCheckedChangeListener
-            StatusAutoSave.setEnabled(act, on)
-            if (on) {
-                Notify.show(act, "Auto-save on: new statuses are saved to Rainax Tube/Status")
-                StatusAutoSave.runSoon(act) { n -> if (n > 0) Notify.show(act, if (n == 1) "Saved 1 status" else "Saved $n statuses"); refresh() }
-            } else Notify.show(act, "Auto-save off")
-        }
+        ui.auto = AppPrefs.statusAuto(act)            // always from the saved choice
+    }
+
+    /** WhatsApp, WA Business or Saved chosen. */
+    fun selectTab(t: Int) {
+        if (t == tab) return
+        tab = t
+        ui.tab = t
+        refresh()
+    }
+
+    fun allowAccess() = askFileAccess()
+    fun pickStatusFolder() = pickFolder(initialUri(tab))
+
+    fun setAuto(on: Boolean) {
+        ui.auto = on
+        if (on == AppPrefs.statusAuto(act)) return
+        StatusAutoSave.setEnabled(act, on)
+        if (on) {
+            Notify.show(act, "Auto-save on: new statuses are saved to Rainax Tube/Status")
+            StatusAutoSave.runSoon(act) { n -> if (n > 0) Notify.show(act, if (n == 1) "Saved 1 status" else "Saved $n statuses"); refresh() }
+        } else Notify.show(act, "Auto-save off")
     }
 
     /** WhatsApp chosen from the apps grid: show its statuses. */
     fun focus() {
-        if (tab == 2) so.statusApps.check(R.id.statusWa) else refresh()
+        if (tab == 2) selectTab(0) else refresh()
     }
 
     // ---------- the folder ----------
@@ -171,29 +190,28 @@ class StatusSaver(
 
     fun refresh() {
         // auto-save on: anything new is saved first (in the background), then the list shows it ticked
-        StatusAutoSave.runSoon(act) { n -> if (n > 0) { savedNames = savedNames + AppPrefs.savedStatuses(act); adapter.notifyDataSetChanged() } }
+        StatusAutoSave.runSoon(act) { n -> if (n > 0) { savedNames = savedNames + AppPrefs.savedStatuses(act); ui.savedTick++ } }
         loadJob?.cancel()
         val t = tab
         val direct = t != 2 && fileAccess()
         val folder = if (t == 2 || direct) null else AppPrefs.statusFolder(act, pkg(t))
         val granted = direct || (folder != null && act.contentResolver.persistedUriPermissions.any { it.uri.toString() == folder.first && it.isReadPermission })
-        so.statusAsk.isVisible = t != 2 && !granted
-        so.statusRefresh.isVisible = t == 2 || granted
+        ui.ask = t != 2 && !granted
+        ui.refreshShown = t == 2 || granted
         if (t != 2 && !granted) {
             val appName = if (t == 1) "WhatsApp Business" else "WhatsApp"
-            so.statusAskText.text = if (android.os.Build.VERSION.SDK_INT >= 30) {
+            ui.askText = if (android.os.Build.VERSION.SDK_INT >= 30) {
                 "WhatsApp hides statuses from the normal photo permission. Tap Allow access and turn on " +
                     "“Allow access to manage all files” for RAINAX Tube (asked only once)." +
                     if (!installed(t)) "\n($appName isn't on this phone.)" else ""
             } else {
                 "Tap Allow access and allow storage, so RAINAX can read the statuses you've seen in $appName."
             }
-            so.statusPickFolder.isVisible = true
             show(emptyList(), null)
-            so.statusSub.text = "Save photos and videos from statuses you've seen"
+            ui.sub = "Save photos and videos from statuses you've seen"
             return
         }
-        so.statusLoading.isVisible = items.isEmpty()
+        ui.loading = items.isEmpty()
         loadJob = act.lifecycleScope.launch {
             val list = withContext(Dispatchers.IO) {
                 // what is already in Rainax Tube/Status (also after reinstalling the app, when its memory is empty)
@@ -207,7 +225,7 @@ class StatusSaver(
                 }.getOrNull()
             }
             if (tab != t) return@launch
-            so.statusLoading.isVisible = false
+            ui.loading = false
             when {
                 list == null && t != 2 && !direct -> {
                     // the folder moved, or the permission was taken back in Settings: ask again
@@ -229,17 +247,16 @@ class StatusSaver(
 
     private fun show(list: List<Item>, emptyText: String?) {
         items = list
-        adapter.notifyDataSetChanged()
-        so.statusList.isVisible = list.isNotEmpty()
-        so.statusEmpty.isVisible = emptyText != null
-        so.statusEmpty.text = emptyText.orEmpty()
+        ui.items = list
+        ui.savedTick++
+        ui.emptyText = emptyText
         val unsaved = list.count { !isSaved(it) }
-        so.statusSaveAll.isVisible = tab != 2 && unsaved > 1
-        so.statusSaveAll.text = "Save all ($unsaved)"
+        ui.saveAllShown = tab != 2 && unsaved > 1
+        ui.saveAllText = "Save all ($unsaved)"
         if (list.isNotEmpty()) {
             val photos = list.count { !it.isVideo }
             val videos = list.size - photos
-            so.statusSub.text = listOfNotNull(
+            ui.sub = listOfNotNull(
                 photos.takeIf { it > 0 }?.let { if (it == 1) "1 photo" else "$it photos" },
                 videos.takeIf { it > 0 }?.let { if (it == 1) "1 video" else "$it videos" }
             ).joinToString(" • ") + if (tab == 2) " saved" else ""
@@ -328,31 +345,29 @@ class StatusSaver(
         return names
     }
 
-    private fun isSaved(item: Item) = tab == 2 || item.name in savedNames || item.name in AppPrefs.savedStatuses(act)
+    fun isSaved(item: Item) = tab == 2 || item.name in savedNames || item.name in AppPrefs.savedStatuses(act)
 
-    private fun save(item: Item, quiet: Boolean = false, done: () -> Unit = {}) {
+    fun save(item: Item, quiet: Boolean = false, done: () -> Unit = {}) {
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { copy(item) }.isSuccess }
             if (ok) { AppPrefs.addSavedStatus(act, item.name); savedNames = savedNames + item.name }
             if (!quiet) Notify.show(act, if (ok) "Saved to Rainax Tube/Status" else "Couldn't save this status")
-            adapter.notifyDataSetChanged()
-            show(items, if (items.isEmpty()) so.statusEmpty.text.toString() else null)
+            show(items, if (items.isEmpty()) ui.emptyText else null)
             done()
         }
     }
 
-    private fun saveAll() {
+    fun saveAll() {
         val todo = items.filter { !isSaved(it) }
         if (todo.isEmpty()) return
-        so.statusSaveAll.isEnabled = false
+        ui.saveAllEnabled = false
         act.lifecycleScope.launch {
             var ok = 0
             for (item in todo) {
                 val saved = withContext(Dispatchers.IO) { runCatching { copy(item) }.isSuccess }
                 if (saved) { ok++; AppPrefs.addSavedStatus(act, item.name); savedNames = savedNames + item.name }
             }
-            so.statusSaveAll.isEnabled = true
-            adapter.notifyDataSetChanged()
+            ui.saveAllEnabled = true
             show(items, null)
             Notify.show(act, "Saved $ok of ${todo.size} to Rainax Tube/Status")
         }
@@ -373,7 +388,7 @@ class StatusSaver(
 
     // ---------- looking ----------
 
-    private fun open(item: Item) {
+    fun open(item: Item) {
         if (item.isVideo) {
             PlayerActivity.open(act, listOf(item.uri.toString()), listOf("Status"), 0)
             return
@@ -422,6 +437,15 @@ class StatusSaver(
         return r.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
     }
 
+    /** A status's small picture (cached). Blocking: call off the main thread. */
+    fun thumb(item: Item): Bitmap? {
+        val key = item.uri.toString()
+        thumbs.get(key)?.let { return it }
+        return runCatching { thumbOf(item) }.getOrNull()?.also { thumbs.put(key, it) }
+    }
+
+    fun cachedThumb(item: Item): Bitmap? = thumbs.get(item.uri.toString())
+
     private fun thumbOf(item: Item): Bitmap? {
         if (!item.isVideo) return decodeImage(item.uri, 360)
         runCatching { act.contentResolver.loadThumbnail(item.uri, Size(360, 360), null) }.getOrNull()?.let { return it }
@@ -433,42 +457,6 @@ class StatusSaver(
             null
         } finally {
             runCatching { mmr.release() }
-        }
-    }
-
-    private inner class Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        override fun getItemCount() = items.size
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_status, parent, false)
-            v.clipToOutline = true
-            return object : RecyclerView.ViewHolder(v) {}
-        }
-
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val item = items[position]
-            val v = holder.itemView
-            val thumb = v.findViewById<ImageView>(R.id.statusThumb)
-            val save = v.findViewById<ImageButton>(R.id.statusSave)
-            v.findViewById<View>(R.id.statusPlay).isVisible = item.isVideo
-            val saved = isSaved(item)
-            save.isVisible = tab != 2
-            save.setImageResource(if (saved) R.drawable.ic_check else R.drawable.ic_download)
-            save.contentDescription = if (saved) "Saved" else "Save"
-            save.setOnClickListener { if (!saved) save(item) }
-            v.setOnClickListener { open(item) }
-            val key = item.uri.toString()
-            thumb.tag = key
-            val cached = thumbs.get(key)
-            if (cached != null) { thumb.setImageBitmap(cached); return }
-            thumb.setImageDrawable(null)
-            decoder.execute {
-                val bmp = runCatching { thumbOf(item) }.getOrNull() ?: return@execute
-                thumb.post {
-                    thumbs.put(key, bmp)
-                    if (thumb.tag == key) thumb.setImageBitmap(bmp)
-                }
-            }
         }
     }
 

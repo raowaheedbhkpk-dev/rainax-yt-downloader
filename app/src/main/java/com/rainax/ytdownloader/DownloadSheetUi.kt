@@ -240,7 +240,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
                     GridCells.Fixed(2), Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp)
                 ) {
-                    itemsIndexed(ui.cards, key = { _, c -> if (c is DlCard.Format) c.choice.spec else "more" }) { i, c ->
+                    itemsIndexed(ui.cards) { i, c ->
                         Rise(ui.riseKey, i) {
                             when (c) {
                                 is DlCard.Format -> TicketCard(c, ui.tearing && c.selected) { a.pick(c.choice) }
