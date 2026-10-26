@@ -61,8 +61,8 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var library: LibraryScreen
     internal lateinit var music: MusicPlayer
     internal lateinit var subs: SubsScreen
-    /** Settings' quick tiles repaint from their switches (set by setupSettingsLook). */
-    internal var paintTiles: (() -> Unit)? = null
+    /** Bumped when the Settings page should read the folder / file access / MP3 note again. */
+    internal val settingsTick = androidx.compose.runtime.mutableIntStateOf(0)
     internal var pendingVideo: String? = null     // reopen this video page once the player is connected
 
     internal var latestTasks: List<DownloadTask> = emptyList()
@@ -644,7 +644,7 @@ class MainActivity : AppCompatActivity() {
         if (index != 1 && selecting) exitSelection()
         val old = tab
         tab = index
-        val pages = listOf(hm.root, pl.root, st.root, so.root, sb.root)
+        val pages = listOf(hm.root, pl.root, st, so.root, sb.root)
         pages.forEachIndexed { i, page ->
             page.animate().cancel()
             page.alpha = 1f
@@ -659,6 +659,7 @@ class MainActivity : AppCompatActivity() {
         if (index == 4) subs.onShown()
         if (index == 3 && ::statusSaver.isInitialized) statusSaver.refresh()
         if (index == 3) refreshClipStrip()
+        if (index == 2) renderFolder()          // Settings: every value read fresh
     }
 
     /** Where each page's tab sits in the bottom bar (Settings counts as after You), for the slide direction. */

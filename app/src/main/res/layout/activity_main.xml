@@ -36,9 +36,11 @@
                 layout="@layout/page_subs"
                 android:visibility="gone" />
 
-            <include
+            <!-- Settings: a Jetpack Compose screen (SettingsScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/settingsPage"
-                layout="@layout/page_settings"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:visibility="gone" />
 
             <include

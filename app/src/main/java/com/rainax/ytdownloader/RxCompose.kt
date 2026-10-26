@@ -9,7 +9,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
@@ -34,6 +38,9 @@ class RxColors(
     val accentText: Color,
     val accentContainer: Color,
     val onAccent: Color,
+    val outline: Color,
+    val surfaceAlt: Color,
+    val gold: Color,
     val dark: Boolean
 ) {
     companion object {
@@ -55,6 +62,9 @@ class RxColors(
                 accentText = Color(Ui.accentText(c)),
                 accentContainer = attr(R.attr.rxAccentContainer, R.color.rx_card),
                 onAccent = res(R.color.rx_on_primary),
+                outline = attr(R.attr.rxOutline, R.color.rx_divider),
+                surfaceAlt = attr(R.attr.rxSurfaceAlt, R.color.rx_card),
+                gold = res(R.color.rx_gold),
                 dark = Ui.isDark(c)
             )
         }
@@ -93,6 +103,22 @@ fun rxDrawable(id: Int, sizeDp: Int): androidx.compose.ui.graphics.ImageBitmap {
             d.draw(cv)
         }
         bmp.asImageBitmap()
+    }
+}
+
+/**
+ * Paints any Android drawable (layer-lists, shapes...) behind a composable, stretched to its size. For the
+ * small drawn pictures the old screens already have, e.g. the theme previews.
+ */
+@Composable
+fun Modifier.rxDrawableBg(id: Int): Modifier {
+    val ctx = LocalContext.current
+    val d = remember(ctx, id) { androidx.core.content.ContextCompat.getDrawable(ctx, id) } ?: return this
+    return this.drawBehind {
+        drawIntoCanvas { cv ->
+            d.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+            d.draw(cv.nativeCanvas)
+        }
     }
 }
 
