@@ -31,7 +31,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.rainax.ytdownloader.databinding.ActivityMainBinding
-import com.rainax.ytdownloader.databinding.SheetDownloadBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
@@ -232,16 +231,20 @@ internal fun MainActivity.showDownloadSheet(
     onAdded: ((String) -> Unit)? = null
 ) {
     sheet?.dismiss()
-    val sb = SheetDownloadBinding.inflate(layoutInflater)
-    val dialog = BottomSheetDialog(this)
-    dialog.setContentView(sb.root)
-    dialog.behavior.skipCollapsed = true
+    val ui = DlSheetUi()
+    // what the sheet's buttons do (filled in below, once the functions they call exist)
+    var onClose = {}; var onBack = {}; var onTab: (Int) -> Unit = {}; var onRetry = {}; var onDownload = {}
+    var choiceAction: (FormatChoice) -> Unit = {}
+    var navAction: (String) -> Unit = {}
+    val (dialog, sheetView) = DlSheet.create(this, ui, DlSheetActions(
+        close = { onClose() }, back = { onBack() }, tab = { onTab(it) }, pick = { choiceAction(it) },
+        more = { navAction("all") }, nav = { navAction(it) }, retry = { onRetry() }, download = { onDownload() }
+    ))
     sheet = dialog
 
     val single = urls.size == 1
     val firstUrl = urls[0]
     val cookies = urls.associateWith<String, String?> { null }
-    val screenH = resources.displayMetrics.heightPixels
 
     var current: PreviewState? = null
     var mode = MODE_QUICK
@@ -253,24 +256,9 @@ internal fun MainActivity.showDownloadSheet(
     fun selectedSpecNow(): String? = if (tabKind == KIND_AUDIO) selAudio else selVideo
     fun select(spec: String?) { if (tabKind == KIND_AUDIO) selAudio = spec else selVideo = spec }
 
-    var choiceAction: (FormatChoice) -> Unit = {}
-    var navAction: (String) -> Unit = {}
-    val adapter = FormatAdapter({ choiceAction(it) }, { navAction(it) })
-    val cards = DlCardAdapter({ choiceAction(it) }, { navAction("all") })
-    val grid = androidx.recyclerview.widget.GridLayoutManager(this, 2)
-    val linear = LinearLayoutManager(this)
-    sb.formatList.layoutManager = grid
-    sb.formatList.adapter = cards
-    sb.formatList.itemAnimator = null
-    sb.formatList.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(this, R.anim.rx_list_rise)
     var cardsShown = false
-    sb.closeBtn.setOnClickListener { dialog.dismiss() }
-    sb.dlThumbBox.clipToOutline = true          // rounded picture corners
-    // our own rounded, softly tinted background (not the default white sheet)
-    dialog.setOnShowListener {
-        dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
-        dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-    }
+    var downloading = false
+    onClose = { dialog.dismiss() }
 
     fun group(list: List<FormatChoice>, detailed: Boolean): List<FormatRow> {
         val out = mutableListOf<FormatRow>()
@@ -431,19 +419,16 @@ internal fun MainActivity.showDownloadSheet(
             !single -> "Download ${urls.size} videos"
             else -> (p?.takeIf { !it.loading }?.title ?: knownTitle)?.takeIf { it.isNotBlank() } ?: "Download"
         }
-        sb.sheetHeading.text = when (mode) {
+        ui.heading = when (mode) {
             MODE_ALL -> "More formats"
             MODE_SUBS -> "Subtitles/CC"
             else -> title
         }
-        sb.backBtn.isVisible = mode != MODE_QUICK
-        sb.dlThumbBox.isVisible = mode == MODE_QUICK
-        val thumb = p?.thumbUrl ?: youtubeThumb(firstUrl) ?: found[firstUrl]?.thumbUrl
-        if (sb.dlThumb.getTag(R.id.img_url) != thumb) Img.load(sb.dlThumb, thumb, widthPx = 320)
-        val duration = if (single && !isPlaylist) p?.subtitle?.let { Regex("(\\d+:)?\\d{1,2}:\\d{2}$").find(it.trim())?.value } else null
-        sb.dlDuration.isVisible = duration != null
-        sb.dlDuration.text = duration
-        sb.sheetSub.text = when {
+        ui.back = mode != MODE_QUICK
+        ui.showThumb = mode == MODE_QUICK
+        ui.thumbUrl = p?.thumbUrl ?: youtubeThumb(firstUrl) ?: found[firstUrl]?.thumbUrl
+        ui.duration = if (single && !isPlaylist) p?.subtitle?.let { Regex("(\\d+:)?\\d{1,2}:\\d{2}$").find(it.trim())?.value } else null
+        ui.sub = when {
             mode != MODE_QUICK -> title
             !single && waiting > 0 -> "Getting sizes…  ${sampleUrls.size - waiting} of ${sampleUrls.size}"
             !single && sampledMany -> "They download one after another  •  sizes estimated from ${sampleUrls.size} videos"
@@ -455,27 +440,12 @@ internal fun MainActivity.showDownloadSheet(
             isPlaylist -> "${p!!.subtitle.orEmpty()}  •  whole playlist".trimStart(' ', '•') + if (waiting > 0) "  •  getting sizes…" else ""
             else -> "Choose a format to download"
         }
-        sb.previewLoading.isVisible = loading || waiting > 0
+        ui.loading = loading || waiting > 0
 
         // Video / Audio tabs
-        sb.dlTabs.isVisible = mode != MODE_SUBS && ((hasVideo && hasAudio) || (single && !isPlaylist && loading))
-        // icon and word side by side in the middle of each tab
-        fun styleTab(box: View, icon: android.widget.ImageView, text: android.widget.TextView, on: Boolean) {
-            val color = if (on) android.graphics.Color.WHITE else androidx.core.content.ContextCompat.getColor(this, R.color.dl_text2)
-            box.setBackgroundResource(if (on) R.drawable.bg_dl_tab_on else 0)
-            box.elevation = if (on) 4 * resources.displayMetrics.density else 0f
-            box.isSelected = on
-            text.setTextColor(color)
-            icon.imageTintList = android.content.res.ColorStateList.valueOf(color)
-        }
-        styleTab(sb.tabVideo, sb.tabVideoIcon, sb.tabVideoText, tabKind == KIND_VIDEO)
-        styleTab(sb.tabAudio, sb.tabAudioIcon, sb.tabAudioText, tabKind == KIND_AUDIO)
-
-        sb.errorBlock.isVisible = error != null
-        if (error != null) {
-            sb.errorText.text = error
-        }
-        sb.playlistBtn.isVisible = false
+        ui.showTabs = mode != MODE_SUBS && ((hasVideo && hasAudio) || (single && !isPlaylist && loading))
+        ui.tabKind = tabKind
+        ui.error = error
 
         if (mode == MODE_QUICK) {
             // the cards: this tab's main formats, then "More Formats"
@@ -485,17 +455,14 @@ internal fun MainActivity.showDownloadSheet(
             if (tabAll.isNotEmpty() && (moreCount > 0 || (tabKind == KIND_VIDEO && subs.isNotEmpty()))) {
                 list += DlCard.More(if (moreCount > 0) "View all ${tabAll.size}" else "Subtitles")
             }
-            if (sb.formatList.adapter !== cards) { sb.formatList.layoutManager = grid; sb.formatList.adapter = cards }
             val showing = if (loading || error != null) emptyList() else list
             // the cards rise in when they first appear
-            if (showing.isNotEmpty() && !cardsShown) { cardsShown = true; sb.formatList.scheduleLayoutAnimation() }
-            cards.submit(showing)
-        } else if (sb.formatList.adapter !== adapter) {
-            sb.formatList.layoutManager = linear
-            sb.formatList.adapter = adapter
+            if (showing.isNotEmpty() && !cardsShown) { cardsShown = true; ui.riseKey++ }
+            ui.cards = showing
         }
+        ui.listMode = mode != MODE_QUICK
         val selChoice = (quick + all).firstOrNull { it.spec == selectedSpec }
-        sb.selectedLabel.text = when {
+        ui.selectedLabel = when {
             selChoice != null -> shortLabel(selChoice) + if (tabKind == KIND_VIDEO && selectedSub != null) "  •  CC" else ""
             loading || waiting > 0 -> "Getting sizes…"
             else -> "Nothing selected"
@@ -520,13 +487,10 @@ internal fun MainActivity.showDownloadSheet(
             }
             else -> emptyList()
         }
-        if (mode != MODE_QUICK) adapter.submitList(rows)
+        if (mode != MODE_QUICK) ui.rows = rows
         // only formats that are really shown can be downloaded
-        sb.downloadBtn.isEnabled = selectedSpec != null && (quick + all).any { it.spec == selectedSpec }
-        sb.downloadBtn.alpha = if (sb.downloadBtn.isEnabled) 1f else 0.5f
-
-        val fraction = if (mode == MODE_QUICK) 0.72 else 0.9
-        sb.root.minimumHeight = (screenH * fraction).toInt()
+        ui.canDownload = !downloading && selectedSpec != null && (quick + all).any { it.spec == selectedSpec }
+        ui.tall = mode != MODE_QUICK
     }
 
     renderNow = { render() }
@@ -540,17 +504,16 @@ internal fun MainActivity.showDownloadSheet(
         render()
     }
     // switching Video / Audio: the other cards rise in
-    sb.tabVideo.setOnClickListener { if (tabKind != KIND_VIDEO) { tabKind = KIND_VIDEO; sb.formatList.scheduleLayoutAnimation(); render() } }
-    sb.tabAudio.setOnClickListener { if (tabKind != KIND_AUDIO) { tabKind = KIND_AUDIO; sb.formatList.scheduleLayoutAnimation(); render() } }
+    onTab = { k -> if (tabKind != k) { tabKind = k; ui.riseKey++; render() } }
     navAction = { id ->
         mode = if (id == "all") MODE_ALL else MODE_SUBS
         render()
     }
-    sb.backBtn.setOnClickListener {
+    onBack = {
         mode = if (mode == MODE_SUBS) MODE_ALL else MODE_QUICK
         render()
     }
-    sb.retryBtn.setOnClickListener {
+    onRetry = {
         when {
             !single -> { found.clear(); lookUp(sampleUrls) }
             current?.playlist?.isNotEmpty() == true -> { found.clear(); sampled = emptyList() }
@@ -558,13 +521,9 @@ internal fun MainActivity.showDownloadSheet(
         }
         render()
     }
-    sb.playlistBtn.setOnClickListener {
-        val id = Uri.parse(firstUrl).getQueryParameter("list").orEmpty()
-        vm.fetchInfo("https://www.youtube.com/playlist?list=$id", cookies[firstUrl], forcePlaylist = true)
-    }
-
-    sb.downloadBtn.setOnClickListener {
-        val spec = selectedSpecNow() ?: return@setOnClickListener
+    onDownload = download@{
+        if (downloading) return@download
+        val spec = selectedSpecNow() ?: return@download
         val p = current
         val sub = if (spec.startsWith("video")) selectedSub else null
         val items = when {
@@ -577,11 +536,12 @@ internal fun MainActivity.showDownloadSheet(
             )
         }
         vm.enqueue(items, spec, sub)
-        sb.downloadBtn.isEnabled = false                 // (one tap: the ticket is being torn off)
+        downloading = true                               // (one tap: the ticket is being torn off)
+        ui.canDownload = false
         // (no battery question: downloads run as a foreground service with a notification, which
         // Android keeps running; the optional setting is in Settings for phones that still stop them)
         val what = if (items.size == 1) "Added to downloads" else "Added ${items.size} items to downloads"
-        DlCardAdapter.tear(sb.formatList) {
+        DlSheet.tear(ui, sheetView) {
             if (isFinishing || isDestroyed) return@tear
             dialog.dismiss()
             if (onAdded != null) { onAdded(what); return@tear }

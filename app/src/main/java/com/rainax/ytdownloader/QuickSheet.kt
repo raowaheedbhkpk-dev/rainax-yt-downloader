@@ -10,7 +10,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.rainax.ytdownloader.databinding.SheetDownloadBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,21 +57,13 @@ object DlCardText {
 object QuickSheet {
 
     fun show(act: AppCompatActivity, url: String, knownTitle: String?, thumb: String?, onClosed: () -> Unit = {}, onAdded: () -> Unit = {}) {
-        val sb = SheetDownloadBinding.inflate(act.layoutInflater)
-        val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
-        dialog.setOnDismissListener { onClosed() }
-        dialog.behavior.skipCollapsed = true
-        dialog.setOnShowListener {
-            dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
-        }
-        sb.dlThumbBox.clipToOutline = true
-        sb.closeBtn.setOnClickListener { dialog.dismiss() }
+        val ui = DlSheetUi()
+        ui.thumbUrl = thumb
 
         var state: PreviewState? = null
         var loading = true
         var showAll = false
+        var downloading = false
         var tabKind = KIND_VIDEO
         var selVideo: String? = null
         var selAudio: String? = null
@@ -80,15 +71,21 @@ object QuickSheet {
         fun select(spec: String?) { if (tabKind == KIND_AUDIO) selAudio = spec else selVideo = spec }
 
         var render: () -> Unit = {}
-        val cards = DlCardAdapter({ select(it.spec); render() }, { showAll = true; render() })
-        val list = FormatAdapter({ select(it.spec); render() }, {})
-        val grid = GridLayoutManager(act, 2)
-        val linear = LinearLayoutManager(act)
-        sb.formatList.layoutManager = grid
-        sb.formatList.adapter = cards
-        sb.formatList.itemAnimator = null
-        sb.formatList.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(act, R.anim.rx_list_rise)
-        Img.load(sb.dlThumb, thumb, widthPx = 320)
+        var load: () -> Unit = {}
+        var download: () -> Unit = {}
+        var dialogRef: BottomSheetDialog? = null
+        val (dialog, view) = DlSheet.create(act, ui, DlSheetActions(
+            close = { dialogRef?.dismiss() },
+            back = { showAll = false; render() },
+            tab = { k -> if (tabKind != k) { tabKind = k; ui.riseKey++; render() } },
+            pick = { select(it.spec); render() },
+            more = { showAll = true; render() },
+            nav = {},
+            retry = { load() },
+            download = { download() }
+        ))
+        dialogRef = dialog
+        dialog.setOnDismissListener { onClosed() }
 
         render = {
             val st = state
@@ -105,33 +102,22 @@ object QuickSheet {
             }
             val error = st?.error
             val title = st?.title?.takeIf { it.isNotBlank() } ?: knownTitle?.takeIf { it.isNotBlank() } ?: "Download"
-            sb.sheetHeading.text = if (showAll) "More formats" else title
-            sb.backBtn.isVisible = showAll
-            sb.dlThumbBox.isVisible = !showAll
-            if (st?.thumbUrl != null && sb.dlThumb.getTag(R.id.img_url) != st.thumbUrl) Img.load(sb.dlThumb, st.thumbUrl, widthPx = 320)
-            val duration = st?.subtitle?.let { Regex("(\\d+:)?\\d{1,2}:\\d{2}$").find(it.trim())?.value }
-            sb.dlDuration.isVisible = duration != null
-            sb.dlDuration.text = duration
-            sb.sheetSub.text = when {
+            ui.heading = if (showAll) "More formats" else title
+            ui.back = showAll
+            ui.showThumb = !showAll
+            if (st?.thumbUrl != null) ui.thumbUrl = st.thumbUrl
+            ui.duration = st?.subtitle?.let { Regex("(\\d+:)?\\d{1,2}:\\d{2}$").find(it.trim())?.value }
+            ui.sub = when {
                 showAll -> title
                 loading -> "Getting sizes…"
                 error != null -> error
                 else -> "Choose a format to download"
             }
-            sb.previewLoading.isVisible = loading
-            sb.errorBlock.isVisible = error != null && !loading
-            sb.errorText.text = error
-            sb.dlTabs.isVisible = (hasVideo && hasAudio) || loading
-            fun styleTab(box: View, icon: android.widget.ImageView, text: android.widget.TextView, on: Boolean) {
-                val color = if (on) Color.WHITE else ContextCompat.getColor(act, R.color.dl_text2)
-                box.setBackgroundResource(if (on) R.drawable.bg_dl_tab_on else 0)
-                box.elevation = if (on) 4 * act.resources.displayMetrics.density else 0f
-                text.setTextColor(color)
-                icon.imageTintList = android.content.res.ColorStateList.valueOf(color)
-            }
-            styleTab(sb.tabVideo, sb.tabVideoIcon, sb.tabVideoText, tabKind == KIND_VIDEO)
-            styleTab(sb.tabAudio, sb.tabAudioIcon, sb.tabAudioText, tabKind == KIND_AUDIO)
-
+            ui.loading = loading
+            ui.error = if (!loading) error else null
+            ui.showTabs = (hasVideo && hasAudio) || loading
+            ui.tabKind = tabKind
+            ui.listMode = showAll
             if (!showAll) {
                 val rec = DlCardText.recommended(tabQuick, tabKind)?.spec
                 val items = tabQuick.map { c ->
@@ -140,30 +126,23 @@ object QuickSheet {
                 }.toMutableList<DlCard>()
                 val more = tabAll.count { a -> tabQuick.none { it.spec == a.spec } }
                 if (more > 0) items += DlCard.More("View all ${tabAll.size}")
-                if (sb.formatList.adapter !== cards) { sb.formatList.layoutManager = grid; sb.formatList.adapter = cards }
-                cards.submit(if (loading || error != null) emptyList() else items)
+                ui.cards = if (loading || error != null) emptyList<DlCard>() else items
             } else {
-                if (sb.formatList.adapter !== list) { sb.formatList.layoutManager = linear; sb.formatList.adapter = list }
                 val rows = mutableListOf<FormatRow>(FormatRow.Section(if (tabKind == KIND_AUDIO) "Audio" else "Video"))
                 tabAll.forEach { rows += FormatRow.Choice(it, it.spec == selected(), true) }
-                list.submitList(rows)
+                ui.rows = rows
             }
             val sel = all.firstOrNull { it.spec == selected() }
-            sb.selectedLabel.text = when {
+            ui.selectedLabel = when {
                 sel != null -> DlCardText.of(sel).second + if (sel.size.isNotBlank()) " (${sel.size})" else ""
                 loading -> "Getting sizes…"
                 else -> "Nothing selected"
             }
-            sb.downloadBtn.isEnabled = sel != null
-            sb.downloadBtn.alpha = if (sel != null) 1f else 0.5f
-            sb.root.minimumHeight = (act.resources.displayMetrics.heightPixels * if (showAll) 0.9 else 0.72).toInt()
+            ui.canDownload = sel != null && !downloading
+            ui.tall = showAll
         }
 
-        sb.tabVideo.setOnClickListener { if (tabKind != KIND_VIDEO) { tabKind = KIND_VIDEO; sb.formatList.scheduleLayoutAnimation(); render() } }
-        sb.tabAudio.setOnClickListener { if (tabKind != KIND_AUDIO) { tabKind = KIND_AUDIO; sb.formatList.scheduleLayoutAnimation(); render() } }
-        sb.backBtn.setOnClickListener { showAll = false; render() }
-
-        fun load() {
+        load = {
             loading = true
             render()
             act.lifecycleScope.launch {
@@ -172,18 +151,19 @@ object QuickSheet {
                 }
                 loading = false
                 state = st
-                if (dialog.isShowing) { sb.formatList.scheduleLayoutAnimation(); render() }
+                if (dialog.isShowing) { ui.riseKey++; render() }
             }
         }
-        sb.retryBtn.setOnClickListener { load() }
 
-        sb.downloadBtn.setOnClickListener {
-            val spec = selected() ?: return@setOnClickListener
+        download = download@{
+            if (downloading) return@download
+            val spec = selected() ?: return@download
             val st = state
             val title = st?.title?.takeIf { it.isNotBlank() } ?: knownTitle.orEmpty()
             Downloader.enqueueAsync(act.applicationContext, listOf(EnqueueItem(url, title, null, st?.thumbUrl ?: thumb)), spec, null, st)
-            sb.downloadBtn.isEnabled = false
-            DlCardAdapter.tear(sb.formatList) {
+            downloading = true
+            ui.canDownload = false
+            DlSheet.tear(ui, view) {
                 if (act.isFinishing || act.isDestroyed) return@tear
                 dialog.dismiss()
                 onAdded()
