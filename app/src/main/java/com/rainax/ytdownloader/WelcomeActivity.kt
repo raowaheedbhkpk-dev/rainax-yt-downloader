@@ -1,23 +1,53 @@
 package com.rainax.ytdownloader
 
-import android.content.res.ColorStateList
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.widget.ViewPager2
-import com.rainax.ytdownloader.databinding.ActivityWelcomeBinding
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 /**
  * The welcome guide after the first install: a few pages on what RAINAX Tube does, swiped or with Next,
  * then "Get started" (or Skip). Shown once; the first-run questions (storage, updates) come right after.
+ *
+ * The first RAINAX screen built with Jetpack Compose (see [RxTheme]); it looks the same as the old one.
  */
 class WelcomeActivity : AppCompatActivity() {
 
@@ -41,61 +71,12 @@ class WelcomeActivity : AppCompatActivity() {
             "Hide videos behind a PIN, pattern or password, and save WhatsApp statuses in one tap.")
     )
 
-    private lateinit var b: ActivityWelcomeBinding
-
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
         Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
         Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
-        b = ActivityWelcomeBinding.inflate(layoutInflater)
-        setContentView(b.root)
-
-        b.welcomePager.adapter = PagesAdapter()
-        // swiping: the page going away shrinks and fades a little, the picture moves slower than the text
-        b.welcomePager.setPageTransformer { page, pos ->
-            val p = pos.coerceIn(-1f, 1f)
-            val a = kotlin.math.abs(p)
-            page.alpha = 1f - a * 0.6f
-            val scale = 1f - a * 0.08f
-            page.scaleX = scale
-            page.scaleY = scale
-            page.findViewById<View>(R.id.pageIcon)?.let { (it.parent as View).translationX = -p * page.width * 0.25f }
-        }
-        val d = resources.displayMetrics.density
-        val dots = pages.indices.map {
-            View(this).also { v ->
-                b.welcomeDots.addView(v, LinearLayout.LayoutParams((8 * d).toInt(), (8 * d).toInt()).apply {
-                    marginStart = (4 * d).toInt(); marginEnd = (4 * d).toInt()
-                })
-            }
-        }
-        fun show(pos: Int) {
-            dots.forEachIndexed { i, v ->
-                v.setBackgroundResource(if (i == pos) R.drawable.bg_welcome_dot_on else R.drawable.bg_welcome_dot)
-                v.alpha = if (i == pos) 1f else 0.35f
-                v.layoutParams = (v.layoutParams as LinearLayout.LayoutParams).apply { width = ((if (i == pos) 22 else 8) * d).toInt() }
-            }
-            val last = pos == pages.lastIndex
-            b.welcomeNext.text = if (last) "Get started" else "Next"
-            b.welcomeSkip.visibility = if (last) View.INVISIBLE else View.VISIBLE
-        }
-        b.welcomePager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) = show(position)
-        })
-        show(0)
-
-        b.welcomeNext.setOnClickListener {
-            val pos = b.welcomePager.currentItem
-            if (pos < pages.lastIndex) b.welcomePager.currentItem = pos + 1 else finishGuide()
-        }
-        b.welcomeSkip.setOnClickListener { finishGuide() }
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val pos = b.welcomePager.currentItem
-                if (pos > 0) b.welcomePager.currentItem = pos - 1 else finishGuide()
-            }
-        })
+        setContent { RxTheme { Guide() } }
     }
 
     private fun finishGuide() {
@@ -104,24 +85,104 @@ class WelcomeActivity : AppCompatActivity() {
         finish()
     }
 
-    private inner class PagesAdapter : RecyclerView.Adapter<PagesAdapter.VH>() {
-        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val icon: ImageView = v.findViewById(R.id.pageIcon)
-            val title: TextView = v.findViewById(R.id.pageTitle)
-            val text: TextView = v.findViewById(R.id.pageText)
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun Guide() {
+        val rx = LocalRx.current
+        val pager = rememberPagerState { pages.size }
+        val scope = rememberCoroutineScope()
+        val pos = pager.currentPage
+        val last = pos == pages.lastIndex
+
+        BackHandler {
+            if (pos > 0) scope.launch { pager.animateScrollToPage(pos - 1) } else finishGuide()
         }
 
-        override fun getItemCount() = pages.size
+        Column(Modifier.fillMaxSize().background(rx.bg).systemBarsPadding()) {
+            // top bar: logo, name, Skip
+            Row(
+                Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(rxDrawable(R.drawable.ic_logo, 28), null, Modifier.padding(start = 8.dp).size(28.dp))
+                Text(
+                    "RAINAX TUBE", Modifier.weight(1f).padding(start = 8.dp),
+                    color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display
+                )
+                TextButton(onClick = { finishGuide() }, modifier = Modifier.alpha(if (last) 0f else 1f), enabled = !last) {
+                    Text("Skip", color = rx.accentText, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)
+                }
+            }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_welcome_page, parent, false))
+            HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { i ->
+                // swiping: the page going away shrinks and fades a little, the picture moves slower than the text
+                val off = ((pager.currentPage - i) + pager.currentPageOffsetFraction).coerceIn(-1f, 1f)
+                val a = kotlin.math.abs(off)
+                PageView(
+                    pages[i],
+                    Modifier.fillMaxSize().graphicsLayer {
+                        alpha = 1f - a * 0.6f
+                        scaleX = 1f - a * 0.08f
+                        scaleY = 1f - a * 0.08f
+                    },
+                    iconShift = off
+                )
+            }
 
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            val p = pages[position]
-            holder.icon.setImageResource(p.icon)
-            holder.icon.imageTintList = if (p.tint) ColorStateList.valueOf(Ui.accent(this@WelcomeActivity)) else null
-            holder.title.text = p.title
-            holder.text.text = p.text
+            // dots: the current one is a longer accent bar
+            Row(
+                Modifier.align(Alignment.CenterHorizontally).padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                pages.indices.forEach { i ->
+                    val on = i == pos
+                    val w = animateDpAsState(if (on) 22.dp else 8.dp, label = "dot").value
+                    val al = animateFloatAsState(if (on) 1f else 0.35f, label = "dotAlpha").value
+                    Box(
+                        Modifier.padding(horizontal = 4.dp).width(w).height(8.dp).alpha(al)
+                            .background(if (on) rx.accent else rx.text2, RoundedCornerShape(2.dp))
+                    )
+                }
+            }
+
+            Button(
+                onClick = { if (!last) scope.launch { pager.animateScrollToPage(pos + 1) } else finishGuide() },
+                modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 24.dp).height(56.dp),
+                shape = RoundedCornerShape(2.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+            ) {
+                Text(if (last) "Get started" else "Next", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+            }
+        }
+    }
+
+    @Composable
+    private fun PageView(p: Page, modifier: Modifier, iconShift: Float) {
+        val rx = LocalRx.current
+        Column(
+            modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                Modifier.size(168.dp)
+                    .graphicsLayer { translationX = iconShift * size.width * 0.6f }
+                    .background(rx.accentContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (p.tint) Image(painterResource(p.icon), null, Modifier.size(80.dp), colorFilter = ColorFilter.tint(rx.accent))
+                else Image(rxDrawable(p.icon, 80), null, Modifier.size(80.dp))      // the logo is a layer-list
+            }
+            Spacer(Modifier.height(40.dp))
+            Text(
+                p.title.uppercase(), Modifier.fillMaxWidth(), color = rx.text, fontSize = 24.sp,
+                fontFamily = RxFonts.display, textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(
+                p.text, Modifier.fillMaxWidth(), color = rx.text2, fontSize = 14.sp, lineHeight = 21.sp,
+                fontFamily = RxFonts.body, textAlign = TextAlign.Center
+            )
         }
     }
 }

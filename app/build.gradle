@@ -7,7 +7,7 @@ plugins {
 // so the app always knows exactly which release it is and never asks to update to itself.
 def tagVersion = (System.getenv("GITHUB_REF_NAME") ?: "").replaceFirst(/^v/, "")
 def isTag = tagVersion ==~ /\d+\.\d+(\.\d+)?/
-def rxVersionName = isTag ? tagVersion : "15.7"
+def rxVersionName = isTag ? tagVersion : "16.0"
 def rxParts = (rxVersionName.tokenize('.').collect { it.toInteger() } + [0, 0, 0]).take(3)
 def rxVersionCode = rxParts[0] * 10000 + rxParts[1] * 100 + rxParts[2]
 
@@ -90,7 +90,10 @@ android {
     buildFeatures {
         viewBinding true
         buildConfig true
+        compose true          // new screens are built with Jetpack Compose (moved over one screen at a time)
     }
+    // the Compose compiler that matches Kotlin 1.9.24
+    composeOptions { kotlinCompilerExtensionVersion '1.5.14' }
 
     packagingOptions {
         resources {
@@ -125,6 +128,12 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.6'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6'
+    // Jetpack Compose (one version set for all its parts; 1.7 works with lifecycle 2.8)
+    implementation platform('androidx.compose:compose-bom:2024.09.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.2'
     // RAINAX's own extractor (the same one and version NewPipe uses). Downloads use NativeDownloader. No yt-dlp.
     implementation 'com.github.TeamNewPipe:NewPipeExtractor:13a655fe53e0c3065f88725fc1fb594c3ede0169'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.0.4'
