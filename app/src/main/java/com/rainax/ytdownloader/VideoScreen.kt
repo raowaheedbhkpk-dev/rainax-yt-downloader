@@ -1366,52 +1366,31 @@ class VideoScreen(
      * short screen, scrolls, and keeps the video full screen (no status or navigation bar popping up).
      */
     private fun optionsSheet(title: String, opts: List<Opt>) {
-        val sb = com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding.inflate(act.layoutInflater)
-        sb.optTitle.text = title
-        var close: () -> Unit = {}
-        opts.forEach { o ->
-            val row = com.rainax.ytdownloader.databinding.ItemOptionBinding.inflate(act.layoutInflater, sb.optList, false)
-            row.optText.text = o.text
-            row.optValue.text = o.value.orEmpty()
-            row.optValue.isVisible = o.value != null
-            row.optCheck.isVisible = o.checked
-            if (o.icon != 0) {
-                row.optIcon.setImageResource(o.icon)
-                row.optIcon.isVisible = true
-            }
-            row.root.setOnClickListener {
-                close()
-                o.action()
-            }
-            sb.optList.addView(row.root)
-        }
+        val rows = opts.map { RxOption(it.text, it.icon, it.value, it.checked, it.action) }
         val sideways = fullscreen ||
             act.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         if (sideways) {
-            close = sidePanel(sb)
+            var close: () -> Unit = {}
+            val view = androidx.compose.ui.platform.ComposeView(act)
+            view.setContent { RxTheme { OptionList(title, rows, fill = true) { o -> close(); o.action() } } }
+            close = sidePanel(view)
             return
         }
-        val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
-        dialog.behavior.skipCollapsed = true
-        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-        close = { dialog.dismiss() }
-        dialog.show()
+        RxOptions.sheet(act, title, rows, expanded = true)
     }
 
-    /** Shows [sb] as a panel on the right over the full-screen video. Returns what closes it. */
-    private fun sidePanel(sb: com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding): () -> Unit {
+    /** Shows [panel] on the right over the full-screen video. Returns what closes it. */
+    private fun sidePanel(panel: View): () -> Unit {
         val dm = act.resources.displayMetrics
         val d = dm.density
         val width = minOf((380 * d).toInt(), (dm.widthPixels * 0.5f).toInt()).coerceAtLeast((280 * d).toInt())
-        val dialog = android.app.Dialog(act)
+        // a ComponentDialog, so the Compose panel inside it has its lifecycle
+        val dialog = androidx.activity.ComponentDialog(act)
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
         // the panel fills the screen's height; its list scrolls inside it
-        sb.root.layoutParams = ViewGroup.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT)
-        (sb.optList.parent as? View)?.layoutParams =
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-        sb.root.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(sb.root, R.attr.rxSurface))
-        dialog.setContentView(sb.root)
+        panel.layoutParams = ViewGroup.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT)
+        panel.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(act, R.attr.rxSurface, android.graphics.Color.BLACK))
+        dialog.setContentView(panel)
         dialog.setCanceledOnTouchOutside(true)
         val w = dialog.window ?: return { dialog.dismiss() }
         w.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
@@ -1422,7 +1401,7 @@ class VideoScreen(
             layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
         // a notch or rounded corner on the right: keep the rows clear of it
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(sb.root) { v, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(panel) { v, insets ->
             val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.systemBars())
             v.setPadding(0, cut.top + (8 * d).toInt(), cut.right, cut.bottom + (16 * d).toInt())
             insets
@@ -1437,8 +1416,8 @@ class VideoScreen(
         w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         // slides in from the right edge
         if (android.animation.ValueAnimator.areAnimatorsEnabled()) {
-            sb.root.translationX = width.toFloat()
-            sb.root.animate().translationX(0f).setDuration(220)
+            panel.translationX = width.toFloat()
+            panel.animate().translationX(0f).setDuration(220)
                 .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
         }
         return { dialog.dismiss() }

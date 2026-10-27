@@ -1,15 +1,10 @@
 package com.rainax.ytdownloader
 
 import android.content.Intent
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
+import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.rainax.ytdownloader.databinding.ItemOptionBinding
-import com.rainax.ytdownloader.databinding.ItemSavePlaylistBinding
-import com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding
-import com.rainax.ytdownloader.databinding.SheetSavePlaylistBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,34 +27,20 @@ object VideoMenu {
         onHidden: ((VideoItem, Boolean) -> Unit)? = null
     ) {
         val id = videoId(item.url)
-        val rows = mutableListOf<Triple<Int, String, () -> Unit>>()
-        rows += Triple(R.drawable.ic_download, "Download") { download(item) }
+        val rows = mutableListOf<RxOption>()
+        rows += RxOption("Download", R.drawable.ic_download) { download(item) }
         if (id != null && !item.isPlaylist) {
-            rows += Triple(R.drawable.ic_watch_later, "Save to Watch later") { saveWatchLater(act, id, signIn) }
-            rows += Triple(R.drawable.ic_playlist_add, "Save to playlist") { saveSheet(act, id, signIn) }
+            rows += RxOption("Save to Watch later", R.drawable.ic_watch_later) { saveWatchLater(act, id, signIn) }
+            rows += RxOption("Save to playlist", R.drawable.ic_playlist_add) { saveSheet(act, id, signIn) }
         }
-        rows += Triple(R.drawable.ic_share, "Share") { share(act, item) }
+        rows += RxOption("Share", R.drawable.ic_share) { share(act, item) }
         if (onHidden != null && id != null) {
-            rows += Triple(R.drawable.ic_not_interested, "Not interested") { notInterested(act, item, false, onHidden) }
+            rows += RxOption("Not interested", R.drawable.ic_not_interested) { notInterested(act, item, false, onHidden) }
             if (item.uploader.isNotBlank()) {
-                rows += Triple(R.drawable.ic_remove, "Don't recommend channel") { notInterested(act, item, true, onHidden) }
+                rows += RxOption("Don't recommend channel", R.drawable.ic_remove) { notInterested(act, item, true, onHidden) }
             }
         }
-        val sb = SheetPlayerOptionsBinding.inflate(act.layoutInflater)
-        val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
-        sb.optTitle.text = item.title.ifBlank { "Video" }
-        sb.optTitle.maxLines = 2
-        rows.forEach { (icon, text, action) ->
-            val row = ItemOptionBinding.inflate(act.layoutInflater, sb.optList, false)
-            row.optText.text = text
-            row.optValue.isVisible = false
-            row.optIcon.setImageResource(icon)
-            row.optIcon.isVisible = true
-            row.root.setOnClickListener { dialog.dismiss(); action() }
-            sb.optList.addView(row.root)
-        }
-        dialog.show()
+        RxOptions.sheet(act, item.title.ifBlank { "Video" }, rows)
     }
 
     private fun share(act: AppCompatActivity, item: VideoItem) {
@@ -91,45 +72,31 @@ object VideoMenu {
     /** "Save video to…": your YouTube playlists with tick boxes (changes save at once), and New playlist. */
     fun saveSheet(act: AppCompatActivity, videoId: String, signIn: () -> Unit) {
         if (!YtAccount.isSignedIn(act)) { Notify.show(act, "Sign in to save videos", action = "Sign in") { signIn() }; return }
-        val sb = SheetSavePlaylistBinding.inflate(act.layoutInflater)
+        val ui = SavePlaylistUi()
         val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
-        fun privacyIcon(p: String) = when {
-            p.contains("PUBLIC", true) -> R.drawable.ic_lock_open
-            p.contains("UNLISTED", true) -> R.drawable.ic_link
-            else -> R.drawable.ic_lock
-        }
-        fun render(list: List<YtAccount.PlaylistOption>) {
-            sb.spList.removeAllViews()
-            sb.spEmpty.isVisible = list.isEmpty()
-            sb.spEmpty.text = "No playlists yet. Make one below."
-            list.forEach { o ->
-                val row = ItemSavePlaylistBinding.inflate(act.layoutInflater, sb.spList, false)
-                row.spTitle.text = o.title
-                row.spCheck.isChecked = o.has
-                row.spPrivacy.setImageResource(privacyIcon(o.privacy))
-                row.root.setOnClickListener {
-                    val want = !o.has
-                    o.has = want
-                    row.spCheck.isChecked = want
-                    act.lifecycleScope.launch {
-                        val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.setInPlaylist(o.id, videoId, want) }.isSuccess }
-                        if (!ok) { o.has = !want; row.spCheck.isChecked = !want }
-                        val where = if (o.id == "WL") "Watch later" else o.title
-                        say(act, if (!ok) "Couldn't change $where. Try again" else if (want) "Saved to $where" else "Removed from $where")
-                    }
-                }
-                sb.spList.addView(row.root)
+        val view = ComposeView(act)
+        fun toggle(o: YtAccount.PlaylistOption) {
+            val want = !o.has
+            o.has = want
+            ui.tick++
+            act.lifecycleScope.launch {
+                val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.setInPlaylist(o.id, videoId, want) }.isSuccess }
+                if (!ok) { o.has = !want; ui.tick++ }
+                val where = if (o.id == "WL") "Watch later" else o.title
+                say(act, if (!ok) "Couldn't change $where. Try again" else if (want) "Saved to $where" else "Removed from $where")
             }
         }
-        sb.spNew.setOnClickListener { newPlaylist(act, videoId) { dialog.dismiss() } }
+        view.setContent { RxTheme { SavePlaylistSheet(ui, { toggle(it) }, { newPlaylist(act, videoId) { dialog.dismiss() } }) } }
+        dialog.setContentView(view)
         dialog.show()
         act.lifecycleScope.launch {
             val r = withContext(Dispatchers.IO) { runCatching { YtAccount.saveOptions(videoId) } }
-            sb.spLoading.isVisible = false
-            r.onSuccess { render(it) }.onFailure {
-                sb.spEmpty.isVisible = true
-                sb.spEmpty.text = "Couldn't load your playlists. Check your internet and try again."
+            r.onSuccess {
+                ui.list = it
+                if (it.isEmpty()) ui.message = "No playlists yet. Make one below."
+            }.onFailure {
+                ui.list = emptyList()
+                ui.message = "Couldn't load your playlists. Check your internet and try again."
             }
         }
     }

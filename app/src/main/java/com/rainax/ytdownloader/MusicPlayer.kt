@@ -10,17 +10,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.GestureDetector
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
-import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.SeekBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
@@ -34,12 +29,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.rainax.ytdownloader.databinding.LayoutMusicMiniBinding
 import com.rainax.ytdownloader.databinding.PageMusicPlayerBinding
-import com.rainax.ytdownloader.databinding.SheetMusicQueueBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -957,29 +949,7 @@ class MusicPlayer(
     )
 
     private fun options(title: String, opts: List<Opt>) {
-        val sb = com.rainax.ytdownloader.databinding.SheetPlayerOptionsBinding.inflate(act.layoutInflater)
-        val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
-        sb.optTitle.text = title
-        sb.optTitle.isVisible = title.isNotBlank()
-        sb.optTitle.maxLines = 2
-        opts.forEach { o ->
-            val row = com.rainax.ytdownloader.databinding.ItemOptionBinding.inflate(act.layoutInflater, sb.optList, false)
-            row.optText.text = o.text
-            row.optValue.text = o.value.orEmpty()
-            row.optValue.isVisible = o.value != null
-            row.optCheck.isVisible = o.checked
-            if (o.icon != 0) {
-                row.optIcon.setImageResource(o.icon)
-                row.optIcon.isVisible = true
-            }
-            row.root.setOnClickListener {
-                dialog.dismiss()
-                o.action()
-            }
-            sb.optList.addView(row.root)
-        }
-        dialog.show()
+        RxOptions.sheet(act, title, opts.map { RxOption(it.text, it.icon, it.value, it.checked, it.action) })
     }
 
     private fun share(s: VideoItem) {
@@ -1010,95 +980,45 @@ class MusicPlayer(
     }
 
     private inner class QueueSheet {
-        private val sb = SheetMusicQueueBinding.inflate(act.layoutInflater)
+        private val ui = QueueUi()
         private val dialog = BottomSheetDialog(act)
-        private val rows = QueueRows()
         val isShowing get() = dialog.isShowing
 
         fun show() {
-            dialog.setContentView(sb.root)
-            sb.qList.layoutManager = LinearLayoutManager(act)
-            sb.qList.adapter = rows
-            sb.qShuffle.setOnClickListener { player()?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
-            sb.qRepeat.setOnClickListener { cycleRepeat() }
+            val view = androidx.compose.ui.platform.ComposeView(act)
+            val actions = QueueActions(
+                shuffle = { player()?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } },
+                repeat = { cycleRepeat() },
+                play = { index ->
+                    player()?.let { p -> if (index < p.mediaItemCount) { p.seekTo(index, 0); p.play() } }
+                },
+                remove = { index ->
+                    player()?.let { p -> if (index < p.mediaItemCount && index != p.currentMediaItemIndex) p.removeMediaItem(index) }
+                }
+            )
+            view.setContent { RxTheme { QueueScreen(ui, actions) } }
+            dialog.setContentView(view)
             dialog.setOnDismissListener { if (queueSheet === this) queueSheet = null }
             dialog.behavior.peekHeight = (act.resources.displayMetrics.heightPixels * 0.6).toInt()
             refresh()
             dialog.show()
             val p = player() ?: return
-            val at = rows.order.indexOf(p.currentMediaItemIndex)
-            if (at > 2) sb.qList.scrollToPosition(at - 1)
+            val at = ui.songs.indexOfFirst { it.index == p.currentMediaItemIndex }
+            if (at > 2) ui.jump = at - 1
         }
 
         fun dismiss() = dialog.dismiss()
 
         fun refresh() {
             val p = player() ?: return
-            sb.qFrom.text = queueName.ifBlank { "Your music" }
-            val text = ContextCompat.getColor(act, R.color.rx_text)
-            val on = Ui.accent(act)
-            sb.qShuffle.imageTintList = android.content.res.ColorStateList.valueOf(if (p.shuffleModeEnabled) on else text)
-            sb.qRepeat.imageTintList = android.content.res.ColorStateList.valueOf(if (p.repeatMode != Player.REPEAT_MODE_OFF) on else text)
-            sb.qRepeat.setImageResource(if (p.repeatMode == Player.REPEAT_MODE_ONE) R.drawable.ic_repeat_one else R.drawable.ic_repeat)
-            rows.submit(queueOrder(p), p.currentMediaItemIndex)
-        }
-    }
-
-    private inner class QueueRows : RecyclerView.Adapter<QueueRow>() {
-        var order: List<Int> = emptyList()
-            private set
-        private var now = -1
-
-        fun submit(list: List<Int>, current: Int) {
-            order = list
-            now = current
-            notifyDataSetChanged()
-        }
-
-        override fun getItemCount() = order.size
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            QueueRow(LayoutInflater.from(parent.context).inflate(R.layout.item_song_row, parent, false))
-
-        override fun onBindViewHolder(holder: QueueRow, position: Int) {
-            val p = player() ?: return
-            val index = order[position]
-            if (index >= p.mediaItemCount) return
-            holder.bind(p.getMediaItemAt(index), index, index == now)
-        }
-    }
-
-    private inner class QueueRow(v: View) : RecyclerView.ViewHolder(v) {
-        private val art: ImageView = v.findViewById(R.id.songArt)
-        private val nowIcon: ImageView = v.findViewById(R.id.songNow)
-        private val title: TextView = v.findViewById(R.id.songTitle)
-        private val sub: TextView = v.findViewById(R.id.songSub)
-        private val remove: ImageButton = v.findViewById(R.id.songMore)
-
-        init {
-            v.findViewById<View>(R.id.songArtBox).clipToOutline = true
-            remove.setImageResource(R.drawable.ic_close)
-            remove.contentDescription = "Remove from queue"
-        }
-
-        fun bind(item: MediaItem, index: Int, playing: Boolean) {
-            val s = songOf(item)
-            Img.loadSquare(art, MusicArt.small(item.mediaId, s?.thumb), widthPx = 200)
-            title.text = s?.title.orEmpty()
-            title.setTextColor(if (playing) Ui.accentText(act) else androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
-            sub.text = s?.let { MusicHome.songLine(it) }.orEmpty()
-            nowIcon.isVisible = playing
-            remove.isVisible = !playing
-            itemView.setOnClickListener {
-                val p = player() ?: return@setOnClickListener
-                if (index < p.mediaItemCount) {
-                    p.seekTo(index, 0)
-                    p.play()
-                }
-            }
-            remove.setOnClickListener {
-                val p = player() ?: return@setOnClickListener
-                if (index < p.mediaItemCount && index != p.currentMediaItemIndex) p.removeMediaItem(index)
+            ui.from = queueName.ifBlank { "Your music" }
+            ui.shuffle = p.shuffleModeEnabled
+            ui.repeat = p.repeatMode
+            ui.now = p.currentMediaItemIndex
+            ui.songs = queueOrder(p).filter { it < p.mediaItemCount }.map { index ->
+                val item = p.getMediaItemAt(index)
+                val s = songOf(item)
+                QueueSong(index, s?.title.orEmpty(), s?.let { MusicHome.songLine(it) }.orEmpty(), MusicArt.small(item.mediaId, s?.thumb))
             }
         }
     }
@@ -1112,14 +1032,14 @@ class MusicPlayer(
         val song = current() ?: currentUrl()?.let { VideoItem(it, pg.mpTitle.text.toString(), pg.mpArtist.text.toString(), null, 0, -1, null) }
         val id = song?.let { youtubeId(it.url) }
         if (song == null || id == null) { toast("Lyrics are only for songs from YouTube"); return }
-        val sb = com.rainax.ytdownloader.databinding.SheetLyricsBinding.inflate(act.layoutInflater)
+        val ui = LyricsUi()
+        ui.title = song.title
+        ui.artist = song.uploader
         val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
+        val view = androidx.compose.ui.platform.ComposeView(act)
+        view.setContent { RxTheme { LyricsScreen(ui) } }
+        dialog.setContentView(view)
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-        sb.lyTitle.text = song.title
-        sb.lyArtist.text = song.uploader
-        sb.lyArtist.isVisible = song.uploader.isNotBlank()
-        sb.lyLoading.isVisible = true
         dialog.show()
         val job = act.lifecycleScope.launch {
             val res: Result<YtLyrics.Lyrics?> = try {
@@ -1129,22 +1049,15 @@ class MusicPlayer(
             } catch (e: Exception) {
                 Result.failure(e)
             }
-            sb.lyLoading.isVisible = false
+            ui.loading = false
             val ly = res.getOrNull()
             when {
                 ly != null -> {
-                    sb.lyText.text = ly.text
-                    sb.lySource.text = ly.source.orEmpty()
-                    sb.lySource.isVisible = !ly.source.isNullOrBlank()
+                    ui.text = ly.text
+                    ui.source = ly.source
                 }
-                res.isFailure -> {
-                    sb.lyEmpty.isVisible = true
-                    sb.lyEmpty.text = "Couldn't load the lyrics. Check your internet and try again"
-                }
-                else -> {
-                    sb.lyEmpty.isVisible = true
-                    sb.lyEmpty.text = "YouTube Music has no lyrics for this song"
-                }
+                res.isFailure -> ui.empty = "Couldn't load the lyrics. Check your internet and try again"
+                else -> ui.empty = "YouTube Music has no lyrics for this song"
             }
         }
         dialog.setOnDismissListener { job.cancel() }

@@ -1,3 +1,6 @@
+New: the Music player's Up next queue and Lyrics sheets rebuilt with Jetpack Compose
+New: the video ⋮ menu, the player gear menus (also the side panel in full screen), the music player menus and "Save video to…" rebuilt with Jetpack Compose
+New: the comments sheet (Top/Newest, likes, replies, writing a comment and quick emoji) rebuilt with Jetpack Compose
 New: the video page (title, Like/Dislike/Save/Share buttons, chapters strip, comments preview, description and Up next) rebuilt with Jetpack Compose
 New: the Music tab (moods, Quick picks, Listen again, song rows, playlists) rebuilt with Jetpack Compose, so all of Home is Compose now; Autoplay in feed works on Subscriptions again
 New: Home's top bar, search box, chips and search suggestions rebuilt with Jetpack Compose (Home is now fully Compose, except the Music tab's rows)

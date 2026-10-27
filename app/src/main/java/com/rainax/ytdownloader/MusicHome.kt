@@ -114,7 +114,7 @@ class MusicHome(
 
 /** A song cover: square, without the black bars of YouTube pictures (RAINAX's loader). */
 @Composable
-private fun SquareArt(url: String?, modifier: Modifier, widthPx: Int, fallbacks: List<String> = emptyList()) {
+internal fun SquareArt(url: String?, modifier: Modifier, widthPx: Int, fallbacks: List<String> = emptyList()) {
     AndroidView(
         factory = { c -> ImageView(c).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
         update = { v -> Img.loadSquare(v, url, widthPx = widthPx, fallbacks = fallbacks) },
