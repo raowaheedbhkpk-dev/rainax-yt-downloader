@@ -228,13 +228,12 @@
         </FrameLayout>
     </com.rainax.ytdownloader.RatioFrameLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
+    <!-- Title, buttons, chapters, comments and Up next: Compose (VideoPage.kt) -->
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/videoList"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingBottom="@dimen/rx_space_16" />
+        android:layout_weight="1" />
 
     <!-- Videos picked with + : how many, Clear, Download all (same picks as on Home) -->
     <LinearLayout

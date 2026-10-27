@@ -1,3 +1,5 @@
+New: the video page (title, Like/Dislike/Save/Share buttons, chapters strip, comments preview, description and Up next) rebuilt with Jetpack Compose
+New: the Music tab (moods, Quick picks, Listen again, song rows, playlists) rebuilt with Jetpack Compose, so all of Home is Compose now; Autoplay in feed works on Subscriptions again
 New: Home's top bar, search box, chips and search suggestions rebuilt with Jetpack Compose (Home is now fully Compose, except the Music tab's rows)
 New: Home's video lists (the magazine, Top 5, Editor's picks, chapters, the cinema, search results and channels) rebuilt with Jetpack Compose; Autoplay in feed works with them too
 New: Subscriptions and Notifications rebuilt with Jetpack Compose (pull down to refresh on both)

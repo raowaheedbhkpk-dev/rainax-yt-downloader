@@ -22,7 +22,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.rainax.ytdownloader.databinding.ItemVideoHeaderBinding
 import com.rainax.ytdownloader.databinding.PageVideoBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -45,8 +44,9 @@ class VideoScreen(
     private val signIn: () -> Unit,
     private val onChanged: () -> Unit
 ) {
-    private val header = ItemVideoHeaderBinding.inflate(act.layoutInflater)
-    private val related = VideoAdapter(true, { open(it.url, it.title, it.uploader, thumb = it.thumb) }, { download(it.url, it.title, false) })
+    /** What the page under the player shows (Compose, VideoPage.kt). */
+    private val vp = VideoPageUi()
+    private val related = FeedModel(true, { open(it.url, it.title, it.uploader, thumb = it.thumb) }, { download(it.url, it.title, false) })
 
     /** The video shown (null when the page is closed). */
     var url: String? = null
@@ -61,8 +61,6 @@ class VideoScreen(
     val isOpen get() = url != null
 
     fun setup() {
-        vb.videoList.layoutManager = LinearLayoutManager(act)
-        related.header = header.root
         // Up next: ⋮ menu like YouTube (and Not interested leaves the list)
         related.filterHidden = true
         related.onMore = { item, _ ->
@@ -70,38 +68,29 @@ class VideoScreen(
                 related.removeWhere { v -> if (channel) v.uploader.equals(hidden.uploader, true) else v.url == hidden.url }
             }
         }
-        vb.videoList.adapter = related
-        vb.videoList.addOnItemTouchListener(cinemaTouch)
-        // reading the description or comments: the lights stay on; back at the top they may go down again
-        vb.videoList.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(rv: androidx.recyclerview.widget.RecyclerView, state: Int) {
-                if (state == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) wakeCinema()
-            }
-        })
+        val actions = VideoPageActions(
+            channel = { details?.let { d -> d.channelUrl?.let { openChannel(it, d.uploader, d.avatar) } } },
+            subscribe = { toggleSubscribe() },
+            download = { url?.let { download(it, currentTitle(), false) } },
+            chapters = { showChapters() },
+            like = { if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE") },
+            dislike = { if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE") },
+            save = { videoId(url)?.let { VideoMenu.saveSheet(act, it, signIn) } },
+            saveHold = { saveWatchLater() },                     // hold: straight to Watch later
+            share = { share() },
+            chapter = { i -> jumpToChapter(i) },
+            comments = { showComments() },
+            description = { showDescription() },
+            error = { if (!Net.online(act)) Net.openSettings(act) },
+            wake = { wakeCinema() }
+        )
+        vb.videoList.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        vb.videoList.setContent { RxTheme { VideoPageScreen(vp, related, actions) } }
         vb.videoClose.setOnClickListener { minimize() }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
-        header.vDownload.setOnClickListener { url?.let { download(it, currentTitle(), false) } }
-        header.vShare.setOnClickListener { share() }
         vb.videoSettings.setOnClickListener { showPlayerMenu() }
         // the top buttons (close, quality) appear and hide together with the player controls
         vb.playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v -> vb.playerTop.visibility = v })
-        header.vDesc.setOnClickListener { showDescription() }
-        header.vMeta.setOnClickListener { showDescription() }
-        header.vComments.setOnClickListener { showComments() }
-        header.vChannelRow.setOnClickListener {
-            val d = details ?: return@setOnClickListener
-            d.channelUrl?.let { openChannel(it, d.uploader, d.avatar) }
-        }
-        header.vSubscribe.setOnClickListener { toggleSubscribe() }
-        header.vLike.setOnClickListener {
-            if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE")
-        }
-        header.vDislike.setOnClickListener {
-            if (!YtAccount.isSignedIn(act)) signIn() else rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE")
-        }
-        header.vChapters.setOnClickListener { showChapters() }
-        header.vSave.setOnClickListener { videoId(url)?.let { VideoMenu.saveSheet(act, it, signIn) } }
-        header.vSave.setOnLongClickListener { saveWatchLater(); true }      // hold: straight to Watch later
         vb.vNextBar.setOnClickListener { showUpNext() }
         // + on Up next videos: pick several and download them together (the same picks as on Home)
         related.onPick = { Picks.toggle(it); if (Picks.has(it.url) && Picks.size <= Picks.SAMPLE) vm.warm(it.url) }
@@ -129,7 +118,7 @@ class VideoScreen(
         vb.vPickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
         vb.vPickDownload.text = if (n > 1) "Download $n" else "Download"
         if (n > 0) vb.vNextBar.isVisible = false else showNextBar(details)
-        related.notifyDataSetChanged()
+        related.redraw()
     }
 
     // ---------- Next / Mix bar and the Up next list ----------
@@ -378,18 +367,17 @@ class VideoScreen(
         val signedIn = YtAccount.isSignedIn(act)
         subscribed = null
         likeStatus = null
-        header.vSubscribe.isVisible = d.channelId != null
-        Ui.subscribeButton(header.vSubscribe, false)
+        vp.subscribeShown = d.channelId != null
+        vp.subscribed = false
         likeCount = d.likes
         dislikeCount = -1
         showCounts()
         // like and dislike counts for everyone (Return YouTube Dislike); liking needs the YouTube account
-        listOf(header.vLike, header.vDislike).forEach {
-            it.isVisible = true
-            Ui.toggleButton(it, false)
-        }
-        header.vSave.isVisible = signedIn
-        Ui.toggleButton(header.vSave, false)
+        vp.rateShown = true
+        vp.liked = false
+        vp.disliked = false
+        vp.saveShown = signedIn
+        vp.saved = false
         loadDislikes(d.url)
         if (!signedIn) return
         val id = videoId(d.url) ?: return
@@ -399,9 +387,9 @@ class VideoScreen(
             if (videoId(url) != id) return@launch
             subscribed = st.subscribed
             likeStatus = st.likeStatus
-            Ui.subscribeButton(header.vSubscribe, st.subscribed == true)
-            Ui.toggleButton(header.vLike, st.likeStatus == "LIKE")
-            Ui.toggleButton(header.vDislike, st.likeStatus == "DISLIKE")
+            vp.subscribed = st.subscribed == true
+            vp.liked = st.likeStatus == "LIKE"
+            vp.disliked = st.likeStatus == "DISLIKE"
         }
     }
 
@@ -410,8 +398,8 @@ class VideoScreen(
     private var dislikeCount = -1L
 
     private fun showCounts() {
-        header.vLike.text = if (likeCount > 0) YtCatalog.count(likeCount) else "Like"
-        header.vDislike.text = if (dislikeCount > 0) YtCatalog.count(dislikeCount) else "Dislike"
+        vp.likeText = if (likeCount > 0) YtCatalog.count(likeCount) else "Like"
+        vp.dislikeText = if (dislikeCount > 0) YtCatalog.count(dislikeCount) else "Dislike"
     }
 
     /** Your like/dislike changes the shown counts right away (from [before] to [now]). */
@@ -444,12 +432,12 @@ class VideoScreen(
         val channelId = details?.channelId ?: return
         val now = subscribed == true
         subscribed = !now
-        Ui.subscribeButton(header.vSubscribe, !now)
+        vp.subscribed = !now
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.subscribe(channelId, !now) }.isSuccess }
             if (!ok) {
                 subscribed = now
-                Ui.subscribeButton(header.vSubscribe, now)
+                vp.subscribed = now
                 act.toast("Couldn't change the subscription. Try again")
             } else {
                 vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
@@ -461,16 +449,16 @@ class VideoScreen(
         val id = videoId(url) ?: return
         val before = likeStatus
         likeStatus = status
-        Ui.toggleButton(header.vLike, status == "LIKE")
-        Ui.toggleButton(header.vDislike, status == "DISLIKE")
+        vp.liked = status == "LIKE"
+        vp.disliked = status == "DISLIKE"
         moveCounts(before, status)
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.rate(id, status) }.isSuccess }
             if (!ok) {
                 moveCounts(status, before)
                 likeStatus = before
-                Ui.toggleButton(header.vLike, before == "LIKE")
-                Ui.toggleButton(header.vDislike, before == "DISLIKE")
+                vp.liked = before == "LIKE"
+                vp.disliked = before == "DISLIKE"
                 act.toast("Couldn't save that. Try again")
             }
         }
@@ -478,11 +466,11 @@ class VideoScreen(
 
     private fun saveWatchLater() {
         val id = videoId(url) ?: return
-        Ui.toggleButton(header.vSave, true)
+        vp.saved = true
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.watchLater(id) }.isSuccess }
             act.toast(if (ok) "Saved to Watch later" else "Couldn't save. Try again")
-            if (!ok) Ui.toggleButton(header.vSave, false)
+            if (!ok) vp.saved = false
         }
     }
 
@@ -529,7 +517,7 @@ class VideoScreen(
         vb.playerLoading.isVisible = on
     }
 
-    private fun currentTitle(): String? = details?.title ?: header.vTitle.text?.toString()?.takeIf { it.isNotBlank() }
+    private fun currentTitle(): String? = details?.title ?: vp.title.takeIf { it.isNotBlank() }
 
     /**
      * Shows a video and starts playing it. [resume]: the player already plays this video (back in the app,
@@ -546,26 +534,30 @@ class VideoScreen(
         commentsOff = false
         onChanged()
 
-        header.vTitle.text = title.orEmpty()
-        header.vMeta.text = ""
-        header.vUploader.text = uploader.orEmpty()
-        header.vSubs.text = ""
-        Img.load(header.vAvatar, null)
-        header.vLoading.isVisible = true
-        header.vError.isVisible = false
-        header.vComments.isVisible = false
-        header.vDesc.isVisible = false
-        header.vDesc.maxLines = 3
-        header.vUpNext.isVisible = false
+        vp.title = title.orEmpty()
+        vp.meta = ""
+        vp.uploader = uploader.orEmpty()
+        vp.subs = ""
+        vp.avatar = null
+        vp.loading = true
+        vp.error = null
+        vp.commentsShown = false
+        vp.desc = null
+        vp.upNextShown = false
+        vp.chapters = emptyList()
+        vp.markedChapter = -1
         vb.vNextBar.isVisible = false
         if (locked && !resume) setLocked(false)          // the next song/video keeps the lock
-        listOf(header.vSubscribe, header.vLike, header.vDislike, header.vSave, header.vChapters).forEach { it.isVisible = false }
+        vp.subscribeShown = false
+        vp.rateShown = false
+        vp.saveShown = false
+        vp.chaptersShown = false
         vb.playerView.setExtraAdGroupMarkers(null, null)
         if (!resume && player()?.repeatMode == Player.REPEAT_MODE_ONE) player()?.repeatMode = Player.REPEAT_MODE_OFF
         vb.root.postDelayed(ambientTick, 1500)
         lightsOn()
         related.submit(emptyList())
-        vb.videoList.scrollToPosition(0)
+        vp.scrollToTop()
         vm.prefetch(clean)                    // the download sheet then has the sizes at once
 
         val p = player()
@@ -593,7 +585,7 @@ class VideoScreen(
                 throw e
             } catch (e: Exception) {
                 if (this@VideoScreen.url != clean) return@launch
-                header.vLoading.isVisible = false
+                vp.loading = false
                 vb.playerLoading.isVisible = false
                 val text = friendlyError(e.message ?: "Couldn't open this video")
                 showError(if (text == NO_INTERNET) text else text + "\nYou can still try Download.")
@@ -709,9 +701,7 @@ class VideoScreen(
 
     fun showError(text: String) {
         val offline = !Net.online(act)
-        header.vError.text = if (offline) "$NO_INTERNET\nTap here for internet settings." else text
-        header.vError.setOnClickListener { if (!Net.online(act)) Net.openSettings(act) }
-        header.vError.isVisible = true
+        vp.error = if (offline) "$NO_INTERNET\nTap here for internet settings." else text
     }
 
     // ---------- playback ----------
@@ -794,23 +784,21 @@ class VideoScreen(
 
     private fun fill(d: VideoDetails) {
         showAccountActions(d)
-        header.vLoading.isVisible = false
-        header.vTitle.text = d.title
+        vp.loading = false
+        vp.title = d.title
         val meta = mutableListOf<String>()
         if (d.views >= 0) meta += YtCatalog.count(d.views) + if (d.seconds < 0) " watching" else " views"
         d.uploaded?.takeIf { it.isNotBlank() }?.let { meta += it }
         if (d.likes > 0) meta += YtCatalog.count(d.likes) + " likes"
-        header.vMeta.text = meta.joinToString(" • ") + "  ...more"
-        header.vUploader.text = d.uploader
-        header.vSubs.text = if (d.subscribers > 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
-        Img.load(header.vAvatar, d.avatar, circle = true, widthPx = 120)
+        vp.meta = meta.joinToString(" • ") + "  ...more"
+        vp.uploader = d.uploader
+        vp.subs = if (d.subscribers > 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
+        vp.avatar = d.avatar
         val desc = d.description.trim()
-        if (desc.isNotEmpty()) {
-            header.vDesc.text = if (desc.contains('<')) HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT) else desc
-            header.vDesc.isVisible = true
-        }
+        vp.desc = if (desc.isEmpty()) null
+            else if (desc.contains('<')) HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim() else desc
         related.submit(d.related)
-        header.vUpNext.isVisible = d.related.isNotEmpty()
+        vp.upNextShown = d.related.isNotEmpty()
         showNextBar(d)
         vb.playerTitle.text = d.title
         showChapterMarks(d)
@@ -822,7 +810,7 @@ class VideoScreen(
     /** Chapter starts as marks on the seek bar, and the Chapters button. */
     private fun showChapterMarks(d: VideoDetails) {
         val list = d.chapters.filter { it.startMs > 0 }
-        header.vChapters.isVisible = d.chapters.size >= 2
+        vp.chaptersShown = d.chapters.size >= 2
         fillChapterStrip(d)
         if (list.isEmpty()) {
             vb.playerView.setExtraAdGroupMarkers(null, null)
@@ -833,47 +821,32 @@ class VideoScreen(
 
     /** The film strip of chapters under the buttons: a frame per chapter; tap one to jump there. */
     private fun fillChapterStrip(d: VideoDetails) {
-        val box = header.vChapterFrames
-        box.removeAllViews()
         markedChapter = -1
-        header.vChapterStrip.isVisible = d.chapters.size >= 2
-        if (d.chapters.size < 2) return
-        d.chapters.forEachIndexed { i, c ->
-            val frame = act.layoutInflater.inflate(R.layout.item_chapter_frame, box, false)
-            val name = c.title.ifBlank { "Chapter ${i + 1}" }
-            frame.tag = c.startMs
-            frame.contentDescription = "Chapter ${i + 1}: $name"
-            frame.findViewById<android.widget.TextView>(R.id.frameTime).text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
-            frame.findViewById<android.widget.TextView>(R.id.frameName).text = name
-            frame.setOnClickListener {
-                player()?.takeIf { p -> p.currentMediaItem?.mediaId == d.url }?.let { p ->
-                    p.seekTo(c.startMs)
-                    p.play()
-                }
-                markChapterFrame(i)
-            }
-            box.addView(frame)
+        vp.chapters = if (d.chapters.size < 2) emptyList() else d.chapters.mapIndexed { i, c ->
+            Triple(YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }, c.title.ifBlank { "Chapter ${i + 1}" }, c.startMs)
         }
+        if (d.chapters.size < 2) return
         val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: 0L
         markChapterFrame(d.chapters.indexOfLast { it.startMs <= pos }.coerceAtLeast(0))
     }
 
+    /** A chapter frame was tapped: the video jumps there. */
+    private fun jumpToChapter(i: Int) {
+        val d = details ?: return
+        val c = d.chapters.getOrNull(i) ?: return
+        player()?.takeIf { p -> p.currentMediaItem?.mediaId == d.url }?.let { p ->
+            p.seekTo(c.startMs)
+            p.play()
+        }
+        markChapterFrame(i)
+    }
+
     private var markedChapter = -1
 
-    /** Puts the red edge on the chapter frame [index] and, when it changes, slides the strip to it. */
+    /** Puts the red edge on the chapter frame [index] (the strip slides to it). */
     private fun markChapterFrame(index: Int) {
-        val box = header.vChapterFrames
-        for (k in 0 until box.childCount) {
-            box.getChildAt(k).setBackgroundResource(if (k == index) R.drawable.bg_film_frame_on else R.drawable.bg_film_frame)
-        }
-        if (index != markedChapter) {
-            markedChapter = index
-            box.getChildAt(index)?.let { f ->
-                header.vChapterStrip.post {
-                    header.vChapterStrip.smoothScrollTo((f.left - (header.vChapterStrip.width - f.width) / 2).coerceAtLeast(0), 0)
-                }
-            }
-        }
+        markedChapter = index
+        vp.markedChapter = index
     }
 
     /** While playing, the red frame follows the chapter the video is in. */
@@ -882,7 +855,7 @@ class VideoScreen(
             val d = details
             val p = player()
             if (d != null && d.chapters.size >= 2 && p != null && p.currentMediaItem?.mediaId == d.url &&
-                header.vChapterFrames.childCount == d.chapters.size) {
+                vp.chapters.size == d.chapters.size) {
                 val i = d.chapters.indexOfLast { it.startMs <= p.currentPosition }.coerceAtLeast(0)
                 if (i != markedChapter) markChapterFrame(i)
             }
@@ -914,20 +887,20 @@ class VideoScreen(
             if (url != clean) return@launch
             // turned off by YouTube (always for videos made for kids): say so instead of showing nothing
             commentsOff = list.isEmpty() && (page?.disabled == true || YtFallback.served(videoId(clean)))
-            header.vCommentsTitle.text = if (page != null && page.total > 0) "Comments  " + YtCatalog.count(page.total.toLong()) else "Comments"
+            vp.commentsTitle = if (page != null && page.total > 0) "Comments  " + YtCatalog.count(page.total.toLong()) else "Comments"
             if (commentsOff) {
-                Img.load(header.vCommentAvatar, null)
-                header.vCommentAvatar.isVisible = false
-                header.vCommentText.text = "Comments are turned off for this video"
-                header.vComments.isVisible = true
+                vp.commentAvatar = null
+                vp.commentAvatarShown = false
+                vp.commentText = "Comments are turned off for this video"
+                vp.commentsShown = true
                 return@launch
             }
             if (list.isEmpty()) return@launch
             val first = list.first()
-            header.vCommentAvatar.isVisible = true
-            Img.load(header.vCommentAvatar, first.avatar, circle = true, widthPx = 80)
-            header.vCommentText.text = plain(first)
-            header.vComments.isVisible = true
+            vp.commentAvatarShown = true
+            vp.commentAvatar = first.avatar
+            vp.commentText = plain(first).toString()
+            vp.commentsShown = true
         }
     }
 
@@ -1079,7 +1052,7 @@ class VideoScreen(
         p.seekTo(ms.coerceAtLeast(0))
         p.play()
         dialog?.dismiss()
-        vb.videoList.smoothScrollToPosition(0)               // the player in view
+        vp.scrollToTop()               // the player in view
     }
 
     // ---------- quality and speed (like YouTube's gear menu) ----------
@@ -1294,7 +1267,7 @@ class VideoScreen(
     /** After a few quiet seconds of playing (dark theme), everything under the player fades almost to black. */
     private val lightsDown = Runnable {
         if (isOpen && !minimized && AppPrefs.cinemaMode(act) && isNight() && player()?.isPlaying == true &&
-            !vb.videoList.canScrollVertically(-1)) {
+            !vp.canScrollUp()) {
             vb.videoList.animate().alpha(0.06f).setDuration(1400).start()
         }
     }
@@ -1308,13 +1281,6 @@ class VideoScreen(
     private fun lightsOn() {
         vb.root.removeCallbacks(lightsDown)
         if (vb.videoList.alpha < 1f) vb.videoList.animate().alpha(1f).setDuration(300).start()
-    }
-
-    private val cinemaTouch = object : androidx.recyclerview.widget.RecyclerView.SimpleOnItemTouchListener() {
-        override fun onInterceptTouchEvent(rv: androidx.recyclerview.widget.RecyclerView, e: android.view.MotionEvent): Boolean {
-            if (e.actionMasked == android.view.MotionEvent.ACTION_DOWN) wakeCinema()
-            return false
-        }
     }
 
     private fun setCinema(on: Boolean) {

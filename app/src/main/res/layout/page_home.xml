@@ -27,17 +27,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <!-- the Music tab's rows -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/feedList"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clipToPadding="false"
-                    android:paddingTop="0dp"
-                    android:paddingBottom="@dimen/rx_space_16"
-                    android:visibility="gone" />
-
-                <!-- every other Home list: Jetpack Compose (FeedCompose.kt) -->
+                <!-- every Home list and the Music tab: Jetpack Compose (FeedCompose.kt, MusicHome.kt) -->
                 <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/feedCompose"
                     android:layout_width="match_parent"

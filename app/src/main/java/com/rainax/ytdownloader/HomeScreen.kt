@@ -44,7 +44,7 @@ class HomeScreen(
     private var tabs: List<Pair<String, String>> = YtCatalog.TABS
     /** List keys where For you is showing popular videos (more pages come from the popular list). */
     private val popularFallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-    /** The video lists (Compose, FeedCompose.kt); the Music tab still uses the RecyclerView [hm.feedList]. */
+    /** The video lists and the Music tab (Compose, FeedCompose.kt / MusicHome.kt). */
     private val feed = FeedHost(hm.feedCompose)
     /** The top bars, chips, suggestions, error and picks bar (Compose, HomeTop.kt). */
     private val chrome = HomeChrome()
@@ -99,7 +99,6 @@ class HomeScreen(
         playPlaylist = { musicPlayPlaylist(it) },
         downloadPlaylist = { download(it) },
         onMood = {
-            hm.feedList.scrollToPosition(0)
             loadMusic(pulled = false)
         }
     )
@@ -203,15 +202,10 @@ class HomeScreen(
         bigAdapter.magazine = shelfHere            // the first tab reads like a magazine
         if (shelfHere) shelf.refresh()
         if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
-        // Music: the RecyclerView (its own rows); every other list: the Compose feed
-        hm.feedList.isVisible = isMusic
-        hm.feedCompose.isVisible = !isMusic
-        if (isMusic) {
-            if (hm.feedList.adapter !== musicHome) hm.feedList.adapter = musicHome
-            if (hm.feedList.background !== musicGlow) hm.feedList.background = musicGlow
-        } else {
-            feed.show(adapter)
-        }
+        // the Music tab's rows or a video list, with the Music tab's soft glow behind it
+        if (isMusic) feed.showMusic(musicHome) else feed.show(adapter)
+        val bg = if (isMusic) musicGlow else null
+        if (hm.feedCompose.background !== bg) hm.feedCompose.background = bg
         FeedAutoplay.refresh()
     }
     private fun fillSearch(text: String) {
@@ -257,16 +251,12 @@ class HomeScreen(
         updateAccountIcon()
         hm.root.isFocusableInTouchMode = true
         applyColumns()
-        hm.feedList.adapter = musicHome
-        hm.feedList.setHasFixedSize(true)
         hm.feedCompose.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         hm.feedCompose.setContent { RxTheme { FeedScreen(feed) } }
         feed.onNearEnd = { load(reset = false) }
         FeedAutoplay.attach(feed.preview)
         // pull to refresh only when the list showing is at its top
-        hm.feedRefresh.setOnChildScrollUpCallback { _, _ ->
-            if (hm.feedList.isVisible) hm.feedList.canScrollVertically(-1) else feed.canScrollUp()
-        }
+        hm.feedRefresh.setOnChildScrollUpCallback { _, _ -> feed.canScrollUp() }
         chrome.dark = Ui.isDark(act)
         val actions = HomeChromeActions(
             menu = { onMenu() },
@@ -369,7 +359,7 @@ class HomeScreen(
         // on another Home tab (Music, Gaming...): Back returns to the first tab before the app closes
         if (tabIndex != 0) {
             onChip(0)
-            if (isMusic) hm.feedList.scrollToPosition(0) else feed.scrollToTop()
+            feed.scrollToTop()
             return true
         }
         return false
@@ -400,14 +390,13 @@ class HomeScreen(
      * normal size instead of stretching across the whole screen. Called again when the screen turns.
      */
     fun applyColumns() {
-        // the Compose feed lays out its own columns (FeedScreen); the Music tab's rows are one list
-        if (hm.feedList.layoutManager == null) hm.feedList.layoutManager = LinearLayoutManager(act)
+        // the Compose feed lays out its own columns (FeedScreen)
     }
 
     /** Home is on screen again: newest Continue watching row and watched bars. */
     fun onShown() {
         if (bigAdapter.header != null) shelf.refresh()
-        if (isMusic && hm.feedList.adapter === musicHome) refreshListenAgain()
+        if (isMusic) refreshListenAgain()
         if (!isMusic) feed.redraw()
     }
 

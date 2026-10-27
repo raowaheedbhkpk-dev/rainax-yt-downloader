@@ -78,6 +78,8 @@ class SubsScreen(
     }
 
     private val ui = UiState()
+    /** Autoplay in feed for this list (the video you stop on plays silently in its picture). */
+    private val preview = ComposePreviewList(view)
     private var next: Page? = null
     private var job: Job? = null
     private var loadedFor: Boolean? = null           // signed-in state the list was loaded for
@@ -85,6 +87,7 @@ class SubsScreen(
     fun setup() {
         view.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         view.setContent { RxTheme { SubsPage() } }
+        FeedAutoplay.attach(preview)
     }
 
     /** The tab is on screen: load once (again after signing in or out). */
@@ -200,6 +203,11 @@ class SubsScreen(
                     }
                 }
                 LaunchedEffect(nearEnd, ui.videos.size) { if (nearEnd && ui.videos.isNotEmpty()) load(reset = false) }
+                // autoplay in feed: knows when the list moves and rests
+                LaunchedEffect(list) {
+                    androidx.compose.runtime.snapshotFlow { list.isScrollInProgress to list.firstVisibleItemScrollOffset }
+                        .collect { (moving, _) -> preview.setScrolling(moving) }
+                }
 
                 PullToRefreshBox(
                     isRefreshing = ui.refreshing,
@@ -207,7 +215,7 @@ class SubsScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
-                        items(ui.videos, key = { it.url }) { v -> VideoCard(v, openVideo, download) }
+                        items(ui.videos, key = { it.url }) { v -> VideoCard(v, openVideo, download, preview = preview) }
                         if (ui.loadingMore && ui.videos.isNotEmpty()) {
                             item(key = "more") {
                                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {

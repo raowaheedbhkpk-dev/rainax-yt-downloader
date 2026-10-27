@@ -273,6 +273,9 @@ class FeedModel(
 class FeedHost(val view: androidx.compose.ui.platform.ComposeView) {
     var model by mutableStateOf<FeedModel?>(null)
         private set
+    /** The Music tab (YouTube Music style rows) instead of a video list. */
+    var music by mutableStateOf<MusicHome?>(null)
+        private set
     /** Grey placeholders while the first page loads; true = in the magazine's shape. */
     var skeleton by mutableStateOf<Boolean?>(null)
         private set
@@ -291,7 +294,13 @@ class FeedHost(val view: androidx.compose.ui.platform.ComposeView) {
 
     fun show(m: FeedModel) {
         skeleton = null
+        music = null
         if (model !== m) model = m
+    }
+
+    fun showMusic(m: MusicHome) {
+        skeleton = null
+        if (music !== m) music = m
     }
 
     fun showSkeleton(magazine: Boolean) { skeleton = magazine }
@@ -309,6 +318,14 @@ class FeedHost(val view: androidx.compose.ui.platform.ComposeView) {
 internal fun FeedScreen(host: FeedHost) {
     val sk = host.skeleton
     if (sk != null) { FeedSkeleton(sk); return }
+    val music = host.music
+    if (music != null) {
+        val ms = rememberLazyListState()
+        host.list = ms
+        LaunchedEffect(host.toTop) { if (host.toTop > 0) ms.scrollToItem(0) }
+        MusicHomeScreen(music, ms, host.bottomPad)
+        return
+    }
     val m = host.model ?: return
     @Suppress("UNUSED_VARIABLE") val v = m.version          // redraw when the list changes
     val state = rememberLazyListState()

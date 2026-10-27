@@ -1,330 +1,101 @@
 package com.rainax.ytdownloader
 
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.core.view.isVisible
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 
 /**
  * The Music tab, like YouTube Music: mood chips, Listen again, Quick picks and song rows (columns of four
- * songs you swipe through, each row with Play all), and playlists at the end.
+ * songs you swipe through, each row with Play all), and playlists at the end. Drawn with Jetpack Compose
+ * ([MusicHomeScreen]); HomeScreen fills it with [submit].
  */
 class MusicHome(
     /** Plays songs in the Music player: the list, where to start, its name, and "radio" (similar songs after it). */
-    private val play: (songs: List<VideoItem>, index: Int, from: String, radio: Boolean) -> Unit,
-    private val songMenu: (VideoItem) -> Unit,
-    private val openPlaylist: (VideoItem) -> Unit,
-    private val playPlaylist: (VideoItem) -> Unit,
-    private val downloadPlaylist: (VideoItem) -> Unit,
+    internal val play: (songs: List<VideoItem>, index: Int, from: String, radio: Boolean) -> Unit,
+    internal val songMenu: (VideoItem) -> Unit,
+    internal val openPlaylist: (VideoItem) -> Unit,
+    internal val playPlaylist: (VideoItem) -> Unit,
+    internal val downloadPlaylist: (VideoItem) -> Unit,
     /** A mood chip was picked (null = back to the Music home): load its rows. */
     private val onMood: (String?) -> Unit
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
+) {
     /** The mood chip that is on (null = Music home). */
-    var mood: String? = null
+    var mood by mutableStateOf<String?>(null)
         private set
 
-    private var sections: List<MusicSection> = emptyList()
-    private var loading = false
+    internal var sections by mutableStateOf<List<MusicSection>>(emptyList())
+        private set
+    internal var loading by mutableStateOf(false)
+        private set
     /** The song playing now (its cover shows the equalizer). */
-    private var nowId: String? = null
-    private val pool = RecyclerView.RecycledViewPool()
+    internal var nowId by mutableStateOf<String?>(null)
+        private set
+    /** Bumped to scroll back to the top (a mood was picked). */
+    internal var toTop by mutableIntStateOf(0)
 
     fun submit(list: List<MusicSection>, stillLoading: Boolean) {
         sections = list
         loading = stillLoading
-        notifyDataSetChanged()
     }
 
     /** Marks the song playing now in every row. */
     fun setNowPlaying(url: String?) {
-        val id = youtubeId(url)
-        if (id == nowId) return
-        nowId = id
-        notifyDataSetChanged()
+        nowId = youtubeId(url)
     }
 
-    override fun getItemCount() = 1 + sections.size + if (loading) 2 else 0
-
-    override fun getItemViewType(position: Int): Int = when {
-        position == 0 -> TYPE_MOODS
-        position - 1 < sections.size -> when (sections[position - 1].kind) {
-            MusicSection.SONGS -> TYPE_SONGS
-            MusicSection.COVERS -> TYPE_COVERS
-            else -> TYPE_PLAYLISTS
-        }
-        else -> TYPE_SKELETON
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val inf = LayoutInflater.from(parent.context)
-        return when (viewType) {
-            TYPE_MOODS -> Moods(inf.inflate(R.layout.item_music_moods, parent, false))
-            TYPE_SKELETON -> Skeleton(inf.inflate(R.layout.item_music_skeleton, parent, false))
-            else -> Shelf(inf.inflate(R.layout.item_music_shelf, parent, false), viewType)
-        }
-    }
-
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (holder) {
-            is Moods -> holder.bind()
-            is Shelf -> holder.bind(sections[position - 1])
-        }
-    }
-
-    // ---------- mood chips ----------
-
-    private inner class Moods(v: View) : RecyclerView.ViewHolder(v) {
-        private val group: ChipGroup = v.findViewById(R.id.moodChips)
-        private var building = false
-
-        init {
-            val inf = LayoutInflater.from(v.context)
-            YtCatalog.MUSIC_MOODS.forEach { (name, _) ->
-                val chip = inf.inflate(R.layout.item_mood_chip, group, false) as Chip
-                chip.id = View.generateViewId()
-                chip.text = name
-                chip.tag = name
-                group.addView(chip)
-            }
-            group.setOnCheckedStateChangeListener { g, ids ->
-                if (building) return@setOnCheckedStateChangeListener
-                val picked = ids.firstOrNull()?.let { id -> g.findViewById<Chip>(id)?.tag as? String }
-                if (picked == mood) return@setOnCheckedStateChangeListener
-                mood = picked
-                onMood(picked)
-            }
-        }
-
-        fun bind() {
-            building = true
-            for (i in 0 until group.childCount) {
-                val chip = group.getChildAt(i) as Chip
-                chip.isChecked = chip.tag == mood
-            }
-            building = false
-        }
-    }
-
-    private class Skeleton(v: View) : RecyclerView.ViewHolder(v) {
-        init {
-            val rows: LinearLayout = v.findViewById(R.id.skRows)
-            val inf = LayoutInflater.from(v.context)
-            repeat(4) { rows.addView(inf.inflate(R.layout.item_music_skeleton_row, rows, false)) }
-            // the root is an RxShimmer: a band of light sweeps across while it loads
-        }
-    }
-
-    // ---------- rows ----------
-
-    private inner class Shelf(v: View, private val type: Int) : RecyclerView.ViewHolder(v) {
-        private val label: TextView = v.findViewById(R.id.shelfLabel)
-        private val title: TextView = v.findViewById(R.id.shelfTitle)
-        private val playAll: MaterialButton = v.findViewById(R.id.shelfPlayAll)
-        private val list: RecyclerView = v.findViewById(R.id.shelfList)
-        private val songs = SongCells()
-        private val covers = CoverCells()
-        private val playlists = PlaylistCells()
-        private var section: MusicSection? = null
-
-        init {
-            list.setRecycledViewPool(pool)
-            list.layoutManager = when (type) {
-                TYPE_SONGS -> GridLayoutManager(v.context, 4, GridLayoutManager.HORIZONTAL, false)
-                else -> LinearLayoutManager(v.context, LinearLayoutManager.HORIZONTAL, false)
-            }
-            list.adapter = when (type) {
-                TYPE_SONGS -> songs
-                TYPE_COVERS -> covers
-                else -> playlists
-            }
-            playAll.setOnClickListener {
-                val s = section ?: return@setOnClickListener
-                if (s.items.isNotEmpty()) play(s.items, 0, s.title, false)
-            }
-        }
-
-        fun bind(s: MusicSection) {
-            val changed = section !== s
-            section = s
-            title.text = s.title
-            label.text = labelFor(s)
-            label.isVisible = label.text.isNotEmpty()
-            playAll.isVisible = type == TYPE_SONGS && s.items.size > 1
-            when (type) {
-                TYPE_SONGS -> {
-                    (list.layoutManager as GridLayoutManager).spanCount = s.items.size.coerceIn(1, 4)
-                    songs.submit(s)
-                }
-                TYPE_COVERS -> covers.submit(s)
-                else -> playlists.submit(s.items)
-            }
-            if (changed) list.scrollToPosition(0)
-        }
-    }
-
-    /** Small grey words above some rows, like YouTube Music. */
-    private fun labelFor(s: MusicSection): String = when {
-        s.title == QUICK_PICKS -> "Start radio from a song"
-        s.title == LISTEN_AGAIN -> "Your recent songs"
-        else -> ""
-    }
-
-    // songs in columns of four: each column is a bit narrower than the screen, so the next one peeks in
-    private inner class SongCells : RecyclerView.Adapter<SongCell>() {
-        private var section: MusicSection? = null
-
-        fun submit(s: MusicSection) {
-            section = s
-            notifyDataSetChanged()
-        }
-
-        override fun getItemCount() = section?.items?.size ?: 0
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongCell {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_song_row, parent, false)
-            val d = parent.resources.displayMetrics
-            val full = parent.width.takeIf { it > 0 } ?: d.widthPixels
-            v.layoutParams = RecyclerView.LayoutParams((full * 0.86f).toInt().coerceAtMost((420 * d.density).toInt()), (64 * d.density).toInt())
-            return SongCell(v)
-        }
-
-        override fun onBindViewHolder(holder: SongCell, position: Int) {
-            val s = section ?: return
-            holder.bind(s.items[position])
-        }
-
-        override fun getItemViewType(position: Int) = CELL_SONG
-    }
-
-    private inner class SongCell(v: View) : RecyclerView.ViewHolder(v) {
-        private val art: ImageView = v.findViewById(R.id.songArt)
-        private val now: ImageView = v.findViewById(R.id.songNow)
-        private val title: TextView = v.findViewById(R.id.songTitle)
-        private val sub: TextView = v.findViewById(R.id.songSub)
-        private val more: ImageButton = v.findViewById(R.id.songMore)
-
-        init {
-            v.findViewById<View>(R.id.songArtBox).clipToOutline = true
-        }
-
-        fun bind(song: VideoItem) {
-            Img.loadSquare(art, MusicArt.small(song.url, song.thumb), widthPx = 240)
-            title.text = song.title
-            sub.text = songLine(song)
-            val playing = nowId != null && youtubeId(song.url) == nowId
-            now.isVisible = playing
-            itemView.setOnClickListener { play(listOf(song), 0, song.title, true) }
-            itemView.setOnLongClickListener { songMenu(song); true }
-            more.setOnClickListener { songMenu(song) }
-            itemView.contentDescription = "${song.title}, ${song.uploader}"
-        }
-    }
-
-    private inner class CoverCells : RecyclerView.Adapter<CoverCell>() {
-        private var section: MusicSection? = null
-
-        fun submit(s: MusicSection) {
-            section = s
-            notifyDataSetChanged()
-        }
-
-        override fun getItemCount() = section?.items?.size ?: 0
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            CoverCell(LayoutInflater.from(parent.context).inflate(R.layout.item_music_card, parent, false))
-
-        override fun onBindViewHolder(holder: CoverCell, position: Int) {
-            val s = section ?: return
-            holder.bind(s.items[position])
-        }
-
-        override fun getItemViewType(position: Int) = CELL_COVER
-    }
-
-    private inner class CoverCell(v: View) : RecyclerView.ViewHolder(v) {
-        private val art: ImageView = v.findViewById(R.id.mcArt)
-        private val title: TextView = v.findViewById(R.id.mcTitle)
-        private val sub: TextView = v.findViewById(R.id.mcSub)
-
-        init {
-            v.findViewById<View>(R.id.mcBox).clipToOutline = true
-        }
-
-        fun bind(song: VideoItem) {
-            Img.loadSquare(art, MusicArt.small(song.url, song.thumb), widthPx = 400,
-                fallbacks = listOfNotNull(youtubeId(song.url)?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }))
-            title.text = song.title
-            sub.text = song.uploader
-            itemView.setOnClickListener { play(listOf(song), 0, song.title, true) }
-            itemView.setOnLongClickListener { songMenu(song); true }
-        }
-    }
-
-    private inner class PlaylistCells : RecyclerView.Adapter<PlaylistCell>() {
-        private var items: List<VideoItem> = emptyList()
-
-        fun submit(list: List<VideoItem>) {
-            items = list
-            notifyDataSetChanged()
-        }
-
-        override fun getItemCount() = items.size
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            PlaylistCell(LayoutInflater.from(parent.context).inflate(R.layout.item_playlist_card, parent, false))
-
-        override fun onBindViewHolder(holder: PlaylistCell, position: Int) = holder.bind(items[position])
-
-        override fun getItemViewType(position: Int) = CELL_PLAYLIST
-    }
-
-    private inner class PlaylistCell(v: View) : RecyclerView.ViewHolder(v) {
-        private val cover: ImageView = v.findViewById(R.id.cover)
-        private val title: TextView = v.findViewById(R.id.cardTitle)
-        private val sub: TextView = v.findViewById(R.id.cardSub)
-        private val download: ImageButton = v.findViewById(R.id.cardDownload)
-        private val playBtn: ImageButton = v.findViewById(R.id.cardPlay)
-
-        init {
-            v.findViewById<View>(R.id.coverBox).clipToOutline = true
-        }
-
-        fun bind(item: VideoItem) {
-            Img.load(cover, item.thumb, widthPx = 400)
-            title.text = item.title
-            sub.text = when {
-                item.uploader.isNotBlank() -> item.uploader
-                item.count > 0 -> "${item.count} songs"
-                else -> "Playlist"
-            }
-            itemView.setOnClickListener { openPlaylist(item) }
-            playBtn.setOnClickListener { playPlaylist(item) }
-            download.setOnClickListener { downloadPlaylist(item) }
-        }
+    internal fun pickMood(name: String) {
+        val picked = if (name == mood) null else name
+        mood = picked
+        toTop++
+        onMood(picked)
     }
 
     companion object {
-        private const val TYPE_MOODS = 0
-        private const val TYPE_SONGS = 1
-        private const val TYPE_COVERS = 2
-        private const val TYPE_PLAYLISTS = 3
-        private const val TYPE_SKELETON = 4
-        // cells inside the rows (all rows share one pool of cells, so each kind needs its own number)
-        private const val CELL_SONG = 10
-        private const val CELL_COVER = 11
-        private const val CELL_PLAYLIST = 12
-
         const val QUICK_PICKS = "Quick picks"
         const val LISTEN_AGAIN = "Listen again"
 
@@ -337,6 +108,174 @@ class MusicHome(
                 song.seconds > 0 -> parts += YtCatalog.duration(song.seconds)
             }
             return parts.joinToString(" • ")
+        }
+    }
+}
+
+/** A song cover: square, without the black bars of YouTube pictures (RAINAX's loader). */
+@Composable
+private fun SquareArt(url: String?, modifier: Modifier, widthPx: Int, fallbacks: List<String> = emptyList()) {
+    AndroidView(
+        factory = { c -> ImageView(c).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+        update = { v -> Img.loadSquare(v, url, widthPx = widthPx, fallbacks = fallbacks) },
+        modifier = modifier
+    )
+}
+
+@Composable
+internal fun MusicHomeScreen(m: MusicHome, state: LazyListState, bottomPad: Int) {
+    LaunchedEffect(m.toTop) { if (m.toTop > 0) state.scrollToItem(0) }
+    LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(bottom = bottomPad.dp)) {
+        item(key = "moods") { Moods(m) }
+        items(m.sections.size, key = { i -> "s$i:" + m.sections[i].title }) { i -> Shelf(m, m.sections[i]) }
+        if (m.loading) {
+            items(2, key = { "sk$it" }) {
+                AndroidView(
+                    factory = { c ->
+                        val inf = android.view.LayoutInflater.from(c)
+                        val v = inf.inflate(R.layout.item_music_skeleton, android.widget.FrameLayout(c), false)
+                        val rows = v.findViewById<android.widget.LinearLayout>(R.id.skRows)
+                        repeat(4) { rows.addView(inf.inflate(R.layout.item_music_skeleton_row, rows, false)) }
+                        v
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Moods(m: MusicHome) {
+    LazyRow(
+        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 10.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(YtCatalog.MUSIC_MOODS.size) { i ->
+            val name = YtCatalog.MUSIC_MOODS[i].first
+            RxChip(name, selected = name == m.mood) { m.pickMood(name) }
+        }
+    }
+}
+
+/** Small grey words above some rows, like YouTube Music. */
+private fun labelFor(s: MusicSection): String = when (s.title) {
+    MusicHome.QUICK_PICKS -> "Start radio from a song"
+    MusicHome.LISTEN_AGAIN -> "Your recent songs"
+    else -> ""
+}
+
+@Composable
+private fun Shelf(m: MusicHome, s: MusicSection) {
+    val rx = LocalRx.current
+    Column(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).padding(start = 16.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                val label = labelFor(s)
+                if (label.isNotEmpty()) Text(label.uppercase(), Modifier.padding(bottom = 2.dp), color = rx.text2, fontSize = 12.sp, letterSpacing = 0.04.em, fontFamily = RxFonts.body)
+                Text(s.title.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (s.kind == MusicSection.SONGS && s.items.size > 1) {
+                OutlinedButton(
+                    onClick = { m.play(s.items, 0, s.title, false) }, modifier = Modifier.padding(start = 8.dp).height(36.dp),
+                    shape = RoundedCornerShape(2.dp), contentPadding = PaddingValues(horizontal = 14.dp)
+                ) { Text("Play all", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
+            }
+        }
+        val row = rememberLazyListState()
+        LaunchedEffect(s) { row.scrollToItem(0) }
+        when (s.kind) {
+            MusicSection.SONGS -> {
+                // songs in columns of four: each column a bit narrower than the screen, so the next one peeks in
+                val w = (LocalConfiguration.current.screenWidthDp * 0.86f).coerceAtMost(420f).dp
+                val columns = s.items.chunked(4)
+                LazyRow(Modifier.fillMaxWidth().padding(top = 10.dp), state = row, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    items(columns.size) { c ->
+                        Column(Modifier.width(w)) { columns[c].forEach { song -> SongRow(m, song) } }
+                    }
+                }
+            }
+            MusicSection.COVERS -> LazyRow(Modifier.fillMaxWidth().padding(top = 10.dp), state = row, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                items(s.items.size) { i -> CoverCard(m, s.items[i]) }
+            }
+            else -> LazyRow(Modifier.fillMaxWidth().padding(top = 10.dp), state = row, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                items(s.items.size) { i -> PlaylistCard(m, s.items[i]) }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SongRow(m: MusicHome, song: VideoItem) {
+    val rx = LocalRx.current
+    val playing = m.nowId != null && youtubeId(song.url) == m.nowId
+    Row(
+        Modifier.fillMaxWidth().height(64.dp)
+            .combinedClickable(onClick = { m.play(listOf(song), 0, song.title, true) }, onLongClick = { m.songMenu(song) })
+            .semantics { contentDescription = "${song.title}, ${song.uploader}" }
+            .padding(start = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(52.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
+            SquareArt(MusicArt.small(song.url, song.thumb), Modifier.fillMaxSize(), 240)
+            if (playing) {
+                Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_song_now).padding(14.dp)) {
+                    Image(painterResource(R.drawable.ic_equalizer), null, Modifier.fillMaxSize())
+                }
+            }
+        }
+        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+            Text(song.title, color = rx.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(MusicHome.songLine(song), Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Box(Modifier.size(44.dp).clickable { m.songMenu(song) }.semantics { contentDescription = "More" }.padding(10.dp)) {
+            Image(painterResource(R.drawable.ic_more), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text2))
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CoverCard(m: MusicHome, song: VideoItem) {
+    val rx = LocalRx.current
+    Column(
+        Modifier.padding(horizontal = 6.dp).width(140.dp)
+            .combinedClickable(onClick = { m.play(listOf(song), 0, song.title, true) }, onLongClick = { m.songMenu(song) })
+    ) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+            SquareArt(MusicArt.small(song.url, song.thumb), Modifier.fillMaxSize(), 400,
+                listOfNotNull(youtubeId(song.url)?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }))
+        }
+        Text(song.title, Modifier.padding(top = 8.dp), color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(song.uploader, color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun PlaylistCard(m: MusicHome, item: VideoItem) {
+    val rx = LocalRx.current
+    Column(Modifier.padding(horizontal = 6.dp).width(156.dp).clickable { m.openPlaylist(item) }) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+            RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 400)
+            Box(
+                Modifier.align(Alignment.BottomEnd).padding(6.dp).size(40.dp).rxDrawableBg(R.drawable.bg_mini_button)
+                    .clickable { m.playPlaylist(item) }.semantics { contentDescription = "Play" }.padding(10.dp)
+            ) { Image(painterResource(R.drawable.ic_p_play), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(Color.White)) }
+        }
+        Text(item.title, Modifier.padding(top = 8.dp), color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val sub = when {
+                item.uploader.isNotBlank() -> item.uploader
+                item.count > 0 -> "${item.count} songs"
+                else -> "Playlist"
+            }
+            Text(sub, Modifier.weight(1f), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.size(36.dp).clickable { m.downloadPlaylist(item) }.semantics { contentDescription = "Download" }.padding(6.dp)) {
+                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
+            }
         }
     }
 }
