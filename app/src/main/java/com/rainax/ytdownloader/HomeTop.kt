@@ -90,10 +90,10 @@ class HomeChrome {
     var chipSel by mutableIntStateOf(0)
 
     /** The search box's text (with the cursor). */
-    var field by mutableStateOf(TextFieldValue(""))
+    var input by mutableStateOf(TextFieldValue(""))
     var search: String
-        get() = field.text
-        set(v) { field = TextFieldValue(v, TextRange(v.length)) }
+        get() = input.text
+        set(v) { input = TextFieldValue(v, TextRange(v.length)) }
     var suggestOpen by mutableStateOf(false)
     /** Bumped to put the cursor in the box (and show the keyboard) / take it out (and hide the keyboard). */
     var focusReq by mutableIntStateOf(0)
@@ -238,20 +238,20 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
         ) {
             Image(painterResource(R.drawable.ic_search), null, Modifier.padding(end = 10.dp).size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (c.field.text.isEmpty()) Text("Search YouTube or paste a link", color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body,
+                if (c.input.text.isEmpty()) Text("Search YouTube or paste a link", color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
                 BasicTextField(
-                    value = c.field,
-                    onValueChange = { v -> val changed = v.text != c.field.text; c.field = v; if (changed) a.typed(v.text) },
+                    value = c.input,
+                    onValueChange = { v -> val changed = v.text != c.input.text; c.input = v; if (changed) a.typed(v.text) },
                     singleLine = true,
                     textStyle = TextStyle(color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body),
                     cursorBrush = SolidColor(rx.accent),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { a.submit(c.field.text) }),
+                    keyboardActions = KeyboardActions(onSearch = { a.submit(c.input.text) }),
                     modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { if (it.isFocused) a.focused() }
                 )
             }
-            if (c.field.text.isNotEmpty()) {
+            if (c.input.text.isNotEmpty()) {
                 Box(
                     Modifier.padding(start = 4.dp).size(30.dp).rxDrawableBg(R.drawable.bg_clear_circle).clickable { a.clearText() }
                         .semantics { contentDescription = "Clear" }.padding(8.dp)
