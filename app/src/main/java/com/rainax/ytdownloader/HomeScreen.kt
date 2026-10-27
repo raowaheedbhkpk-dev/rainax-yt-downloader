@@ -46,6 +46,8 @@ class HomeScreen(
     private val popularFallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     /** The video lists (Compose, FeedCompose.kt); the Music tab still uses the RecyclerView [hm.feedList]. */
     private val feed = FeedHost(hm.feedCompose)
+    /** The top bars, chips, suggestions, error and picks bar (Compose, HomeTop.kt). */
+    private val chrome = HomeChrome()
     /** Autoplay in feed for Home's lists. */
     val feedPreview get() = feed.preview
 
@@ -178,9 +180,8 @@ class HomeScreen(
     private fun openTab(id: String) {
         if (query != null) return
         val i = tabs.indexOfFirst { it.second == id }
-        val chip = hm.homeChips.getChildAt(i) as? Chip ?: return
-        chip.isChecked = true
-        hm.chipsScroll.post { hm.chipsScroll.smoothScrollTo((chip.left - 24 * act.resources.displayMetrics.density).toInt().coerceAtLeast(0), 0) }
+        if (i < 0) return
+        onChip(i)
     }
 
     private val adapter get() = when {
@@ -213,21 +214,18 @@ class HomeScreen(
         }
         FeedAutoplay.refresh()
     }
-    private val suggestAdapter = SuggestAdapter(
-        onPick = { submit(it) },
-        onFill = { text ->
-            // ↖ : put the suggestion in the box to keep typing
-            hm.searchInput.setText(text)
-            hm.searchInput.setSelection(hm.searchInput.text.length)
-        },
-        onClear = { confirmClearHistory() },
-        onRemove = { q ->
-            AppPrefs.removeSearch(act, q)
-            Haptics.tick(hm.suggestList)
-            suggest(hm.searchInput.text.toString())
-            Notify.show(act, "Removed from recent searches")
-        }
-    )
+    private fun fillSearch(text: String) {
+        // ↖ : put the suggestion in the box to keep typing
+        chrome.search = text
+        suggest(text)
+    }
+
+    private fun removeRecent(q: String) {
+        AppPrefs.removeSearch(act, q)
+        Haptics.tick(hm.root)
+        suggest(chrome.search)
+        Notify.show(act, "Removed from recent searches")
+    }
 
     /** "Clear search history" under the recent searches: asks once, then removes them all. */
     private fun confirmClearHistory() {
@@ -236,7 +234,7 @@ class HomeScreen(
             .setMessage("Your recent searches will be removed from this phone.")
             .setPositiveButton("Clear") { _, _ ->
                 AppPrefs.clearSearchHistory(act)
-                suggest(hm.searchInput.text.toString())
+                suggest(chrome.search)
                 Notify.show(act, "Search history cleared")
             }
             .setNegativeButton("Cancel", null)
@@ -256,7 +254,6 @@ class HomeScreen(
         shelf.openChannel = { openChannel(it.url, it.title, it.thumb) }
         shelf.openAllSubs = { onAllSubs() }
         tabs = computeTabs()
-        hm.accountBtn.setOnClickListener { onAccount() }
         updateAccountIcon()
         hm.root.isFocusableInTouchMode = true
         applyColumns()
@@ -270,8 +267,38 @@ class HomeScreen(
         hm.feedRefresh.setOnChildScrollUpCallback { _, _ ->
             if (hm.feedList.isVisible) hm.feedList.canScrollVertically(-1) else feed.canScrollUp()
         }
-        hm.suggestList.layoutManager = LinearLayoutManager(act)
-        hm.suggestList.adapter = suggestAdapter
+        chrome.dark = Ui.isDark(act)
+        val actions = HomeChromeActions(
+            menu = { onMenu() },
+            theme = { onTheme(it) },
+            openSearch = { startTyping() },
+            voice = { onVoice() },
+            back = { back() },
+            titleDownload = { playlistItem?.let { download(it) } },
+            chip = { onChip(it) },
+            typed = { if (chrome.suggestOpen) suggest(it) },
+            focused = { if (!chrome.suggestOpen) startTyping() },
+            submit = { submit(it) },
+            clearText = { chrome.search = ""; startTyping() },
+            fill = { fillSearch(it) },
+            clearHistory = { confirmClearHistory() },
+            removeRecent = { removeRecent(it) },
+            retry = { load(reset = true) },
+            netSettings = { Net.openSettings(act) },
+            picksView = { PicksSheet.show(act) { downloadMany(it) } },
+            picksClear = { Picks.clear() },
+            picksDownload = {
+                val list = Picks.all()
+                if (list.isNotEmpty()) {
+                    Picks.clear()
+                    downloadMany(list)
+                }
+            }
+        )
+        hm.homeTop.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        hm.homeTop.setContent { RxTheme { HomeTopBar(chrome, actions) } }
+        hm.homeOverlay.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        hm.homeOverlay.setContent { RxTheme { HomeOverlay(chrome, actions) } }
 
         // pull down: fresh list (not the saved one)
         // the round spinner is hidden: a film countdown shows instead (see countdown())
@@ -287,56 +314,7 @@ class HomeScreen(
             if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
             load(reset = true, pulled = true)
         }
-        hm.titleBack.setOnClickListener { back() }
-        hm.titleDownload.setOnClickListener { playlistItem?.let { download(it) } }
         channelHeader.chSubscribe.setOnClickListener { toggleChannelSubscribe() }
-
-        hm.homeChips.setOnCheckedStateChangeListener { group, ids ->
-            if (buildingTabs) return@setOnCheckedStateChangeListener
-            Haptics.tick(group)
-            val index = ids.firstOrNull()?.let { id -> (0 until group.childCount).firstOrNull { group.getChildAt(it).id == id } } ?: return@setOnCheckedStateChangeListener
-            if (query != null) searchKind = index else tabIndex = index
-            applyListAdapter()
-            load(reset = true)
-        }
-
-        hm.searchOpen.setOnClickListener { startTyping() }
-        hm.searchOpen.setOnLongClickListener { onVoice(); true }          // hold Search: speak straight away
-        // like YouTube: a search icon in the top bar opens the glowing search box (the old pill stays hidden;
-        // notifications live on the You tab)
-        hm.homeSearchPill.isVisible = false
-        hm.homeSearchMic.setOnClickListener { onVoice() }
-        hm.homeMenu.setOnClickListener { onMenu() }
-        hm.homeBell.setOnClickListener { openNotifications() }
-        // sun in the light theme, moon in the dark one; opens System / Light / Dark and the accent colours
-        hm.homeTheme.setImageResource(if (Ui.isDark(act)) R.drawable.ic_moon else R.drawable.ic_brightness)
-        hm.homeTheme.setOnClickListener { onTheme(it) }
-        hm.searchMic.setOnClickListener { onVoice() }
-        Ui.expandTouch(hm.searchClear)
-        hm.searchInput.setOnFocusChangeListener { _, focused -> if (focused) startTyping() }
-        hm.searchInput.setOnClickListener { startTyping() }
-        hm.searchInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                submit(hm.searchInput.text.toString())
-                true
-            } else false
-        }
-        hm.searchInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                hm.searchClear.isVisible = !s.isNullOrEmpty()
-                hm.searchMic.isVisible = s.isNullOrEmpty()
-                if (hm.suggestList.isVisible) suggest(s?.toString().orEmpty())
-            }
-        })
-        hm.searchClear.setOnClickListener {
-            hm.searchInput.setText("")
-            startTyping()
-        }
-        hm.searchBack.setOnClickListener { back() }
-        hm.feedRetry.setOnClickListener { load(reset = true) }
-        hm.feedSettings.setOnClickListener { Net.openSettings(act) }
 
         // + on every video: pick several, then download them together
         listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter, specialAdapter).forEach { a ->
@@ -344,16 +322,17 @@ class HomeScreen(
             a.isPicked = { Picks.has(it) }
         }
         Picks.listen { refreshPicks() }
-        hm.pickClear.setOnClickListener { Picks.clear() }
-        hm.pickCount.setOnClickListener { PicksSheet.show(act) { downloadMany(it) } }
-        hm.pickDownload.setOnClickListener {
-            val list = Picks.all()
-            if (list.isEmpty()) return@setOnClickListener
-            Picks.clear()
-            downloadMany(list)
-        }
 
         buildTabs()
+        applyListAdapter()
+        load(reset = true)
+    }
+
+    /** A chip was chosen: that tab (Home) or kind of result (search). */
+    private fun onChip(index: Int) {
+        if (buildingTabs) return
+        chrome.chipSel = index
+        if (query != null) searchKind = index else tabIndex = index
         applyListAdapter()
         load(reset = true)
     }
@@ -366,17 +345,16 @@ class HomeScreen(
             playlistItem = null
             channelUrl = null
             channel = null
-            hm.titleBar.isVisible = false
-            hm.chipsScroll.isVisible = true
-            if (query != null) hm.searchBar.isVisible = true else hm.brandBar.isVisible = true
+            chrome.bar = if (query != null) 1 else 0
+            chrome.chipsShown = true
             if (query == null) buildTabs()
             applyListAdapter()
             load(reset = true)                     // the list before is still saved: shows at once
             return true
         }
-        if (hm.suggestList.isVisible) {
+        if (chrome.suggestOpen) {
             stopTyping()
-            if (query == null) showSearchBox(false) else hm.searchInput.setText(query)
+            if (query == null) showSearchBox(false) else chrome.search = query.orEmpty()
             return true
         }
         if (query != null) {
@@ -390,8 +368,7 @@ class HomeScreen(
         }
         // on another Home tab (Music, Gaming...): Back returns to the first tab before the app closes
         if (tabIndex != 0) {
-            (hm.homeChips.getChildAt(0) as? Chip)?.isChecked = true
-            hm.chipsScroll.smoothScrollTo(0, 0)
+            onChip(0)
             if (isMusic) hm.feedList.scrollToPosition(0) else feed.scrollToTop()
             return true
         }
@@ -405,9 +382,7 @@ class HomeScreen(
 
     private fun refreshPicks() {
         val n = Picks.size
-        hm.pickBar.isVisible = n > 0
-        hm.pickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
-        hm.pickDownload.text = if (n > 1) "Download $n" else "Download"
+        chrome.picks = n
         val d = act.resources.displayMetrics.density
         feed.bottomPad = (if (n > 0) 88 else 16) + (Ui.pillExtra / d).toInt()
         feed.redraw()
@@ -452,26 +427,21 @@ class HomeScreen(
 
     /** Brand bar <-> search box. */
     private fun showSearchBox(on: Boolean) {
-        hm.brandBar.isVisible = !on
-        hm.searchBar.isVisible = on
-        if (!on) hm.searchInput.setText("")
+        chrome.bar = if (on) 1 else if (playlistUrl != null || channelUrl != null || special != null) 2 else 0
+        if (!on) chrome.search = ""
     }
 
     private fun startTyping() {
-        val opening = !hm.searchBar.isVisible
         showSearchBox(true)
-        if (opening) Motion.focusIn(hm.searchBox)          // the glowing box eases in
-        hm.suggestList.isVisible = true
-        suggest(hm.searchInput.text.toString())
-        if (!hm.searchInput.hasFocus()) hm.searchInput.requestFocus()
-        hm.searchInput.post { imm().showSoftInput(hm.searchInput, InputMethodManager.SHOW_IMPLICIT) }
+        chrome.suggestOpen = true
+        suggest(chrome.search)
+        chrome.focusReq++                       // the cursor in the box, and the keyboard
     }
 
     private fun stopTyping() {
-        hm.suggestList.isVisible = false
+        chrome.suggestOpen = false
         suggestJob?.cancel()
-        hm.root.requestFocus()                 // take focus away from the box (it would reopen the suggestions)
-        imm().hideSoftInputFromWindow(hm.searchInput.windowToken, 0)
+        chrome.unfocusReq++                     // take focus away from the box (it would reopen the suggestions)
     }
 
     private fun suggest(text: String) {
@@ -481,7 +451,7 @@ class HomeScreen(
             // like YouTube: your recent searches, then "You may like" (channels you watch, popular videos) with pictures
             val recent = history.take(10).map { Sug(it, icon = R.drawable.ic_history) }
             val local = mayLike(history)
-            suggestAdapter.submit(emptyList(), local, showClear = history.isNotEmpty(), stubs = recent)
+            chrome.setSuggestions(emptyList(), local, showClear = history.isNotEmpty(), stubs = recent)
             // then, like YouTube: searches related to what you watch and search, each with a matching picture
             suggestJob = act.lifecycleScope.launch {
                 val personal = try {
@@ -491,19 +461,19 @@ class HomeScreen(
                 } catch (e: Exception) {
                     emptyList()
                 }
-                if (personal.isEmpty() || hm.searchInput.text?.isNotBlank() == true) return@launch
+                if (personal.isEmpty() || chrome.search.isNotBlank()) return@launch
                 val channels = local.filter { it.sub != null }
                 val trending = local.filter { it.sub == null && personal.none { p -> p.text == it.text } }
-                suggestAdapter.submit(emptyList(), (channels + personal + trending).take(8), showClear = history.isNotEmpty(), stubs = recent)
+                chrome.setSuggestions(emptyList(), (channels + personal + trending).take(8), showClear = history.isNotEmpty(), stubs = recent)
             }
             return
         }
         val fromHistory = history.filter { it.contains(text, true) }.take(3).map { Sug(it, icon = R.drawable.ic_history) }
-        suggestAdapter.submit(fromHistory)
+        chrome.setSuggestions(fromHistory)
         suggestJob = act.lifecycleScope.launch {
             delay(220)                           // wait for a pause in typing
             val list = withContext(Dispatchers.IO) { YtCatalog.suggestions(text) }
-            suggestAdapter.submit(fromHistory + list.filter { s -> fromHistory.none { it.text.equals(s, true) } }.map { Sug(it) })
+            chrome.setSuggestions(fromHistory + list.filter { s -> fromHistory.none { it.text.equals(s, true) } }.map { Sug(it) })
         }
     }
 
@@ -587,7 +557,7 @@ class HomeScreen(
         val link = LinkText.find(q).firstOrNull()
         if (link != null) {
             stopTyping()
-            hm.searchInput.setText("")
+            chrome.search = ""
             if (query == null) showSearchBox(false)
             download(VideoItem(link, "", "", null, 0, -1, null))
             return
@@ -596,7 +566,7 @@ class HomeScreen(
         rememberScroll()
         stopTyping()
         showSearchBox(true)
-        hm.searchInput.setText(q)
+        chrome.search = q
         val wasSearching = query != null
         query = q
         if (!wasSearching) searchKind = 0
@@ -610,7 +580,7 @@ class HomeScreen(
      * ("acc:VLLL" liked, "acc:VLWL" Watch later, "acc:FEhistory"), or "local:history" (watched in RAINAX).
      */
     fun openList(title: String, id: String) {
-        if (hm.suggestList.isVisible) stopTyping()
+        if (chrome.suggestOpen) stopTyping()
         if (id.startsWith("acc:") && !YtAccount.isSignedIn(act)) {
             onAccount()                                  // sign in first
             return
@@ -621,12 +591,10 @@ class HomeScreen(
         channelUrl = null
         channel = null
         special = id
-        hm.titleText.text = title
-        hm.titleDownload.isVisible = false
-        hm.brandBar.isVisible = false
-        hm.searchBar.isVisible = false
-        hm.titleBar.isVisible = true
-        hm.chipsScroll.isVisible = false
+        chrome.title = title
+        chrome.titleDownload = false
+        chrome.bar = 2
+        chrome.chipsShown = false
         if (id == "local:history" || id.startsWith("acc:")) vm.feedCache.remove("sp:$id")    // always fresh
         applyListAdapter()
         load(reset = true)
@@ -638,7 +606,7 @@ class HomeScreen(
         while (back() && guard++ < 6) { /* leave search results, lists and typing */ }
         val i = tabs.indexOfFirst { it.second == YtCatalog.MUSIC }
         if (i < 0) return
-        (hm.homeChips.getChildAt(i) as? Chip)?.isChecked = true
+        onChip(i)
     }
 
     /** The bell: YouTube's own notifications, on their own page laid out like the YouTube app. */
@@ -648,32 +616,30 @@ class HomeScreen(
             onAccount()
             return
         }
-        if (hm.suggestList.isVisible) stopTyping()
+        if (chrome.suggestOpen) stopTyping()
         NotificationsPage(act, { open(it) }, { download(it) }).show()
     }
 
     /** A playlist: its videos (each with Download) and "Download all" at the top. */
     fun openPlaylist(item: VideoItem) {
-        if (hm.suggestList.isVisible) stopTyping()
+        if (chrome.suggestOpen) stopTyping()
         rememberScroll()
         special = null
         channelUrl = null
         channel = null
         playlistUrl = item.url
         playlistItem = item
-        hm.titleText.text = item.title
-        hm.titleDownload.isVisible = true
-        hm.brandBar.isVisible = false
-        hm.searchBar.isVisible = false
-        hm.titleBar.isVisible = true
-        hm.chipsScroll.isVisible = false
+        chrome.title = item.title
+        chrome.titleDownload = true
+        chrome.bar = 2
+        chrome.chipsShown = false
         applyListAdapter()
         load(reset = true)
     }
 
     /** A channel: picture, name, Subscribe, and its videos (each with Download). */
     fun openChannel(url: String, name: String? = null, avatar: String? = null) {
-        if (hm.suggestList.isVisible) stopTyping()
+        if (chrome.suggestOpen) stopTyping()
         rememberScroll()
         special = null
         playlistUrl = null
@@ -684,12 +650,10 @@ class HomeScreen(
         channelTab = null
         channelHeader.chTabs.removeAllViews()
         channelHeader.chSubscribe.isVisible = true
-        hm.titleText.text = name.orEmpty()
-        hm.titleDownload.isVisible = false
-        hm.brandBar.isVisible = false
-        hm.searchBar.isVisible = false
-        hm.titleBar.isVisible = true
-        hm.chipsScroll.isVisible = false
+        chrome.title = name.orEmpty()
+        chrome.titleDownload = false
+        chrome.bar = 2
+        chrome.chipsShown = false
         channelHeader.chHeadName.text = name.orEmpty()
         channelHeader.chHeadMeta.text = ""
         channelHeader.chHeadDesc.isVisible = false
@@ -703,7 +667,7 @@ class HomeScreen(
 
     private fun fillChannel(d: ChannelDetails) {
         channel = d
-        hm.titleText.text = d.name
+        chrome.title = d.name
         channelHeader.chHeadName.text = d.name
         channelHeader.chHeadMeta.text = if (d.subscribers >= 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
         channelHeader.chHeadDesc.text = d.description
@@ -774,16 +738,8 @@ class HomeScreen(
     /** Filter chips: YouTube / Music on Home, Videos / Playlists for search results. */
     private fun buildTabs() {
         buildingTabs = true
-        hm.homeChips.removeAllViews()
-        val titles = if (query != null) YtCatalog.SEARCH_KINDS.map { it.first } else tabs.map { it.first }
-        val sel = if (query != null) searchKind else tabIndex
-        titles.forEachIndexed { i, t ->
-            val chip = LayoutInflater.from(act).inflate(R.layout.item_chip, hm.homeChips, false) as Chip
-            chip.id = View.generateViewId()
-            chip.text = t
-            hm.homeChips.addView(chip)
-            if (i == sel) chip.isChecked = true
-        }
+        chrome.chips = if (query != null) YtCatalog.SEARCH_KINDS.map { it.first } else tabs.map { it.first }
+        chrome.chipSel = if (query != null) searchKind else tabIndex
         buildingTabs = false
     }
 
@@ -852,8 +808,8 @@ class HomeScreen(
     /** Music tab: all rows load at the same time and appear as soon as each is ready (Listen again at once). */
     private fun loadMusic(pulled: Boolean) {
         loadJob?.cancel()
-        hm.feedError.isVisible = false
-        hm.feedLoading.isVisible = false
+        chrome.error = null
+        chrome.loading = false
         val mood = musicHome.mood
         val key = mood.orEmpty()
         val recent = MusicHistory.recent(act)
@@ -917,7 +873,7 @@ class HomeScreen(
         if (reset) {
             loadJob?.cancel()
             next = null
-            hm.feedError.isVisible = false
+            chrome.error = null
             val cached = vm.feedCache[cacheKey()]
             if (cached != null) {
                 hm.feedRefresh.isRefreshing = false
@@ -927,7 +883,7 @@ class HomeScreen(
                 a.submit(cached.first)
                 next = cached.second
                 a.loadingMore = next != null
-                hm.feedLoading.isVisible = false
+                chrome.loading = false
                 // back to a list seen before: the same place in it, not the top
                 val saved = scrollMemory.remove(cacheKey())
                 if (saved != null) feed.restoreScroll(saved)
@@ -995,7 +951,7 @@ class HomeScreen(
                 next = if (added == 0 && !reset) null else res.next      // a page with nothing new: stop (mixes repeat)
                 a.loadingMore = next != null
                 vm.feedCache[key] = a.all() to next
-                hm.feedLoading.isVisible = false
+                chrome.loading = false
                 applyListAdapter()
                 hm.feedRefresh.isRefreshing = false
                 if (reset) feed.scrollToTop()
@@ -1007,7 +963,7 @@ class HomeScreen(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                hm.feedLoading.isVisible = false
+                chrome.loading = false
                 hm.feedRefresh.isRefreshing = false
                 applyListAdapter()
                 a.loadingMore = false
@@ -1042,7 +998,7 @@ class HomeScreen(
 
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
     private fun showSkeleton() {
-        hm.feedLoading.isVisible = false
+        chrome.loading = false
         feed.showSkeleton(adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
             channelUrl == null && special == null)
     }
@@ -1062,17 +1018,7 @@ class HomeScreen(
 
     /** Top bar: the account's picture, or an empty profile icon. */
     fun updateAccountIcon() {
-        val avatar = if (YtAccount.isSignedIn(act)) YtAccount.profile(act)?.avatar else null
-        if (avatar != null) {
-            hm.accountIcon.imageTintList = null
-            Img.load(hm.accountIcon, avatar, circle = true, widthPx = 96)
-        } else {
-            Img.load(hm.accountIcon, null)
-            hm.accountIcon.setImageResource(R.drawable.ic_person)
-            hm.accountIcon.imageTintList = android.content.res.ColorStateList.valueOf(
-                androidx.core.content.ContextCompat.getColor(act, R.color.rx_text)
-            )
-        }
+        // (the top bar has no account picture now; the You tab and the bottom bar show it)
     }
 
     /** Friendly words for an empty personal list (new accounts). */
@@ -1090,9 +1036,8 @@ class HomeScreen(
     private fun showError(text: String) {
         // no connection: say so plainly, with a button to the phone's internet settings
         val offline = !Net.online(act)
-        hm.feedErrorText.text = if (offline) "No internet connection\nTurn on Wi-Fi or mobile data, then tap Try again." else friendlyError(text)
-        hm.feedSettings.isVisible = offline
-        hm.feedError.isVisible = true
+        chrome.error = if (offline) "No internet connection\nTurn on Wi-Fi or mobile data, then tap Try again." else friendlyError(text)
+        chrome.errorOffline = offline
     }
 
     private companion object {
@@ -1111,188 +1056,5 @@ class HomeScreen(
         const val MAG_MOVIES = "q:full movie"
         /** The bell's list (YouTube's notifications, recent ones only). */
         const val NOTIFICATIONS = "acc:notifications"
-    }
-
-    /** One search suggestion: text, an optional small line and picture, and its icon (clock, search, trending). */
-    class Sug(val text: String, val sub: String? = null, val thumb: String? = null, val icon: Int = R.drawable.ic_search)
-
-    /**
-     * Search suggestions, like YouTube. Empty box: recent searches, "Clear search history", then "You may like".
-     * Typing: matching recent searches first, then YouTube's suggestions.
-     */
-    private class SuggestAdapter(
-        private val onPick: (String) -> Unit,
-        private val onFill: (String) -> Unit,
-        private val onClear: () -> Unit,
-        private val onRemove: (String) -> Unit
-    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-        /** Hold a recent search: Search / Edit / Remove (one at a time, not only "Clear all"). */
-        private fun recentMenu(anchor: View, q: String) {
-            Haptics.press(anchor)
-            val pm = android.widget.PopupMenu(anchor.context, anchor)
-            pm.menu.add(0, 1, 0, "Search")
-            pm.menu.add(0, 2, 1, "Edit")
-            pm.menu.add(0, 3, 2, "Remove")
-            pm.setOnMenuItemClickListener {
-                when (it.itemId) {
-                    1 -> onPick(q)
-                    2 -> onFill(q)
-                    3 -> onRemove(q)
-                }
-                true
-            }
-            pm.show()
-        }
-        private sealed class Row {
-            class Item(val s: Sug) : Row()
-            class Header(val title: String) : Row()
-            object Clear : Row()
-            class Stubs(val list: List<Sug>) : Row()
-        }
-        private var rows: List<Row> = emptyList()
-
-        fun submit(list: List<Sug>, mayLike: List<Sug> = emptyList(), showClear: Boolean = false, stubs: List<Sug> = emptyList()) {
-            val r = mutableListOf<Row>()
-            if (stubs.isNotEmpty()) r += Row.Stubs(stubs)
-            list.forEach { r += Row.Item(it) }
-            if (showClear) r += Row.Clear
-            if (mayLike.isNotEmpty()) {
-                r += Row.Header("You may like")
-                mayLike.forEach { r += Row.Item(it) }
-            }
-            rows = r
-            notifyDataSetChanged()
-        }
-
-        override fun getItemCount() = rows.size
-
-        override fun getItemViewType(position: Int) = when (rows[position]) {
-            is Row.Item -> ROW
-            is Row.Header -> HEADER
-            Row.Clear -> CLEAR
-            is Row.Stubs -> STUBS
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val c = parent.context
-            val d = parent.resources.displayMetrics.density
-            if (viewType == HEADER) {
-                val tv = TextView(c).apply {
-                    textSize = 24f
-                    isAllCaps = true
-                    typeface = androidx.core.content.res.ResourcesCompat.getFont(c, R.font.rx_display)
-                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_text))
-                    setPadding((16 * d).toInt(), (18 * d).toInt(), (16 * d).toInt(), (8 * d).toInt())
-                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                }
-                return object : RecyclerView.ViewHolder(tv) {}
-            }
-            if (viewType == STUBS) {
-                // recent searches as ticket stubs in one sideways row, under a small gold label
-                val box = LinearLayout(c).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(0, (14 * d).toInt(), 0, (6 * d).toInt())
-                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                }
-                box.addView(TextView(c).apply {
-                    text = "RECENT SEARCHES"
-                    textSize = 10f
-                    letterSpacing = 0.25f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_gold))
-                    setPadding((16 * d).toInt(), 0, (16 * d).toInt(), (8 * d).toInt())
-                })
-                val scroll = android.widget.HorizontalScrollView(c).apply {
-                    isHorizontalScrollBarEnabled = false
-                    clipToPadding = false
-                    setPadding((12 * d).toInt(), 0, (12 * d).toInt(), 0)
-                }
-                scroll.addView(LinearLayout(c).apply { orientation = LinearLayout.HORIZONTAL; tag = "stubs" })
-                box.addView(scroll)
-                return object : RecyclerView.ViewHolder(box) {}
-            }
-            if (viewType == CLEAR) {
-                // one row like the others: a bin icon in the same column, the words in film red, a thin line under it
-                val row = LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false)
-                val red = Ui.accentText(c)
-                row.findViewById<ImageView>(R.id.icon).apply {
-                    setImageResource(R.drawable.ic_delete)
-                    imageTintList = android.content.res.ColorStateList.valueOf(red)
-                }
-                row.findViewById<TextView>(R.id.text).apply {
-                    text = "Clear search history"
-                    setTextColor(red)
-                    textSize = 14f
-                    isAllCaps = true
-                    letterSpacing = 0.08f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                }
-                row.findViewById<View>(R.id.fill).isVisible = false
-                row.findViewById<View>(R.id.thumb).isVisible = false
-                val box = LinearLayout(c).apply {
-                    orientation = LinearLayout.VERTICAL
-                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    addView(row)
-                    addView(View(c).apply {
-                        setBackgroundColor(androidx.core.content.ContextCompat.getColor(c, R.color.rx_divider))
-                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, (1 * d).toInt())).apply {
-                        marginStart = (16 * d).toInt(); marginEnd = (16 * d).toInt(); topMargin = (4 * d).toInt()
-                    })
-                }
-                return object : RecyclerView.ViewHolder(box) {}
-            }
-            return VH(LayoutInflater.from(c).inflate(R.layout.item_suggestion, parent, false))
-        }
-
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            when (val row = rows[position]) {
-                is Row.Header -> (holder.itemView as TextView).text = row.title
-                is Row.Stubs -> {
-                    val c = holder.itemView.context
-                    val strip = holder.itemView.findViewWithTag<LinearLayout>("stubs")
-                    strip.removeAllViews()
-                    row.list.forEach { s ->
-                        val stub = LayoutInflater.from(c).inflate(R.layout.item_recent_stub, strip, false) as TextView
-                        stub.text = s.text
-                        stub.contentDescription = "Search ${s.text}. Hold for edit or remove"
-                        stub.setOnClickListener { onPick(s.text) }
-                        stub.setOnLongClickListener { v -> recentMenu(v, s.text); true }
-                        strip.addView(stub)
-                    }
-                }
-                Row.Clear -> (holder.itemView as ViewGroup).getChildAt(0).setOnClickListener { onClear() }
-                is Row.Item -> {
-                    val h = holder as VH
-                    val s = row.s
-                    h.text.text = s.text
-                    h.sub.text = s.sub
-                    h.sub.isVisible = !s.sub.isNullOrBlank()
-                    h.icon.setImageResource(s.icon)
-                    h.thumb.isVisible = s.thumb != null
-                    if (s.thumb != null) Img.load(h.thumb, s.thumb, widthPx = 240)
-                    h.itemView.setOnClickListener { onPick(s.text) }
-                    h.fill.setOnClickListener { onFill(s.text) }
-                    // a recent search (clock icon): hold for Search / Edit / Remove
-                    if (s.icon == R.drawable.ic_history) h.itemView.setOnLongClickListener { v -> recentMenu(v, s.text); true }
-                    else h.itemView.setOnLongClickListener(null)
-                }
-            }
-        }
-
-        companion object {
-            private const val ROW = 0
-            private const val CLEAR = 1
-            private const val HEADER = 2
-            private const val STUBS = 3
-        }
-
-        class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val icon: ImageView = v.findViewById(R.id.icon)
-            val text: TextView = v.findViewById(R.id.text)
-            val sub: TextView = v.findViewById(R.id.sub)
-            val thumb: ImageView = v.findViewById(R.id.thumb)
-            val fill: ImageView = v.findViewById(R.id.fill)
-        }
     }
 }
