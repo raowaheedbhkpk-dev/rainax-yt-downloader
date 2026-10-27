@@ -829,7 +829,7 @@ class MusicPlayer(
     /** The number of comments (looked up only while the big player is open). */
     private fun loadCommentCount(url: String) {
         if (commentCounts.containsKey(url)) {
-            ui.commentsText = commentCounts[url]
+            ui.commentsText = commentCounts[url] ?: "Comments"
             return
         }
         commentsJob?.cancel()

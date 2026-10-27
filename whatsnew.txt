@@ -1,3 +1,4 @@
+Fix: the build error in the Music player's comments count (whole app now on Jetpack Compose)
 Cleanup: removed old screen files, 29 unused pictures and the ViewPager2 library left over from the move to Jetpack Compose (smaller app)
 New: the full-screen player's buttons (top bar, play and 10 s buttons, seek bar, lock, aspect, rotate, picture-in-picture and the swipe info) rebuilt with Jetpack Compose
 New: Shorts rebuilt with Jetpack Compose (full-screen swipe pager, Like / Dislike, Comments, Download and Share)
