@@ -21,9 +21,9 @@
             android:layout_marginHorizontal="@dimen/rx_space_16"
             android:layout_marginTop="@dimen/rx_space_8"
             android:layout_marginBottom="@dimen/rx_space_4"
-            android:letterSpacing="0.2"
+            android:letterSpacing="0.01"
             android:text="Appearance"
-            android:textAllCaps="true"
+            android:textAllCaps="false"
             android:textColor="@color/rx_gold"
             android:textSize="10sp"
             android:textStyle="bold" />

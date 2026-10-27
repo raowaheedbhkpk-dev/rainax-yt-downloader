@@ -220,7 +220,7 @@ class VideoAdapter(
         }
         if (magazine && n >= 9 && items.take(9).none { it.isChannel }) {
             var chapterNo = 0
-            fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t.uppercase()) }
+            fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t) }
             out += Slot.Video(0, COVER)
             if (header != null && headerEarly) out += Slot.Header
             out += Slot.Section(label("Today"), "Top 5 right now")

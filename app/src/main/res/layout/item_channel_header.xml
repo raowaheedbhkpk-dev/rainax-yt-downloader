@@ -38,8 +38,8 @@
             android:orientation="vertical">
 
             <TextView
-                android:fontFamily="@font/rx_display"
-                android:textAllCaps="true"
+                android:fontFamily="@font/rx_body_bold"
+                android:textAllCaps="false"
                 android:letterSpacing="0.02"
                 android:id="@+id/chHeadName"
                 android:layout_width="match_parent"

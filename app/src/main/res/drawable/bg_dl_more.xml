@@ -4,7 +4,7 @@
         <shape>
             <solid android:color="@color/dl_card_bg" />
             <stroke android:width="1.5dp" android:color="@color/dl_more_stroke" android:dashGap="4dp" android:dashWidth="6dp" />
-            <corners android:radius="2dp" />
+            <corners android:radius="999dp" />
         </shape>
     </item>
 </ripple>

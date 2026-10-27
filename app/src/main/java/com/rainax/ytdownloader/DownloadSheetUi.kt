@@ -183,7 +183,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
                 Spacer(Modifier.width(8.dp))
             }
             if (ui.showThumb) {
-                Box(Modifier.padding(end = 14.dp).size(104.dp, 64.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_dl_thumb)) {
+                Box(Modifier.padding(end = 14.dp).size(104.dp, 64.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_dl_thumb)) {
                     AndroidView(
                         factory = { c -> android.widget.ImageView(c).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP } },
                         update = { v -> if (v.getTag(R.id.img_url) != ui.thumbUrl) Img.load(v, ui.thumbUrl, widthPx = 320) },
@@ -199,7 +199,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text(ui.heading.uppercase(), color = text, fontSize = 20.sp, lineHeight = 24.sp, fontFamily = RxFonts.display,
+                Text(ui.heading, color = text, fontSize = 20.sp, lineHeight = 24.sp, fontFamily = RxFonts.display,
                     letterSpacing = 0.02.em, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(ui.sub, Modifier.padding(top = 4.dp), color = text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
@@ -218,7 +218,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Text(err, Modifier.padding(top = 14.dp), color = colorResource(R.color.rx_error), fontSize = 14.sp, fontFamily = RxFonts.body)
                 OutlinedButton(
-                    onClick = { a.retry() }, modifier = Modifier.padding(top = 8.dp).fillMaxWidth(), shape = RoundedCornerShape(2.dp)
+                    onClick = { a.retry() }, modifier = Modifier.padding(top = 8.dp).fillMaxWidth(), shape = RoundedCornerShape(12.dp)
                 ) { Text("Retry", color = rx.accentText, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
             }
         }
@@ -227,7 +227,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
         if (ui.showTabs) {
             Row(
                 Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp).fillMaxWidth().height(52.dp)
-                    .background(colorResource(R.color.dl_tabs_bg), RoundedCornerShape(2.dp)).padding(4.dp)
+                    .background(colorResource(R.color.dl_tabs_bg), RoundedCornerShape(12.dp)).padding(4.dp)
             ) {
                 SheetTab(Modifier.weight(1f).padding(end = 2.dp), R.drawable.ic_dl_video, "Video", ui.tabKind == KIND_VIDEO) { a.tab(KIND_VIDEO) }
                 SheetTab(Modifier.weight(1f).padding(start = 2.dp), R.drawable.ic_dl_audio, "Audio", ui.tabKind == KIND_AUDIO) { a.tab(KIND_AUDIO) }
@@ -271,12 +271,12 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
             Button(
                 onClick = { if (ui.canDownload && !ui.tearing) a.download() },
                 modifier = Modifier.height(54.dp).alpha(if (ui.canDownload) 1f else 0.5f),
-                shape = RoundedCornerShape(2.dp),
+                shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 28.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = Color.White)
             ) {
                 Image(painterResource(R.drawable.ic_dl_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
-                Text("DOWNLOAD", Modifier.padding(start = 10.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.07.em, fontFamily = RxFonts.body)
+                Text("Download", Modifier.padding(start = 10.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em, fontFamily = RxFonts.body)
             }
         }
     }
@@ -308,7 +308,7 @@ private fun SheetTab(modifier: Modifier, icon: Int, label: String, on: Boolean, 
     val rx = LocalRx.current
     val color = if (on) Color.White else colorResource(R.color.dl_text2)
     Row(
-        modifier.fillMaxSize().background(if (on) rx.accent else Color.Transparent, RoundedCornerShape(2.dp)).clickable(onClick = onClick),
+        modifier.fillMaxSize().background(if (on) rx.accent else Color.Transparent, RoundedCornerShape(12.dp)).clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
     ) {
         Image(painterResource(icon), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(color))
@@ -360,7 +360,7 @@ private fun TicketCard(c: DlCard.Format, tearing: Boolean, onClick: () -> Unit) 
             verticalArrangement = Arrangement.Bottom
         ) {
             Text(c.tag, color = text2, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
-            Text(c.quality.uppercase(), Modifier.padding(top = 2.dp), color = text, fontSize = 32.sp, lineHeight = 34.sp,
+            Text(c.quality, Modifier.padding(top = 2.dp), color = text, fontSize = 32.sp, lineHeight = 34.sp,
                 fontFamily = RxFonts.display, letterSpacing = 0.02.em)
             Text(c.size, Modifier.padding(top = 12.dp), color = if (c.selected) rx.accentText else text2, fontSize = 14.sp,
                 fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)

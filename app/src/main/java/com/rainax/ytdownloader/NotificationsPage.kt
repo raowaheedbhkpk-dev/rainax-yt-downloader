@@ -186,7 +186,7 @@ class NotificationsPage(
                     IconButton(onClick = { dialog.dismiss() }) {
                         Image(painterResource(R.drawable.ic_back), "Back", Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
                     }
-                    Text("NOTIFICATIONS", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display)
+                    Text("Notifications", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 22.sp, fontFamily = RxFonts.display)
                     IconButton(onClick = { load(reset = true) }) {
                         Image(painterResource(R.drawable.ic_refresh), "Refresh", Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
                     }
@@ -225,7 +225,7 @@ class NotificationsPage(
                             Text(m.second, Modifier.padding(top = 6.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center)
                             if (m.third) {
                                 Button(
-                                    onClick = { load(reset = true) }, modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(2.dp),
+                                    onClick = { load(reset = true) }, modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
                                 ) { Text("Try again", fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
                             }

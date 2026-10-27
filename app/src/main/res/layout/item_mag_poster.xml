@@ -43,7 +43,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="@font/rx_display"
+            android:fontFamily="@font/rx_body_bold"
             android:includeFontPadding="false"
             android:maxLines="3"
             android:textAllCaps="false"

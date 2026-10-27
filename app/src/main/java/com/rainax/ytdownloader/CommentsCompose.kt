@@ -146,7 +146,7 @@ internal fun CommentsScreen(ui: CommentsUi, a: CommentsActions) {
 
     Column(Modifier.fillMaxSize().background(rx.bg).padding(top = 8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("COMMENTS", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+            Text("Comments", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
             Text(ui.count, Modifier.weight(1f).padding(start = 8.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body)
         }
         if (ui.sorts.size >= 2) {

@@ -101,7 +101,7 @@ internal fun ShortsScreen(ui: ShortsUi, playerView: android.view.View, a: Shorts
             Box(Modifier.size(48.dp).clickable { a.back() }.semantics { contentDescription = "Back" }.padding(12.dp)) {
                 Image(painterResource(R.drawable.ic_back), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(Color.White))
             }
-            Text("SHORTS", Modifier.padding(start = 4.dp), color = Color.White, fontSize = 20.sp, fontFamily = RxFonts.display,
+            Text("Shorts", Modifier.padding(start = 4.dp), color = Color.White, fontSize = 20.sp, fontFamily = RxFonts.display,
                 letterSpacing = 0.02.em)
         }
     }

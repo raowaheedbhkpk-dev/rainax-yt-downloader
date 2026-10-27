@@ -24,7 +24,7 @@
     <style name="Widget.Rainax.SnackbarButton" parent="Widget.Material3.Button.TextButton.Snackbar">
         <item name="android:textColor">@color/rx_cinema_gold</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
     </style>
     <style name="Widget.Rainax.SnackbarText" parent="Widget.Material3.Snackbar.TextView">
@@ -199,7 +199,7 @@
         <item name="backgroundTint">?attr/rxAccent</item>
         <item name="android:textColor">@color/rx_white</item>
         <item name="cornerRadius">2dp</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
@@ -210,14 +210,14 @@
         <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/rx_text</item>
         <item name="cornerRadius">2dp</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
     </style>
     <style name="Widget.Rainax.Dialog.Neutral" parent="Widget.Material3.Button.TextButton.Dialog">
         <item name="android:textColor">@color/rx_gold</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -300,27 +300,27 @@
         <item name="android:fontFamily">@font/rx_body</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">12sp</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
         <item name="android:letterSpacing">0.08</item>
     </style>
 
     <!-- bottom bar labels: small, like YouTube -->
     <style name="TextAppearance.Rainax.Nav" parent="TextAppearance.Material3.LabelSmall">
-        <item name="android:textSize">10sp</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="textAllCaps">true</item>
-        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
         <item name="android:fontFamily">@font/rx_body</item>
         <item name="fontFamily">@font/rx_body</item>
     </style>
 
     <!-- titles -->
     <style name="TextAppearance.Rainax.Display" parent="">
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body_bold</item>
+        <item name="fontFamily">@font/rx_body_bold</item>
         <item name="android:textColor">@color/rx_text</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.02</item>
     </style>
 
@@ -442,7 +442,7 @@
 
     <style name="TextAppearance.Rainax.Tab" parent="TextAppearance.Material3.TitleSmall">
         <item name="android:textStyle">bold</item>
-        <item name="textAllCaps">true</item>
+        <item name="textAllCaps">false</item>
         <item name="android:letterSpacing">0.08</item>
     </style>
 
@@ -512,18 +512,18 @@
     </style>
     <style name="TextAppearance.Rainax.Type.Title" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textSize">20sp</item>
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body_bold</item>
+        <item name="fontFamily">@font/rx_body_bold</item>
     </style>
     <style name="TextAppearance.Rainax.Type.Headline" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textSize">24sp</item>
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body_bold</item>
+        <item name="fontFamily">@font/rx_body_bold</item>
     </style>
     <style name="TextAppearance.Rainax.Type.Display" parent="TextAppearance.Material3.HeadlineLarge">
         <item name="android:textSize">32sp</item>
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body_bold</item>
+        <item name="fontFamily">@font/rx_body_bold</item>
     </style>
     <style name="ThemeOverlay.Rainax.Accent.Violet" parent="">
         <item name="rxAccent">@color/rx_accent_violet</item>

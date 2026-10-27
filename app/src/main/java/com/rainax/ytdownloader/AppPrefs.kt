@@ -105,6 +105,10 @@ object AppPrefs {
     fun setAccent(c: Context, v: Int) = p(c).edit().putInt("accent", v).apply()
 
     /** Video page › Cinema mode: the page under the player dims while a video plays (dark theme). */
+    /** Home's first tab as a magazine (Cover story, Top 5, chapters, tickets). Off by default: a simple video list. */
+    fun magazineHome(c: Context) = p(c).getBoolean("magazine_home", false)
+    fun setMagazineHome(c: Context, v: Boolean) = p(c).edit().putBoolean("magazine_home", v).apply()
+
     fun cinemaMode(c: Context) = p(c).getBoolean("cinema_mode", true)
     fun setCinemaMode(c: Context, v: Boolean) = p(c).edit().putBoolean("cinema_mode", v).apply()
 

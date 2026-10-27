@@ -104,7 +104,7 @@ private fun QueueRow(s: QueueSong, playing: Boolean, a: QueueActions) {
         Modifier.fillMaxWidth().height(64.dp).clickable { a.play(s.index) }.semantics { contentDescription = s.title }.padding(start = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(52.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
+        Box(Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
             SquareArt(s.art, Modifier.fillMaxSize(), 200)
             if (playing) {
                 Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_song_now).padding(14.dp)) {
@@ -142,10 +142,10 @@ internal fun LyricsScreen(ui: LyricsUi) {
     val text3 = colorResource(R.color.rx_cinema_text3)
     Column(Modifier.fillMaxWidth().background(colorResource(R.color.rx_cinema_bg)).padding(top = 10.dp)) {
         Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).background(colorResource(R.color.rx_cinema_line)))
-        Text("LYRICS", Modifier.fillMaxWidth().padding(top = 16.dp), color = colorResource(R.color.rx_cinema_gold), fontSize = 10.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = 0.3.em, textAlign = TextAlign.Center)
-        Text(ui.title.uppercase(), Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 6.dp), color = Color.White,
-            fontSize = 24.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text("Lyrics", Modifier.fillMaxWidth().padding(top = 16.dp), color = colorResource(R.color.rx_cinema_gold), fontSize = 12.sp,
+            fontWeight = FontWeight.Bold, letterSpacing = 0.01.em, textAlign = TextAlign.Center)
+        Text(ui.title, Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 6.dp), color = Color.White,
+            fontSize = 22.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (ui.artist.isNotBlank()) {
             Text(ui.artist, Modifier.fillMaxWidth().padding(top = 2.dp), color = text3, fontSize = 14.sp, fontFamily = RxFonts.body,
                 textAlign = TextAlign.Center)
