@@ -81,6 +81,22 @@ object YtAccount {
         )
     }
 
+    /**
+     * The signed-in headers for a YouTube request (cookies and the SAPISIDHASH key), or null when not signed in.
+     * Used for age-restricted videos, which YouTube only plays for a signed-in, grown-up account.
+     */
+    internal fun authHeaders(): Map<String, String>? {
+        val cookie = cookies ?: return null
+        val sid = sapisid(cookie) ?: return null
+        val ts = System.currentTimeMillis() / 1000
+        return mapOf(
+            "Cookie" to cookie,
+            "Authorization" to "SAPISIDHASH ${ts}_" + sha1("$ts $sid $ORIGIN"),
+            "X-Origin" to ORIGIN,
+            "X-Goog-AuthUser" to "0"
+        )
+    }
+
     /** Blocking. A signed-in YouTube request; throws a readable error. */
     private fun post(endpoint: String, body: JSONObject): JSONObject = request(endpoint, body, true)
 

@@ -1,3 +1,4 @@
+Fix: age-restricted videos now play and download when you are signed in with an 18+ YouTube account; Google sign-in shows "This browser or app may not be secure" less often (tries again as Firefox when it does)
 Fix: the build error in the Music player's comments count (whole app now on Jetpack Compose)
 Cleanup: removed old screen files, 29 unused pictures and the ViewPager2 library left over from the move to Jetpack Compose (smaller app)
 New: the full-screen player's buttons (top bar, play and 10 s buttons, seek bar, lock, aspect, rotate, picture-in-picture and the swipe info) rebuilt with Jetpack Compose

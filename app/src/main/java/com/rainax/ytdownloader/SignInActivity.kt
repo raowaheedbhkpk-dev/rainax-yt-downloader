@@ -46,8 +46,13 @@ class SignInActivity : AppCompatActivity() {
         ws.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         ws.domStorageEnabled = true
         ws.cacheMode = WebSettings.LOAD_DEFAULT
-        // Google refuses sign-in from pages that say they are an app's web view: look like the phone's browser
-        ws.userAgentString = WebSettings.getDefaultUserAgent(this).replace("; wv)", ")")
+        // Google refuses sign-in from pages that say they are an app's web view ("This browser or app may not be
+        // secure"): look like the phone's own Chrome. The app's web view gives itself away in three places: "; wv"
+        // and "Version/4.0" in its name, and a header with the app's package name. All three are taken out.
+        ws.userAgentString = chromeAgent()
+        if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
+            androidx.webkit.WebSettingsCompat.setRequestedWithHeaderOriginAllowList(ws, emptySet())
+        }
         val cm = CookieManager.getInstance()
         cm.setAcceptCookie(true)
         cm.setAcceptThirdPartyCookies(b.signInWeb, true)
@@ -66,6 +71,13 @@ class SignInActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 b.signInProgress.visibility = View.GONE
                 check()
+                // Google still said "Couldn't sign you in": once more, looking like Firefox (Google allows it)
+                if (url != null && rejected(url) && !triedFirefox) {
+                    triedFirefox = true
+                    b.signInWeb.settings.userAgentString = FIREFOX_UA
+                    b.signInWeb.clearHistory()
+                    b.signInWeb.loadUrl(SIGN_IN_URL)
+                }
             }
 
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) = check()
@@ -91,6 +103,17 @@ class SignInActivity : AppCompatActivity() {
     }
 
     private var started = false
+    private var triedFirefox = false
+
+    /** The phone's web view name, made to look like the phone's Chrome browser. */
+    private fun chromeAgent(): String = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrDefault("")
+        .replace("; wv)", ")")
+        .replace(Regex("\\s*Version/\\d+(\\.\\d+)*"), "")
+        .ifBlank { "Mozilla/5.0 (Linux; Android ${android.os.Build.VERSION.RELEASE}; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36" }
+
+    /** Google's "Couldn't sign you in / This browser or app may not be secure" page. */
+    private fun rejected(url: String): Boolean =
+        url.contains("accounts.google.com") && (url.contains("/rejected") || url.contains("disallowed_useragent"))
 
     private fun startSignIn() {
         started = true
@@ -124,6 +147,7 @@ class SignInActivity : AppCompatActivity() {
 
     companion object {
         private const val STARTED = "started"
+        private val FIREFOX_UA = "Mozilla/5.0 (Android ${android.os.Build.VERSION.RELEASE}; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0"
         private const val SIGN_IN_URL = "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true" +
             "&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26next%3Dhttps%253A%252F%252Fm.youtube.com%252F"
     }

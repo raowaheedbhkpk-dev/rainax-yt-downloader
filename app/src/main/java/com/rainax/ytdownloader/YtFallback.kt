@@ -34,7 +34,11 @@ object YtFallback {
     const val REFUSED_TEXT = "YouTube refused this video:"
 
     /** A YouTube app the request pretends to be (the same ones yt-dlp uses for these videos). */
-    private class Client(val name: String, val id: String, val version: String, val ua: String, val embedded: Boolean = false)
+    private class Client(
+        val name: String, val id: String, val version: String, val ua: String, val embedded: Boolean = false,
+        /** Sent with your YouTube sign-in (age-restricted videos need a signed-in, grown-up account). */
+        val signedIn: Boolean = false
+    )
 
     private const val SAFARI_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
         "(KHTML, like Gecko) Version/15.5 Safari/605.1.15,gzip(gfe)"
@@ -47,6 +51,19 @@ object YtFallback {
             "TVHTML5", "7", "7.20260707.07.00",
             "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/25.lts.30.1034943-gold (unlike Gecko), Unknown_TV_Unknown_0/Unknown (Unknown, Unknown)"
         )
+    )
+
+    /**
+     * Signed in only, after the ones above: the TV app and the website with your YouTube sign-in. YouTube plays
+     * age-restricted videos only to a signed-in account that is 18+ (the same way yt-dlp does it with cookies).
+     */
+    private val SIGNED_IN = listOf(
+        Client(
+            "TVHTML5", "7", "7.20260707.07.00",
+            "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/25.lts.30.1034943-gold (unlike Gecko), Unknown_TV_Unknown_0/Unknown (Unknown, Unknown)",
+            signedIn = true
+        ),
+        Client("WEB", "1", "2.20260805.01.00", SAFARI_UA, signedIn = true)
     )
 
     /** True for "not available" answers this second way may solve (not private, paid or blocked-by-country ones). */
@@ -63,7 +80,9 @@ object YtFallback {
         val js = embed?.playerId?.let { pid -> runCatching { JsSolver.prepare(pid) }.getOrNull() }
         val sts = js?.sts ?: runCatching { YoutubeJavaScriptPlayerManager.getSignatureTimestamp(id) }.getOrNull()
         var last: Exception? = null
-        for (c in CLIENTS) {
+        // your sign-in is only sent when the anonymous ways failed (and you are signed in)
+        val clients = CLIENTS + if (YtAccount.authHeaders() != null) SIGNED_IN else emptyList()
+        for (c in clients) {
             try {
                 return build(pageUrl, id, player(c, id, sts, embed), js?.id).also { served += id }
             } catch (e: Exception) {
@@ -297,6 +316,7 @@ object YtFallback {
             con.setRequestProperty("Origin", "https://www.youtube.com")
             if (c.embedded) con.setRequestProperty("Referer", "https://www.reddit.com/")
             visitor?.let { con.setRequestProperty("X-Goog-Visitor-Id", it) }
+            if (c.signedIn) YtAccount.authHeaders()?.forEach { (k, v) -> con.setRequestProperty(k, v) }
             con.outputStream.use { it.write(json.toByteArray()) }
             val code = con.responseCode
             val text = (if (code >= 400) con.errorStream else con.inputStream)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()

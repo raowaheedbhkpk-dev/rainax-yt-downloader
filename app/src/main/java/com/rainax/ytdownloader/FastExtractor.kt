@@ -95,7 +95,16 @@ object FastExtractor {
                     try { YtFallback.info(key) } catch (second: Exception) {
                         android.util.Log.w("RAINAX", "fallback failed: ${second.message}")
                         // YouTube's own reason, so the message says what really happened
-                        val why = second.message.orEmpty().replace(Regex("\\s+"), " ").trim().take(120)
+                        var why = second.message.orEmpty().replace(Regex("\\s+"), " ").trim().take(120)
+                        // age-restricted: say what to do (YouTube plays these only to a signed-in 18+ account)
+                        if (why.contains("confirm your age", true) || why.contains("age-restricted", true) ||
+                            why.contains("inappropriate for some users", true)) {
+                            why = if (YtAccount.authHeaders() == null)
+                                "Age-restricted video. Sign in to YouTube (You → Sign in) with an 18+ account, then open it again."
+                            else
+                                "Age-restricted video, and YouTube didn't allow your account to watch it. Check that your " +
+                                    "Google account's age is verified (18+), or sign out and sign in again."
+                        }
                         throw IllegalStateException("$REFUSED $why".trim(), e)
                     }
                 }
