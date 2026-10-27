@@ -4,16 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
+import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -23,11 +17,6 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.widget.ViewPager2
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.rainax.ytdownloader.databinding.ActivityShortsBinding
-import com.rainax.ytdownloader.databinding.ItemShortPageBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,29 +74,27 @@ class ShortsActivity : AppCompatActivity() {
         Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
     }
 
-
-    private lateinit var b: ActivityShortsBinding
+    /** What the screen shows (Compose, ShortsScreen.kt). This screen's own list is ui.items
+     *  (the Home strip may change the shared one while it is open). */
+    private val ui = ShortsUi()
+    private val items get() = ui.items
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
-    private val adapter = PageAdapter()
-    /** This screen's own list (the Home strip may change the shared one while it is open). */
-    private val items = mutableListOf<VideoItem>()
     private val details = HashMap<String, VideoDetails>()
     private val loadingDetails = HashSet<String>()
     private val failed = HashSet<String>()
-    private var current = -1
+    private val current get() = ui.current
     private var loadingMore = false
-    private var bottomInset = 0
     private var userPaused = false
     /** Your like / dislike per video id ("LIKE", "DISLIKE", "INDIFFERENT"). */
-    private val rating = HashMap<String, String>()
-    private val likeCounts = HashMap<String, Long>()
-    private val dislikeCounts = HashMap<String, Long>()
+    private val rating get() = ui.rating
+    private val likeCounts get() = ui.likes
+    private val dislikeCounts get() = ui.dislikes
 
     private val signIn = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode == RESULT_OK) {
             Notify.show(this, "Signed in to YouTube")
-            holder(current)?.let { h -> items.getOrNull(current)?.let { h.loadState(it.url) } }
+            items.getOrNull(current)?.let { loadState(it.url) }
         }
     }
 
@@ -126,7 +113,6 @@ class ShortsActivity : AppCompatActivity() {
             if (to == "LIKE") likeCounts[id] = (likeCounts[id] ?: 0L).coerceAtLeast(0) + 1
             if (to == "DISLIKE") dislikeCounts[id] = (dislikeCounts[id] ?: 0L).coerceAtLeast(0) + 1
             rating[id] = to
-            holder(current)?.showRating()
         }
         lifecycleScope.launch {
             // know your current like first (tapping Like on a video you already liked takes it back)
@@ -151,24 +137,9 @@ class ShortsActivity : AppCompatActivity() {
         Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         items.addAll(ShortsFeed.items)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        b = ActivityShortsBinding.inflate(layoutInflater)
-        setContentView(b.root)
-        b.root.isForceDarkAllowed = false
-        ViewCompat.setOnApplyWindowInsetsListener(b.root) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            b.shortsTop.updatePadding(top = bars.top)
-            if (bottomInset != bars.bottom) {
-                bottomInset = bars.bottom
-                // only move the text up on the pages already shown (a full refresh would restart them)
-                (b.pager.getChildAt(0) as? RecyclerView)?.let { rv ->
-                    for (i in 0 until rv.childCount) (rv.getChildViewHolder(rv.getChildAt(i)) as? PageVH)?.padInfo()
-                }
-            }
-            insets
-        }
-        b.shortsBack.setOnClickListener { finish() }
+        window.decorView.setBackgroundColor(android.graphics.Color.BLACK)
 
-        playerView = layoutInflater.inflate(R.layout.view_short_player, b.root, false) as PlayerView
+        playerView = layoutInflater.inflate(R.layout.view_short_player, android.widget.FrameLayout(this), false) as PlayerView
         val p = ExoPlayer.Builder(this)
             .setMediaSourceFactory(RxMediaSourceFactory())
             .setAudioAttributes(
@@ -183,10 +154,10 @@ class ShortsActivity : AppCompatActivity() {
             .build()
         p.repeatMode = Player.REPEAT_MODE_ONE
         p.addListener(object : Player.Listener {
-            override fun onRenderedFirstFrame() = holder(current)?.started() ?: Unit
+            override fun onRenderedFirstFrame() = started()
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying) holder(current)?.started()
+                if (isPlaying) started()
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -197,48 +168,51 @@ class ShortsActivity : AppCompatActivity() {
                     FastExtractor.forget(item.url)
                     loadAndPlay(current)
                 } else {
-                    holder(current)?.showError()
+                    showError(item.url)
                 }
             }
         })
         player = p
         playerView.player = p
 
-        b.pager.orientation = ViewPager2.ORIENTATION_VERTICAL
-        b.pager.offscreenPageLimit = 1
-        b.pager.adapter = adapter
-        b.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) = select(position)
-        })
-        val start = intent.getIntExtra(EXTRA_INDEX, 0).coerceIn(0, (items.size - 1).coerceAtLeast(0))
-        if (items.isEmpty()) loadMore() else b.pager.setCurrentItem(start, false)
-        b.pager.post { if (current < 0 && items.isNotEmpty()) select(b.pager.currentItem) }
+        ui.start = intent.getIntExtra(EXTRA_INDEX, 0).coerceIn(0, (items.size - 1).coerceAtLeast(0))
+        val actions = ShortsActions(
+            back = { finish() },
+            select = { select(it) },
+            tap = { pos -> if (pos == current) togglePause() },
+            like = { rate(it.url, "LIKE") },
+            dislike = { rate(it.url, "DISLIKE") },
+            comments = { CommentsSheet(this, it.url, { askSignIn() }).show() },
+            download = { chooseDownload(it) },
+            share = { share(it) }
+        )
+        setContent { RxTheme { ShortsScreen(ui, playerView, actions) } }
+        if (items.isEmpty()) loadMore()
     }
 
-    private fun holder(pos: Int): PageVH? =
-        (b.pager.getChildAt(0) as? RecyclerView)?.findViewHolderForAdapterPosition(pos) as? PageVH
+    /** The Short on screen started showing its video: its picture and spinner go. */
+    private fun started() {
+        items.getOrNull(current)?.let { ui.started[it.url] = true; ui.errors.remove(it.url) }
+    }
 
-    /** A Short came on screen: move the video surface there and play it. */
+    private fun showError(url: String) {
+        ui.errors[url] = true
+    }
+
+    /** A Short came on screen: the video surface moves there (Compose) and it plays. */
     private fun select(pos: Int) {
         if (pos == current || pos !in items.indices) return
-        current = pos
+        ui.started.clear()                       // the pages show their pictures until their video starts
+        ui.errors.remove(items[pos].url)
+        ui.current = pos
         userPaused = false
+        ui.paused = false
         player?.run { stop(); clearMediaItems() }
-        attachSurface(pos)
         loadAndPlay(pos)
         // the next Short is looked up now, so it starts at once
         items.getOrNull(pos + 1)?.let { prefetch(it.url) }
+        loadState(items[pos].url)
         if (pos >= items.size - 4) loadMore()
-    }
-
-    private fun attachSurface(pos: Int) {
-        val h = holder(pos)
-        if (h == null) {
-            b.pager.post { if (current == pos) attachSurface(pos) }
-            return
-        }
-        (playerView.parent as? ViewGroup)?.removeView(playerView)
-        h.b.spVideo.addView(playerView)
     }
 
     private fun prefetch(url: String) {
@@ -246,7 +220,7 @@ class ShortsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val d = withContext(Dispatchers.IO) { runCatching { YtCatalog.video(url) }.getOrNull() }
             loadingDetails.remove(url)
-            if (d != null) details[url] = d
+            if (d != null) { details[url] = d; fill(d) }
         }
     }
 
@@ -257,7 +231,7 @@ class ShortsActivity : AppCompatActivity() {
             val d = withContext(Dispatchers.IO) { runCatching { YtCatalog.video(item.url) }.getOrNull() }
             if (d != null) details[item.url] = d
             if (current != pos) return@launch
-            if (d == null) holder(pos)?.showError() else play(pos, d)
+            if (d == null) showError(item.url) else play(pos, d)
         }
     }
 
@@ -267,15 +241,12 @@ class ShortsActivity : AppCompatActivity() {
         val more = d.related.filter {
             !it.isPlaylist && !it.isChannel && (it.isShort || it.seconds in 1..180) && known.add(youtubeId(it.url) ?: it.url)
         }
-        if (more.isEmpty()) return
-        val start = items.size
-        items.addAll(more)
-        adapter.notifyItemRangeInserted(start, more.size)
+        if (more.isNotEmpty()) items.addAll(more)
     }
 
     private fun play(pos: Int, d: VideoDetails) {
         val p = player ?: return
-        holder(pos)?.fill(d)
+        fill(d)
         addRelated(d)
         val src = d.play
         val uri = when {
@@ -285,11 +256,38 @@ class ShortsActivity : AppCompatActivity() {
             src.muxed != null -> Uri.parse(src.muxed)
             src.hls != null -> Uri.Builder().scheme("rainax").authority("hls")
                 .appendQueryParameter("h", src.hls).appendQueryParameter("u", d.url).build()
-            else -> { holder(pos)?.showError(); return }
+            else -> { items.getOrNull(pos)?.let { showError(it.url) }; return }
         }
         p.setMediaItem(MediaItem.Builder().setMediaId(d.url).setUri(uri).build())
         p.prepare()
         if (!userPaused) p.play()
+    }
+
+    /** Better title and channel, the like count, and the dislike count (Return YouTube Dislike). */
+    private fun fill(d: VideoDetails) {
+        val item = items.firstOrNull { youtubeId(it.url) == youtubeId(d.url) } ?: return
+        ui.names[item.url] = d.title.ifBlank { item.title } to d.uploader.ifBlank { item.uploader }
+        val id = youtubeId(d.url) ?: return
+        if (d.likes >= 0 && !likeCounts.containsKey(id)) likeCounts[id] = d.likes
+        if (dislikeCounts.containsKey(id)) return
+        lifecycleScope.launch {
+            val (likes, n) = withContext(Dispatchers.IO) { Dislikes.votes(id) }
+            if (likes > 0 && (likeCounts[id] ?: 0L) <= 0L) likeCounts[id] = likes
+            if (n >= 0 && !dislikeCounts.containsKey(id)) {
+                dislikeCounts[id] = n + if (rating[id] == "DISLIKE" && n == 0L) 1 else 0
+            }
+        }
+    }
+
+    /** Signed in: whether you already liked or disliked this Short. */
+    private fun loadState(pageUrl: String) {
+        val id = youtubeId(pageUrl) ?: return
+        if (!YtAccount.isSignedIn(this) || rating.containsKey(id)) return
+        lifecycleScope.launch {
+            val st = withContext(Dispatchers.IO) { runCatching { YtAccount.videoState(id) }.getOrNull() } ?: return@launch
+            if (rating.containsKey(id)) return@launch
+            rating[id] = st.likeStatus ?: "INDIFFERENT"
+        }
     }
 
     private fun loadMore() {
@@ -307,11 +305,8 @@ class ShortsActivity : AppCompatActivity() {
                 }
                 return@launch
             }
-            val start = items.size
             items.addAll(fresh)
             ShortsFeed.items.addAll(found.filter { f -> ShortsFeed.items.none { it.url == f.url } })
-            adapter.notifyItemRangeInserted(start, fresh.size)
-            if (current < 0) select(b.pager.currentItem)
         }
     }
 
@@ -324,7 +319,7 @@ class ShortsActivity : AppCompatActivity() {
             userPaused = false
             p.play()
         }
-        holder(current)?.b?.spPaused?.isVisible = userPaused
+        ui.paused = userPaused
     }
 
     /** Download: the same download sheet as everywhere (Video / Audio tabs, quality cards, real sizes). */
@@ -357,122 +352,6 @@ class ShortsActivity : AppCompatActivity() {
         player?.release()
         player = null
         super.onDestroy()
-    }
-
-    // ---------- pages ----------
-
-    private inner class PageAdapter : RecyclerView.Adapter<PageVH>() {
-        override fun getItemCount() = items.size
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            PageVH(ItemShortPageBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-
-        override fun onBindViewHolder(holder: PageVH, position: Int) = holder.bind(items[position], position)
-
-        override fun onViewRecycled(holder: PageVH) {
-            if (playerView.parent === holder.b.spVideo) holder.b.spVideo.removeView(playerView)
-        }
-    }
-
-    private inner class PageVH(val b: ItemShortPageBinding) : RecyclerView.ViewHolder(b.root) {
-        private var url: String? = null
-
-        fun bind(item: VideoItem, pos: Int) {
-            url = item.url
-            padInfo()
-            // tall picture, same size as the video will be (no small picture that then jumps bigger)
-            val id = youtubeId(item.url)
-            Img.loadPortrait(b.spThumb, listOfNotNull(
-                id?.let { "https://i.ytimg.com/vi/$it/oar2.jpg" },
-                id?.let { "https://i.ytimg.com/vi/$it/hq720.jpg" },
-                id?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" },
-                item.thumb
-            ))
-            b.spThumb.isVisible = true
-            b.spLoading.isVisible = true
-            b.spError.isVisible = false
-            b.spPaused.isVisible = false
-            b.spTitle.text = item.title
-            b.spUploader.text = item.uploader
-            details[item.url]?.let { fill(it) }
-            b.root.setOnClickListener { if (pos == current) togglePause() }
-            b.spComments.setOnClickListener {
-                CommentsSheet(this@ShortsActivity, item.url, { askSignIn() }).show()
-            }
-            b.spDownload.setOnClickListener { chooseDownload(item) }
-            b.spShare.setOnClickListener { share(item) }
-            b.spLike.setOnClickListener { rate(item.url, "LIKE") }
-            b.spDislike.setOnClickListener { rate(item.url, "DISLIKE") }
-            showRating()
-            loadState(item.url)
-            if (pos == current) {
-                if (playerView.parent == null) b.spVideo.addView(playerView)
-                // the playing Short shown again (e.g. after a refresh): no picture or spinner over it
-                if ((player?.playbackState ?: Player.STATE_IDLE) == Player.STATE_READY) started()
-                b.spPaused.isVisible = userPaused
-            } else if (playerView.parent === b.spVideo) {
-                b.spVideo.removeView(playerView)
-            }
-        }
-
-        fun padInfo() {
-            b.spInfo.updatePadding(bottom = bottomInset + (20 * resources.displayMetrics.density).toInt())
-        }
-
-        fun fill(d: VideoDetails) {
-            if (youtubeId(d.url) != youtubeId(url)) return
-            if (d.title.isNotBlank()) b.spTitle.text = d.title
-            if (d.uploader.isNotBlank()) b.spUploader.text = d.uploader
-            val id = youtubeId(d.url) ?: return
-            if (d.likes >= 0 && !likeCounts.containsKey(id)) likeCounts[id] = d.likes
-            showRating()
-            if (dislikeCounts.containsKey(id)) return
-            lifecycleScope.launch {
-                val (likes, n) = withContext(Dispatchers.IO) { Dislikes.votes(id) }
-                if (likes > 0 && (likeCounts[id] ?: 0L) <= 0L) likeCounts[id] = likes
-                if (n >= 0 && !dislikeCounts.containsKey(id)) {
-                    dislikeCounts[id] = n + if (rating[id] == "DISLIKE" && n == 0L) 1 else 0
-                    if (youtubeId(url) == id) showRating()
-                }
-            }
-        }
-
-        /** Counts and your own like/dislike (coloured) on the buttons. */
-        fun showRating() {
-            val id = youtubeId(url) ?: return
-            val likes = likeCounts[id] ?: -1
-            val dislikes = dislikeCounts[id] ?: -1
-            b.spLikeText.text = if (likes > 0) YtCatalog.count(likes) else "Like"
-            b.spDislikeText.text = if (dislikes > 0) YtCatalog.count(dislikes) else "Dislike"
-            val mine = rating[id]
-            val on = Ui.accent(this@ShortsActivity)
-            val off = androidx.core.content.ContextCompat.getColor(this@ShortsActivity, R.color.rx_white)
-            b.spLike.imageTintList = android.content.res.ColorStateList.valueOf(if (mine == "LIKE") on else off)
-            b.spDislike.imageTintList = android.content.res.ColorStateList.valueOf(if (mine == "DISLIKE") on else off)
-        }
-
-        /** Signed in: whether you already liked or disliked this Short. */
-        fun loadState(pageUrl: String) {
-            val id = youtubeId(pageUrl) ?: return
-            if (!YtAccount.isSignedIn(this@ShortsActivity) || rating.containsKey(id)) return
-            lifecycleScope.launch {
-                val st = withContext(Dispatchers.IO) { runCatching { YtAccount.videoState(id) }.getOrNull() } ?: return@launch
-                if (rating.containsKey(id)) return@launch
-                rating[id] = st.likeStatus ?: "INDIFFERENT"
-                if (youtubeId(url) == id) showRating()
-            }
-        }
-
-        fun started() {
-            b.spThumb.isVisible = false
-            b.spLoading.isVisible = false
-            b.spError.isVisible = false
-        }
-
-        fun showError() {
-            b.spLoading.isVisible = false
-            b.spError.isVisible = true
-        }
     }
 
     companion object {

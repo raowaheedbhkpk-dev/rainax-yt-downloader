@@ -15,11 +15,9 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
-import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -72,7 +70,7 @@ class MusicPlayer(
     var onTone: (Int) -> Unit = {}
 
     /** Where the video of a song shows (the main screen gives it the player's picture). */
-    val videoView: PlayerView get() = pg.mpVideo
+    val videoView: PlayerView get() = art.mpVideo
 
     /** The big player shows a song's video now. */
     val wantsPicture: Boolean get() = active && expanded && videoMode
@@ -93,6 +91,9 @@ class MusicPlayer(
     private var likeCount = -1L
     private val commentCounts = HashMap<String, String>()
     private var queueSheet: QueueSheet? = null
+    /** What the big player shows (Compose, MusicPage.kt) and its cover / video (a real view). */
+    private val ui = MusicPageUi()
+    private val art = com.rainax.ytdownloader.databinding.LayoutMusicArtBinding.inflate(act.layoutInflater)
 
     // the background takes the cover's colour
     private var tone = MusicArt.DEFAULT_TONE
@@ -108,44 +109,35 @@ class MusicPlayer(
         miniBg.cornerRadius = 2 * act.resources.displayMetrics.density
         mini.root.background = miniBg
         mini.mmArt.clipToOutline = true
-        pg.mpArtBox.clipToOutline = true
-        pg.mpTitle.isSelected = true                          // long titles scroll
+        art.mpArtBox.clipToOutline = true
         applyTone(tone)
 
-        pg.mpCollapse.setOnClickListener { collapse() }
-        pg.mpModeSong.setOnClickListener { setVideoMode(false) }
-        pg.mpModeVideo.setOnClickListener { setVideoMode(true) }
-        pg.mpMore.setOnClickListener { playerMenu() }
-        pg.mpPlay.setOnClickListener { togglePlay() }
-        pg.mpPrev.setOnClickListener { previous() }
-        pg.mpNext.setOnClickListener { next() }
-        pg.mpShuffle.setOnClickListener { player()?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
-        pg.mpRepeat.setOnClickListener { cycleRepeat() }
-        pg.mpUpNext.setOnClickListener { showQueue() }
-        pg.mpLike.setOnClickListener { rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE") }
-        pg.mpDislike.setOnClickListener { rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE") }
-        pg.mpComments.setOnClickListener { showComments() }
-        pg.mpDownload.setOnClickListener { current()?.let { download(it.url, it.title, true) } }
-        pg.mpShare.setOnClickListener { current()?.let { share(it) } }
-        pg.mpLyrics.setOnClickListener { showLyrics() }
-        pg.mpSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
-                if (!fromUser) return
-                val d = duration()
-                if (d > 0) pg.mpPos.text = time(d * progress / 1000)
-            }
-
-            override fun onStartTrackingTouch(sb: SeekBar) {
-                dragging = true
-            }
-
-            override fun onStopTrackingTouch(sb: SeekBar) {
+        val actions = MusicPageActions(
+            collapse = { collapse() },
+            mode = { setVideoMode(it) },
+            more = { playerMenu() },
+            like = { rate(if (likeStatus == "LIKE") "INDIFFERENT" else "LIKE") },
+            dislike = { rate(if (likeStatus == "DISLIKE") "INDIFFERENT" else "DISLIKE") },
+            comments = { showComments() },
+            download = { current()?.let { download(it.url, it.title, true) } },
+            share = { current()?.let { share(it) } },
+            lyrics = { showLyrics() },
+            seekStart = { at -> dragging = true; showSeek(at) },
+            seekMove = { at -> showSeek(at) },
+            seekEnd = { at ->
                 dragging = false
-                val p = player() ?: return
                 val d = duration()
-                if (d > 0) p.seekTo(d * sb.progress / 1000)
-            }
-        })
+                if (d > 0) player()?.seekTo(d * at / 1000)
+            },
+            shuffle = { player()?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } },
+            previous = { previous() },
+            play = { togglePlay() },
+            next = { next() },
+            repeat = { cycleRepeat() },
+            upNext = { showQueue() }
+        )
+        pg.mpCompose.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        pg.mpCompose.setContent { RxTheme { MusicPageScreen(ui, art.root, actions) } }
 
         // swipe the cover down: the big player folds into the mini bar
         val fling = GestureDetector(act, object : GestureDetector.SimpleOnGestureListener() {
@@ -159,7 +151,7 @@ class MusicPlayer(
                 return false
             }
         })
-        pg.mpArtArea.setOnTouchListener { _, e -> fling.onTouchEvent(e) }
+        art.mpArtArea.setOnTouchListener { _, e -> fling.onTouchEvent(e) }
 
         mini.root.setOnClickListener { expand() }
         mini.mmPlay.setOnClickListener { togglePlay() }
@@ -501,7 +493,7 @@ class MusicPlayer(
             loadVideo()
         } else {
             videoJob?.cancel()
-            pg.mpArtLoading.isVisible = false
+            art.mpArtLoading.isVisible = false
             if (hasPicture(item)) swap(p, item, BgPlayService.lazyUri(item.mediaId), picture = false)
         }
         onChanged()
@@ -514,10 +506,10 @@ class MusicPlayer(
         if (hasPicture(item)) return
         val url = item.mediaId
         videoJob?.cancel()
-        pg.mpArtLoading.isVisible = true
+        art.mpArtLoading.isVisible = true
         videoJob = act.lifecycleScope.launch {
             val d = withContext(Dispatchers.IO) { runCatching { YtCatalog.video(url) }.getOrNull() }
-            pg.mpArtLoading.isVisible = false
+            art.mpArtLoading.isVisible = false
             val pl = player() ?: return@launch
             val now = pl.currentMediaItem ?: return@launch
             if (!videoMode || now.mediaId != url) return@launch
@@ -577,7 +569,7 @@ class MusicPlayer(
     /** The record turns (one turn in 8 s) while the song plays, and stops where it is when paused. */
     private fun spinVinyl(playing: Boolean) {
         if (videoMode || !android.animation.ValueAnimator.areAnimatorsEnabled()) { vinylSpin?.pause(); return }
-        val a = vinylSpin ?: android.animation.ObjectAnimator.ofFloat(pg.mpArt, View.ROTATION, 0f, 360f).apply {
+        val a = vinylSpin ?: android.animation.ObjectAnimator.ofFloat(art.mpArt, View.ROTATION, 0f, 360f).apply {
             duration = 8000
             repeatCount = android.animation.ValueAnimator.INFINITE
             interpolator = android.view.animation.LinearInterpolator()
@@ -591,25 +583,20 @@ class MusicPlayer(
     }
 
     private fun updateModes() {
-        pg.mpModeSong.setBackgroundResource(if (!videoMode) R.drawable.bg_mp_toggle_on else 0)
-        pg.mpModeVideo.setBackgroundResource(if (videoMode) R.drawable.bg_mp_toggle_on else 0)
-        pg.mpModeSong.alpha = if (!videoMode) 1f else 0.7f
-        pg.mpModeVideo.alpha = if (videoMode) 1f else 0.7f
-        pg.mpArtBox.ratio = if (videoMode) 9f / 16f else 1f
-        pg.mpVideo.isVisible = videoMode
-        pg.mpArt.isVisible = !videoMode
+        ui.videoMode = videoMode
+        art.mpArtBox.ratio = if (videoMode) 9f / 16f else 1f
+        art.mpVideo.isVisible = videoMode
+        art.mpArt.isVisible = !videoMode
         // song mode: a round record (the cover spins while it plays); video mode: the normal picture box
-        pg.mpVinylGrooves.isVisible = !videoMode
-        pg.mpVinylHole.isVisible = !videoMode
-        pg.mpArtBox.outlineProvider = if (videoMode) android.view.ViewOutlineProvider.BACKGROUND else vinylOutline
-        pg.mpArtBox.invalidateOutline()
-        if (videoMode) { vinylSpin?.cancel(); pg.mpArt.rotation = 0f } else spinVinyl(player()?.isPlaying == true)
-        if (!videoMode) pg.mpArtLoading.isVisible = false
+        art.mpVinylGrooves.isVisible = !videoMode
+        art.mpVinylHole.isVisible = !videoMode
+        art.mpArtBox.outlineProvider = if (videoMode) android.view.ViewOutlineProvider.BACKGROUND else vinylOutline
+        art.mpArtBox.invalidateOutline()
+        if (videoMode) { vinylSpin?.cancel(); art.mpArt.rotation = 0f } else spinVinyl(player()?.isPlaying == true)
+        if (!videoMode) art.mpArtLoading.isVisible = false
         val p = player()
-        pg.mpShuffle.alpha = if (p?.shuffleModeEnabled == true) 1f else 0.5f
-        val repeat = p?.repeatMode ?: Player.REPEAT_MODE_OFF
-        pg.mpRepeat.setImageResource(if (repeat == Player.REPEAT_MODE_ONE) R.drawable.ic_repeat_one else R.drawable.ic_repeat)
-        pg.mpRepeat.alpha = if (repeat != Player.REPEAT_MODE_OFF) 1f else 0.5f
+        ui.shuffle = p?.shuffleModeEnabled == true
+        ui.repeat = p?.repeatMode ?: Player.REPEAT_MODE_OFF
     }
 
     // ---------- showing the song ----------
@@ -619,8 +606,8 @@ class MusicPlayer(
         val url = item.mediaId
         val title = md.title?.toString().orEmpty()
         val artist = md.artist?.toString().orEmpty()
-        pg.mpTitle.text = title
-        pg.mpArtist.text = artist
+        ui.title = title
+        ui.artist = artist
         mini.mmTitle.text = title
         mini.mmArtist.text = artist
         updateUpNext()
@@ -629,7 +616,7 @@ class MusicPlayer(
         shownId = id
         val thumb = md.extras?.getString(EXTRA_THUMB)
         val big = MusicArt.big(url, thumb)
-        Img.loadSquare(pg.mpArt, big.firstOrNull(), widthPx = 900, fallbacks = big.drop(1)) { bmp ->
+        Img.loadSquare(art.mpArt, big.firstOrNull(), widthPx = 900, fallbacks = big.drop(1)) { bmp ->
             if (shownId == id) paint(MusicArt.tone(bmp), animate = true)
         }
         Img.loadSquare(mini.mmArt, MusicArt.small(url, thumb), widthPx = 200)
@@ -643,16 +630,16 @@ class MusicPlayer(
         val p = player() ?: return
         val i = p.nextMediaItemIndex
         val next = if (i != C.INDEX_UNSET && i < p.mediaItemCount) p.getMediaItemAt(i).mediaMetadata.title?.toString() else null
-        pg.mpUpNextText.text = if (next.isNullOrBlank()) "Up next" else "Up next  ·  $next"
+        ui.upNext = if (next.isNullOrBlank()) "Up next" else "Up next  ·  $next"
     }
 
     private fun updatePlayState() {
         val p = player()
         val showPause = p != null && p.playWhenReady && p.playbackState != Player.STATE_ENDED
         val icon = if (showPause) R.drawable.ic_p_pause else R.drawable.ic_p_play
-        pg.mpPlayIcon.setImageResource(icon)
+        ui.playing = showPause
         mini.mmPlay.setImageResource(icon)
-        pg.mpBuffering.isVisible = p != null && p.playWhenReady && p.playbackState == Player.STATE_BUFFERING
+        ui.buffering = p != null && p.playWhenReady && p.playbackState == Player.STATE_BUFFERING
     }
 
     private val tick = object : Runnable {
@@ -683,12 +670,19 @@ class MusicPlayer(
         val pos = p.currentPosition.coerceAtLeast(0)
         val part = if (d > 0) (pos * 1000 / d).toInt().coerceIn(0, 1000) else 0
         if (!dragging) {
-            pg.mpSeek.progress = part
-            pg.mpSeek.secondaryProgress = if (d > 0) (p.bufferedPosition * 1000 / d).toInt().coerceIn(0, 1000) else 0
-            pg.mpPos.text = time(pos)
+            ui.part = part
+            ui.buffered = if (d > 0) (p.bufferedPosition * 1000 / d).toInt().coerceIn(0, 1000) else 0
+            ui.pos = time(pos)
         }
-        pg.mpDur.text = if (d > 0) time(d) else "0:00"
+        ui.dur = if (d > 0) time(d) else "0:00"
         mini.mmProgress.progress = part
+    }
+
+    /** The seek bar is being dragged: the thumb and the time follow the finger. */
+    private fun showSeek(at: Int) {
+        ui.part = at
+        val d = duration()
+        if (d > 0) ui.pos = time(d * at / 1000)
     }
 
     private fun time(ms: Long) = YtCatalog.duration(ms / 1000).ifBlank { "0:00" }
@@ -813,7 +807,7 @@ class MusicPlayer(
         likeStatus = null
         likeCount = -1
         showLike()
-        pg.mpCommentsText.text = commentCounts[url] ?: "Comments"
+        ui.commentsText = commentCounts[url] ?: "Comments"
         val id = youtubeId(url) ?: return
         infoJob = act.lifecycleScope.launch {
             val votes = withContext(Dispatchers.IO) { Dislikes.votes(id) }
@@ -835,7 +829,7 @@ class MusicPlayer(
     /** The number of comments (looked up only while the big player is open). */
     private fun loadCommentCount(url: String) {
         if (commentCounts.containsKey(url)) {
-            pg.mpCommentsText.text = commentCounts[url]
+            ui.commentsText = commentCounts[url]
             return
         }
         commentsJob?.cancel()
@@ -848,7 +842,7 @@ class MusicPlayer(
             }
             if (commentCounts.size > 100) commentCounts.clear()
             commentCounts[url] = text
-            if (currentUrl() == url) pg.mpCommentsText.text = text
+            if (currentUrl() == url) ui.commentsText = text
         }
     }
 
@@ -862,11 +856,9 @@ class MusicPlayer(
     }
 
     private fun showLike() {
-        val on = Ui.accent(act)
-        val off = ContextCompat.getColor(act, R.color.rx_white)
-        pg.mpLikeIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (likeStatus == "LIKE") on else off)
-        pg.mpDislikeIcon.imageTintList = android.content.res.ColorStateList.valueOf(if (likeStatus == "DISLIKE") on else off)
-        pg.mpLikeText.text = if (likeCount > 0) YtCatalog.count(likeCount) else "Like"
+        ui.liked = likeStatus == "LIKE"
+        ui.disliked = likeStatus == "DISLIKE"
+        ui.likeText = if (likeCount > 0) YtCatalog.count(likeCount) else "Like"
     }
 
     /** Like / dislike on YouTube (needs the YouTube account). */
@@ -1029,7 +1021,7 @@ class MusicPlayer(
 
     /** Lyrics of the song playing, from YouTube Music (with its source line), in a dark sheet. */
     private fun showLyrics() {
-        val song = current() ?: currentUrl()?.let { VideoItem(it, pg.mpTitle.text.toString(), pg.mpArtist.text.toString(), null, 0, -1, null) }
+        val song = current() ?: currentUrl()?.let { VideoItem(it, ui.title, ui.artist, null, 0, -1, null) }
         val id = song?.let { youtubeId(it.url) }
         if (song == null || id == null) { toast("Lyrics are only for songs from YouTube"); return }
         val ui = LyricsUi()

@@ -17,18 +17,14 @@ import android.util.Rational
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -61,6 +57,8 @@ class PlayerActivity : AppCompatActivity() {
 
 
     private lateinit var b: ActivityPlayerBinding
+    /** What the buttons over the video show (Compose, PlayerOverlay.kt). */
+    private val ui = PlayerUi()
     private var player: ExoPlayer? = null
     private val handler = Handler(Looper.getMainLooper())
     private val audio by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -118,7 +116,7 @@ class PlayerActivity : AppCompatActivity() {
     private val touchSlop by lazy { 24 * resources.displayMetrics.density }
 
     private val hideControls = Runnable { showControls(false) }
-    private val hideInfo = Runnable { b.gestureInfo.isVisible = false }
+    private val hideInfo = Runnable { ui.info = null }
     private val ticker = object : Runnable {
         override fun run() {
             updateProgress()
@@ -137,7 +135,6 @@ class PlayerActivity : AppCompatActivity() {
         b = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(b.root)
         goImmersive()
-        applyInsets()
         setupButtons()
         setupGestures()
         if (!readIntent(intent)) {
@@ -302,7 +299,7 @@ class PlayerActivity : AppCompatActivity() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) partialRetries = 0
             b.playerView.keepScreenOn = isPlaying          // screen may sleep while paused
-            b.playBtn.setImageResource(if (isPlaying) R.drawable.ic_p_pause else R.drawable.ic_p_play)
+            ui.playing = isPlaying
             if (isPlaying) bumpControls() else {
                 handler.removeCallbacks(hideControls)
                 if (!locked && !isInPip()) showControls(true)
@@ -311,7 +308,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         override fun onPlaybackStateChanged(state: Int) {
-            b.buffering.isVisible = state == Player.STATE_BUFFERING
+            ui.buffering = state == Player.STATE_BUFFERING
             if (state == Player.STATE_ENDED) {
                 player?.let { prefs.edit().remove(posKey(it.currentMediaItem?.mediaId.orEmpty())).apply() }
                 showControls(true)
@@ -350,11 +347,11 @@ class PlayerActivity : AppCompatActivity() {
         override fun onTracksChanged(tracks: Tracks) {
             val hasVideo = tracks.isTypeSupported(C.TRACK_TYPE_VIDEO)
             val hasAny = !tracks.isEmpty
-            b.audioArt.isVisible = hasAny && !hasVideo
-            b.audioTitle.text = currentTitle()
-            b.aspectBtn.isVisible = hasVideo
-            b.pipBtn.isVisible = hasVideo && pipSupported()
-            b.subsBtn.alpha = if (tracks.isTypeSupported(C.TRACK_TYPE_TEXT)) 1f else 0.6f
+            ui.audioOnly = hasAny && !hasVideo
+            ui.title = currentTitle()
+            ui.aspectShown = hasVideo
+            ui.pipShown = hasVideo && pipSupported()
+            ui.subsDim = !tracks.isTypeSupported(C.TRACK_TYPE_TEXT)
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -414,17 +411,15 @@ class PlayerActivity : AppCompatActivity() {
         player?.currentMediaItem?.mediaMetadata?.title?.toString().orEmpty().ifBlank { "Video" }
 
     private fun updateTitle() {
-        b.titleText.text = currentTitle()
-        b.audioTitle.text = currentTitle()
+        ui.title = currentTitle()
     }
 
     private fun updateNavButtons() {
         val many = uris.size > 1
-        b.prevBtn.isVisible = many
-        b.nextBtn.isVisible = many
+        ui.navShown = many
         player?.let {
-            b.prevBtn.alpha = if (it.hasPreviousMediaItem()) 1f else 0.4f
-            b.nextBtn.alpha = if (it.hasNextMediaItem()) 1f else 0.4f
+            ui.hasPrev = it.hasPreviousMediaItem()
+            ui.hasNext = it.hasNextMediaItem()
         }
     }
 
@@ -433,58 +428,59 @@ class PlayerActivity : AppCompatActivity() {
         val dur = p.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L
         val pos = p.currentPosition
         if (!userSeeking) {
-            b.posText.text = fmt(pos)
-            b.seekBar.progress = if (dur > 0) (pos * 1000 / dur).toInt() else 0
-            b.seekBar.secondaryProgress = if (dur > 0) (p.bufferedPosition * 1000 / dur).toInt() else 0
+            ui.pos = fmt(pos)
+            ui.part = if (dur > 0) (pos * 1000 / dur).toInt().coerceIn(0, 1000) else 0
+            ui.buffered = if (dur > 0) (p.bufferedPosition * 1000 / dur).toInt().coerceIn(0, 1000) else 0
         }
-        b.durText.text = if (dur > 0) fmt(dur) else "--:--"
+        ui.dur = if (dur > 0) fmt(dur) else "--:--"
     }
 
     // ---------- buttons ----------
 
     private fun setupButtons() {
-        b.backBtn.setOnClickListener { finish() }
-        b.playBtn.setOnClickListener { togglePlay() }
-        b.rewBtn.setOnClickListener { seekBy(-10_000) }
-        b.fwdBtn.setOnClickListener { seekBy(10_000) }
-        b.prevBtn.setOnClickListener {
-            player?.let { if (it.hasPreviousMediaItem()) { savePosition(); it.seekToPreviousMediaItem() } }
-            bumpControls()
-        }
-        b.nextBtn.setOnClickListener {
-            player?.let { if (it.hasNextMediaItem()) { savePosition(); it.seekToNextMediaItem() } }
-            bumpControls()
-        }
-        b.speedBtn.setOnClickListener { chooseSpeed() }
-        b.audioBtn.setOnClickListener { chooseTrack(C.TRACK_TYPE_AUDIO, "Audio track") }
-        b.subsBtn.setOnClickListener { chooseSubtitles() }
-        b.moreBtn.setOnClickListener { moreMenu() }
-        b.lockBtn.setOnClickListener { setLocked(true) }
-        b.unlockBtn.setOnClickListener { setLocked(false) }
-        b.aspectBtn.setOnClickListener { cycleAspect() }
-        b.rotateBtn.setOnClickListener { cycleRotation() }
-        b.pipBtn.setOnClickListener { enterPip() }
-
-        b.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (!fromUser) return
-                val dur = player?.duration?.takeIf { it > 0 } ?: return
-                b.posText.text = fmt(dur * progress / 1000)
-            }
-
-            override fun onStartTrackingTouch(sb: SeekBar?) {
+        val actions = PlayerActions(
+            back = { finish() },
+            speed = { chooseSpeed() },
+            audio = { chooseTrack(C.TRACK_TYPE_AUDIO, "Audio track") },
+            subs = { chooseSubtitles() },
+            more = { moreMenu() },
+            prev = {
+                player?.let { if (it.hasPreviousMediaItem()) { savePosition(); it.seekToPreviousMediaItem() } }
+                bumpControls()
+            },
+            rew = { seekBy(-10_000) },
+            play = { togglePlay() },
+            fwd = { seekBy(10_000) },
+            next = {
+                player?.let { if (it.hasNextMediaItem()) { savePosition(); it.seekToNextMediaItem() } }
+                bumpControls()
+            },
+            seekStart = { at ->
                 userSeeking = true
                 handler.removeCallbacks(hideControls)
-            }
-
-            override fun onStopTrackingTouch(sb: SeekBar?) {
+                showSeek(at)
+            },
+            seekMove = { at -> showSeek(at) },
+            seekEnd = { at ->
                 userSeeking = false
-                val p = player ?: return
-                val dur = p.duration.takeIf { it > 0 } ?: return
-                p.seekTo(dur * (sb?.progress ?: 0) / 1000)
+                player?.let { p -> p.duration.takeIf { it > 0 }?.let { dur -> p.seekTo(dur * at / 1000) } }
                 bumpControls()
-            }
-        })
+            },
+            lock = { setLocked(true) },
+            unlock = { setLocked(false) },
+            aspect = { cycleAspect() },
+            rotate = { cycleRotation() },
+            pip = { enterPip() }
+        )
+        b.playerOverlay.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        b.playerOverlay.setContent { RxTheme { PlayerOverlay(ui, actions) } }
+    }
+
+    /** The seek bar is being dragged: the dot and the time follow the finger. */
+    private fun showSeek(at: Int) {
+        ui.part = at
+        val dur = player?.duration?.takeIf { it > 0 } ?: return
+        ui.pos = fmt(dur * at / 1000)
     }
 
     private fun togglePlay() {
@@ -523,7 +519,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun speedLabel(s: Float) = if (s == s.toInt().toFloat()) "${s.toInt()}x" else "${s}x"
 
     private fun updateSpeedLabel() {
-        b.speedBtn.text = speedLabel(player?.playbackParameters?.speed ?: 1f)
+        ui.speed = speedLabel(player?.playbackParameters?.speed ?: 1f)
     }
 
     private fun chooseTrack(type: Int, title: String) {
@@ -671,11 +667,11 @@ class PlayerActivity : AppCompatActivity() {
         locked = on
         if (on) {
             showControls(false)
-            b.unlockBtn.isVisible = true
-            handler.postDelayed({ if (locked) b.unlockBtn.isVisible = false }, 2500)
+            ui.unlock = true
+            handler.postDelayed({ if (locked) ui.unlock = false }, 2500)
             info("Screen locked")
         } else {
-            b.unlockBtn.isVisible = false
+            ui.unlock = false
             showControls(true)
             info("Unlocked")
         }
@@ -685,13 +681,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun showControls(show: Boolean) {
         if (locked && show) return
-        b.controls.animate().cancel()
-        if (show) {
-            b.controls.isVisible = true
-            b.controls.animate().alpha(1f).setDuration(150).start()
-        } else {
-            b.controls.animate().alpha(0f).setDuration(200).withEndAction { b.controls.isVisible = false }.start()
-        }
+        ui.controls = show
     }
 
     /** Shows the controls and hides them again after a moment while the video plays. */
@@ -703,8 +693,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun info(text: String) {
-        b.gestureInfo.text = text
-        b.gestureInfo.isVisible = true
+        ui.info = text
         handler.removeCallbacks(hideInfo)
         handler.postDelayed(hideInfo, 900)
     }
@@ -718,11 +707,11 @@ class PlayerActivity : AppCompatActivity() {
 
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
                 if (locked) {
-                    b.unlockBtn.isVisible = !b.unlockBtn.isVisible
-                    if (b.unlockBtn.isVisible) handler.postDelayed({ if (locked) b.unlockBtn.isVisible = false }, 2500)
+                    ui.unlock = !ui.unlock
+                    if (ui.unlock) handler.postDelayed({ if (locked) ui.unlock = false }, 2500)
                     return true
                 }
-                if (b.controls.isVisible && b.controls.alpha > 0.5f) showControls(false) else bumpControls()
+                if (ui.controls) showControls(false) else bumpControls()
                 return true
             }
 
@@ -810,23 +799,20 @@ class PlayerActivity : AppCompatActivity() {
                         val delta = (dx / w * minOf(dur, 180_000L)).toLong()
                         seekTarget = (startPos + delta).coerceIn(0, dur)
                         val sign = if (delta >= 0) "+" else "−"
-                        b.gestureInfo.text = "$sign${fmt(abs(delta))}\n${fmt(seekTarget)} / ${fmt(dur)}"
-                        b.gestureInfo.isVisible = true
+                        ui.info = "$sign${fmt(abs(delta))}\n${fmt(seekTarget)} / ${fmt(dur)}"
                     }
                     Mode.VOLUME -> {
                         val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                         val v = (startVolume - dy / h * max * 1.4f).roundToInt().coerceIn(0, max)
                         audio.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
-                        b.gestureInfo.text = "Volume  ${v * 100 / maxOf(max, 1)}%"
-                        b.gestureInfo.isVisible = true
+                        ui.info = "Volume  ${v * 100 / maxOf(max, 1)}%"
                     }
                     Mode.BRIGHT -> {
                         val v = (startBright - dy / h * 1.4f).coerceIn(0.01f, 1f)
                         val lp = window.attributes
                         lp.screenBrightness = v
                         window.attributes = lp
-                        b.gestureInfo.text = "Brightness  ${(v * 100).roundToInt()}%"
-                        b.gestureInfo.isVisible = true
+                        ui.info = "Brightness  ${(v * 100).roundToInt()}%"
                     }
                     else -> {}
                 }
@@ -880,8 +866,8 @@ class PlayerActivity : AppCompatActivity() {
         wasInPip = isInPictureInPictureMode
         if (isInPictureInPictureMode) {
             showControls(false)
-            b.gestureInfo.isVisible = false
-            b.unlockBtn.isVisible = false
+            ui.info = null
+            ui.unlock = false
         } else if (!locked) {
             bumpControls()
         }
@@ -894,22 +880,6 @@ class PlayerActivity : AppCompatActivity() {
         WindowCompat.getInsetsController(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
-        }
-    }
-
-    /** Keeps the buttons away from notches and rounded corners. */
-    private fun applyInsets() {
-        val top = b.topBar.paddingTop
-        val bottom = b.bottomBar.paddingBottom
-        val side = b.topBar.paddingLeft
-        val bSide = b.bottomBar.paddingLeft
-        ViewCompat.setOnApplyWindowInsetsListener(b.controls) { _, insets ->
-            val i = insets.getInsetsIgnoringVisibility(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            )
-            b.topBar.updatePadding(left = side + i.left, top = top + i.top, right = side + i.right)
-            b.bottomBar.updatePadding(left = bSide + i.left, bottom = bottom + i.bottom, right = bSide + i.right)
-            insets
         }
     }
 

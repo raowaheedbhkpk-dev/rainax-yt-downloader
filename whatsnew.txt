@@ -1,3 +1,8 @@
+Cleanup: removed old screen files, 29 unused pictures and the ViewPager2 library left over from the move to Jetpack Compose (smaller app)
+New: the full-screen player's buttons (top bar, play and 10 s buttons, seek bar, lock, aspect, rotate, picture-in-picture and the swipe info) rebuilt with Jetpack Compose
+New: Shorts rebuilt with Jetpack Compose (full-screen swipe pager, Like / Dislike, Comments, Download and Share)
+New: the Private folder (PIN / pattern / password lock and the hidden videos and music) rebuilt with Jetpack Compose
+New: the big Music player (Song / Video switch, title, Like / Comments / Download / Share / Lyrics, seek bar, play buttons and Up next) rebuilt with Jetpack Compose
 New: the Music player's Up next queue and Lyrics sheets rebuilt with Jetpack Compose
 New: the video ⋮ menu, the player gear menus (also the side panel in full screen), the music player menus and "Save video to…" rebuilt with Jetpack Compose
 New: the comments sheet (Top/Newest, likes, replies, writing a comment and quick emoji) rebuilt with Jetpack Compose

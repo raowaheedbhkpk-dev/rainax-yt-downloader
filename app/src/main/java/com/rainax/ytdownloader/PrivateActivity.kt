@@ -2,28 +2,12 @@ package com.rainax.ytdownloader
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
-import android.widget.GridLayout
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.PopupMenu
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.rainax.ytdownloader.databinding.ActivityPrivateBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,7 +24,10 @@ class PrivateActivity : AppCompatActivity() {
         Ui.saneScale(newBase)?.let { runCatching { applyOverrideConfiguration(it) } }    // same clean sizes on every phone
     }
 
-    private lateinit var b: ActivityPrivateBinding
+    /** What the screen shows (Compose, PrivateScreen.kt). */
+    private val ui = PrivateUi()
+    private lateinit var patternView: PatternView
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private enum class Step { CREATE, CONFIRM, UNLOCK, CHECK_OLD }
 
@@ -51,7 +38,6 @@ class PrivateActivity : AppCompatActivity() {
     private var busy = false
     private var unlocked = false
     private var playing = false           // opened the player from here: don't lock on return
-    private val adapter = Adapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
@@ -59,31 +45,28 @@ class PrivateActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
-        b = ActivityPrivateBinding.inflate(layoutInflater)
-        setContentView(b.root)
-
-        buildPinPad()
-        b.lockClose.setOnClickListener { finish() }
-        b.vaultBack.setOnClickListener { finish() }
-        b.vaultMenu.setOnClickListener { vaultMenu(it) }
-        b.lockTypes.setOnCheckedStateChangeListener { _, ids ->
-            type = when (ids.firstOrNull()) { R.id.typePattern -> PrivateVault.PATTERN; R.id.typePassword -> PrivateVault.PASSWORD; else -> PrivateVault.PIN }
-            firstEntry = null
-            showInput()
-        }
-        b.patternView.onPattern = { dots ->
+        patternView = PatternView(this)
+        patternView.onPattern = { dots ->
             if (dots.size < 4 && (step == Step.CREATE)) {
-                b.lockSub.text = "Connect at least 4 dots"
-                b.patternView.showWrong()
+                ui.sub = "Connect at least 4 dots"
+                patternView.showWrong()
             } else submit(dots.joinToString("-"))
         }
-        b.passwordOk.setOnClickListener { submit(b.passwordInput.text.toString()) }
-        b.passwordInput.setOnEditorActionListener { _, id, _ ->
-            if (id == EditorInfo.IME_ACTION_DONE) { submit(b.passwordInput.text.toString()); true } else false
-        }
-        b.lockForgot.setOnClickListener { confirmReset() }
-        b.vaultList.layoutManager = LinearLayoutManager(this)
-        b.vaultList.adapter = adapter
+        val actions = PrivateActions(
+            close = { finish() },
+            pickType = { t ->
+                type = t
+                firstEntry = null
+                showInput()
+            },
+            key = { onKey(it) },
+            submitPassword = { submit(ui.password) },
+            forgot = { confirmReset() },
+            vaultMenu = { vaultMenu() },
+            play = { item -> play(ui.items.indexOf(item).coerceAtLeast(0)) },
+            itemMenu = { itemMenu(it) }
+        )
+        setContent { RxTheme { PrivateScreen(ui, patternView, actions) } }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = finish()
         })
@@ -103,18 +86,18 @@ class PrivateActivity : AppCompatActivity() {
     private fun startCreate() {
         step = Step.CREATE
         firstEntry = null
-        b.lockTitle.text = "Set up Private folder"
-        b.lockTypes.isVisible = true
-        b.lockForgot.isVisible = false
+        ui.title = "Set up Private folder"
+        ui.typesShown = true
+        ui.forgotShown = false
         showInput()
     }
 
     private fun startUnlock() {
         step = Step.UNLOCK
         type = PrivateVault.lockType(this)
-        b.lockTitle.text = "Private folder"
-        b.lockTypes.isVisible = false
-        b.lockForgot.isVisible = true
+        ui.title = "Private folder"
+        ui.typesShown = false
+        ui.forgotShown = true
         showInput()
         val wait = PrivateVault.waitMs(this)
         if (wait > 0) tooManyTries(wait)
@@ -122,20 +105,14 @@ class PrivateActivity : AppCompatActivity() {
 
     /** Shows the right input for [type] and the current step. */
     private fun showInput() {
-        b.lockView.isVisible = true
-        b.vaultView.isVisible = false
+        ui.unlocked = false
+        ui.type = type
         pin.clear()
         updateDots()
-        b.patternView.clear()
-        b.passwordInput.setText("")
-        val isPin = type == PrivateVault.PIN
-        val isPattern = type == PrivateVault.PATTERN
-        b.pinDots.isVisible = isPin
-        b.pinPad.isVisible = isPin
-        b.patternView.isVisible = isPattern
-        b.passwordBox.isVisible = type == PrivateVault.PASSWORD
+        patternView.clear()
+        ui.password = ""
         val what = when (type) { PrivateVault.PATTERN -> "pattern"; PrivateVault.PASSWORD -> "password"; else -> "PIN" }
-        b.lockSub.text = when (step) {
+        ui.sub = when (step) {
             Step.CREATE -> when (type) {
                 PrivateVault.PATTERN -> "Draw a pattern (at least 4 dots)"
                 PrivateVault.PASSWORD -> "Choose a password (at least 4 characters)"
@@ -145,29 +122,7 @@ class PrivateActivity : AppCompatActivity() {
             Step.CHECK_OLD -> "Enter your current $what"
             Step.UNLOCK -> "Enter your $what"
         }
-        b.passwordOk.text = if (step == Step.UNLOCK || step == Step.CHECK_OLD) "Unlock" else "Continue"
-    }
-
-    private fun buildPinPad() {
-        val d = resources.displayMetrics.density
-        val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓")
-        keys.forEach { k ->
-            val key = TextView(this).apply {
-                text = k
-                gravity = Gravity.CENTER
-                textSize = if (k.length == 1 && k[0].isDigit()) 26f else 22f
-                setTextColor(androidx.core.content.ContextCompat.getColor(this@PrivateActivity, R.color.rx_text))
-                setBackgroundResource(R.drawable.bg_pin_key)
-                contentDescription = when (k) { "⌫" -> "Delete"; "✓" -> "OK"; else -> k }
-                setOnClickListener { onKey(k) }
-            }
-            val lp = GridLayout.LayoutParams().apply {
-                width = (72 * d).toInt(); height = (72 * d).toInt()
-                val m = (9 * d).toInt()
-                setMargins(m, m, m, m)
-            }
-            b.pinPad.addView(key, lp)
-        }
+        ui.okText = if (step == Step.UNLOCK || step == Step.CHECK_OLD) "Unlock" else "Continue"
     }
 
     private fun onKey(k: String) {
@@ -175,7 +130,7 @@ class PrivateActivity : AppCompatActivity() {
         when (k) {
             "⌫" -> if (pin.isNotEmpty()) pin.setLength(pin.length - 1)
             "✓" -> {
-                if (pin.length < 4) { b.lockSub.text = "At least 4 numbers"; return }
+                if (pin.length < 4) { ui.sub = "At least 4 numbers"; return }
                 submit(pin.toString())
                 return
             }
@@ -185,26 +140,26 @@ class PrivateActivity : AppCompatActivity() {
     }
 
     private fun updateDots() {
-        b.pinDots.text = if (pin.isEmpty()) " " else "●".repeat(pin.length)
+        ui.dots = pin.length
     }
 
     private fun submit(secret: String) {
         if (busy) return
         when (step) {
             Step.CREATE -> {
-                if (type == PrivateVault.PASSWORD && secret.length < 4) { b.lockSub.text = "At least 4 characters"; return }
+                if (type == PrivateVault.PASSWORD && secret.length < 4) { ui.sub = "At least 4 characters"; return }
                 firstEntry = secret
                 step = Step.CONFIRM
-                b.lockTypes.isVisible = false
+                ui.typesShown = false
                 showInput()
             }
             Step.CONFIRM -> {
                 if (secret != firstEntry) {
                     wrongInput("Didn't match. Start again")
                     step = Step.CREATE
-                    b.lockTypes.isVisible = true
+                    ui.typesShown = true
                     firstEntry = null
-                    b.root.postDelayed({ if (step == Step.CREATE) showInput() }, 900)
+                    handler.postDelayed({ if (step == Step.CREATE) showInput() }, 900)
                     return
                 }
                 setBusy(true)
@@ -234,30 +189,27 @@ class PrivateActivity : AppCompatActivity() {
     }
 
     private fun wrongInput(text: String) {
-        b.lockSub.text = text
-        b.patternView.showWrong()
+        ui.sub = text
+        patternView.showWrong()
         pin.clear()
         updateDots()
-        b.passwordInput.setText("")
-        b.lockSub.animate().translationX(16f).setDuration(50).withEndAction {
-            b.lockSub.animate().translationX(-16f).setDuration(50).withEndAction { b.lockSub.animate().translationX(0f).setDuration(50).start() }.start()
-        }.start()
+        ui.password = ""
+        ui.shakeSub()
     }
 
     private fun tooManyTries(ms: Long) {
-        b.lockSub.text = "Too many tries. Wait ${(ms / 1000) + 1} seconds"
-        b.patternView.isEnabled = false
-        b.root.postDelayed({
-            b.patternView.isEnabled = true
+        ui.sub = "Too many tries. Wait ${(ms / 1000) + 1} seconds"
+        patternView.isEnabled = false
+        handler.postDelayed({
+            patternView.isEnabled = true
             if (!unlocked) showInput()
         }, ms + 200)
     }
 
     private fun setBusy(on: Boolean) {
         busy = on
-        b.lockBusy.visibility = if (on) View.VISIBLE else View.INVISIBLE
-        b.passwordOk.isEnabled = !on
-        b.patternView.isEnabled = !on
+        ui.busy = on
+        patternView.isEnabled = !on
     }
 
     private fun confirmReset() {
@@ -278,20 +230,18 @@ class PrivateActivity : AppCompatActivity() {
     private fun openVault() {
         unlocked = true
         currentFocus?.let { (getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).hideSoftInputFromWindow(it.windowToken, 0) }
-        b.lockView.isVisible = false
-        b.vaultView.isVisible = true
+        ui.unlocked = true
         refresh()
     }
 
     private fun refresh() {
         lifecycleScope.launch {
             val list = withContext(Dispatchers.IO) { PrivateVault.items(this@PrivateActivity) }
-            adapter.items = list
-            adapter.notifyDataSetChanged()
-            b.vaultEmpty.isVisible = list.isEmpty()
+            ui.items = list
+            ui.loaded = true
             val videos = list.count { !it.isAudio }
             val songs = list.size - videos
-            b.vaultCount.text = if (list.isEmpty()) "" else listOfNotNull(
+            ui.count = if (list.isEmpty()) "" else listOfNotNull(
                 videos.takeIf { it > 0 }?.let { if (it == 1) "1 video" else "$it videos" },
                 songs.takeIf { it > 0 }?.let { if (it == 1) "1 song" else "$it songs" },
                 formatSize(list.sumOf { it.size })
@@ -299,22 +249,23 @@ class PrivateActivity : AppCompatActivity() {
         }
     }
 
-    private fun vaultMenu(anchor: View) {
-        val m = PopupMenu(this, anchor)
-        m.menu.add(0, 1, 0, "Change lock")
-        m.menu.add(0, 2, 1, "Lock now")
-        m.setOnMenuItemClickListener {
-            when (it.itemId) {
-                1 -> { unlocked = false; step = Step.CHECK_OLD; type = PrivateVault.lockType(this); b.lockTitle.text = "Change lock"; b.lockTypes.isVisible = false; b.lockForgot.isVisible = false; showInput() }
-                2 -> { unlocked = false; startUnlock() }
-            }
-            true
-        }
-        m.show()
+    private fun vaultMenu() {
+        RxOptions.sheet(this, "Private folder", listOf(
+            RxOption("Change lock", R.drawable.ic_lock) {
+                unlocked = false
+                step = Step.CHECK_OLD
+                type = PrivateVault.lockType(this)
+                ui.title = "Change lock"
+                ui.typesShown = false
+                ui.forgotShown = false
+                showInput()
+            },
+            RxOption("Lock now", R.drawable.ic_lock_open) { unlocked = false; startUnlock() }
+        ))
     }
 
     private fun play(index: Int) {
-        val list = adapter.items
+        val list = ui.items
         playing = true
         PlayerActivity.open(
             this,
@@ -324,20 +275,18 @@ class PrivateActivity : AppCompatActivity() {
         )
     }
 
-    private fun itemMenu(item: PrivateVault.Item, anchor: View) {
-        val m = PopupMenu(this, anchor)
-        m.menu.add(0, 1, 0, "Play")
-        m.menu.add(0, 2, 1, "Move back to Rainax Tube")
-        m.menu.add(0, 3, 2, "Delete for good")
-        m.setOnMenuItemClickListener {
-            when (it.itemId) {
-                1 -> play(adapter.items.indexOf(item).coerceAtLeast(0))
-                2 -> lifecycleScope.launch {
+    private fun itemMenu(item: PrivateVault.Item) {
+        RxOptions.sheet(this, item.title, listOf(
+            RxOption("Play", R.drawable.ic_play) { play(ui.items.indexOf(item).coerceAtLeast(0)) },
+            RxOption("Move back to Rainax Tube", R.drawable.ic_lock_open) {
+                lifecycleScope.launch {
                     val ok = withContext(Dispatchers.IO) { runCatching { PrivateVault.moveOut(this@PrivateActivity, item) }.isSuccess }
                     Notify.show(this@PrivateActivity, if (ok) "Moved back to Rainax Tube" else "Couldn't move it back")
                     refresh()
                 }
-                3 -> RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
+            },
+            RxOption("Delete for good", R.drawable.ic_delete) {
+                RxDialogBuilder(this, R.style.ThemeOverlay_Rainax_Dialog)
                     .setTitle("Delete for good?")
                     .setMessage("\"${item.title}\" is deleted from your phone. This can't be undone.")
                     .setPositiveButton("Delete") { _, _ ->
@@ -349,42 +298,12 @@ class PrivateActivity : AppCompatActivity() {
                     .setNegativeButton("Cancel", null)
                     .show()
             }
-            true
-        }
-        m.show()
+        ))
     }
 
-    private inner class Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        var items: List<PrivateVault.Item> = emptyList()
-        override fun getItemCount() = items.size
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_song_row, parent, false)
-            v.findViewById<View>(R.id.songArtBox).clipToOutline = true
-            return object : RecyclerView.ViewHolder(v) {}
-        }
-
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val item = items[position]
-            val v = holder.itemView
-            val art = v.findViewById<ImageView>(R.id.songArt)
-            val thumb = PrivateVault.thumb(this@PrivateActivity, item)
-            art.tag = item.id
-            art.scaleType = ImageView.ScaleType.CENTER
-            art.setImageResource(if (item.isAudio) R.drawable.ic_audio else R.drawable.ic_video)
-            if (thumb.exists()) {
-                lifecycleScope.launch {
-                    val bmp = withContext(Dispatchers.IO) {
-                        runCatching { BitmapFactory.decodeFile(thumb.path, BitmapFactory.Options().apply { inSampleSize = 2 }) }.getOrNull()
-                    }
-                    if (bmp != null && art.tag == item.id) { art.scaleType = ImageView.ScaleType.CENTER_CROP; art.setImageBitmap(bmp) }
-                }
-            }
-            v.findViewById<TextView>(R.id.songTitle).text = item.title
-            v.findViewById<TextView>(R.id.songSub).text = listOf(if (item.isAudio) "Music" else "Video", formatSize(item.size)).joinToString(" • ")
-            v.findViewById<ImageButton>(R.id.songMore).setOnClickListener { itemMenu(item, it) }
-            v.setOnClickListener { play(items.indexOf(item).coerceAtLeast(0)) }
-        }
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
     }
 
     companion object {
