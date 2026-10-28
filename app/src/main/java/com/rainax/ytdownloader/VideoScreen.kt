@@ -165,7 +165,7 @@ class VideoScreen(
     private fun showUpNext() {
         val d = details ?: return
         if (d.related.isEmpty()) return
-        val dialog = BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         val rows = FeedModel(false, {
             dialog.dismiss()
             open(it.url, it.title, it.uploader, thumb = it.thumb)
@@ -903,7 +903,7 @@ class VideoScreen(
      */
     private fun showDescription() {
         val d = details ?: return
-        val dialog = BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: -1L
         val now = if (pos >= 0) d.chapters.indexOfLast { it.startMs <= pos } else -1
         val chapters = if (d.chapters.size < 2) emptyList() else d.chapters.mapIndexed { i, c ->

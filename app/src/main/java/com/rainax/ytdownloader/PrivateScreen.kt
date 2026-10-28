@@ -162,7 +162,7 @@ private fun Lock(ui: PrivateUi, pattern: PatternView, a: PrivateActions) {
 private fun PinPad(ui: PrivateUi, a: PrivateActions) {
     val rx = LocalRx.current
     Text(if (ui.dots == 0) " " else "●".repeat(ui.dots), Modifier.padding(top = 22.dp).height(40.dp), color = rx.text,
-        fontSize = 24.sp, letterSpacing = 0.5.em)
+        fontSize = 24.sp, letterSpacing = 0.em)
     Column(Modifier.padding(top = 10.dp)) {
         listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("⌫", "0", "✓")).forEach { row ->
             Row {

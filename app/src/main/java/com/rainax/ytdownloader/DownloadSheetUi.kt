@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -138,7 +140,7 @@ class DlSheetActions(
 object DlSheet {
     /** A bottom sheet showing [ui]. The caller shows it; [view] is the sheet's view (for haptics). */
     fun create(act: AppCompatActivity, ui: DlSheetUi, a: DlSheetActions): Pair<BottomSheetDialog, ComposeView> {
-        val dialog = BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         val view = ComposeView(act)
         view.setContent { RxTheme { DownloadSheet(ui, a) } }
         dialog.setContentView(view)
@@ -170,11 +172,12 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
 
     Column(
         Modifier.fillMaxWidth().heightIn(min = sheetH).height(sheetH)
-            .background(colorResource(R.color.dl_bg_top), RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+            .background(colorResource(R.color.dl_bg_top))
             .nestedScroll(rememberNestedScrollInteropConnection())
     ) {
         // handle
-        Box(Modifier.padding(top = 10.dp, bottom = 6.dp).align(Alignment.CenterHorizontally).size(40.dp, 5.dp).rxDrawableBg(R.drawable.bg_dl_handle))
+        Box(Modifier.padding(top = 10.dp, bottom = 6.dp).align(Alignment.CenterHorizontally).size(36.dp, 5.dp)
+            .background(colorResource(R.color.dl_handle), RoundedCornerShape(50)))
 
         // header: back, picture, title and a short line, close
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -199,9 +202,9 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text(ui.heading, color = text, fontSize = 20.sp, lineHeight = 24.sp, fontFamily = RxFonts.display,
-                    letterSpacing = 0.02.em, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(ui.sub, Modifier.padding(top = 4.dp), color = text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(ui.heading, color = text, fontSize = 17.sp, lineHeight = 22.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(ui.sub, Modifier.padding(top = 2.dp), color = text2, fontSize = 13.sp, fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
             RoundIcon(R.drawable.ic_dl_close, "Close", 13.dp, null) { a.close() }
@@ -226,8 +229,8 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
         // Video / Audio tabs
         if (ui.showTabs) {
             Row(
-                Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp).fillMaxWidth().height(52.dp)
-                    .background(colorResource(R.color.dl_tabs_bg), RoundedCornerShape(12.dp)).padding(4.dp)
+                Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp).fillMaxWidth().height(44.dp)
+                    .background(colorResource(R.color.dl_tabs_bg), RoundedCornerShape(12.dp)).padding(3.dp)
             ) {
                 SheetTab(Modifier.weight(1f).padding(end = 2.dp), R.drawable.ic_dl_video, "Video", ui.tabKind == KIND_VIDEO) { a.tab(KIND_VIDEO) }
                 SheetTab(Modifier.weight(1f).padding(start = 2.dp), R.drawable.ic_dl_audio, "Audio", ui.tabKind == KIND_AUDIO) { a.tab(KIND_AUDIO) }
@@ -264,14 +267,14 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f).padding(end = 16.dp)) {
-                Text("Selected:", color = text2, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                Text("Selected", color = text2, fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = RxFonts.body)
                 Text(ui.selectedLabel, Modifier.padding(top = 2.dp), color = text, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                     fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Button(
                 onClick = { if (ui.canDownload && !ui.tearing) a.download() },
-                modifier = Modifier.height(54.dp).alpha(if (ui.canDownload) 1f else 0.5f),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(52.dp).alpha(if (ui.canDownload) 1f else 0.5f),
+                shape = RoundedCornerShape(50),
                 contentPadding = PaddingValues(horizontal = 28.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
             ) {
@@ -306,75 +309,59 @@ private fun RoundIcon(icon: Int, label: String, pad: androidx.compose.ui.unit.Dp
 @Composable
 private fun SheetTab(modifier: Modifier, icon: Int, label: String, on: Boolean, onClick: () -> Unit) {
     val rx = LocalRx.current
-    val color = if (on) rx.onAccent else colorResource(R.color.dl_text2)
+    val color = if (on) colorResource(R.color.dl_text) else colorResource(R.color.dl_text2)
     Row(
-        modifier.fillMaxSize().background(if (on) rx.accent else Color.Transparent, RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)).background(if (on) colorResource(R.color.dl_card_bg) else Color.Transparent).clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
     ) {
         Image(painterResource(icon), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(color))
-        Text(label, Modifier.padding(start = 8.dp), color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+        Text(label, Modifier.padding(start = 8.dp), color = color, fontSize = 14.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, fontFamily = RxFonts.body)
     }
 }
 
-/** A quality card shaped like a ticket: the size sits on the tear-off stub. */
+/** A quality card (v19.5): a white rounded card, a black ring and a round check when chosen. */
 @Composable
 private fun TicketCard(c: DlCard.Format, tearing: Boolean, onClick: () -> Unit) {
     val rx = LocalRx.current
-    val density = LocalDensity.current.density
     val cardBg = colorResource(R.color.dl_card_bg)
-    val gold = colorResource(R.color.dl_card_recommended)
-    val stroke = colorResource(R.color.dl_card_stroke)
     val text = colorResource(R.color.dl_text)
     val text2 = colorResource(R.color.dl_text2)
-    val ticket = remember(c.selected, c.recommended, rx.accent, cardBg) {
-        when {
-            c.selected -> TicketDrawable(
-                androidx.core.graphics.ColorUtils.compositeColors(
-                    androidx.core.graphics.ColorUtils.setAlphaComponent(rx.accent.toArgb(), 0x14), cardBg.toArgb()
-                ), rx.accent.toArgb(), 2 * density, density, 40 * density
-            )
-            c.recommended -> TicketDrawable(cardBg.toArgb(), gold.toArgb(), 2 * density, density, 40 * density)
-            else -> TicketDrawable(cardBg.toArgb(), stroke.toArgb(), 1.5f * density, density, 40 * density)
-        }
-    }
+    val shape = RoundedCornerShape(18.dp)
     val t by animateFloatAsState(if (tearing) 1f else 0f, tween(240), label = "tear")
     val lift = with(LocalDensity.current) { 26.dp.toPx() }
     Box(
         Modifier.padding(start = 6.dp, end = 6.dp, bottom = 12.dp).fillMaxWidth()
-            .graphicsLayer { rotationZ = -5f * t; translationY = -lift * t; alpha = 1f - t }
+            .graphicsLayer { scaleX = 1f - 0.06f * t; scaleY = 1f - 0.06f * t; translationY = -lift * t; alpha = 1f - t }
     ) {
         Column(
-            Modifier.padding(top = 11.dp).fillMaxWidth().height(118.dp)
-                .drawBehind {
-                    drawIntoCanvas { cv ->
-                        ticket.setBounds(0, 0, size.width.toInt(), size.height.toInt())
-                        ticket.draw(cv.nativeCanvas)
-                    }
-                }
+            Modifier.fillMaxWidth().height(128.dp).clip(shape).background(cardBg)
+                .border(if (c.selected) 2.dp else 0.dp, if (c.selected) rx.accent else Color.Transparent, shape)
                 .clickable(onClick = onClick)
                 .semantics {
                     contentDescription = listOf(c.quality, c.tag, c.size, if (c.recommended) "Recommended" else "", if (c.selected) "Selected" else "")
                         .filter { it.isNotBlank() }.joinToString(", ")
                 }
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Bottom
+                .padding(16.dp)
         ) {
-            Text(c.tag, color = text2, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
-            Text(c.quality, Modifier.padding(top = 2.dp), color = text, fontSize = 32.sp, lineHeight = 34.sp,
-                fontFamily = RxFonts.display, letterSpacing = 0.02.em)
-            Text(c.size, Modifier.padding(top = 12.dp), color = if (c.selected) rx.accentText else text2, fontSize = 14.sp,
-                fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+            if (c.recommended) {
+                Text(
+                    "Recommended", Modifier.background(rx.accent, RoundedCornerShape(50)).padding(horizontal = 9.dp, vertical = 3.dp),
+                    color = rx.onAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body
+                )
+            } else Text(c.tag, color = text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
+            Spacer(Modifier.weight(1f))
+            Text(c.quality, color = text, fontSize = 30.sp, lineHeight = 32.sp, fontFamily = RxFonts.display)
+            Text(if (c.recommended) "${c.tag} · ${c.size}" else c.size, Modifier.padding(top = 4.dp), color = text2, fontSize = 13.sp,
+                fontWeight = FontWeight.Medium, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (c.selected) {
-            Box(Modifier.align(Alignment.TopEnd).padding(top = 23.dp, end = 12.dp).size(22.dp).rxDrawableBg(R.drawable.bg_dl_check).padding(4.dp)) {
-                Image(painterResource(R.drawable.ic_dl_check), null, Modifier.fillMaxSize(), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(LocalRx.current.onAccent))
-            }
-        }
-        if (c.recommended) {
-            Text(
-                "Recommended", Modifier.padding(start = 14.dp).rxDrawableBg(R.drawable.bg_dl_badge).padding(horizontal = 10.dp, vertical = 4.dp),
-                color = LocalRx.current.onAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body
-            )
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 14.dp).size(24.dp)
+                .background(if (c.selected) rx.accent else Color.Transparent, CircleShape)
+                .border(if (c.selected) 0.dp else 1.5.dp, if (c.selected) Color.Transparent else colorResource(R.color.dl_more_stroke), CircleShape)
+                .padding(5.dp)
+        ) {
+            if (c.selected) Image(painterResource(R.drawable.ic_dl_check), null, Modifier.fillMaxSize(),
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(rx.onAccent))
         }
     }
 }
@@ -382,20 +369,21 @@ private fun TicketCard(c: DlCard.Format, tearing: Boolean, onClick: () -> Unit) 
 @Composable
 private fun MoreCard(c: DlCard.More, onClick: () -> Unit) {
     val rx = LocalRx.current
+    val shape = RoundedCornerShape(18.dp)
     Box(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 12.dp).fillMaxWidth()) {
         Column(
-            Modifier.padding(top = 11.dp).fillMaxWidth().height(118.dp).rxDrawableBg(R.drawable.bg_dl_more)
+            Modifier.fillMaxWidth().height(128.dp).clip(shape).background(colorResource(R.color.dl_card_bg))
                 .clickable(onClick = onClick).padding(16.dp)
         ) {
-            Box(Modifier.size(34.dp).rxDrawableBg(R.drawable.bg_dl_more_icon).padding(8.dp)) {
-                Image(painterResource(R.drawable.ic_dl_grid), null, Modifier.fillMaxSize())
+            Box(Modifier.size(36.dp).background(colorResource(R.color.dl_more_icon_bg), CircleShape).padding(9.dp)) {
+                Image(painterResource(R.drawable.ic_dl_grid), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
             }
             Spacer(Modifier.weight(1f))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("More Formats", color = colorResource(R.color.dl_text), fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
-                Image(painterResource(R.drawable.ic_dl_chevron), null, Modifier.padding(start = 4.dp).size(14.dp))
+                Text("More formats", color = colorResource(R.color.dl_text), fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                Image(painterResource(R.drawable.ic_dl_chevron), null, Modifier.padding(start = 4.dp).size(14.dp), colorFilter = ColorFilter.tint(rx.text))
             }
-            Text(c.sub, Modifier.padding(top = 2.dp), color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+            Text(c.sub, Modifier.padding(top = 2.dp), color = colorResource(R.color.dl_text2), fontSize = 13.sp, fontFamily = RxFonts.body)
         }
     }
 }

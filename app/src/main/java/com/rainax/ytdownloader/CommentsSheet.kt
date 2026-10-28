@@ -27,7 +27,7 @@ class CommentsSheet(
 ) {
     private val ui = CommentsUi()
     private val root = ComposeView(act)
-    private val dialog = BottomSheetDialog(act)
+    private val dialog = RxSheetDialog(act)
     private val rows = mutableListOf<YtComments.Item>()
     private val openReplies = HashSet<String>()                     // comment ids with replies shown
     private val replyJobs = HashMap<String, Job>()                  // replies being loaded, by comment id

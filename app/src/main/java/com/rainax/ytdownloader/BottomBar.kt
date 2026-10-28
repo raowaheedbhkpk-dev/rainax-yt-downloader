@@ -152,7 +152,7 @@ private fun Tab(ui: NavUi, t: NavTab, onClick: () -> Unit) {
                 }
             }
         }
-        Text(t.label, Modifier.padding(top = 4.dp), color = color, fontSize = 10.sp, letterSpacing = 0.1.em,
+        Text(t.label, Modifier.padding(top = 4.dp), color = color, fontSize = 10.sp, letterSpacing = 0.em,
             fontFamily = RxFonts.body, maxLines = 1)
     }
 }
@@ -214,7 +214,7 @@ internal fun UpdatePill(ui: UpdatePillUi) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(ui.action, color = LocalRx.current.onAccent, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    letterSpacing = 0.15.em)
+                    letterSpacing = 0.em)
             }
         }
     }

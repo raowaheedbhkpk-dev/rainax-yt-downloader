@@ -85,7 +85,7 @@ object PicksSheet {
 
     fun show(act: androidx.appcompat.app.AppCompatActivity, onDownload: (List<VideoItem>) -> Unit) {
         if (Picks.size == 0) return
-        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         var items by androidx.compose.runtime.mutableStateOf(Picks.all())
         val listener: () -> Unit = {
             if (dialog.isShowing) {

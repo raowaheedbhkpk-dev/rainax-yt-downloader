@@ -355,7 +355,7 @@ class MainActivity : AppCompatActivity() {
             signIn.launch(Intent(this, SignInActivity::class.java))
             return
         }
-        val dialog = BottomSheetDialog(this)
+        val dialog = RxSheetDialog(this)
         val p = YtAccount.profile(this)
         val view = androidx.compose.ui.platform.ComposeView(this)
         view.setContent {

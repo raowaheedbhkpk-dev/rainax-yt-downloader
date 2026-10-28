@@ -58,8 +58,8 @@ internal fun RxNetImage(url: String?, modifier: Modifier, circle: Boolean = fals
 /** "LIVE", "SHORTS", "12 videos" or "12:34" for the picture's corner. */
 internal fun videoBadge(item: VideoItem): String = when {
     item.isPlaylist -> if (item.count > 0) "${item.count} videos" else "Playlist"
-    item.isShort -> "SHORTS"
-    item.seconds < 0 -> "LIVE"
+    item.isShort -> "Shorts"
+    item.seconds < 0 -> "Live"
     else -> YtCatalog.duration(item.seconds)
 }
 
@@ -162,28 +162,28 @@ internal fun VideoCard(
                 RxNetImage(item.avatar, Modifier.fillMaxSize(), circle = true, widthPx = 96)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(item.title, color = rx.text, fontSize = 16.sp, lineHeight = if (modern) 22.sp else 21.sp, fontFamily = rxBodyFont(),
+                Text(item.title, color = rx.text, fontSize = if (modern) 15.sp else 16.sp, lineHeight = if (modern) 20.sp else 21.sp, fontFamily = rxBodyFont(),
                     fontWeight = if (modern) FontWeight.Bold else FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(videoMeta(item), Modifier.padding(top = if (modern) 4.dp else 3.dp), color = rx.text2, fontSize = if (modern) 13.sp else 12.sp,
-                    fontFamily = rxBodyFont(), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    fontFamily = rxBodyFont(), maxLines = if (modern) 1 else 2, overflow = TextOverflow.Ellipsis)
             }
             if (onPick != null && !item.isPlaylist && !item.isChannel && item.seconds >= 0) {
                 val on = isPicked(item.url)
                 Box(
-                    Modifier.padding(start = 4.dp).size(40.dp).then(
+                    Modifier.padding(start = 4.dp).size(if (modern) 36.dp else 40.dp).then(
                         if (modern) Modifier.clip(CircleShape).background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
                     ).clickable { onPick(item) }
-                        .semantics { contentDescription = if (on) "Selected. Tap to unselect" else "Select for download" }.padding(10.dp)
+                        .semantics { contentDescription = if (on) "Selected. Tap to unselect" else "Select for download" }.padding(if (modern) 9.dp else 10.dp)
                 ) {
                     Image(painterResource(if (on) R.drawable.ic_check else R.drawable.ic_add), null, Modifier.fillMaxSize(),
                         colorFilter = ColorFilter.tint(if (on) rx.accent else rx.text))
                 }
             }
             Box(
-                Modifier.padding(start = 6.dp).size(42.dp).then(
+                Modifier.padding(start = 6.dp).size(if (modern) 36.dp else 42.dp).then(
                     if (modern) Modifier.clip(CircleShape).background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
                 ).clickable { onDownload(item) }
-                    .semantics { contentDescription = "Download" }.padding(11.dp)
+                    .semantics { contentDescription = "Download" }.padding(if (modern) 9.dp else 11.dp)
             ) {
                 // layout A: a soft grey round button, so the title stays the first thing you see
                 Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.text else rx.accent))

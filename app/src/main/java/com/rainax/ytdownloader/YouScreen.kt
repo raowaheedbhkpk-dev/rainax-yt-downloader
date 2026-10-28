@@ -282,7 +282,7 @@ internal fun RxChip(label: String, selected: Boolean, icon: Int? = null, onClick
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold, letterSpacing = 0.08.em, fontSize = 13.sp) },
+        label = { Text(label, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold, letterSpacing = 0.em, fontSize = 13.sp) },
         leadingIcon = if (icon != null) {
             { Image(painterResource(icon), null, Modifier.size(16.dp), colorFilter = ColorFilter.tint(if (selected) rx.onAccent else rx.text)) }
         } else null,
@@ -432,7 +432,7 @@ private fun CollectionShelf(act: MainActivity, s: YouState, playable: List<Downl
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Your storage", Modifier.weight(1f), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
-            if (u != null) Text("${StorageMeter.short(u.videoBytes + u.audioBytes)} USED", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.display)
+            if (u != null) Text("${StorageMeter.short(u.videoBytes + u.audioBytes)} used", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.display)
         }
         Column(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).fillMaxWidth().background(colorResource(R.color.film_bg)).padding(horizontal = 6.dp)) {
             Box(Modifier.fillMaxWidth().height(5.dp).rxDrawableBg(R.drawable.bg_sprockets))
@@ -481,11 +481,11 @@ private fun ShelfCase(act: MainActivity, t: DownloadTask) {
         val kind = when {
             t.isAudio -> if (t.format.contains("mp3") || t.mime == "audio/mpeg") "MP3" else "AUDIO"
             t.format.substringAfter(':').toIntOrNull()?.let { it >= 720 } == true -> "HD"
-            else -> "VIDEO"
+            else -> "Video"
         }
         Text(
             kind, Modifier.align(Alignment.TopEnd).padding(5.dp).rxDrawableBg(R.drawable.bg_hero_tag).padding(horizontal = 5.dp, vertical = 1.dp),
-            color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.1.em
+            color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em
         )
         Text(
             t.title, Modifier.align(Alignment.BottomStart).padding(start = 7.dp).padding(7.dp),
@@ -616,14 +616,14 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
             Box(Modifier.padding(top = 12.dp).fillMaxWidth().height(1.dp).background(rx.divider))
             Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 val sp = LiveStats.split(live.bytesPerSec)
-                Stat("SPEED", if (live.bytesPerSec > 1) sp.first to (sp.second + "/s") else "—" to "", Modifier.weight(1f))
-                Stat("TIME LEFT", LiveStats.eta(live.etaSec) to "", Modifier.weight(1f))
+                Stat("Speed", if (live.bytesPerSec > 1) sp.first to (sp.second + "/s") else "—" to "", Modifier.weight(1f))
+                Stat("Time left", LiveStats.eta(live.etaSec) to "", Modifier.weight(1f))
                 val got = LiveStats.split(live.done.toDouble())
                 val size = if (live.total > 0) {
                     val all = LiveStats.split(live.total.toDouble())
                     got.first to "/ ${all.first} ${all.second}"
                 } else got
-                Stat("SIZE", size, Modifier.weight(1f))
+                Stat("Size", size, Modifier.weight(1f))
             }
         }
         val showProgress = t.status == Status.RUNNING || t.status == Status.QUEUED || t.status == Status.PAUSED || t.status == Status.WAITING
@@ -647,7 +647,7 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
 private fun Stat(label: String, value: Pair<String, String>, modifier: Modifier) {
     val rx = LocalRx.current
     Column(modifier) {
-        Text(label, color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.2.em)
+        Text(label, color = rx.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(
             buildAnnotatedString {
                 append(value.first)

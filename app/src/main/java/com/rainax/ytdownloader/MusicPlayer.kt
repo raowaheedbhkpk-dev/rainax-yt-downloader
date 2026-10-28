@@ -906,7 +906,7 @@ class MusicPlayer(
 
     private inner class QueueSheet {
         private val ui = QueueUi()
-        private val dialog = BottomSheetDialog(act)
+        private val dialog = RxSheetDialog(act)
         val isShowing get() = dialog.isShowing
 
         fun show() {
@@ -960,7 +960,7 @@ class MusicPlayer(
         val ui = LyricsUi()
         ui.title = song.title
         ui.artist = song.uploader
-        val dialog = BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         val view = androidx.compose.ui.platform.ComposeView(act)
         view.setContent { RxTheme { LyricsScreen(ui) } }
         dialog.setContentView(view)

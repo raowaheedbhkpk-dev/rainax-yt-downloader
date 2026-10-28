@@ -25,7 +25,7 @@
         <item name="android:textColor">@color/rx_cinema_gold</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0.12</item>
+        <item name="android:letterSpacing">0</item>
     </style>
     <style name="Widget.Rainax.SnackbarText" parent="Widget.Material3.Snackbar.TextView">
         <item name="android:textColor">@color/rx_snack_text</item>
@@ -215,7 +215,7 @@
         <item name="android:textColor">@color/rx_on_primary</item>
         <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0.12</item>
+        <item name="android:letterSpacing">0</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
         <item name="android:layout_marginStart">8dp</item>
@@ -226,14 +226,14 @@
         <item name="android:textColor">@color/rx_text</item>
         <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0.12</item>
+        <item name="android:letterSpacing">0</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
     </style>
     <style name="Widget.Rainax.Dialog.Neutral" parent="Widget.Material3.Button.TextButton.Dialog">
         <item name="android:textColor">@color/rx_gold</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0.12</item>
+        <item name="android:letterSpacing">0</item>
         <item name="android:textStyle">bold</item>
     </style>
 
@@ -317,7 +317,7 @@
         <item name="android:textSize">12sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="textAllCaps">false</item>
-        <item name="android:letterSpacing">0.08</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
     <!-- bottom bar labels: small, like YouTube -->
@@ -325,7 +325,7 @@
         <item name="android:textSize">10sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="textAllCaps">false</item>
-        <item name="android:letterSpacing">0.1</item>
+        <item name="android:letterSpacing">0</item>
         <item name="android:fontFamily">@font/rx_body</item>
         <item name="fontFamily">@font/rx_body</item>
     </style>
@@ -458,7 +458,7 @@
     <style name="TextAppearance.Rainax.Tab" parent="TextAppearance.Material3.TitleSmall">
         <item name="android:textStyle">bold</item>
         <item name="textAllCaps">false</item>
-        <item name="android:letterSpacing">0.08</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
     <!-- Settings › Accent: the colour of buttons, bars, chips and switches (film red is the theme's own) -->

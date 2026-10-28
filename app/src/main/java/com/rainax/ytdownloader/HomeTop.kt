@@ -205,9 +205,9 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                             fontWeight = FontWeight.Medium, letterSpacing = (-0.02).em)
                     } else Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Image(rxDrawable(R.drawable.ic_logo, 28), null, Modifier.size(28.dp))
-                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = rxHeadFont(), letterSpacing = 0.06.em)
+                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = rxHeadFont(), letterSpacing = 0.em)
                         Text("TUBE", Modifier.padding(start = 3.dp), color = rx.accentText, fontSize = 20.sp, fontFamily = rxHeadFont(),
-                            fontWeight = FontWeight.SemiBold, letterSpacing = 0.06.em)
+                            fontWeight = FontWeight.SemiBold, letterSpacing = 0.em)
                     }
                     Box(Modifier.size(48.dp).clickable { a.theme(view) }.semantics { contentDescription = "Theme" }, contentAlignment = Alignment.Center) {
                         Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(22.dp),
@@ -375,7 +375,7 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
             item(key = "stubs") {
                 Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
                     Text(rxHeadCase("Recent searches"), Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.gold, fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
+                        fontWeight = FontWeight.Bold, letterSpacing = 0.em)
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp)) {
                         itemsIndexed(c.stubs) { _, s -> RecentStub(s, a) }
                     }
@@ -390,7 +390,7 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
                         verticalAlignment = Alignment.CenterVertically) {
                         Image(painterResource(R.drawable.ic_delete), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.accentText))
                         Text(rxHeadCase("Clear search history"), Modifier.padding(start = 20.dp), color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.08.em, fontFamily = rxBodyFont())
+                            letterSpacing = 0.em, fontFamily = rxBodyFont())
                     }
                     Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp).fillMaxWidth().height(1.dp).background(rx.divider))
                 }

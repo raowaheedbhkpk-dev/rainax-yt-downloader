@@ -92,7 +92,7 @@ internal fun DescriptionSheet(
         Modifier.fillMaxWidth().background(rx.surface).nestedScroll(rememberNestedScrollInteropConnection())
             .verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp)
     ) {
-        Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).rxDrawableBg(R.drawable.bg_handle))
+        SheetHandle()
         Label("Description", Modifier.padding(top = 16.dp))
         Text(title, Modifier.padding(top = 6.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)
         Row(Modifier.padding(top = 16.dp).fillMaxWidth().rxDrawableBg(R.drawable.bg_desc_card).padding(vertical = 14.dp),
@@ -129,8 +129,7 @@ internal fun DescriptionSheet(
 
 @Composable
 private fun Label(text: String, modifier: Modifier) {
-    Text(text, modifier, color = LocalRx.current.accentText, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-        letterSpacing = 0.15.em, fontFamily = RxFonts.body)
+    Text(text, modifier, color = LocalRx.current.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
 }
 
 @Composable

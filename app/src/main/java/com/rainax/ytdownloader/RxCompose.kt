@@ -75,11 +75,12 @@ val LocalRx = staticCompositionLocalOf<RxColors> { error("RxTheme missing") }
 
 /** RAINAX's own fonts: the tall display face for headings, the body face for text. */
 object RxFonts {
-    // v19.2: the whole app uses the new look's one face (Plus Jakarta Sans). Titles: its extra-bold weight.
+    // v19.2: the whole app uses the new look's one face (Plus Jakarta Sans). Titles: its bold weight.
     val display = FontFamily(
-        Font(R.font.rx_modern_extrabold, FontWeight.Normal),
-        Font(R.font.rx_modern_extrabold, FontWeight.SemiBold),
-        Font(R.font.rx_modern_extrabold, FontWeight.Bold)
+        Font(R.font.rx_modern_bold, FontWeight.Normal),
+        Font(R.font.rx_modern_bold, FontWeight.SemiBold),
+        Font(R.font.rx_modern_extrabold, FontWeight.Bold),
+        Font(R.font.rx_modern_extrabold, FontWeight.ExtraBold)
     )
     val body = FontFamily(
         Font(R.font.rx_modern_regular, FontWeight.Normal),

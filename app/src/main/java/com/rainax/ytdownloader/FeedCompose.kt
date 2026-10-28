@@ -506,7 +506,7 @@ private fun SectionHead(label: String, title: String, onMore: (() -> Unit)?) {
             Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(1.dp).background(rx.divider))
             if (onMore != null) {
                 Text("More", Modifier.height(36.dp).clickable(onClick = onMore).padding(horizontal = 4.dp, vertical = 10.dp),
-                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
             }
         }
     }
@@ -585,7 +585,7 @@ private fun HeroCard(m: FeedModel, item: VideoItem) {
             WatchBar(item, Modifier.align(Alignment.BottomStart))
             Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 18.dp)) {
                 Text("Top pick", Modifier.rxDrawableBg(R.drawable.bg_hero_tag).padding(horizontal = 8.dp, vertical = 3.dp),
-                    color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+                    color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
                 Text(item.title, Modifier.padding(top = 10.dp), color = Color.White, fontSize = 32.sp, lineHeight = 33.sp,
                     fontFamily = RxFonts.display, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -635,7 +635,7 @@ private fun CoverCard(m: FeedModel, item: VideoItem) {
         }
         Text(listOf("Cover story", item.uploader).filter { it.isNotBlank() }.joinToString(" · "),
             Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp), color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            letterSpacing = 0.2.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            letterSpacing = 0.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(item.title, Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp), color = rx.text, fontSize = 32.sp, lineHeight = 34.sp,
             fontFamily = RxFonts.display, maxLines = 3, overflow = TextOverflow.Ellipsis)
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 10.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -724,7 +724,7 @@ private fun GridTile(m: FeedModel, item: VideoItem, modifier: Modifier, big: Boo
         Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_hero_scrim))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(if (big) 12.dp else 9.dp)) {
             Text(item.uploader, color = colorResource(R.color.rx_cinema_gold), fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                letterSpacing = 0.18.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                letterSpacing = 0.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (big) Text(item.title, Modifier.padding(top = 3.dp), color = Color.White, fontSize = 20.sp, lineHeight = 22.sp,
                 fontFamily = RxFonts.display, maxLines = 4, overflow = TextOverflow.Ellipsis)
             else Text(item.title, Modifier.padding(top = 3.dp), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold,
@@ -741,8 +741,8 @@ private fun GridTile(m: FeedModel, item: VideoItem, modifier: Modifier, big: Boo
 private fun WeekCard(w: WeekStats) {
     val rx = LocalRx.current
     val minutes = w.watchedMs / 60_000
-    val (num, label) = if (minutes >= 60) String.format(java.util.Locale.US, "%.1f", minutes / 60.0) to "HOURS WATCHED"
-    else minutes.toString() to "MINUTES WATCHED"
+    val (num, label) = if (minutes >= 60) String.format(java.util.Locale.US, "%.1f", minutes / 60.0) to "Hours watched"
+    else minutes.toString() to "Minutes watched"
     Column(
         Modifier.padding(start = 16.dp, end = 16.dp, top = 26.dp).fillMaxWidth().background(rx.card).padding(16.dp)
             .semantics { contentDescription = "Your week: $num ${label.lowercase()}, ${w.videos} videos, ${w.downloads} downloads" }
@@ -750,11 +750,11 @@ private fun WeekCard(w: WeekStats) {
         Text("Your week on RAINAX", color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
         Box(Modifier.padding(top = 10.dp).size(44.dp, 3.dp).background(rx.accent))
         Row(Modifier.fillMaxWidth().padding(top = 14.dp)) {
-            listOf(Triple(num, label, rx.text), Triple(w.videos.toString(), "VIDEOS", rx.text), Triple(w.downloads.toString(), "DOWNLOADS", rx.accentText))
+            listOf(Triple(num, label, rx.text), Triple(w.videos.toString(), "Videos", rx.text), Triple(w.downloads.toString(), "Downloads", rx.accentText))
                 .forEach { (n, l, c) ->
                     Column(Modifier.weight(1f)) {
                         Text(n, color = c, fontSize = 32.sp, fontFamily = RxFonts.display)
-                        Text(l, Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+                        Text(l, Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
                     }
                 }
         }
@@ -807,9 +807,9 @@ private fun MoviesBand(m: FeedModel, s: FeedModel.Slot.Movies) {
     Column(Modifier.padding(top = 26.dp).fillMaxWidth().background(colorResource(R.color.rx_cinema_deep)).padding(vertical = 14.dp)) {
         Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(6.dp).rxDrawableBg(R.drawable.bg_marquee_bulbs))
         Text(s.label, Modifier.fillMaxWidth().padding(top = 14.dp), color = colorResource(R.color.rx_on_picture2), fontSize = 10.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = 0.3.em, textAlign = TextAlign.Center)
+            fontWeight = FontWeight.Bold, letterSpacing = 0.em, textAlign = TextAlign.Center)
         Text(
-            "NOW SHOWING", Modifier.fillMaxWidth().padding(top = 2.dp), textAlign = TextAlign.Center, letterSpacing = 0.22.em,
+            "Now showing", Modifier.fillMaxWidth().padding(top = 2.dp), textAlign = TextAlign.Center, letterSpacing = 0.em,
             style = TextStyle(color = gold, fontSize = 32.sp, fontFamily = RxFonts.display,
                 shadow = Shadow(colorResource(R.color.rx_cinema_gold_glow), blurRadius = 28f))
         )
@@ -818,8 +818,8 @@ private fun MoviesBand(m: FeedModel, s: FeedModel.Slot.Movies) {
         }
         val more = m.onChapterMore
         if (more != null) {
-            Text("ALL MOVIES  ›", Modifier.align(Alignment.CenterHorizontally).height(40.dp).clickable { more(s.id) }.padding(horizontal = 12.dp, vertical = 12.dp),
-                color = gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.2.em)
+            Text("All movies  ›", Modifier.align(Alignment.CenterHorizontally).height(40.dp).clickable { more(s.id) }.padding(horizontal = 12.dp, vertical = 12.dp),
+                color = gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
         }
         Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp).fillMaxWidth().height(6.dp).rxDrawableBg(R.drawable.bg_marquee_bulbs))
     }
@@ -869,7 +869,7 @@ private fun Ticket(m: FeedModel, item: VideoItem) {
         }
         Box(Modifier.align(Alignment.CenterEnd).width(64.dp).fillMaxHeight()) {
             Text("Admit one", Modifier.align(Alignment.Center).graphicsLayer { rotationZ = -90f }, color = rx.accentText, fontSize = 14.sp,
-                fontFamily = RxFonts.display, letterSpacing = 0.3.em, maxLines = 1, softWrap = false)
+                fontFamily = RxFonts.display, letterSpacing = 0.em, maxLines = 1, softWrap = false)
             Text(videoBadge(item), Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp), color = colorResource(R.color.rx_on_picture2),
                 fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }

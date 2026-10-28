@@ -127,8 +127,8 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 120.dp)) {
-        Text("ALL-IN-ONE DOWNLOADER", color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
-        Text("SAVE ANY\nVIDEO.", Modifier.padding(top = 6.dp), color = rx.text, fontSize = 44.sp, lineHeight = 44.sp, fontFamily = RxFonts.display)
+        Text("All-in-one downloader", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("Save any\nvideo.", Modifier.padding(top = 6.dp), color = rx.text, fontSize = 44.sp, lineHeight = 44.sp, fontFamily = RxFonts.display)
         Box(Modifier.padding(top = 12.dp).size(44.dp, 3.dp).background(rx.accent))
 
         // the apps: tap one to open it (to copy a link) or its website
@@ -142,7 +142,7 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AppBadge(app, 24.dp, 10)
-                    Text(app.name, Modifier.padding(start = 8.dp), color = rx.text, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.12.em)
+                    Text(app.name, Modifier.padding(start = 8.dp), color = rx.text, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
                 }
             }
         }
@@ -221,7 +221,7 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                 }
                 Text(
                     "Copied · ${app?.name ?: "video link"}", Modifier.weight(1f).padding(horizontal = 12.dp),
-                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.06.em, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
                 Box(Modifier.padding(vertical = 6.dp).width(2.dp).fillMaxHeight().rxDrawableBg(R.drawable.bg_dash_vertical))
                 TextButton(

@@ -73,7 +73,7 @@ object VideoMenu {
     fun saveSheet(act: AppCompatActivity, videoId: String, signIn: () -> Unit) {
         if (!YtAccount.isSignedIn(act)) { Notify.show(act, "Sign in to save videos", action = "Sign in") { signIn() }; return }
         val ui = SavePlaylistUi()
-        val dialog = BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         val view = ComposeView(act)
         fun toggle(o: YtAccount.PlaylistOption) {
             val want = !o.has

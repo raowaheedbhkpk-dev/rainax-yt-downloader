@@ -42,6 +42,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -187,18 +189,19 @@ class SignInActivity : AppCompatActivity() {
     private fun Screen() {
         val rx = LocalRx.current
         Column(Modifier.fillMaxSize().background(rx.bg).systemBarsPadding()) {
-            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(48.dp).clickable { finish() }.semantics { contentDescription = "Close" }.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth().height(56.dp).background(rx.bg).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clip(CircleShape).clickable { finish() }.semantics { contentDescription = "Close" }.padding(12.dp)) {
                     Image(painterResource(R.drawable.ic_close), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
                 }
-                Text("Sign in with YouTube", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 20.sp,
-                    fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+                Text(if (intro) "" else "Sign in with YouTube", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 17.sp,
+                    fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)
                 Image(painterResource(R.drawable.ic_lock), null, Modifier.padding(end = 12.dp).size(26.dp), colorFilter = ColorFilter.tint(rx.text2))
             }
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = rx.accent, trackColor = rx.surfaceAlt)
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                AndroidView(factory = { (web.parent as? android.view.ViewGroup)?.removeView(web); web }, modifier = Modifier.fillMaxSize())
+                // Google's page only after Sign in (while the intro shows, the web view stayed on top of the bar above)
                 if (intro) Intro()
+                else AndroidView(factory = { (web.parent as? android.view.ViewGroup)?.removeView(web); web }, modifier = Modifier.fillMaxSize())
             }
         }
     }

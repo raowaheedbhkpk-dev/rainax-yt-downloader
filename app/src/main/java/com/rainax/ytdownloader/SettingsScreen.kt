@@ -187,8 +187,7 @@ internal fun SettingsScreen(act: MainActivity) {
         // title with the accent bar, version on the right
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp), verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
-                Text("Settings", color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display, lineHeight = 34.sp)
-                Box(Modifier.padding(top = 8.dp).width(40.dp).height(3.dp).background(rx.accent))
+                Text("Settings", color = rx.text, fontSize = 34.sp, fontFamily = RxFonts.display, lineHeight = 40.sp)
             }
             Text("v$version", color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body)
         }
@@ -197,7 +196,6 @@ internal fun SettingsScreen(act: MainActivity) {
         Row(
             Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().height(48.dp)
                 .background(rx.surface, RoundedCornerShape(12.dp))
-                .border(1.dp, rx.outline, RoundedCornerShape(12.dp))
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -279,13 +277,17 @@ internal fun SettingsScreen(act: MainActivity) {
             anyMatch = true
             if (!searching) {
                 Text(
-                    ch.label.lowercase().replaceFirstChar { it.uppercase() }, Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-                    color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body
+                    ch.label.lowercase().replaceFirstChar { it.uppercase() }, Modifier.padding(start = 32.dp, top = 24.dp, bottom = 8.dp),
+                    color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body
                 )
-            }
-            rows.forEach { o ->
-                OptionRow(o)
-                if (o.end !is SetEnd.Note) Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(rx.divider))
+            } else Spacer(Modifier.height(12.dp))
+            // iOS style: each chapter's rows sit together in one white rounded card, thin lines between them
+            Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(rx.surface)) {
+                rows.forEachIndexed { i, o ->
+                    OptionRow(o)
+                    if (i < rows.lastIndex && o.end !is SetEnd.Note && rows[i + 1].end !is SetEnd.Note)
+                        Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(0.5.dp).background(rx.divider))
+                }
             }
         }
         if (searching && !anyMatch) {
@@ -316,7 +318,6 @@ private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: Stri
     Column(
         modifier.padding(4.dp).height(80.dp)
             .background(if (on) rx.accent else rx.surface, shape)
-            .border(if (on) BorderStroke(0.dp, Color.Transparent) else BorderStroke(1.dp, rx.outline), shape)
             .clickable(onClick = toggle)
             .semantics { contentDescription = "$title, ${if (on) "on" else "off"}" }
             .padding(16.dp)
@@ -357,7 +358,7 @@ private fun OptionRow(o: SetOpt) {
     val end = o.end
     if (end is SetEnd.Note) {
         Text(
-            end.text, Modifier.fillMaxWidth().background(rx.surfaceAlt).padding(16.dp),
+            end.text, Modifier.fillMaxWidth().background(rx.card).padding(horizontal = 16.dp, vertical = 12.dp),
             color = rx.text2, fontSize = 12.sp, lineHeight = 17.sp, fontFamily = RxFonts.body
         )
         return
@@ -368,13 +369,13 @@ private fun OptionRow(o: SetOpt) {
         else -> null
     }
     val texts: @Composable () -> Unit = {
-        Text(o.title, color = rx.text, fontSize = 16.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)
+        Text(o.title, color = rx.text, fontSize = 15.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Medium)
         if (o.sub != null) {
-            Text(o.sub, Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 13.sp, lineHeight = 17.sp, fontFamily = RxFonts.body)
+            Text(o.sub, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 13.sp, lineHeight = 17.sp, fontFamily = RxFonts.body)
         }
     }
     if (end is SetEnd.Choice) {
-        Column(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 16.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 14.dp)) {
             texts()
             FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 end.options.forEach { (label, value) ->
@@ -385,11 +386,11 @@ private fun OptionRow(o: SetOpt) {
                         label = { Text(label, fontFamily = RxFonts.body, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal) },
                         shape = RoundedCornerShape(12.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = rx.surface, labelColor = rx.text,
+                            containerColor = rx.card, labelColor = rx.text,
                             selectedContainerColor = rx.accent, selectedLabelColor = rx.onAccent
                         ),
                         border = FilterChipDefaults.filterChipBorder(
-                            enabled = true, selected = sel, borderColor = rx.outline, selectedBorderColor = rx.accent
+                            enabled = true, selected = sel, borderColor = Color.Transparent, selectedBorderColor = Color.Transparent
                         )
                     )
                 }
@@ -400,7 +401,7 @@ private fun OptionRow(o: SetOpt) {
     Row(
         Modifier.fillMaxWidth()
             .let { m -> if (click != null) m.clickable(onClick = click) else m }
-            .heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 16.dp),
+            .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) { texts() }
@@ -410,7 +411,8 @@ private fun OptionRow(o: SetOpt) {
                 onCheckedChange = { end.set(it) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = rx.onAccent, checkedTrackColor = rx.accent,
-                    uncheckedThumbColor = rx.text2, uncheckedTrackColor = rx.surface, uncheckedBorderColor = rx.outline
+                    uncheckedThumbColor = Color.White, uncheckedTrackColor = rx.surfaceAlt, uncheckedBorderColor = Color.Transparent,
+                    checkedBorderColor = Color.Transparent
                 )
             )
             is SetEnd.Open -> Image(

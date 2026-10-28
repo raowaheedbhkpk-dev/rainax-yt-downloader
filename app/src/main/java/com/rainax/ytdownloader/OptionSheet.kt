@@ -62,9 +62,10 @@ internal fun OptionList(title: String, opts: List<RxOption>, fill: Boolean = fal
         (if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth()).background(rx.surface)
             .padding(top = 8.dp, bottom = 16.dp)
     ) {
+        if (!fill) SheetHandle()
         if (title.isNotBlank()) {
-            Text(title, Modifier.padding(horizontal = 20.dp, vertical = 10.dp), color = rx.text, fontSize = 20.sp,
-                fontFamily = RxFonts.display, letterSpacing = 0.02.em, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(title, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp), color = rx.text, fontSize = 17.sp,
+                fontFamily = RxFonts.body, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Column(
             (if (fill) Modifier.weight(1f) else Modifier).fillMaxWidth()
@@ -79,13 +80,13 @@ internal fun OptionList(title: String, opts: List<RxOption>, fill: Boolean = fal
 private fun OptionRow(o: RxOption, onClick: () -> Unit) {
     val rx = LocalRx.current
     Row(
-        Modifier.fillMaxWidth().height(52.dp).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 20.dp),
+        Modifier.fillMaxWidth().height(50.dp).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (o.icon != 0) {
-            Image(painterResource(o.icon), null, Modifier.padding(end = 18.dp).size(24.dp), colorFilter = ColorFilter.tint(rx.text))
+            Image(painterResource(o.icon), null, Modifier.padding(end = 16.dp).size(22.dp), colorFilter = ColorFilter.tint(rx.text))
         }
-        Text(o.text, Modifier.weight(1f), color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 2,
+        Text(o.text, Modifier.weight(1f), color = rx.text, fontSize = 15.sp, fontFamily = RxFonts.body, maxLines = 2,
             overflow = TextOverflow.Ellipsis)
         o.value?.let {
             Text(it, Modifier.padding(start = 12.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1)
@@ -99,7 +100,7 @@ private fun OptionRow(o: RxOption, onClick: () -> Unit) {
 object RxOptions {
     /** A bottom sheet menu: tap a row and the sheet closes, then the row's action runs. */
     fun sheet(act: AppCompatActivity, title: String, opts: List<RxOption>, expanded: Boolean = false): BottomSheetDialog {
-        val dialog = BottomSheetDialog(act)
+        val dialog = RxSheetDialog(act)
         val view = ComposeView(act)
         view.setContent { RxTheme { OptionList(title, opts) { o -> dialog.dismiss(); o.action() } } }
         dialog.setContentView(view)
@@ -124,8 +125,8 @@ class SavePlaylistUi {
 internal fun SavePlaylistSheet(ui: SavePlaylistUi, toggle: (YtAccount.PlaylistOption) -> Unit, newPlaylist: () -> Unit) {
     val rx = LocalRx.current
     Column(Modifier.fillMaxWidth().background(rx.surface).padding(bottom = 12.dp)) {
-        Text("SAVE VIDEO TO…", Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
-            color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display)
+        Text("Save video to…", Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
+            color = rx.text, fontSize = 17.sp, fontFamily = RxFonts.body, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         val list = ui.list
         if (list == null) LinearProgressIndicator(Modifier.fillMaxWidth(), color = rx.accent, trackColor = rx.surfaceAlt)
         ui.message?.let {
