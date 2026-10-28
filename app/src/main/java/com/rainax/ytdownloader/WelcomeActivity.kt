@@ -106,7 +106,7 @@ class WelcomeActivity : AppCompatActivity() {
             ) {
                 Image(rxDrawable(R.drawable.ic_logo, 28), null, Modifier.padding(start = 8.dp).size(28.dp))
                 Text(
-                    "RAINAX TUBE", Modifier.weight(1f).padding(start = 8.dp),
+                    "RAINAX Tube", Modifier.weight(1f).padding(start = 8.dp),
                     color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display
                 )
                 TextButton(onClick = { finishGuide() }, modifier = Modifier.alpha(if (last) 0f else 1f), enabled = !last) {
@@ -175,7 +175,7 @@ class WelcomeActivity : AppCompatActivity() {
             }
             Spacer(Modifier.height(40.dp))
             Text(
-                p.title.uppercase(), Modifier.fillMaxWidth(), color = rx.text, fontSize = 24.sp,
+                p.title, Modifier.fillMaxWidth(), color = rx.text, fontSize = 24.sp,
                 fontFamily = RxFonts.display, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(14.dp))

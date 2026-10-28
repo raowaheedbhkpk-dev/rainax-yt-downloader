@@ -78,7 +78,8 @@
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/navCard"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- floating mini player (placed and dragged in code) -->

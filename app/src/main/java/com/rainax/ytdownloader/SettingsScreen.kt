@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
@@ -240,7 +241,7 @@ internal fun SettingsScreen(act: MainActivity) {
             }
 
             // the look: three little screens (System, Light, Dark); black and white only, so no accent rings
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surface).padding(16.dp)) {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surface, RoundedCornerShape(16.dp)).padding(16.dp)) {
                 Text("Appearance", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                 Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
                     listOf(
@@ -257,7 +258,7 @@ internal fun SettingsScreen(act: MainActivity) {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Box(
-                                Modifier.fillMaxWidth().height(60.dp).rxDrawableBg(pic)
+                                Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(14.dp)).rxDrawableBg(pic)
                                     .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(14.dp))
                             )
                             Text(
@@ -311,7 +312,7 @@ internal fun SettingsScreen(act: MainActivity) {
 private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: String, on: Boolean, toggle: () -> Unit) {
     val rx = LocalRx.current
     val shape = RoundedCornerShape(12.dp)
-    val fg = if (on) Color.White else rx.text
+    val fg = if (on) rx.onAccent else rx.text
     Column(
         modifier.padding(4.dp).height(80.dp)
             .background(if (on) rx.accent else rx.surface, shape)
@@ -324,7 +325,7 @@ private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: Stri
         Spacer(Modifier.weight(1f))
         Text(title, color = fg, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(prefix + if (on) "On" else "Off", color = if (on) Color.White.copy(alpha = 0.85f) else rx.text2,
+        Text(prefix + if (on) "On" else "Off", color = if (on) rx.onAccent.copy(alpha = 0.75f) else rx.text2,
             fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 1)
     }
 }

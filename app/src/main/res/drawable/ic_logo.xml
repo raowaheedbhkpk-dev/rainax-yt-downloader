@@ -3,7 +3,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="?attr/rxAccent" />
+            <solid android:color="@color/rx_grad_start" />
             <corners android:radius="9dp" />
         </shape>
     </item>

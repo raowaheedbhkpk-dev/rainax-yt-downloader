@@ -273,9 +273,9 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
                 modifier = Modifier.height(54.dp).alpha(if (ui.canDownload) 1f else 0.5f),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = Color.White)
+                colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
             ) {
-                Image(painterResource(R.drawable.ic_dl_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
+                Image(painterResource(R.drawable.ic_dl_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
                 Text("Download", Modifier.padding(start = 10.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em, fontFamily = RxFonts.body)
             }
         }
@@ -306,7 +306,7 @@ private fun RoundIcon(icon: Int, label: String, pad: androidx.compose.ui.unit.Dp
 @Composable
 private fun SheetTab(modifier: Modifier, icon: Int, label: String, on: Boolean, onClick: () -> Unit) {
     val rx = LocalRx.current
-    val color = if (on) Color.White else colorResource(R.color.dl_text2)
+    val color = if (on) rx.onAccent else colorResource(R.color.dl_text2)
     Row(
         modifier.fillMaxSize().background(if (on) rx.accent else Color.Transparent, RoundedCornerShape(12.dp)).clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically

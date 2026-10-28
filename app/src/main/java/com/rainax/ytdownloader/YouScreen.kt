@@ -218,9 +218,9 @@ private fun YouHeader(act: MainActivity, s: YouState) {
                     onClick = { act.signIn.launch(android.content.Intent(act, SignInActivity::class.java)) },
                     modifier = Modifier.weight(1f).height(42.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                 ) {
-                    Image(painterResource(R.drawable.ic_person), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
+                    Image(painterResource(R.drawable.ic_person), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
                     Text("Sign in to YouTube", Modifier.padding(start = 8.dp), fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)
                 }
             }

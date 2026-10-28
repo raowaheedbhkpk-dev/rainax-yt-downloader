@@ -187,6 +187,7 @@ class MainActivity : AppCompatActivity() {
             signIn = { onAccountClick() }
         ) { updateChrome() }
         music.setup()
+        b.root.post { updateChrome() }          // at start (once everything is set up): Home shows only its own floating tab bar
         music.onNowPlaying = { home.musicNowPlaying(it) }
         music.onTone = { home.musicTone(it) }
         lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { MusicHistory.recent(applicationContext) }   // read early, off the main thread

@@ -60,7 +60,7 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
     /** Drawn with Jetpack Compose (it replaced page_voice.xml); the glowing orb stays its own drawn view. */
     private val dialog = androidx.activity.ComponentDialog(act, R.style.Theme_Rainax_Page)
     private val orb = VoiceOrb(act)
-    private var status by mutableStateOf("LISTENING")
+    private var status by mutableStateOf("Listening")
     private var words by mutableStateOf<String?>(null)
     private var wordsColor by mutableIntStateOf(R.color.voice_hint)
     private var hint by mutableStateOf("")
@@ -178,19 +178,19 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
         listening = s == STATE_LISTENING
         when (s) {
             STATE_LISTENING -> {
-                status = "LISTENING"
+                status = "Listening"
                 orb.mode = VoiceOrb.MODE_LISTENING
                 dotBlink = true
                 dotDim = false
             }
             STATE_THINKING -> {
-                status = "SEARCHING"
+                status = "Searching"
                 orb.mode = VoiceOrb.MODE_THINKING
                 dotBlink = false
                 dotDim = false
             }
             else -> {
-                status = "TAP THE MIC TO TRY AGAIN"
+                status = "Tap the mic to try again"
                 orb.mode = VoiceOrb.MODE_IDLE
                 dotBlink = false
                 dotDim = true
@@ -224,11 +224,11 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
                 }
                 Box(Modifier.size(8.dp).alpha(blink.value).rxDrawableBg(R.drawable.bg_voice_dot))
                 Text(status, Modifier.padding(start = 8.dp), color = text, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.06.em, fontFamily = RxFonts.body)
+                    fontFamily = RxFonts.body)
             }
             // your words, live
             Text(
-                (words ?: "Speak now…").uppercase(),
+                (words ?: "Speak now…"),
                 Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 120.dp),
                 color = colorResource(wordsColor), fontSize = 32.sp, lineHeight = 36.sp, fontFamily = RxFonts.display,
                 textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis
@@ -246,7 +246,7 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
                             .semantics { contentDescription = "Microphone" },
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(painterResource(R.drawable.ic_mic), null, Modifier.size(34.dp), colorFilter = ColorFilter.tint(Color.White))
+                        Image(painterResource(R.drawable.ic_mic), null, Modifier.size(34.dp), colorFilter = ColorFilter.tint(LocalRx.current.onAccent))
                     }
                 }
                 if (lang.isNotEmpty()) Text(lang, Modifier.padding(top = 4.dp), color = colorResource(R.color.voice_muted), fontSize = 12.sp,

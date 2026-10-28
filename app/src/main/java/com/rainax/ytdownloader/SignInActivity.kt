@@ -223,10 +223,10 @@ class SignInActivity : AppCompatActivity() {
             Text("to unlock these features", Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 16.sp, fontFamily = RxFonts.body)
             Column(Modifier.padding(top = 20.dp).fillMaxWidth()) {
                 Feature(R.drawable.ic_nav_subs, "Subscriptions", rx.accent)
-                Feature(R.drawable.ic_watch_later, "Watch later", Color(0xFF3EA6FF))
-                Feature(R.drawable.ic_history, "History", Color(0xFF1FC7B6))
-                Feature(R.drawable.ic_thumb_up, "Like and dislike videos", Color(0xFFFFB300))
-                Feature(R.drawable.ic_person, "Recommendations made for you", Color(0xFF2BD47D))
+                Feature(R.drawable.ic_watch_later, "Watch later", rx.accent)
+                Feature(R.drawable.ic_history, "History", rx.accent)
+                Feature(R.drawable.ic_thumb_up, "Like and dislike videos", rx.accent)
+                Feature(R.drawable.ic_person, "Recommendations made for you", rx.accent)
             }
             Button(
                 onClick = { startSignIn() }, modifier = Modifier.padding(top = 20.dp).fillMaxWidth().height(48.dp),

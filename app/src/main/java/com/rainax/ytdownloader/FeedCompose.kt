@@ -227,7 +227,7 @@ class FeedModel(
         }
         if (magazine && n >= 9 && items.take(9).none { it.isChannel }) {
             var chapterNo = 0
-            fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t.uppercase()) }
+            fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t) }
             video(0, COVER)
             if (header != null && headerEarly) raw += "h" to { k -> Slot.Header(k) }
             label("Today").let { l -> raw += "s:$l" to { k -> Slot.Section(l, "Top 5 right now", k) } }
@@ -611,7 +611,7 @@ private fun HeroCard(m: FeedModel, item: VideoItem) {
                     }
                     Button(
                         onClick = { m.onDownload(item) }, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                     ) {
                         Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
                         Text("Download", Modifier.padding(start = 8.dp), letterSpacing = 0.em, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
@@ -647,7 +647,7 @@ private fun CoverCard(m: FeedModel, item: VideoItem) {
                 }
             }
             Spacer(Modifier.width(4.dp))
-            RoundButton(R.drawable.ic_download, "Download", Color.White, 40, 10, R.drawable.bg_mag_square) { m.onDownload(item) }
+            RoundButton(R.drawable.ic_download, "Download", rx.onAccent, 40, 10, R.drawable.bg_mag_square) { m.onDownload(item) }
         }
     }
 }

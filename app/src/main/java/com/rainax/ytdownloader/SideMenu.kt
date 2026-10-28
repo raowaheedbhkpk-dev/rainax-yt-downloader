@@ -126,7 +126,7 @@ internal fun SideMenu(ui: SideMenuUi, a: SideMenuActions) {
                 Text(
                     buildAnnotatedString {
                         append("RAINAX ")
-                        withStyle(SpanStyle(color = rx.accent)) { append("TUBE") }
+                        withStyle(SpanStyle(color = rx.text2)) { append("Tube") }
                     },
                     Modifier.weight(1f).padding(start = 10.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display
                 )
@@ -158,7 +158,7 @@ internal fun SideMenu(ui: SideMenuUi, a: SideMenuActions) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(painterResource(R.drawable.ic_search), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.text2))
-                Text("SEARCH…", Modifier.padding(start = 10.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, letterSpacing = 0.1.em)
+                Text("Search…", Modifier.padding(start = 10.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body)
             }
             // the places
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -170,9 +170,9 @@ internal fun SideMenu(ui: SideMenuUi, a: SideMenuActions) {
                     if (e.section != last) {
                         last = e.section
                         chapter++
-                        Text(String.format(java.util.Locale.US, "%02d — %s", chapter, e.section),      // Cinema chapters
-                            Modifier.padding(start = 20.dp, top = 14.dp, end = 12.dp, bottom = 6.dp),
-                            color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
+                        Text(e.section.lowercase().replaceFirstChar { it.uppercase() },      // Menu, Discover, General
+                            Modifier.padding(start = 24.dp, top = 16.dp, end = 12.dp, bottom = 6.dp),
+                            color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
                     }
                     MenuRow(e, ui, row++, a)
                 }
@@ -200,6 +200,7 @@ private fun MenuRow(e: MenuEntry, ui: SideMenuUi, index: Int, a: SideMenuActions
     Row(
         Modifier.fillMaxWidth().height(46.dp)
             .graphicsLayer { alpha = rise.value; translationX = (1f - rise.value) * -24.dp.toPx() }
+            .padding(horizontal = 10.dp).clip(RoundedCornerShape(14.dp))
             .background(if (on) rx.accent else Color.Transparent)
             .clickable { a.pick(e) }.semantics { contentDescription = e.label }
             .padding(horizontal = 14.dp),
@@ -209,9 +210,9 @@ private fun MenuRow(e: MenuEntry, ui: SideMenuUi, index: Int, a: SideMenuActions
             Modifier.size(32.dp).then(if (on) Modifier else Modifier.rxDrawableBg(R.drawable.bg_menu_icon)),
             contentAlignment = Alignment.Center
         ) {
-            if (e.icon != 0) Image(painterResource(e.icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(if (on) Color.White else rx.text))
+            if (e.icon != 0) Image(painterResource(e.icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(if (on) rx.onAccent else rx.text))
         }
-        Text(e.label, Modifier.weight(1f).padding(start = 14.dp), color = if (on) Color.White else rx.text, fontSize = 14.sp,
+        Text(e.label, Modifier.weight(1f).padding(start = 14.dp), color = if (on) rx.onAccent else rx.text, fontSize = 14.sp,
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal, fontFamily = RxFonts.body, maxLines = 1)
         if (e.label == "Downloads" && ui.downloads > 0) {
             Box(Modifier.size(20.dp).rxDrawableBg(R.drawable.bg_menu_badge), contentAlignment = Alignment.Center) {
