@@ -36,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
@@ -50,7 +49,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
@@ -186,24 +184,24 @@ internal fun SettingsScreen(act: MainActivity) {
         Modifier.fillMaxSize().background(rx.bg).verticalScroll(rememberScrollState()).padding(bottom = 120.dp)
     ) {
         // title with the accent bar, version on the right
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp), verticalAlignment = Alignment.Bottom) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp), verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
                 Text("SETTINGS", color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display, lineHeight = 34.sp)
-                Box(Modifier.padding(top = 6.dp).width(40.dp).height(3.dp).background(rx.accent))
+                Box(Modifier.padding(top = 8.dp).width(40.dp).height(3.dp).background(rx.accent))
             }
             Text("v$version", color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body)
         }
 
         // search
         Row(
-            Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp).fillMaxWidth().height(44.dp)
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().height(48.dp)
                 .background(rx.surface, RoundedCornerShape(2.dp))
                 .border(1.dp, rx.outline, RoundedCornerShape(2.dp))
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(painterResource(R.drawable.ic_search), null, Modifier.size(16.dp), colorFilter = ColorFilter.tint(rx.text2))
-            Box(Modifier.padding(start = 10.dp).weight(1f), contentAlignment = Alignment.CenterStart) {
+            Image(painterResource(R.drawable.ic_set_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text2))
+            Box(Modifier.padding(start = 8.dp).weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (query.isEmpty()) Text("Search settings", color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body)
                 BasicTextField(
                     value = query,
@@ -219,12 +217,12 @@ internal fun SettingsScreen(act: MainActivity) {
 
         if (!searching) {
             // the switches people flip most, as big tiles
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+            Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp)) {
                 Row {
                     QuickTile(Modifier.weight(1f), R.drawable.ic_set_wifi, "Wi-Fi only", "", wifi) {
                         wifi = !wifi; AppPrefs.setWifiOnly(act, wifi); act.nudgeService(); Haptics.tick(view)
                     }
-                    QuickTile(Modifier.weight(1f), R.drawable.ic_headphones, "Background play", "", bgPlay) {
+                    QuickTile(Modifier.weight(1f), R.drawable.ic_set_headphones, "Background play", "", bgPlay) {
                         bgPlay = !bgPlay; AppPrefs.setBackgroundPlay(act, bgPlay); Haptics.tick(view)
                     }
                 }
@@ -232,7 +230,7 @@ internal fun SettingsScreen(act: MainActivity) {
                     QuickTile(Modifier.weight(1f), R.drawable.ic_set_skip, "Skip sponsors", "", sponsor) {
                         sponsor = !sponsor; AppPrefs.setSponsorBlock(act, sponsor); Haptics.tick(view)
                     }
-                    QuickTile(Modifier.weight(1f), R.drawable.ic_link, "Copied links", "Detect · ", clip) {
+                    QuickTile(Modifier.weight(1f), R.drawable.ic_set_link, "Copied links", "Detect · ", clip) {
                         clip = !clip
                         AppPrefs.setClipDetect(act, clip)
                         Haptics.tick(view)
@@ -242,8 +240,8 @@ internal fun SettingsScreen(act: MainActivity) {
             }
 
             // the look: four little screens for the theme, then the accent rings
-            Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp).fillMaxWidth().background(rx.surface).padding(14.dp)) {
-                Text("APPEARANCE", color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surface).padding(16.dp)) {
+                Text("Appearance", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                 Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
                     listOf(
                         Triple(0, "System", R.drawable.bg_prev_system),
@@ -264,7 +262,7 @@ internal fun SettingsScreen(act: MainActivity) {
                                     .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(2.dp))
                             )
                             Text(
-                                label, Modifier.padding(top = 6.dp), fontSize = 12.sp, fontFamily = RxFonts.body,
+                                label, Modifier.padding(top = 8.dp), fontSize = 12.sp, fontFamily = RxFonts.body,
                                 color = if (chosen) rx.accentText else rx.text2,
                                 fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal
                             )
@@ -272,7 +270,7 @@ internal fun SettingsScreen(act: MainActivity) {
                     }
                 }
                 // the current accent and the next few; ALL 16 opens every ring
-                Row(Modifier.padding(top = 10.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(top = 8.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).height(48.dp), verticalAlignment = Alignment.CenterVertically) {
                         val cur = AppPrefs.accent(act)
                         val grid = Accents.GRID
@@ -280,9 +278,9 @@ internal fun SettingsScreen(act: MainActivity) {
                         (0 until 5).map { grid[(start + it) % grid.size] }.forEach { id -> Swatch(act, id, cur, rx) }
                     }
                     Text(
-                        if (allAccents) "LESS  ‹" else "ALL 16  ›",
-                        Modifier.height(44.dp).clickable { allAccents = !allAccents }.padding(horizontal = 8.dp).padding(top = 13.dp),
-                        color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.1.em
+                        if (allAccents) "Less" else "All 16",
+                        Modifier.height(48.dp).clickable { allAccents = !allAccents }.padding(horizontal = 8.dp).padding(top = 14.dp),
+                        color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body
                     )
                 }
                 if (allAccents) {
@@ -306,13 +304,13 @@ internal fun SettingsScreen(act: MainActivity) {
             anyMatch = true
             if (!searching) {
                 Text(
-                    ch.label, Modifier.padding(start = 20.dp, top = 26.dp, bottom = 4.dp),
-                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em
+                    ch.label.lowercase().replaceFirstChar { it.uppercase() }, Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
+                    color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body
                 )
             }
             rows.forEach { o ->
                 OptionRow(o)
-                if (o.end !is SetEnd.Note) Box(Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(1.dp).background(rx.divider))
+                if (o.end !is SetEnd.Note) Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(rx.divider))
             }
         }
         if (searching && !anyMatch) {
@@ -323,12 +321,12 @@ internal fun SettingsScreen(act: MainActivity) {
         }
 
         Text(
-            "RAINAX Tube  v$version", Modifier.fillMaxWidth().padding(top = 22.dp),
+            "RAINAX Tube  v$version", Modifier.fillMaxWidth().padding(top = 24.dp),
             color = rx.text2, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body, textAlign = TextAlign.Center
         )
         Text(
             "Only download content you have the right to download. Not affiliated with YouTube, Google or any video site.",
-            Modifier.fillMaxWidth().padding(start = 36.dp, end = 36.dp, top = 6.dp),
+            Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 8.dp),
             color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center
         )
     }
@@ -341,12 +339,12 @@ private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: Stri
     val shape = RoundedCornerShape(2.dp)
     val fg = if (on) Color.White else rx.text
     Column(
-        modifier.padding(4.dp).height(76.dp)
+        modifier.padding(4.dp).height(80.dp)
             .background(if (on) rx.accent else rx.surface, shape)
             .border(if (on) BorderStroke(0.dp, Color.Transparent) else BorderStroke(1.dp, rx.outline), shape)
             .clickable(onClick = toggle)
             .semantics { contentDescription = "$title, ${if (on) "on" else "off"}" }
-            .padding(12.dp)
+            .padding(16.dp)
     ) {
         Image(painterResource(icon), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(fg))
         Spacer(Modifier.weight(1f))
@@ -384,7 +382,7 @@ private fun OptionRow(o: SetOpt) {
     val end = o.end
     if (end is SetEnd.Note) {
         Text(
-            end.text, Modifier.fillMaxWidth().background(rx.surfaceAlt).padding(horizontal = 16.dp, vertical = 12.dp),
+            end.text, Modifier.fillMaxWidth().background(rx.surfaceAlt).padding(16.dp),
             color = rx.text2, fontSize = 12.sp, lineHeight = 17.sp, fontFamily = RxFonts.body
         )
         return
@@ -397,11 +395,11 @@ private fun OptionRow(o: SetOpt) {
     val texts: @Composable () -> Unit = {
         Text(o.title, color = rx.text, fontSize = 16.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)
         if (o.sub != null) {
-            Text(o.sub, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 12.sp, lineHeight = 15.sp, fontFamily = RxFonts.body)
+            Text(o.sub, Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 13.sp, lineHeight = 17.sp, fontFamily = RxFonts.body)
         }
     }
     if (end is SetEnd.Choice) {
-        Column(Modifier.fillMaxWidth().heightIn(min = 66.dp).padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 16.dp)) {
             texts()
             FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 end.options.forEach { (label, value) ->
@@ -427,10 +425,10 @@ private fun OptionRow(o: SetOpt) {
     Row(
         Modifier.fillMaxWidth()
             .let { m -> if (click != null) m.clickable(onClick = click) else m }
-            .heightIn(min = 66.dp).padding(horizontal = 20.dp, vertical = 12.dp),
+            .heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1f).padding(end = 12.dp)) { texts() }
+        Column(Modifier.weight(1f).padding(end = 16.dp)) { texts() }
         when (end) {
             is SetEnd.Toggle -> Switch(
                 checked = end.on,
@@ -441,7 +439,7 @@ private fun OptionRow(o: SetOpt) {
                 )
             )
             is SetEnd.Open -> Image(
-                painterResource(R.drawable.ic_chevron_down), null, Modifier.size(18.dp).rotate(-90f),
+                painterResource(R.drawable.ic_set_chevron), null, Modifier.size(20.dp),
                 colorFilter = ColorFilter.tint(rx.text2)
             )
             else -> {}

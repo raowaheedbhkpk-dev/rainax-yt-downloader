@@ -1,3 +1,4 @@
+Settings: a cleaner, more even layout (same spacing everywhere, calmer section names, matching thin icons)
 Back to the earlier look (the v18.2 design changes were undone)
 Fix: age-restricted videos now play and download when you are signed in with an 18+ YouTube account; Google sign-in shows "This browser or app may not be secure" less often (tries again as Firefox when it does)
 Fix: the build error in the Music player's comments count (whole app now on Jetpack Compose)
