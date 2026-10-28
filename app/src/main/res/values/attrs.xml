@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="rxBg" format="color" />
+    <attr name="rxSurface" format="color" />
+    <attr name="rxCard" format="color" />
+    <attr name="rxSurfaceAlt" format="color" />
+    <attr name="rxOutline" format="color" />
+    <!-- the accent colour (Settings › Accent): film red, gold, teal or purple -->
+    <attr name="rxAccent" format="color" />
+    <!-- the accent for small text: same hue, readable on the background (WCAG AA) -->
+    <attr name="rxAccentText" format="color" />
+    <!-- a soft wash of the accent (tonal buttons, small chips) and the text/icons on it -->
+    <attr name="rxAccentContainer" format="color" />
+    <attr name="rxOnAccentContainer" format="color" />
+    <!-- page background (Midnight Glass glows; pure black for AMOLED) -->
+    <attr name="rxAmbient" format="reference" />
+</resources>

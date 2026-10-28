@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/rxAmbient"
+    android:forceDarkAllowed="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- Home: one Jetpack Compose page (HomePage.kt) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/homePage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- You: a Jetpack Compose screen (YouScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/playPage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <!-- Social: a Jetpack Compose screen (SocialScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/socialPage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <!-- Subscriptions: a Jetpack Compose screen (SubsScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/subsPage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <!-- Settings: a Jetpack Compose screen (SettingsScreen.kt) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/settingsPage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <include
+                android:id="@+id/videoPage"
+                layout="@layout/page_video"
+                android:visibility="gone" />
+
+            <!-- app update: a small pill above the bottom bar (Compose, BottomBar.kt) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/updatePill"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:elevation="10dp"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- mini music bar (while songs play in the Music player) -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/musicMini"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:elevation="6dp"
+            android:visibility="gone" />
+
+        <!-- bottom bar (Compose, BottomBar.kt): a flat strip, a red bar above the chosen tab, a red square "+" in the middle -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/navCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- floating mini player (placed and dragged in code) -->
+    <include
+        android:id="@+id/miniPlayer"
+        layout="@layout/layout_mini_player"
+        android:layout_width="208dp"
+        android:layout_height="117dp"
+        android:layout_gravity="top|start" />
+
+    <!-- side menu (Compose, SideMenu.kt) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/explore"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- the big Music player (over everything, like YouTube Music) -->
+    <include
+        android:id="@+id/musicPage"
+        layout="@layout/page_music_player"
+        android:visibility="gone" />
+
+</FrameLayout>

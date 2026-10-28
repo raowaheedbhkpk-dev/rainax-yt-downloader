@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- a row of little gold lights, like the sign over a cinema -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="line">
+    <stroke
+        android:width="4dp"
+        android:color="#FFFFFF"
+        android:dashGap="7dp"
+        android:dashWidth="4dp" />
+</shape>

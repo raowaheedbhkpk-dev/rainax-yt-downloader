@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- theme preview: pure black -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><solid android:color="#000000" /></shape></item>
+    <item android:left="8dp" android:right="8dp" android:top="10dp" android:height="6dp" android:gravity="top"><shape><solid android:color="#222222" /></shape></item>
+    <item android:left="8dp" android:right="20dp" android:top="22dp" android:height="4dp" android:gravity="top"><shape><solid android:color="#181818" /></shape></item>
+</layer-list>

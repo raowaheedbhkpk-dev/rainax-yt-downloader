@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Music player's cover (a spinning record) or the song's video. The rest of the player is Compose (MusicPage.kt). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mpArtArea"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="@dimen/rx_space_24"
+    android:paddingTop="@dimen/rx_space_8"
+    android:paddingBottom="@dimen/rx_space_4">
+
+    <com.rainax.ytdownloader.FitRatioLayout
+        android:id="@+id/mpArtBox"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_mp_art"
+        android:elevation="12dp">
+
+        <ImageView
+            android:id="@+id/mpArt"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/mpVideo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/rx_black"
+            android:visibility="gone"
+            app:resize_mode="fit"
+            app:show_buffering="never"
+            app:shutter_background_color="@color/rx_black"
+            app:surface_type="texture_view"
+            app:use_controller="false" />
+
+        <!-- vinyl (song mode): grooves over the cover and the red centre label; the cover spins while it plays -->
+        <View
+            android:id="@+id/mpVinylGrooves"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_vinyl_grooves" />
+
+        <View
+            android:id="@+id/mpVinylHole"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_vinyl_hole" />
+
+        <ProgressBar
+            android:id="@+id/mpArtLoading"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/rx_white"
+            android:visibility="gone" />
+    </com.rainax.ytdownloader.FitRatioLayout>
+</FrameLayout>

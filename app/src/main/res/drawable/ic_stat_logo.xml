@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RAINAX logo for notifications and the media card: the rounded square with the download arrow cut out
+     (Android draws notification icons in one colour, so this is the logo's shape) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M6,1h12a5,5 0,0 1,5 5v12a5,5 0,0 1,-5 5H6a5,5 0,0 1,-5 -5V6a5,5 0,0 1,5 -5z
+            M10.17,4.06h3.66v7.94h3.36L12,17.5 6.81,12h3.36z
+            M5.89,19.33h12.22v1.84H5.89z" />
+</vector>

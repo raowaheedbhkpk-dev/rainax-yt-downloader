@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the update pill: a dark strip with a thin edge (same in every theme) -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#22FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#161616" />
+            <stroke android:width="1dp" android:color="#2A2A2A" />
+            <corners android:radius="520dp" />
+        </shape>
+    </item>
+</ripple>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- RAINAX spacing: every gap, margin and padding comes from this small set -->
+    <dimen name="rx_space_2">2dp</dimen>
+    <dimen name="rx_space_4">4dp</dimen>
+    <dimen name="rx_space_8">8dp</dimen>
+    <dimen name="rx_space_12">12dp</dimen>
+    <dimen name="rx_space_16">16dp</dimen>
+    <dimen name="rx_space_20">20dp</dimen>
+    <dimen name="rx_space_24">24dp</dimen>
+    <dimen name="rx_space_32">32dp</dimen>
+    <!-- the smallest comfortable size for anything you tap -->
+    <dimen name="rx_touch">48dp</dimen>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- voice search: the page colour (night or warm paper) with a soft accent glow rising from the bottom -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/voice_bg" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.5"
+                android:centerY="1.0"
+                android:endColor="@android:color/transparent"
+                android:gradientRadius="520dp"
+                android:startColor="@color/voice_glow"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

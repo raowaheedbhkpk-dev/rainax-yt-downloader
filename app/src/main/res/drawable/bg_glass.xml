@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A flat card (settings groups, downloads, boxes) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/rxCard" />
+    <corners android:radius="14dp" />
+</shape>

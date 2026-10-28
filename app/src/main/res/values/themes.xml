@@ -1,0 +1,659 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- "Cinema Pro": near-black (or warm paper) pages, sharp corners, film red + gold accents.
+         Oswald (SIL Open Font License) is the title face (@font/rx_body), the phone's own font for text.
+         One theme for light and dark. Colours come from values/colors.xml and values-night/colors.xml,
+         so every screen follows the same palette. forceDarkAllowed=false stops phone makers
+         (Xiaomi/MIUI, Oppo, ...) from re-colouring the app on their own. -->
+    <!-- how screens open and close (slide + fade), the same everywhere in the app -->
+    <style name="Animation.Rainax.Activity" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/rx_open_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/rx_open_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/rx_close_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/rx_close_exit</item>
+    </style>
+
+    <!-- message bars: like a film subtitle. Black strip, gold text, square corners -->
+    <style name="Widget.Rainax.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="backgroundTint">@color/rx_snack_bg</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="android:layout_margin">20dp</item>
+        <item name="elevation">0dp</item>
+    </style>
+    <style name="Widget.Rainax.SnackbarButton" parent="Widget.Material3.Button.TextButton.Snackbar">
+        <item name="android:textColor">@color/rx_cinema_gold</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.12</item>
+    </style>
+    <style name="Widget.Rainax.SnackbarText" parent="Widget.Material3.Snackbar.TextView">
+        <item name="android:textColor">@color/rx_snack_text</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textAlignment">center</item>
+    </style>
+
+    <!-- every corner in the Cinema look: sharp (2dp just softens the pixels) -->
+    <style name="ShapeAppearance.Rainax.Sharp" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
+    </style>
+
+    <style name="Theme.Rainax" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowAnimationStyle">@style/Animation.Rainax.Activity</item>
+        <item name="snackbarStyle">@style/Widget.Rainax.Snackbar</item>
+        <item name="snackbarButtonStyle">@style/Widget.Rainax.SnackbarButton</item>
+        <item name="snackbarTextViewStyle">@style/Widget.Rainax.SnackbarText</item>
+        <!-- Surface colours as theme attributes, so the AMOLED theme can turn them pure black -->
+        <item name="rxAccent">@color/rx_primary</item>
+        <item name="rxAccentText">@color/rx_primary_text</item>
+        <item name="rxAccentContainer">@color/rx_primary_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_primary_container</item>
+        <item name="rxBg">@color/rx_bg</item>
+        <item name="rxSurface">@color/rx_surface</item>
+        <item name="rxCard">@color/rx_card</item>
+        <item name="rxSurfaceAlt">@color/rx_surface_alt</item>
+        <item name="rxOutline">@color/rx_outline</item>
+        <item name="rxAmbient">@drawable/bg_ambient</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+        <!-- one type family everywhere: Material's own text styles use the RAINAX body face too -->
+        <item name="textAppearanceBodySmall">@style/TextAppearance.Rainax.Type.Caption</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Rainax.Type.Body</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Rainax.Type.BodyLarge</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Rainax.Type.Label</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.Rainax.Type.LabelMedium</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Rainax.Type.LabelLarge</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Rainax.Type.TitleSmall</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.Rainax.Type.TitleMedium</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.Rainax.Type.Title</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Rainax.Type.Headline</item>
+        <item name="colorPrimary">?attr/rxAccent</item>
+        <item name="colorOnPrimary">@color/rx_on_primary</item>
+        <item name="colorPrimaryContainer">?attr/rxAccentContainer</item>
+        <item name="colorOnPrimaryContainer">?attr/rxOnAccentContainer</item>
+        <item name="colorSecondary">@color/rx_accent</item>
+        <item name="colorOnSecondary">@color/rx_on_primary</item>
+        <item name="colorSecondaryContainer">?attr/rxAccentContainer</item>
+        <item name="colorOnSecondaryContainer">?attr/rxOnAccentContainer</item>
+        <item name="colorTertiary">@color/rx_accent</item>
+        <item name="colorSurface">?attr/rxSurface</item>
+        <item name="colorOnSurface">@color/rx_text</item>
+        <item name="colorSurfaceVariant">?attr/rxSurfaceAlt</item>
+        <item name="colorOnSurfaceVariant">@color/rx_text2</item>
+        <item name="colorSurfaceContainerLowest">?attr/rxBg</item>
+        <item name="colorSurfaceContainerLow">?attr/rxSurface</item>
+        <item name="colorSurfaceContainer">?attr/rxSurface</item>
+        <item name="colorSurfaceContainerHigh">?attr/rxSurface</item>
+        <item name="colorSurfaceContainerHighest">?attr/rxSurfaceAlt</item>
+        <item name="colorOutline">@color/rx_text2</item>
+        <item name="colorOutlineVariant">?attr/rxOutline</item>
+        <item name="colorError">@color/rx_error</item>
+        <item name="colorErrorContainer">@color/rx_error_container</item>
+        <item name="android:colorBackground">?attr/rxBg</item>
+        <item name="colorOnBackground">@color/rx_text</item>
+        <item name="android:windowBackground">?attr/rxAmbient</item>
+        <!-- Android 12+ start screen: the white arrow sits on the red icon background (visible in light theme) -->
+        <item name="android:windowSplashScreenIconBackgroundColor" tools:targetApi="31">@color/ic_launcher_bg_start</item>
+        <item name="android:statusBarColor">@color/rx_bg_top</item>
+        <item name="android:navigationBarColor">@color/rx_bg_bottom</item>
+        <item name="android:windowLightStatusBar">@bool/rx_light_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/rx_light_bars</item>
+        <item name="android:forceDarkAllowed">false</item>
+
+        <item name="materialButtonStyle">@style/Widget.Rainax.Button</item>
+        <item name="chipStyle">@style/Widget.Rainax.Chip</item>
+        <item name="bottomNavigationStyle">@style/Widget.Rainax.BottomNav</item>
+        <item name="tabStyle">@style/Widget.Rainax.TabLayout</item>
+        <item name="materialCardViewStyle">@style/Widget.Rainax.Card</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.Rainax.BottomSheet</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.Rainax.Dialog</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Rainax.Large</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="materialSwitchStyle">@style/Widget.Rainax.Switch</item>
+        <item name="circularProgressIndicatorStyle">@style/Widget.Rainax.Progress.Circular</item>
+        <item name="linearProgressIndicatorStyle">@style/Widget.Rainax.Progress.Linear</item>
+        <item name="checkboxStyle">@style/Widget.Rainax.CheckBox</item>
+        <item name="radioButtonStyle">@style/Widget.Rainax.Radio</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Rainax.Dialog</item>
+        <item name="android:dialogTheme">@style/ThemeOverlay.Rainax.Popup</item>
+    </style>
+
+    <!-- small windows (theme menu, panels): blurred screen behind -->
+    <style name="ThemeOverlay.Rainax.Popup" parent="ThemeOverlay.Material3.Dialog">
+        <!-- v19.4: the screen behind is blurred (Android 12+), like the floating tab bar -->
+        <item name="android:windowBlurBehindEnabled" tools:targetApi="31">true</item>
+        <item name="android:windowBlurBehindRadius" tools:targetApi="31">28dp</item>
+    </style>
+
+    <!-- AMOLED: pure black backgrounds (used together with dark mode) -->
+    <style name="Theme.Rainax.Amoled" parent="Theme.Rainax">
+        <item name="rxBg">@color/rx_amoled_bg</item>
+        <item name="rxSurface">@color/rx_amoled_bg</item>
+        <item name="rxCard">@color/rx_amoled_card</item>
+        <item name="rxSurfaceAlt">@color/rx_amoled_alt</item>
+        <item name="rxOutline">@color/rx_amoled_outline</item>
+        <item name="rxAmbient">@drawable/bg_ambient_amoled</item>
+        <item name="android:statusBarColor">@color/rx_black</item>
+        <item name="android:navigationBarColor">@color/rx_black</item>
+    </style>
+
+    <!-- full pages opened over the app (Notifications): slide in from the side like a screen -->
+    <style name="Animation.Rainax.Page" parent="">
+        <item name="android:windowEnterAnimation">@anim/rx_open_enter</item>
+        <item name="android:windowExitAnimation">@anim/rx_close_exit</item>
+    </style>
+
+    <style name="Theme.Rainax.Page" parent="Theme.Rainax">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">?attr/rxBg</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Rainax.Page</item>
+    </style>
+
+    <style name="Theme.Rainax.Page.Amoled" parent="Theme.Rainax.Amoled">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">?attr/rxBg</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Rainax.Page</item>
+    </style>
+
+    <!-- Full-screen black video player -->
+    <style name="Theme.Rainax.Player" parent="Theme.Rainax">
+        <item name="android:windowBackground">@color/rx_black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+    <style name="ThemeOverlay.Rainax.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.Rainax.BottomSheet</item>
+        <item name="android:navigationBarColor">?attr/rxSurface</item>
+        <!-- v19.4: the screen behind is blurred (Android 12+), like the floating tab bar -->
+        <item name="android:windowBlurBehindEnabled" tools:targetApi="31">true</item>
+        <item name="android:windowBlurBehindRadius" tools:targetApi="31">28dp</item>
+        <item name="android:backgroundDimAmount">0.25</item>
+    </style>
+
+    <!-- confirmation boxes: a film scene. Sharp dark card, red bar + gold label above a big Oswald title
+         (RxDialog.kt builds that title), a filled red action and an outlined "keep" action -->
+    <style name="ThemeOverlay.Rainax.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.Rainax.Dialog.Positive</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.Rainax.Dialog.Negative</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.Rainax.Dialog.Neutral</item>
+        <item name="alertDialogStyle">@style/Widget.Rainax.Dialog</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/TextAppearance.Rainax.DialogBody</item>
+        <!-- v19.4: the screen behind is blurred (Android 12+), like the floating tab bar -->
+        <item name="android:windowBlurBehindEnabled" tools:targetApi="31">true</item>
+        <item name="android:windowBlurBehindRadius" tools:targetApi="31">28dp</item>
+        <item name="android:backgroundDimAmount">0.35</item>
+        <item name="colorSurfaceContainerHigh">?attr/rxSurface</item>
+        <item name="android:textColorPrimary">@color/rx_text</item>
+        <item name="android:textColorSecondary">@color/rx_text2</item>
+    </style>
+
+    <style name="Widget.Rainax.Dialog" parent="MaterialAlertDialog.Material3">
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Sharp</item>
+        <item name="backgroundTint">?attr/rxSurface</item>
+        <item name="backgroundInsetStart">20dp</item>
+        <item name="backgroundInsetEnd">20dp</item>
+    </style>
+    <style name="TextAppearance.Rainax.DialogBody" parent="MaterialAlertDialog.Material3.Body.Text">
+        <item name="android:textColor">@color/rx_text2</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.15</item>
+    </style>
+    <style name="Widget.Rainax.Dialog.Positive" parent="Widget.Material3.Button">
+        <item name="backgroundTint">?attr/rxAccent</item>
+        <item name="android:textColor">@color/rx_on_primary</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:layout_marginStart">8dp</item>
+    </style>
+    <style name="Widget.Rainax.Dialog.Negative" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/rx_text</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textColor">@color/rx_text</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+    <style name="Widget.Rainax.Dialog.Neutral" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/rx_gold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- switches: square track and square knob, red when on -->
+    <style name="Widget.Rainax.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="android:thumb">@drawable/rx_switch_thumb</item>
+        <item name="thumbTint">@color/rx_switch_thumb</item>
+        <item name="thumbIcon">@null</item>
+        <item name="track">@drawable/rx_switch_track</item>
+        <item name="trackTint">@color/rx_switch_track</item>
+        <item name="trackDecoration">@drawable/rx_switch_track_edge</item>
+        <item name="trackDecorationTint">@color/rx_switch_edge</item>
+    </style>
+
+    <!-- loading: thin square-ended red lines -->
+    <style name="Widget.Rainax.Progress.Circular" parent="Widget.Material3.CircularProgressIndicator">
+        <item name="indicatorColor">?attr/rxAccent</item>
+        <item name="trackCornerRadius">0dp</item>
+        <item name="trackThickness">3dp</item>
+    </style>
+    <style name="Widget.Rainax.Progress.Linear" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="indicatorColor">?attr/rxAccent</item>
+        <item name="trackCornerRadius">0dp</item>
+    </style>
+    <style name="Widget.Rainax.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/rx_switch_check</item>
+    </style>
+    <style name="Widget.Rainax.Radio" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="buttonTint">@color/rx_switch_check</item>
+    </style>
+
+    <style name="Widget.Rainax.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="backgroundTint">?attr/rxSurface</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Sheet</item>
+    </style>
+
+    <style name="ShapeAppearance.Rainax.Large" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSize">20dp</item>
+    </style>
+
+    <!-- action buttons (Like, Share, Subscribe ...): sharp like the rest of Cinema Pro -->
+    <style name="ShapeAppearance.Rainax.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+    <!-- avatars stay round -->
+    <style name="ShapeAppearance.Rainax.Round" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="ShapeAppearance.Rainax.Sheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <!-- Buttons: colours are set explicitly, never inherited from the system -->
+    <style name="TextAppearance.Rainax.Button" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/rx_body</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="textAllCaps">false</item>
+    </style>
+
+    <!-- chips: medium weight, like YouTube's (not bold) -->
+    <style name="TextAppearance.Rainax.Chip" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/rx_body_semibold</item>
+        <item name="android:fontFamily">@font/rx_body_semibold</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <!-- filter chips: small bold capitals, like film credits -->
+    <style name="TextAppearance.Rainax.ChipCaps" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/rx_body</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <!-- bottom bar labels: small, like YouTube -->
+    <style name="TextAppearance.Rainax.Nav" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+
+    <!-- titles -->
+    <style name="TextAppearance.Rainax.Display" parent="">
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+        <item name="android:textColor">@color/rx_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <style name="Widget.Rainax.Button" parent="Widget.Material3.Button">
+        <item name="backgroundTint">?attr/rxAccent</item>
+        <item name="android:textColor">@color/rx_on_primary</item>
+        <item name="iconTint">@color/rx_on_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.Rainax.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="backgroundTint">?attr/rxAccentContainer</item>
+        <item name="android:textColor">?attr/rxOnAccentContainer</item>
+        <item name="iconTint">?attr/rxOnAccentContainer</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
+        <item name="strokeColor">?attr/rxOutline</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.Rainax.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">?attr/rxOutline</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textColor">@color/rx_text</item>
+        <item name="iconTint">@color/rx_text</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.Rainax.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">?attr/rxAccentText</item>
+        <item name="iconTint">?attr/rxAccent</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.Rainax.Button.Icon" parent="Widget.Material3.Button.IconButton">
+        <item name="iconTint">@color/rx_text</item>
+    </style>
+
+    <!-- Chips -->
+    <style name="Widget.Rainax.Chip" parent="Widget.Material3.Chip.Assist">
+        <item name="chipBackgroundColor">?attr/rxSurfaceAlt</item>
+        <item name="android:textColor">@color/rx_text</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.Chip</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipCornerRadius">2dp</item>
+    </style>
+
+    <style name="Widget.Rainax.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/rx_chip_bg</item>
+        <item name="android:textColor">@color/rx_chip_text</item>
+        <item name="checkedIconTint">@color/rx_on_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Rainax.ChipCaps</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipStrokeColor">@color/rx_chip_stroke</item>
+        <item name="chipCornerRadius">2dp</item>
+    </style>
+
+    <!-- Music tab mood chips: soft rounded squares, like YouTube Music -->
+    <style name="Widget.Rainax.Chip.Mood" parent="Widget.Rainax.Chip.Filter">
+        <item name="chipCornerRadius">2dp</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipStrokeColor">@color/rx_mood_stroke</item>
+        <item name="chipBackgroundColor">@color/rx_mood_bg</item>
+        <item name="chipStartPadding">4dp</item>
+        <item name="chipEndPadding">4dp</item>
+    </style>
+
+    <!-- Cards -->
+    <style name="Widget.Rainax.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">?attr/rxCard</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">4dp</item>
+    </style>
+
+    <!-- Bottom navigation -->
+    <!-- floating glass navigation: the bar is see-through, its glass card is in activity_main -->
+    <style name="Widget.Rainax.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.Rainax.Nav</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.Rainax.Nav</item>
+        <item name="itemPaddingTop">8dp</item>
+        <item name="itemPaddingBottom">8dp</item>
+        <item name="itemIconTint">@color/rx_nav_item</item>
+        <item name="itemTextColor">@color/rx_nav_item</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.Rainax.NavIndicator</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="Widget.Rainax.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@android:color/transparent</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Pill</item>
+    </style>
+
+    <!-- Top pill tabs -->
+    <style name="Widget.Rainax.TabLayout" parent="Widget.Material3.TabLayout">
+        <item name="tabIndicator">@drawable/bg_tab_pill</item>
+        <item name="tabIndicatorGravity">stretch</item>
+        <item name="tabIndicatorFullWidth">true</item>
+        <item name="tabIndicatorAnimationMode">elastic</item>
+        <item name="tabSelectedTextColor">@color/rx_on_primary</item>
+        <item name="tabTextColor">@color/rx_text2</item>
+        <item name="tabRippleColor">@android:color/transparent</item>
+        <item name="tabMode">fixed</item>
+        <item name="tabGravity">fill</item>
+        <item name="tabTextAppearance">@style/TextAppearance.Rainax.Tab</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="TextAppearance.Rainax.Tab" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <!-- Settings › Accent: the colour of buttons, bars, chips and switches (film red is the theme's own) -->
+    <style name="ThemeOverlay.Rainax.Accent.Gold" parent="">
+        <item name="rxAccent">@color/rx_accent_gold</item>
+        <item name="rxAccentText">@color/rx_accent_gold</item>
+        <item name="rxAccentContainer">@color/rx_accent_gold_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_gold_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Teal" parent="">
+        <item name="rxAccent">@color/rx_accent_teal</item>
+        <item name="rxAccentText">@color/rx_accent_teal</item>
+        <item name="rxAccentContainer">@color/rx_accent_teal_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_teal_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Purple" parent="">
+        <item name="rxAccent">@color/rx_accent_purple</item>
+        <item name="rxAccentText">@color/rx_accent_purple</item>
+        <item name="rxAccentContainer">@color/rx_accent_purple_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_purple_container</item>
+    </style>
+
+    <!--
+      The RAINAX type scale: eight sizes only (10 / 12 / 14 / 16 / 20 / 24 / 32 / 44 sp).
+      Body text in Figtree (rx_body), titles and headlines in Oswald (rx_display).
+    -->
+    <style name="TextAppearance.Rainax.Type.Label" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">@font/rx_body_semibold</item>
+        <item name="fontFamily">@font/rx_body_semibold</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">@font/rx_body_semibold</item>
+        <item name="fontFamily">@font/rx_body_semibold</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">@font/rx_body_semibold</item>
+        <item name="fontFamily">@font/rx_body_semibold</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">@font/rx_body_semibold</item>
+        <item name="fontFamily">@font/rx_body_semibold</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">@font/rx_body_semibold</item>
+        <item name="fontFamily">@font/rx_body_semibold</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">20sp</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textSize">24sp</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+    <style name="TextAppearance.Rainax.Type.Display" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:textSize">32sp</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Violet" parent="">
+        <item name="rxAccent">@color/rx_accent_violet</item>
+        <item name="rxAccentText">@color/rx_accent_violet</item>
+        <item name="rxAccentContainer">@color/rx_accent_violet_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_violet_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Green" parent="">
+        <item name="rxAccent">@color/rx_accent_green</item>
+        <item name="rxAccentText">@color/rx_accent_green</item>
+        <item name="rxAccentContainer">@color/rx_accent_green_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_green_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Blue" parent="">
+        <item name="rxAccent">@color/rx_accent_blue</item>
+        <item name="rxAccentText">@color/rx_accent_blue</item>
+        <item name="rxAccentContainer">@color/rx_accent_blue_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_blue_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Pink" parent="">
+        <item name="rxAccent">@color/rx_accent_pink</item>
+        <item name="rxAccentText">@color/rx_accent_pink</item>
+        <item name="rxAccentContainer">@color/rx_accent_pink_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_pink_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Orange" parent="">
+        <item name="rxAccent">@color/rx_accent_orange</item>
+        <item name="rxAccentText">@color/rx_accent_orange</item>
+        <item name="rxAccentContainer">@color/rx_accent_orange_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_orange_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Slate" parent="">
+        <item name="rxAccent">@color/rx_accent_slate</item>
+        <item name="rxAccentText">@color/rx_accent_slate</item>
+        <item name="rxAccentContainer">@color/rx_accent_slate_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_slate_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Brown" parent="">
+        <item name="rxAccent">@color/rx_accent_brown</item>
+        <item name="rxAccentText">@color/rx_accent_brown</item>
+        <item name="rxAccentContainer">@color/rx_accent_brown_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_brown_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Indigo" parent="">
+        <item name="rxAccent">@color/rx_accent_indigo</item>
+        <item name="rxAccentText">@color/rx_accent_indigo</item>
+        <item name="rxAccentContainer">@color/rx_accent_indigo_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_indigo_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Forest" parent="">
+        <item name="rxAccent">@color/rx_accent_forest</item>
+        <item name="rxAccentText">@color/rx_accent_forest</item>
+        <item name="rxAccentContainer">@color/rx_accent_forest_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_forest_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Steel" parent="">
+        <item name="rxAccent">@color/rx_accent_steel</item>
+        <item name="rxAccentText">@color/rx_accent_steel</item>
+        <item name="rxAccentContainer">@color/rx_accent_steel_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_steel_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Plum" parent="">
+        <item name="rxAccent">@color/rx_accent_plum</item>
+        <item name="rxAccentText">@color/rx_accent_plum</item>
+        <item name="rxAccentContainer">@color/rx_accent_plum_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_plum_container</item>
+    </style>
+    <style name="ThemeOverlay.Rainax.Accent.Rose" parent="">
+        <item name="rxAccent">@color/rx_accent_rose</item>
+        <item name="rxAccentText">@color/rx_accent_rose</item>
+        <item name="rxAccentContainer">@color/rx_accent_rose_container</item>
+        <item name="rxOnAccentContainer">@color/rx_on_accent_rose_container</item>
+    </style>
+
+    <!-- the theme popup's rows (Home's sun button) -->
+    <style name="Widget.Rainax.ThemeRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+    <style name="Widget.Rainax.ThemeRowText" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:textColor">@color/rx_text</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    <style name="Widget.Rainax.ThemeRowCheck" parent="">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:src">@drawable/ic_check</item>
+        <item name="tint">?attr/rxAccent</item>
+        <item name="android:tint">?attr/rxAccent</item>
+        <item name="android:visibility">invisible</item>
+    </style>
+
+    <!-- the download popup over other apps: no window of its own, only the sheet -->
+    <style name="Theme.Rainax.Popup" parent="Theme.Rainax">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@android:color/transparent</item>
+    </style>
+</resources>

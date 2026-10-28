@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the current accent as a small ring (its colour is set in code) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@android:color/transparent" />
+    <stroke android:width="6dp" android:color="?attr/rxAccent" />
+</shape>

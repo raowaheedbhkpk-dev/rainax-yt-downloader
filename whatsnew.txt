@@ -1,0 +1,162 @@
+New: every sheet, box and small window now blurs the screen behind it (Android 12+), like the floating tab bar, with a lighter shade; the tab bar has Music in place of Subs (Subscriptions is in the side menu); box titles in normal case
+Fix: the new look in dark mode: buttons, tabs and tiles that showed as blank white boxes (Settings tiles, Sign in, the download sheet Video tab and Download button, the side menu row, the logo) now show their words and icons; Home no longer shows two tab bars; side menu, voice search and welcome screens in normal case; theme previews and the Appearance card in the new colours with round corners; Sign in icons in black and white
+New: the whole app in the new look: black and white only, the Plus Jakarta Sans face everywhere, rounded corners on cards, buttons and sheets, and words in normal case (no more all capitals). The floating tab bar is on every tab now and shows icons only (the chosen one in a round black circle). Theme is just System, Light or Dark (the accent colours and AMOLED are gone; AMOLED users get Dark)
+New: Home in layout A "Clean feed": the large "Home" title with round white buttons beside it (theme, search — hold for voice — and your picture, which opens the menu), white chips, and calmer video cards (a soft grey Download button, a square-cornered time badge)
+Fix: the blur behind Home's floating tab bar now really blurs (and follows the list); Home in the new look is a clean list of cards (no magazine cover story)
+New: Home in an iOS 17 style: off-white page, white rounded cards with a soft shadow, a large "Home" title, and a floating tab bar (Home, Shorts, Subs, You and a round +) with a progressive blur behind it (Android 12+)
+New: Home in a new Modern Minimalism look (black and white, the Plus Jakarta Sans face, rounded pictures, pill chips and buttons, more space); the rest of the app is unchanged for now
+Fix: the app closed when the theme button on Home was tapped
+New: the rest of the app moved to Jetpack Compose in one go: bottom bar, side menu, Home page with pull to refresh, Continue watching and Shorts strip, channel page header, video page buttons and bars, Up next and Mix list, picks list, music mini bar, update pill, voice search, sign-in screen and loading placeholders
+New: the account sheet, the video description sheet and the theme menu rebuilt with Jetpack Compose
+Settings: a cleaner, more even layout (same spacing everywhere, calmer section names, matching thin icons)
+Back to the earlier look (the v18.2 design changes were undone)
+Fix: age-restricted videos now play and download when you are signed in with an 18+ YouTube account; Google sign-in shows "This browser or app may not be secure" less often (tries again as Firefox when it does)
+Fix: the build error in the Music player's comments count (whole app now on Jetpack Compose)
+Cleanup: removed old screen files, 29 unused pictures and the ViewPager2 library left over from the move to Jetpack Compose (smaller app)
+New: the full-screen player's buttons (top bar, play and 10 s buttons, seek bar, lock, aspect, rotate, picture-in-picture and the swipe info) rebuilt with Jetpack Compose
+New: Shorts rebuilt with Jetpack Compose (full-screen swipe pager, Like / Dislike, Comments, Download and Share)
+New: the Private folder (PIN / pattern / password lock and the hidden videos and music) rebuilt with Jetpack Compose
+New: the big Music player (Song / Video switch, title, Like / Comments / Download / Share / Lyrics, seek bar, play buttons and Up next) rebuilt with Jetpack Compose
+New: the Music player's Up next queue and Lyrics sheets rebuilt with Jetpack Compose
+New: the video ⋮ menu, the player gear menus (also the side panel in full screen), the music player menus and "Save video to…" rebuilt with Jetpack Compose
+New: the comments sheet (Top/Newest, likes, replies, writing a comment and quick emoji) rebuilt with Jetpack Compose
+New: the video page (title, Like/Dislike/Save/Share buttons, chapters strip, comments preview, description and Up next) rebuilt with Jetpack Compose
+New: the Music tab (moods, Quick picks, Listen again, song rows, playlists) rebuilt with Jetpack Compose, so all of Home is Compose now; Autoplay in feed works on Subscriptions again
+New: Home's top bar, search box, chips and search suggestions rebuilt with Jetpack Compose (Home is now fully Compose, except the Music tab's rows)
+New: Home's video lists (the magazine, Top 5, Editor's picks, chapters, the cinema, search results and channels) rebuilt with Jetpack Compose; Autoplay in feed works with them too
+New: Subscriptions and Notifications rebuilt with Jetpack Compose (pull down to refresh on both)
+New: the Social page and the WhatsApp status saver rebuilt with Jetpack Compose
+New: the download sheet (quality tickets, Video / Audio, More formats, subtitles) rebuilt with Jetpack Compose
+New: the You page (downloads, storage, collection, Music, Videos, Playlists) rebuilt with Jetpack Compose: smoother lists and live download numbers
+New: Settings rebuilt with Jetpack Compose. Same look, and every switch and choice now always shows what is really saved, even after a theme or colour change
+New: RAINAX starts moving to Jetpack Compose, Android's modern design system, one screen at a time. First: the welcome guide
+Fix: links shared from TikTok Lite (and other apps that add a "get the app" link) no longer add a second download that keeps failing
+Fix: the app icon now really changes to your accent colour about a minute after you leave the app
+Theme fix for good: on Android 12 and newer, Light / Dark is now set by Android itself for RAINAX, so lists can no longer show a mix of light and dark rows or white text on a light page
+Fix: with Theme set to Light on a phone in dark mode (or the other way round), titles and numbers on Home no longer turn white and invisible after a while
+Fixes: older downloads no longer disappear from Library after 50; upright videos show the right quality in the download sheet; playing a long downloads list no longer closes the app; the You badge counts only running downloads; M4A sound is no longer labelled MP3; two files with the same name never overwrite each other; fewer memory leaks after theme changes
+Fixes: Settings quick tiles (Background play, Skip sponsors, Detect links) now show their real on/off state; Home no longer jumps to another feed after a theme change; the app icon colour change waits until downloads and background music finish; screens follow the phone switching to dark mode
+Fixes: settings no longer change by themselves after a theme or colour change; a quick trip out of the app after changing the colour no longer restarts the app
+Closing the small video window keeps your downloaded video playing as sound in the background (with lock-screen controls)
+Upright videos and Shorts show their real quality in the download sheet (1080p instead of 2K, 4K instead of 5K); Home shows videos only, Shorts stay in the Shorts feed
+Downloaded videos keep playing as sound when you lock the phone or leave the app (with lock-screen controls), and continue on screen when you come back. Download straight from TikTok, Instagram or YouTube: Share › RAINAX opens a download popup right over that app, or add the new Download link tile to your quick settings to download a copied link
+Keep RAINAX running: a short popup (with Don't show again) leads to Android's own Allow, so downloads, background play and status auto-save keep going with the screen off
+The screen no longer turns off while you watch a video or a live stream (also in the floating player and in Shorts); it can sleep again when the video is paused
+New Settings: search settings, big quick tiles for Wi-Fi only, Background play, Skip sponsors and Copied links, theme previews and accent rings at the top
+Home keeps its magazine layout after you change the theme or accent (it no longer falls back to the old Top pick layout)
+New sun / moon button on Home: switch between System, Light and Dark in one tap, and tap Theme to pick one of 16 accent colours
+16 accent colours: pick yours from a new grid of colour rings in Settings (violet, green, blue, pink, orange, slate, brown, indigo and more); the app icon follows your colour
+Player gestures: double tap left or right to skip 10 seconds (keep tapping for more), swipe up or down in full screen for brightness and volume, and a lock button on the full-screen player
+Player: in landscape and full screen, Settings, Quality and Playback speed now open as a panel on the right of the video, fully visible and easy to tap, and the video stays full screen
+Auto-save WhatsApp statuses: turn it on in the status saver and every status you view is saved to Rainax Tube/Status before it disappears, even when RAINAX is closed
+Downloads: each running download now shows its speed, time left and size in clear columns, with the bar and percent across the whole card
+Accent everywhere: Shuffle, Save all and other soft buttons, small chips, the search box glow, notification dots, voice search and the downloading label now use your accent colour; screens follow your chosen Light or Dark theme even when the phone uses the other one
+The app icon and the RAINAX logo now take your accent colour (Film red, Gold, Teal or Purple); every open screen updates to your new theme and accent straight away
+Accent fixes: your chosen accent (Gold, Teal, Purple) now shows everywhere, also when the theme is set to Light or Dark: settings chips and switches, the download sheet, the + button and voice search
+Tablets: finished downloads now show in 2 or 3 columns; tidier spacing and building blocks under the hood for faster, safer updates
+Cleaner look: one font family and one tidy set of text sizes across the app; easier-to-read gold labels in light mode and red text in dark mode; lists now animate smoothly when videos are removed, chapters arrive or more videos load
+Smoother everyday use: the full opening plays once after each update, a quick 1-second title every other time; Continue watching sits near the top; Back on a Home tab returns to For you; hold a recent search to edit or remove it; a red count on You while downloads run; chapters follow the video; Movies shows real films only; the lights stay on while you read in cinema mode; bigger touch areas, soft vibrations, and lists never hide under the update pill
+Light and dark fixes: voice search, Your week, the storage strip and chapter film strip now follow your theme; voice orb uses your accent colour
+New cinematic opening in full HDR on HDR screens: the RAINAX mark spins in under a stage light, RAINAX and TUBE slide out on two lines, with a floor reflection; light and dark themes
+A slow, smooth 6-second opening: RAINAX TUBE written letter by letter with a soft glow, then it opens into the app
+Updates download by themselves in the background: a small pill above the bottom bar shows the progress, then tap Install when it is ready
+Fits every screen by itself: normal size on big phones and tablets, a little smaller on small HD screens so nothing is cut; the update box always shows its Update button
+Build fix: the vinyl record rings in the Music player
+Lyrics in the Music player: tap Lyrics to read the words of the song, straight from YouTube Music
+Cinema mode on the video page (the lights go down while you watch), chapters as a film strip, Your week on Home, and a choice of accent colour: film red, gold, teal or purple
+Download sheet qualities as cinema tickets that tear off when you tap Download, a turning film reel on downloads in progress, My collection shelf and a storage strip on the You page
+Opening title card, film countdown when you pull to refresh, spinning vinyl music player, recent searches as tickets, Under 4 min and Over 20 min search filters, Now showing notifications with the picture, new empty screens
+New Social page: big Save any video headline, real app icons for TikTok, Instagram, Facebook and YouTube, copied links as tickets; magazine-shaped loading on Home
+New flat Ticket bottom bar, NOW SHOWING movie tickets on Home, a fresh Home feed every time, You may like based on what you watch, neater Clear search history
+Cleaner build: all code warnings fixed, safer Instagram error reports
+Magazine Home: Cover story, Top 5 right now, Editor's picks, chapters for Music, Gaming, News, Cricket and Comedy with their own poster rows, a pull quote, then More stories
+Cinema Pro everywhere: movie-poster Home with Play and Download, red tag chips, Settings in numbered chapters, sharp cards and buttons on every screen, new side menu, download sheet and voice search colours
+New Cinema Pro look (part 1): film red and gold colours, bold Oswald titles, sharp corners, new confirmation boxes, subtitle-style messages, square switches and thin loading lines
+New Settings page: clean grouped cards, coloured icons and one tidy row for every option
+New side menu: matches light, dark and AMOLED themes, close with ✕, Back, tap outside or swipe left
+Channels open properly: Videos, Shorts, Live and Playlists read straight from YouTube when needed
+Installs on more phones: fixes "There was a problem parsing the package" on some Tecno, Infinix and itel phones
+Channels have Videos, Shorts, Live and Playlists tabs, like YouTube; your own channel shows properly
+Save to playlist: tap Save or ⋮ to add videos to your YouTube playlists, or make a new one
+⋮ menu on every video: Download, Watch later, Save, Share, Not interested, Don't recommend channel
+Videos you watch now also show in your YouTube history, and you can pause watch history in Settings
+Player: Loop video, Ambient mode glow and Stats for nerds in the ⚙ menu
+MP3 converting much faster: the sound is now read on all phone cores at once
+Version 9.8: new Notifications page, You tab like YouTube, new voice search screen and many fixes
+Fixes: Sign in button readable in dark mode, Library chips start at Downloads, finish check mark shows, smoother voice screen
+New voice search screen: a glowing orb that moves with your voice and your words appearing as you speak
+Your YouTube profile picture shows on the You tab in the bottom bar when you're signed in
+Home top bar like YouTube: a search icon that opens the search box (notifications are on the You tab)
+Feed videos show their length on the picture again, like YouTube
+You tab like YouTube: Accounts, big profile picture, View channel and Sign out (the top-bar profile icon is gone)
+Search shows "You may like" with pictures; bottom bar has labels; Settings can clear your watch history
+New Notifications page like YouTube: your real YouTube notifications with channel picture, unread dot, All and Mentions
+Polished look: new update window, rounded dialogs, message bars, shimmering loading cards and Settings icons
+Downloads page: coloured status labels, a check mark when a download finishes, and a new empty page
+Shorts use the new download sheet, and the Social page offers to download a link you just copied
+New search: a rounded search pill on Home with a voice button, and a glowing red search box while you type
+Feed videos get their sizes much faster: one request per video instead of two, looked up sooner and 3 at a time
+New bottom bar: a floating rounded bar with a raised + button, and a dot that jumps to the tab you choose
+Smooth animations: tabs slide in, the video page rises up, screens slide open and closed, lists and cards fade up, cards respond to your touch
+MP3 much faster: made from YouTube's better Opus sound, decoded inside RAINAX (no slow trip through Android's media system)
+MP3 shows what it is doing and how fast (Reading sound / Making MP3), and how long it took when done
+MP3 converting is many times faster: the phone's fast software decoder is used, sound is read in big pieces, and 256k-320k use the fast encoder setting
+MP3 is much faster: it is made on all of your phone's cores at once
+New MP3 choices: 128k (small), 192k and 320k (best), next to the instant M4A
+Download window: Video and Audio icons now sit next to their names
+New download window: Video and Audio tabs, big quality cards with sizes, a Recommended pick, and one DOWNLOAD button
+Voice search: tap "Search with your voice" in search, or hold the search button
+Notifications now show only your recent ones (about the last month), like YouTube
+Welcome guide on first start: a quick tour of what RAINAX Tube can do
+Closing the app (swipe it away or press Back) now pauses the player. Press play on the notification to continue. Home and screen lock keep playing
+Rate us now opens the RAINAX Tube reviews page on APKPure
+Settings: new Privacy section with Private folder and Clear search history
+Settings: "Saved in" shows your real folder, with a button to allow All files access when needed
+New: Rate us on APKPure and Share app buttons in Settings
+Download sizes are ready before you tap: videos on screen get their formats and sizes in the background, so the download sheet opens with them at once
+Social page simplified: paste or share a link (copied links are detected), plus the WhatsApp status saver
+Instagram: choose from all qualities (1080p, 720p, 480p...) and Audio only, not just one
+Facebook downloads: each quality shows once with its size, and titles show emoji and symbols properly
+Fixed: Instagram Reels and video posts (public accounts) download again
+Fixed: Facebook videos and Reels (including share links) download again
+No more "Photos and videos" permission question: one storage permission is enough
+Pull to refresh on Home now brings new Shorts too
+Fixed: WhatsApp statuses you already saved show as saved after reinstalling, and are never saved twice
+New: Private folder with PIN, pattern or password. Hide videos and music from your gallery and other apps
+Background player: 10 seconds back and forward buttons, and the RAINAX logo on the media card
+Updates now come from the new RAINAX Tube releases page
+New: Clear search history button under your recent searches
+Home feed is fresh on every refresh: popular videos, more from channels you watch and your searches, without videos you already watched
+Downloads now save in Internal storage/Rainax Tube (Video, Audio and Status folders)
+Music player bar has a close button
+Mix now shows YouTube's real Mix, different from Up next
+Music tab mood chips have proper spacing
+Lowering simultaneous downloads now pauses the extra ones right away
+Removed the Copy link button (use Share)
+WhatsApp statuses now show without picking a folder: allow "All files access" once (asked on first start, like other players)
+New Social Downloader page: paste a link and RAINAX names the app it is from, with all supported apps as one-tap badges
+New: WhatsApp and WhatsApp Business status saver (photos and videos, Save all, and your saved statuses)
+New: X (Twitter) video downloads
+Safer: other apps can no longer make the RAINAX player open its private files or add tracks to its player
+Safer: your YouTube sign-in is never copied to backups or a new phone
+Safer updates: only files from the official RAINAX release page are accepted
+Downloading many picked videos: sizes are estimated from 12 of them (faster, and YouTube does not block you)
+Autoplay in feed, like YouTube: the video you stop on plays silently in the list (tap the speaker for sound)
+Opening a video that was playing in the list carries on from where it was
+New setting: Autoplay in feed (Always on, Wi-Fi only or Off)
+Fixed: the downloads page no longer freezes with 1000+ downloads in the list
+Smoother app while big playlists download (saving the list runs in the background)
+Much faster: formats and sizes now show in about a second
+Download shows only the real formats of each video with their real sizes (also for several videos, playlists and Shorts)
+Sizes come faster: picked videos are looked up right away, 4 at a time
+First start: asks to allow storage access and app updates (one tap installs new versions)
+See your selected videos as a list and remove any before downloading
+New Sign in with YouTube page that shows what you get before signing in
+New Shorts icon, bigger Shorts on Home and endless Shorts: swipe the strip and more load by themselves
++ button on Up next and Mix videos too: pick several and download them together
+Cleaner Home: more space between sections, lighter chips, new Continue watching cards
+All-new look like YouTube: clean dark (or white) theme with a red accent, full-width videos
+Bottom bar with Home, Shorts, + (download from a link), Subscriptions and You
+Side menu, notifications bell, voice search, Subscriptions page and your channels on Home
+Video page: Next / Mix bar, comments under the video with quick emoji, lock screen
+New Music tab and player like YouTube Music (Song / Video, Up next, sleep timer)

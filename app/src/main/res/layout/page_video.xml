@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Video page: in-app player, Download / audio buttons, comments and related videos -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/rxAmbient"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical">
+
+    <com.rainax.ytdownloader.RatioFrameLayout
+        android:id="@+id/playerBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/rx_black">
+
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:played_color="?attr/rxAccent"
+            app:resize_mode="fit"
+            app:scrubber_color="?attr/rxAccent"
+            app:show_buffering="when_playing"
+            app:show_shuffle_button="false"
+            app:show_subtitle_button="false" />
+
+        <!-- picture until the video starts, top buttons, stats, double-tap hints, brightness / volume, lock:
+             Jetpack Compose (VideoChrome.kt) -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/videoOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </com.rainax.ytdownloader.RatioFrameLayout>
+
+    <!-- Title, buttons, chapters, comments and Up next: Compose (VideoPage.kt) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/videoList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- the picks bar and the "Next" bar: Jetpack Compose (VideoChrome.kt) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/videoBottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>

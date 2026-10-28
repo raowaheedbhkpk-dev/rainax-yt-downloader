@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- theme preview: half light, half dark (follows the phone) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><solid android:color="#1C1C1E" /></shape></item>
+    <item android:right="0dp" android:gravity="start|fill_vertical" android:width="40dp"><shape><solid android:color="#F2F2F7" /></shape></item>
+</layer-list>
