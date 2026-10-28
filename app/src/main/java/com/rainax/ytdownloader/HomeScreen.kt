@@ -199,7 +199,8 @@ class HomeScreen(
         val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null && special == null
         val wantHeader = if (shelfHere) shelf.root else null
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
-        bigAdapter.magazine = shelfHere            // the first tab reads like a magazine
+        // the first tab reads like a magazine (not in the new look: there Home is a clean list of cards)
+        bigAdapter.magazine = shelfHere && navBar == null
         if (shelfHere) shelf.refresh()
         if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
         // the Music tab's rows or a video list, with the Music tab's soft glow behind it
@@ -954,7 +955,7 @@ class HomeScreen(
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
     private fun showSkeleton() {
         chrome.loading = false
-        feed.showSkeleton(adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
+        feed.showSkeleton(navBar == null && adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
             channelUrl == null && special == null)
     }
 

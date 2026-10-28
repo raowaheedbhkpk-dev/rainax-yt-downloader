@@ -1,3 +1,4 @@
+Fix: the blur behind Home's floating tab bar now really blurs (and follows the list); Home in the new look is a clean list of cards (no magazine cover story)
 New: Home in an iOS 17 style: off-white page, white rounded cards with a soft shadow, a large "Home" title, and a floating tab bar (Home, Shorts, Subs, You and a round +) with a progressive blur behind it (Android 12+)
 New: Home in a new Modern Minimalism look (black and white, the Plus Jakarta Sans face, rounded pictures, pill chips and buttons, more space); the rest of the app is unchanged for now
 Fix: the app closed when the theme button on Home was tapped

@@ -24,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,13 +50,17 @@ internal fun HomePage(
     // Home is the first screen in the new look (ModernStyle.kt): iOS-like off-white page, white cards, a large
     // title, and a floating tab bar with a progressive blur behind it
     val rx = LocalRx.current
-    val blur = rememberProgressiveBlur()
+    val source = androidx.compose.ui.graphics.rememberGraphicsLayer()
     val zone = with(androidx.compose.ui.platform.LocalDensity.current) { 100.dp.toPx() }
+    var pageHeight by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     Box(Modifier.fillMaxSize().background(rx.bg)) {
         Column(
-            Modifier.fillMaxSize().then(
-                if (navBar != null) Modifier.drawWithContent { drawWithProgressiveBlur(blur, zone, rx.bg) { this@drawWithContent.drawContent() } }
-                else Modifier
+            Modifier.fillMaxSize().onSizeChanged { pageHeight = it.height.toFloat() }.then(
+                // the page is drawn into a layer too: the progressive blur draws it again, blurred
+                if (navBar != null) Modifier.drawWithContent {
+                    source.record { this@drawWithContent.drawContent() }
+                    drawLayer(source)
+                } else Modifier
             )
         ) {
             // the top bar's height: autoplay in feed doesn't count cards hidden under it
@@ -79,7 +85,17 @@ internal fun HomePage(
                 Box(Modifier.fillMaxSize().padding(bottom = if (navBar != null) 88.dp else 0.dp)) { HomeOverlay(chrome, a) }
             }
         }
-        if (navBar != null) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) { navBar() }
+        if (navBar != null) {
+            ProgressiveBlurZone(
+                source,
+                zoneTop = { pageHeight - zone },
+                // redraw the blur whenever the list moves or changes
+                tick = { feed.list?.let { it.firstVisibleItemIndex * 100_000 + it.firstVisibleItemScrollOffset }; feed.model?.version },
+                tint = rx.bg,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(100.dp)
+            )
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) { navBar() }
+        }
     }
 }
 
