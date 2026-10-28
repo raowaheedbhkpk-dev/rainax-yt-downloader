@@ -429,67 +429,60 @@ private fun CollectionShelf(act: MainActivity, s: YouState, playable: List<Downl
         s.meter = u
     }
     val u = s.meter
+    // v19.6: storage in one white rounded card with a plain round bar; the collection as rounded posters
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Your storage", Modifier.weight(1f), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
-            if (u != null) Text("${StorageMeter.short(u.videoBytes + u.audioBytes)} used", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.display)
-        }
-        Column(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).fillMaxWidth().background(colorResource(R.color.film_bg)).padding(horizontal = 6.dp)) {
-            Box(Modifier.fillMaxWidth().height(5.dp).rxDrawableBg(R.drawable.bg_sprockets))
-            Row(Modifier.fillMaxWidth().height(14.dp).background(colorResource(R.color.film_track))) {
+        Column(Modifier.padding(top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(rx.surface).padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Your storage", Modifier.weight(1f), color = rx.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
+                if (u != null) Text("${StorageMeter.short(u.videoBytes + u.audioBytes)} used", color = rx.text2, fontSize = 13.sp, fontFamily = RxFonts.body)
+            }
+            Row(Modifier.padding(top = 12.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(rx.surfaceAlt)) {
                 if (u != null) {
                     val all = (u.videoBytes + u.audioBytes + u.freeBytes).coerceAtLeast(1L).toFloat()
-                    if (u.videoBytes > 0) Box(Modifier.weight(u.videoBytes / all).height(14.dp).background(rx.accent))
-                    if (u.audioBytes > 0) Box(Modifier.weight(u.audioBytes / all).height(14.dp).background(rx.gold))
+                    if (u.videoBytes > 0) Box(Modifier.weight((u.videoBytes / all).coerceAtLeast(0.01f)).fillMaxHeight().background(rx.accent))
+                    if (u.audioBytes > 0) Box(Modifier.weight((u.audioBytes / all).coerceAtLeast(0.01f)).fillMaxHeight().background(rx.text2))
                     Spacer(Modifier.weight((u.freeBytes / all).coerceAtLeast(0.0001f)))
                 }
             }
-            Box(Modifier.fillMaxWidth().height(5.dp).rxDrawableBg(R.drawable.bg_sprockets))
+            if (u != null) {
+                Text(
+                    "Videos ${StorageMeter.short(u.videoBytes)}  ·  MP3 ${StorageMeter.short(u.audioBytes)}  ·  Free ${StorageMeter.short(u.freeBytes)}",
+                    Modifier.padding(top = 8.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body
+                )
+            }
         }
-        if (u != null) {
-            Text(
-                "Videos ${StorageMeter.short(u.videoBytes)}  ·  MP3 ${StorageMeter.short(u.audioBytes)}  ·  Free ${StorageMeter.short(u.freeBytes)}",
-                Modifier.padding(start = 4.dp, end = 4.dp, top = 6.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body
-            )
-        }
-        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("My collection", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display)
-            Box(Modifier.padding(start = 12.dp).weight(1f).height(1.dp).background(rx.divider))
-        }
+        Text("My collection", Modifier.padding(start = 4.dp, top = 22.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display)
         LazyRow(Modifier.fillMaxWidth().padding(top = 12.dp).height(168.dp), contentPadding = PaddingValues(horizontal = 0.dp)) {
             items(playable.sortedByDescending { it.createdAt }.take(12), key = { it.id }) { t -> ShelfCase(act, t) }
         }
-        Box(Modifier.fillMaxWidth().height(4.dp).background(rx.surfaceAlt))
     }
 }
 
-/** One DVD case on the shelf. Tap plays the file. */
+/** One poster in My collection (rounded picture, kind in the corner, the title over it). Tap plays the file. */
 @Composable
 private fun ShelfCase(act: MainActivity, t: DownloadTask) {
     val rx = LocalRx.current
     val thumb = rememberThumb(t.thumbPath?.takeIf { java.io.File(it).exists() })
     Box(
-        Modifier.padding(horizontal = 5.dp).size(108.dp, 156.dp).background(colorResource(R.color.rx_cinema_case))
+        Modifier.padding(end = 10.dp).size(108.dp, 156.dp).clip(RoundedCornerShape(14.dp)).background(rx.surfaceAlt)
             .clickable { act.openFile(t) }.semantics { contentDescription = "Play ${t.title}" }
     ) {
-        Box(Modifier.fillMaxSize().padding(start = 7.dp)) {
-            if (thumb != null) Image(thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            else NetImage(t.thumbUrl, Modifier.fillMaxSize())
-            Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_hero_scrim))
-        }
-        Box(Modifier.width(7.dp).fillMaxHeight().background(rx.accent))
+        if (thumb != null) Image(thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        else NetImage(t.thumbUrl, Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_hero_scrim))
         val kind = when {
-            t.isAudio -> if (t.format.contains("mp3") || t.mime == "audio/mpeg") "MP3" else "AUDIO"
+            t.isAudio -> if (t.format.contains("mp3") || t.mime == "audio/mpeg") "MP3" else "Audio"
             t.format.substringAfter(':').toIntOrNull()?.let { it >= 720 } == true -> "HD"
             else -> "Video"
         }
         Text(
-            kind, Modifier.align(Alignment.TopEnd).padding(5.dp).rxDrawableBg(R.drawable.bg_hero_tag).padding(horizontal = 5.dp, vertical = 1.dp),
-            color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em
+            kind, Modifier.align(Alignment.TopEnd).padding(6.dp).background(Color(0xBF000000), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+            color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold
         )
         Text(
-            t.title, Modifier.align(Alignment.BottomStart).padding(start = 7.dp).padding(7.dp),
-            color = Color.White, fontSize = 12.sp, fontFamily = RxFonts.display, maxLines = 3, overflow = TextOverflow.Ellipsis
+            t.title, Modifier.align(Alignment.BottomStart).padding(8.dp),
+            color = Color.White, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body,
+            maxLines = 3, overflow = TextOverflow.Ellipsis
         )
     }
 }

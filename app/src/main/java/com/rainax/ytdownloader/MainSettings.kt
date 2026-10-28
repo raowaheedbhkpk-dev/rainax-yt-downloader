@@ -107,13 +107,17 @@ internal fun MainActivity.showThemePopup(anchor: View) {
         w.setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         w.setDimAmount(0.15f)
         // right under the button, at the right edge (like the old drop-down)
+        // Home's round button tells where it is (the view passed in is the whole Home screen there)
         val at = IntArray(2)
         anchor.getLocationOnScreen(at)
+        val btn = ThemeAnchor.rect?.takeIf { anchor.height > 200 * d }
+            ?: android.graphics.Rect(at[0], at[1], at[0] + anchor.width, at[1] + anchor.height)
+        val statusTop = androidx.core.view.ViewCompat.getRootWindowInsets(anchor)
+            ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0
         w.setGravity(android.view.Gravity.TOP or android.view.Gravity.END)
         w.attributes = w.attributes.apply {
-            x = (resources.displayMetrics.widthPixels - (at[0] + anchor.width)).coerceAtLeast((8 * d).toInt())
-            y = at[1] + anchor.height - (androidx.core.view.ViewCompat.getRootWindowInsets(anchor)
-                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0)
+            x = (resources.displayMetrics.widthPixels - btn.right).coerceAtLeast((12 * d).toInt())
+            y = (btn.bottom + (6 * d).toInt() - statusTop).coerceAtLeast(0)
         }
     }
     dialog.show()

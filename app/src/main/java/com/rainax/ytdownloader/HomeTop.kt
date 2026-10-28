@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -157,7 +159,7 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
             Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Home", Modifier.weight(1f), color = rx.text, fontSize = 34.sp, lineHeight = 40.sp, fontFamily = ModernFonts.family,
                     fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em, maxLines = 1)
-                RoundTopButton("Theme", onClick = { a.theme(view) }) {
+                RoundTopButton("Theme", onClick = { a.theme(view) }, onPlaced = { r -> ThemeAnchor.rect = r }) {
                     Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(20.dp),
                         colorFilter = ColorFilter.tint(rx.text))
                 }
@@ -235,10 +237,18 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
 /** A 44dp round white button for Home's title row (layout A). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RoundTopButton(label: String, onClick: () -> Unit, onLong: (() -> Unit)? = null, content: @Composable () -> Unit) {
+private fun RoundTopButton(
+    label: String, onClick: () -> Unit, onLong: (() -> Unit)? = null,
+    onPlaced: ((android.graphics.Rect) -> Unit)? = null, content: @Composable () -> Unit
+) {
     val rx = LocalRx.current
     Box(
-        Modifier.padding(start = 8.dp).size(44.dp).clip(CircleShape).background(rx.surface)
+        Modifier.padding(start = 8.dp).size(44.dp)
+            .then(if (onPlaced != null) Modifier.onGloballyPositioned { c ->
+                val b = c.boundsInWindow()
+                onPlaced(android.graphics.Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt()))
+            } else Modifier)
+            .clip(CircleShape).background(rx.surface)
             .combinedClickable(onClick = onClick, onLongClick = onLong)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
@@ -466,3 +476,6 @@ private fun SugRow(s: Sug, a: HomeChromeActions) {
         if (recent) RecentMenu(menu, { menu = false }, s.text, a)
     }
 }
+
+/** Where Home's round Theme button sits in the window, so the theme menu opens right under it. */
+internal object ThemeAnchor { var rect: android.graphics.Rect? = null }

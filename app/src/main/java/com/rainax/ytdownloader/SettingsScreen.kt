@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,7 +69,9 @@ private class SetOpt(
     val title: String,
     val sub: String? = null,
     val end: SetEnd,
-    val visible: Boolean = true
+    val visible: Boolean = true,
+    /** The little black icon box at the row's start (S1 layout). */
+    val icon: Int = 0
 )
 
 private sealed class SetEnd {
@@ -113,36 +116,51 @@ internal fun SettingsScreen(act: MainActivity) {
     }
 
     val chapters = listOf(
+        SetChapter("GENERAL", listOf(
+            SetOpt("Wi-Fi only", "Downloads wait for Wi-Fi", SetEnd.Toggle(wifi) {
+                wifi = it; AppPrefs.setWifiOnly(act, it); act.nudgeService(); Haptics.tick(view)
+            }, icon = R.drawable.ic_set_wifi),
+            SetOpt("Background play", "Keeps playing with the screen off", SetEnd.Toggle(bgPlay) {
+                bgPlay = it; AppPrefs.setBackgroundPlay(act, it); Haptics.tick(view)
+            }, icon = R.drawable.ic_set_headphones),
+            SetOpt("Skip sponsors", "Jumps over sponsored parts", SetEnd.Toggle(sponsor) {
+                sponsor = it; AppPrefs.setSponsorBlock(act, it); Haptics.tick(view)
+            }, icon = R.drawable.ic_set_skip),
+            SetOpt("Detect copied links", "Offers to download a link you copy", SetEnd.Toggle(clip) {
+                clip = it; AppPrefs.setClipDetect(act, it); Haptics.tick(view)
+                if (it) act.offerClipTile()       // copied links while RAINAX is closed: the quick settings tile
+            }, icon = R.drawable.ic_set_link)
+        )),
         SetChapter("STARTUP", listOf(
             SetOpt("Opening title", "A one-second RAINAX title card when the app starts",
-                SetEnd.Toggle(opening) { opening = it; AppPrefs.setOpeningTitle(act, it) })
+                SetEnd.Toggle(opening) { opening = it; AppPrefs.setOpeningTitle(act, it) }, icon = R.drawable.ic_play_box)
         )),
         SetChapter("DOWNLOADS", listOf(
             SetOpt("Simultaneous downloads", "How many files download at the same time",
                 SetEnd.Choice(listOf("1" to 1, "2" to 2, "3" to 3, "4" to 4), parallel) {
                     parallel = it; AppPrefs.setMaxParallel(act, it); act.nudgeService()
-                }),
+                }, icon = R.drawable.ic_download),
             SetOpt("Auto-retry failed downloads", "Tries again after 1, 3 and 10 minutes, and when the internet comes back",
-                SetEnd.Toggle(autoRetry) { autoRetry = it; AppPrefs.setAutoRetry(act, it) }),
+                SetEnd.Toggle(autoRetry) { autoRetry = it; AppPrefs.setAutoRetry(act, it) }, icon = R.drawable.ic_refresh),
             SetOpt("Auto-clear finished list", "Finished items leave the list after 7 days (the files stay)",
-                SetEnd.Toggle(autoClear) { autoClear = it; AppPrefs.setAutoClear(act, it) }),
+                SetEnd.Toggle(autoClear) { autoClear = it; AppPrefs.setAutoClear(act, it) }, icon = R.drawable.ic_playlist),
             SetOpt("Downloads stop when the screen is off?", "Let RAINAX run in the background",
-                SetEnd.Open { act.openBatterySettings() }),
+                SetEnd.Open { act.openBatterySettings() }, icon = R.drawable.ic_set_battery),
             SetOpt("Last MP3", null, SetEnd.Note("Last MP3: $mp3"), visible = mp3.isNotBlank())
         )),
         SetChapter("PLAYBACK", listOf(
             SetOpt("Autoplay in feed", "The video you stop on plays silently in the list",
                 SetEnd.Choice(listOf("Always" to 2, "Wi-Fi only" to 1, "Off" to 0), autoplay) {
                     autoplay = it; AppPrefs.setFeedAutoplay(act, it); FeedAutoplay.refresh()
-                }),
+                }, icon = R.drawable.ic_play),
             SetOpt("Continue where you left off", "Videos start again where you stopped",
-                SetEnd.Toggle(resume) { resume = it; AppPrefs.setResumeVideos(act, it) })
+                SetEnd.Toggle(resume) { resume = it; AppPrefs.setResumeVideos(act, it) }, icon = R.drawable.ic_history)
         )),
         SetChapter("STORAGE", listOf(
-            SetOpt("Saved in", folder, SetEnd.Plain),
+            SetOpt("Saved in", folder, SetEnd.Plain, icon = R.drawable.ic_download),
             SetOpt("Allow all files access", "Needed to save in your Downloads folder",
-                SetEnd.Open { act.openAllFilesSettings(thenInstallAsk = false) }, visible = needsAllFiles),
-            SetOpt("Private folder", "Hidden videos behind your PIN", SetEnd.Open { PrivateActivity.open(act) })
+                SetEnd.Open { act.openAllFilesSettings(thenInstallAsk = false) }, visible = needsAllFiles, icon = R.drawable.ic_lock_open),
+            SetOpt("Private folder", "Hidden videos behind your PIN", SetEnd.Open { PrivateActivity.open(act) }, icon = R.drawable.ic_lock)
         )),
         SetChapter("PRIVACY", listOf(
             SetOpt("Pause watch history", "Nothing you watch is saved, here or on your YouTube account",
@@ -150,7 +168,7 @@ internal fun SettingsScreen(act: MainActivity) {
                     historyPaused = it
                     AppPrefs.setHistoryPaused(act, it)
                     act.message(if (it) "Watch history paused" else "Watch history is on")
-                }),
+                }, icon = R.drawable.ic_history),
             SetOpt("Clear search history", null, SetEnd.Open {
                 RxDialogBuilder(act, R.style.ThemeOverlay_Rainax_Dialog)
                     .setTitle("Clear search history?")
@@ -161,18 +179,18 @@ internal fun SettingsScreen(act: MainActivity) {
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
-            }),
+            }, icon = R.drawable.ic_search),
             SetOpt("Bring back hidden videos", "Videos and channels you said Not interested to", SetEnd.Open {
                 val n = HiddenFeed.count()
                 HiddenFeed.clear(act)
                 act.message(if (n > 0) "Hidden videos and channels can show again" else "Nothing is hidden")
-            }),
-            SetOpt("Clear watch history", "Continue watching and resume points", SetEnd.Open { act.askClearWatchHistory() })
+            }, icon = R.drawable.ic_refresh),
+            SetOpt("Clear watch history", "Continue watching and resume points", SetEnd.Open { act.askClearWatchHistory() }, icon = R.drawable.ic_history)
         )),
         SetChapter("ABOUT", listOf(
-            SetOpt("Check for app update", null, SetEnd.Open { AppUpdater.check(act, manual = true) }),
-            SetOpt("Rate us on APKPure", "A good review helps a lot", SetEnd.Open { AppShare.rate(act) }),
-            SetOpt("Share RAINAX Tube", "Send the app to a friend", SetEnd.Open { AppShare.share(act) })
+            SetOpt("Check for app update", null, SetEnd.Open { AppUpdater.check(act, manual = true) }, icon = R.drawable.ic_refresh),
+            SetOpt("Rate us on APKPure", "A good review helps a lot", SetEnd.Open { AppShare.rate(act) }, icon = R.drawable.ic_play_box),
+            SetOpt("Share RAINAX Tube", "Send the app to a friend", SetEnd.Open { AppShare.share(act) }, icon = R.drawable.ic_share)
         ))
     )
 
@@ -194,8 +212,8 @@ internal fun SettingsScreen(act: MainActivity) {
 
         // search
         Row(
-            Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().height(48.dp)
-                .background(rx.surface, RoundedCornerShape(12.dp))
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp).fillMaxWidth().height(40.dp)
+                .background(rx.surfaceAlt, RoundedCornerShape(12.dp))
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -215,55 +233,22 @@ internal fun SettingsScreen(act: MainActivity) {
         }
 
         if (!searching) {
-            // the switches people flip most, as big tiles
-            Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp)) {
-                Row {
-                    QuickTile(Modifier.weight(1f), R.drawable.ic_set_wifi, "Wi-Fi only", "", wifi) {
-                        wifi = !wifi; AppPrefs.setWifiOnly(act, wifi); act.nudgeService(); Haptics.tick(view)
-                    }
-                    QuickTile(Modifier.weight(1f), R.drawable.ic_set_headphones, "Background play", "", bgPlay) {
-                        bgPlay = !bgPlay; AppPrefs.setBackgroundPlay(act, bgPlay); Haptics.tick(view)
-                    }
-                }
-                Row {
-                    QuickTile(Modifier.weight(1f), R.drawable.ic_set_skip, "Skip sponsors", "", sponsor) {
-                        sponsor = !sponsor; AppPrefs.setSponsorBlock(act, sponsor); Haptics.tick(view)
-                    }
-                    QuickTile(Modifier.weight(1f), R.drawable.ic_set_link, "Copied links", "Detect · ", clip) {
-                        clip = !clip
-                        AppPrefs.setClipDetect(act, clip)
-                        Haptics.tick(view)
-                        if (clip) act.offerClipTile()       // copied links while RAINAX is closed: the quick settings tile
-                    }
-                }
-            }
-
-            // the look: three little screens (System, Light, Dark); black and white only, so no accent rings
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surface, RoundedCornerShape(16.dp)).padding(16.dp)) {
-                Text("Appearance", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
-                Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
-                    listOf(
-                        Triple(0, "System", R.drawable.bg_prev_system),
-                        Triple(1, "Light", R.drawable.bg_prev_light),
-                        Triple(2, "Dark", R.drawable.bg_prev_dark)
-                    ).forEach { (m, label, pic) ->
+            // Appearance (S1): one segmented control, System / Light / Dark
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                .background(rx.surface).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                Text("Appearance", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
+                Row(Modifier.padding(top = 10.dp).fillMaxWidth().height(38.dp).clip(RoundedCornerShape(10.dp)).background(rx.card).padding(3.dp)) {
+                    listOf(0 to "System", 1 to "Light", 2 to "Dark").forEach { (m, label) ->
                         val chosen = m == themeMode
-                        Column(
-                            Modifier.weight(1f)
-                                .clickable { Haptics.tick(view); themeMode = m; act.chooseTheme(m) }
-                                .semantics { contentDescription = "$label theme" + if (chosen) ", chosen" else "" }
-                                .padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Box(
+                            Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(8.dp))
+                                .background(if (chosen) rx.accent else Color.Transparent)
+                                .clickable { if (!chosen) { Haptics.tick(view); themeMode = m; act.chooseTheme(m) } }
+                                .semantics { contentDescription = "$label theme" + if (chosen) ", chosen" else "" },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(14.dp)).rxDrawableBg(pic)
-                                    .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(14.dp))
-                            )
-                            Text(
-                                label, Modifier.padding(top = 8.dp), fontSize = 12.sp, fontFamily = RxFonts.body,
-                                color = if (chosen) rx.accentText else rx.text2,
-                                fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal
-                            )
+                            Text(label, color = if (chosen) rx.onAccent else rx.text, fontSize = 13.sp,
+                                fontWeight = if (chosen) FontWeight.Bold else FontWeight.Medium, fontFamily = RxFonts.body)
                         }
                     }
                 }
@@ -286,7 +271,7 @@ internal fun SettingsScreen(act: MainActivity) {
                 rows.forEachIndexed { i, o ->
                     OptionRow(o)
                     if (i < rows.lastIndex && o.end !is SetEnd.Note && rows[i + 1].end !is SetEnd.Note)
-                        Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(0.5.dp).background(rx.divider))
+                        Box(Modifier.padding(start = if (o.icon != 0) 58.dp else 16.dp).fillMaxWidth().height(0.5.dp).background(rx.divider))
                 }
             }
         }
@@ -306,6 +291,15 @@ internal fun SettingsScreen(act: MainActivity) {
             Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 8.dp),
             color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center
         )
+    }
+}
+
+/** The row's little black (white in dark) rounded icon box, like iOS Settings. */
+@Composable
+private fun IconBox(icon: Int) {
+    val rx = LocalRx.current
+    Box(Modifier.padding(end = 14.dp).size(30.dp).clip(RoundedCornerShape(8.dp)).background(rx.text), contentAlignment = Alignment.Center) {
+        Image(painterResource(icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.bg))
     }
 }
 
@@ -375,8 +369,11 @@ private fun OptionRow(o: SetOpt) {
         }
     }
     if (end is SetEnd.Choice) {
-        Column(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 14.dp)) {
-            texts()
+        Column(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (o.icon != 0) IconBox(o.icon)
+                Column(Modifier.weight(1f)) { texts() }
+            }
             FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 end.options.forEach { (label, value) ->
                     val sel = value == end.chosen
@@ -401,10 +398,11 @@ private fun OptionRow(o: SetOpt) {
     Row(
         Modifier.fillMaxWidth()
             .let { m -> if (click != null) m.clickable(onClick = click) else m }
-            .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+            .heightIn(min = 52.dp).padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1f).padding(end = 16.dp)) { texts() }
+        if (o.icon != 0) IconBox(o.icon)
+        Column(Modifier.weight(1f).padding(end = 12.dp)) { texts() }
         when (end) {
             is SetEnd.Toggle -> Switch(
                 checked = end.on,
