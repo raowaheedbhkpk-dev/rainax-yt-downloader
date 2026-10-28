@@ -12,7 +12,6 @@ import android.os.Looper
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
@@ -28,7 +27,6 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.rainax.ytdownloader.databinding.LayoutMusicMiniBinding
 import com.rainax.ytdownloader.databinding.PageMusicPlayerBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,7 +44,8 @@ import kotlin.math.abs
 class MusicPlayer(
     private val act: AppCompatActivity,
     private val pg: PageMusicPlayerBinding,
-    private val mini: LayoutMusicMiniBinding,
+    /** The mini music bar above the bottom bar (Compose, MusicPage.kt). */
+    private val mini: androidx.compose.ui.platform.ComposeView,
     private val player: () -> Player?,
     private val download: (url: String, title: String?, audio: Boolean) -> Unit,
     /** Closes the video page first (one thing plays at a time). */
@@ -99,16 +98,12 @@ class MusicPlayer(
     private var tone = MusicArt.DEFAULT_TONE
     private var toneAnim: ValueAnimator? = null
     private val pageBg = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(tone, tone, tone))
-    private val miniBg = GradientDrawable()
 
     // ---------- setup ----------
 
     @SuppressLint("ClickableViewAccessibility")
     fun setup() {
         pg.root.background = pageBg
-        miniBg.cornerRadius = 2 * act.resources.displayMetrics.density
-        mini.root.background = miniBg
-        mini.mmArt.clipToOutline = true
         art.mpArtBox.clipToOutline = true
         applyTone(tone)
 
@@ -153,66 +148,9 @@ class MusicPlayer(
         })
         art.mpArtArea.setOnTouchListener { _, e -> fling.onTouchEvent(e) }
 
-        mini.root.setOnClickListener { expand() }
-        mini.mmPlay.setOnClickListener { togglePlay() }
-        mini.mmNext.setOnClickListener { next() }
-        mini.mmClose.setOnClickListener { close() }
-        setupMiniSwipe()
+        mini.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        mini.setContent { RxTheme { MusicMiniBar(ui, MusicMiniActions({ expand() }, { togglePlay() }, { next() }, { close() })) } }
         updateModes()
-    }
-
-    /** Swipe the mini bar sideways to stop the music and close it. */
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupMiniSwipe() {
-        val slop = ViewConfiguration.get(act).scaledTouchSlop
-        var downX = 0f
-        var swiping = false
-        mini.root.setOnTouchListener { v, e ->
-            when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    downX = e.rawX
-                    swiping = false
-                    false
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = e.rawX - downX
-                    if (!swiping && abs(dx) > slop * 2) {
-                        swiping = true
-                        MotionEvent.obtain(e).let { c ->              // no longer a tap
-                            c.action = MotionEvent.ACTION_CANCEL
-                            v.onTouchEvent(c)
-                            c.recycle()
-                        }
-                        v.parent?.requestDisallowInterceptTouchEvent(true)
-                    }
-                    if (swiping) {
-                        v.translationX = dx
-                        v.alpha = (1f - abs(dx) / v.width.coerceAtLeast(1)).coerceIn(0.2f, 1f)
-                    }
-                    swiping
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (!swiping) {
-                        false
-                    } else {
-                        swiping = false
-                        val dx = v.translationX
-                        if (e.actionMasked == MotionEvent.ACTION_UP && abs(dx) > v.width * 0.35f) {
-                            v.animate().translationX(if (dx > 0) v.width.toFloat() else -v.width.toFloat()).alpha(0f)
-                                .setDuration(160).withEndAction {
-                                    v.translationX = 0f
-                                    v.alpha = 1f
-                                    close()
-                                }.start()
-                        } else {
-                            v.animate().translationX(0f).alpha(1f).setDuration(160).start()
-                        }
-                        true
-                    }
-                }
-                else -> false
-            }
-        }
     }
 
     /** The player connected (or went away): follow it. */
@@ -608,8 +546,6 @@ class MusicPlayer(
         val artist = md.artist?.toString().orEmpty()
         ui.title = title
         ui.artist = artist
-        mini.mmTitle.text = title
-        mini.mmArtist.text = artist
         updateUpNext()
         val id = youtubeId(url) ?: url
         if (id == shownId) return
@@ -619,7 +555,7 @@ class MusicPlayer(
         Img.loadSquare(art.mpArt, big.firstOrNull(), widthPx = 900, fallbacks = big.drop(1)) { bmp ->
             if (shownId == id) paint(MusicArt.tone(bmp), animate = true)
         }
-        Img.loadSquare(mini.mmArt, MusicArt.small(url, thumb), widthPx = 200)
+        ui.miniArt = MusicArt.small(url, thumb)
         songOf(item)?.let { MusicHistory.add(act, it) }
         onNowPlaying(url)
         loadInfo(url)
@@ -636,9 +572,7 @@ class MusicPlayer(
     private fun updatePlayState() {
         val p = player()
         val showPause = p != null && p.playWhenReady && p.playbackState != Player.STATE_ENDED
-        val icon = if (showPause) R.drawable.ic_p_pause else R.drawable.ic_p_play
         ui.playing = showPause
-        mini.mmPlay.setImageResource(icon)
         ui.buffering = p != null && p.playWhenReady && p.playbackState == Player.STATE_BUFFERING
     }
 
@@ -675,7 +609,6 @@ class MusicPlayer(
             ui.pos = time(pos)
         }
         ui.dur = if (d > 0) time(d) else "0:00"
-        mini.mmProgress.progress = part
     }
 
     /** The seek bar is being dragged: the thumb and the time follow the finger. */
@@ -707,7 +640,7 @@ class MusicPlayer(
 
     private fun applyTone(c: Int) {
         pageBg.colors = intArrayOf(c, MusicArt.darker(c, 0.6f), MusicArt.darker(c, 0.3f))
-        miniBg.setColor(MusicArt.darker(c, 0.9f))
+        ui.miniTone = MusicArt.darker(c, 0.9f)
         if (expanded) setBars(c)
     }
 

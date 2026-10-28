@@ -3,15 +3,50 @@ package com.rainax.ytdownloader
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import com.rainax.ytdownloader.databinding.ActivitySignInBinding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 
 /**
  * YouTube sign-in on Google's own page. When YouTube's sign-in cookies appear, they are kept on this phone
@@ -25,7 +60,10 @@ class SignInActivity : AppCompatActivity() {
     }
 
 
-    private lateinit var b: ActivitySignInBinding
+    /** Google's page; the rest of the screen is Jetpack Compose (it replaced activity_sign_in.xml). */
+    private lateinit var web: WebView
+    private var intro by mutableStateOf(true)
+    private var loading by mutableStateOf(false)
     private var done = false
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -34,11 +72,10 @@ class SignInActivity : AppCompatActivity() {
         Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
         Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
-        b = ActivitySignInBinding.inflate(layoutInflater)
-        setContentView(b.root)
-        b.signInClose.setOnClickListener { finish() }
+        web = WebView(this)
+        setContent { RxTheme { Screen() } }
 
-        val ws = b.signInWeb.settings
+        val ws = web.settings
         ws.allowFileAccess = false              // the sign-in page never needs the phone's files
         ws.allowContentAccess = false
         ws.javaScriptEnabled = true
@@ -55,28 +92,28 @@ class SignInActivity : AppCompatActivity() {
         }
         val cm = CookieManager.getInstance()
         cm.setAcceptCookie(true)
-        cm.setAcceptThirdPartyCookies(b.signInWeb, true)
+        cm.setAcceptThirdPartyCookies(web, true)
 
-        b.signInWeb.webViewClient = object : WebViewClient() {
+        web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 // only secure pages (Google's sign-in is all https); app links (intent://...) and plain http stay out
                 return request?.url?.scheme != "https"
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                b.signInProgress.visibility = View.VISIBLE
+                loading = true
                 check()
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
-                b.signInProgress.visibility = View.GONE
+                loading = false
                 check()
                 // Google still said "Couldn't sign you in": once more, looking like Firefox (Google allows it)
                 if (url != null && rejected(url) && !triedFirefox) {
                     triedFirefox = true
-                    b.signInWeb.settings.userAgentString = FIREFOX_UA
-                    b.signInWeb.clearHistory()
-                    b.signInWeb.loadUrl(SIGN_IN_URL)
+                    web.settings.userAgentString = FIREFOX_UA
+                    web.clearHistory()
+                    web.loadUrl(SIGN_IN_URL)
                 }
             }
 
@@ -86,19 +123,18 @@ class SignInActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    b.signInIntro.visibility == View.VISIBLE -> finish()
-                    b.signInWeb.canGoBack() -> b.signInWeb.goBack()
+                    intro -> finish()
+                    web.canGoBack() -> web.goBack()
                     else -> finish()
                 }
             }
         })
 
         // first the page that says what signing in gives; Sign in opens Google's page
-        b.signInStart.setOnClickListener { startSignIn() }
         if (savedInstanceState?.getBoolean(STARTED) == true) startSignIn()
         else {
-            b.signInIntro.visibility = View.VISIBLE
-            b.signInProgress.visibility = View.GONE
+            intro = true
+            loading = false
         }
     }
 
@@ -117,9 +153,9 @@ class SignInActivity : AppCompatActivity() {
 
     private fun startSignIn() {
         started = true
-        b.signInIntro.visibility = View.GONE
+        intro = false
         // always (also after the screen was rebuilt), or the page would stay blank
-        b.signInWeb.loadUrl(SIGN_IN_URL)
+        web.loadUrl(SIGN_IN_URL)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -140,9 +176,76 @@ class SignInActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        b.signInWeb.stopLoading()
-        b.signInWeb.destroy()
+        web.stopLoading()
+        web.destroy()
         super.onDestroy()
+    }
+
+    // ---------- drawing ----------
+
+    @Composable
+    private fun Screen() {
+        val rx = LocalRx.current
+        Column(Modifier.fillMaxSize().background(rx.bg).systemBarsPadding()) {
+            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clickable { finish() }.semantics { contentDescription = "Close" }.padding(12.dp)) {
+                    Image(painterResource(R.drawable.ic_close), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
+                }
+                Text("SIGN IN WITH YOUTUBE", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 20.sp,
+                    fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+                Image(painterResource(R.drawable.ic_lock), null, Modifier.padding(end = 12.dp).size(26.dp), colorFilter = ColorFilter.tint(rx.text2))
+            }
+            if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = rx.accent, trackColor = rx.surfaceAlt)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                AndroidView(factory = { (web.parent as? android.view.ViewGroup)?.removeView(web); web }, modifier = Modifier.fillMaxSize())
+                if (intro) Intro()
+            }
+        }
+    }
+
+    /** First: what signing in gives you, then Sign in opens Google's page. */
+    @Composable
+    private fun Intro() {
+        val rx = LocalRx.current
+        Column(
+            Modifier.fillMaxSize().background(rx.bg).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(72.dp).rxDrawableBg(R.drawable.ic_logo))          // (a layer-list: drawn as a picture)
+                Image(painterResource(R.drawable.ic_swap_h), null, Modifier.padding(horizontal = 12.dp).size(40.dp), colorFilter = ColorFilter.tint(rx.text2))
+                Box(Modifier.size(72.dp).rxDrawableBg(R.drawable.bg_play_badge).padding(20.dp)) {
+                    Image(painterResource(R.drawable.ic_p_play), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(Color.White))
+                }
+            }
+            Text("SIGN IN WITH YOUTUBE", Modifier.padding(top = 20.dp), color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display,
+                textAlign = TextAlign.Center)
+            Text("to unlock these features", Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 16.sp, fontFamily = RxFonts.body)
+            Column(Modifier.padding(top = 20.dp).fillMaxWidth()) {
+                Feature(R.drawable.ic_nav_subs, "Subscriptions", rx.accent)
+                Feature(R.drawable.ic_watch_later, "Watch later", Color(0xFF3EA6FF))
+                Feature(R.drawable.ic_history, "History", Color(0xFF1FC7B6))
+                Feature(R.drawable.ic_thumb_up, "Like and dislike videos", Color(0xFFFFB300))
+                Feature(R.drawable.ic_person, "Recommendations made for you", Color(0xFF2BD47D))
+            }
+            Button(
+                onClick = { startSignIn() }, modifier = Modifier.padding(top = 20.dp).fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(2.dp), colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+            ) { Text("Sign in", fontSize = 16.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold) }
+            Text(
+                "You sign in on Google's own page. RAINAX Tube never sees your password, and you can sign out any time.",
+                Modifier.padding(top = 16.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center
+            )
+        }
+    }
+
+    @Composable
+    private fun Feature(icon: Int, text: String, tint: Color) {
+        val rx = LocalRx.current
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Image(painterResource(icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(tint))
+            Text(text, Modifier.padding(start = 16.dp), color = rx.text, fontSize = 16.sp, fontFamily = RxFonts.body)
+        }
     }
 
     companion object {

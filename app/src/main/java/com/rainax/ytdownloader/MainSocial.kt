@@ -118,7 +118,7 @@ internal fun MainActivity.handleIntent(intent: Intent?) {
     // "N new WhatsApp statuses saved" tapped: the Social page at the status saver
     if (intent?.getBooleanExtra(StatusAutoSave.EXTRA_OPEN_STATUS, false) == true) {
         intent.removeExtra(StatusAutoSave.EXTRA_OPEN_STATUS)
-        b.bottomNav.selectedItemId = R.id.nav_social
+        selectNav(R.id.nav_social)
         so.post {
             social.showStatus++
             statusSaverOrNull()?.selectTab(2)
@@ -454,7 +454,7 @@ internal fun MainActivity.showDownloadSheet(
             if (onAdded != null) { onAdded(what); return@tear }
             Snackbar.make(b.root, what, Snackbar.LENGTH_LONG)
                 .setAnchorView(snackAnchor())
-                .setAction("View") { b.bottomNav.selectedItemId = R.id.nav_downloads }
+                .setAction("View") { selectNav(R.id.nav_downloads) }
                 .show()
         }
     }

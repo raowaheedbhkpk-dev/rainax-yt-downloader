@@ -1,5 +1,8 @@
 package com.rainax.ytdownloader
 
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import android.Manifest
 import android.app.DownloadManager
 import android.content.ClipData
@@ -86,37 +89,23 @@ internal fun MainActivity.chooseAccent(v: Int) {
  */
 internal fun MainActivity.showThemePopup(anchor: View) {
     val d = resources.displayMetrics.density
-    val pb = com.rainax.ytdownloader.databinding.PopupThemeBinding.inflate(layoutInflater)
     val width = (288 * d).toInt()
-    val pw = android.widget.PopupWindow(pb.root, width, ViewGroup.LayoutParams.WRAP_CONTENT, true)
+    val view = androidx.compose.ui.platform.ComposeView(this)
+    // a popup is its own window: the Compose view gets the screen's lifecycle by hand
+    view.setViewTreeLifecycleOwner(this)
+    view.setViewTreeSavedStateRegistryOwner(this)
+    view.setViewTreeViewModelStoreOwner(this)
+    val pw = android.widget.PopupWindow(view, width, ViewGroup.LayoutParams.WRAP_CONTENT, true)
     pw.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
     pw.isOutsideTouchable = true
     pw.elevation = 12 * d
     val mode = AppPrefs.themeMode(this)
-    pb.tpSystemCheck.visibility = if (mode == 0) View.VISIBLE else View.INVISIBLE
-    pb.tpLightCheck.visibility = if (mode == 1) View.VISIBLE else View.INVISIBLE
-    pb.tpDarkCheck.visibility = if (mode == 2 || mode == 3) View.VISIBLE else View.INVISIBLE
-    pb.tpThemeName.text = Accents.of(AppPrefs.accent(this)).name
-    pb.tpSystem.setOnClickListener { pw.dismiss(); chooseTheme(0) }
-    pb.tpLight.setOnClickListener { pw.dismiss(); chooseTheme(1) }
-    pb.tpDark.setOnClickListener { pw.dismiss(); if (mode != 3) chooseTheme(2) }      // AMOLED already is dark
-    fun resize() {
-        pb.root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
-        pw.update(width, pb.root.measuredHeight)
-    }
-    pb.tpTheme.setOnClickListener {
-        Haptics.tick(it)
-        AccentSwatch.fill(pb.tpGrid, AppPrefs.accent(this), R.attr.rxSurface) { v ->
-            pb.root.postDelayed({ pw.dismiss(); chooseAccent(v) }, 140)    // the ring shows as chosen for a moment
+    view.setContent {
+        RxTheme {
+            ThemeMenu(this, mode, Accents.of(AppPrefs.accent(this)).name,
+                pick = { m -> pw.dismiss(); chooseTheme(m) },
+                accent = { v -> pw.dismiss(); chooseAccent(v) })
         }
-        pb.tpModes.visibility = View.GONE
-        pb.tpAccents.visibility = View.VISIBLE
-        resize()
-    }
-    pb.tpBack.setOnClickListener {
-        pb.tpAccents.visibility = View.GONE
-        pb.tpModes.visibility = View.VISIBLE
-        resize()
     }
     pw.showAsDropDown(anchor, 0, 0, android.view.Gravity.END)
 }

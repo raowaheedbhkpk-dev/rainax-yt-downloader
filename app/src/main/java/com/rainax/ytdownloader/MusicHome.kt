@@ -129,18 +129,7 @@ internal fun MusicHomeScreen(m: MusicHome, state: LazyListState, bottomPad: Int)
         item(key = "moods") { Moods(m) }
         items(m.sections.size, key = { i -> "s$i:" + m.sections[i].title }) { i -> Shelf(m, m.sections[i]) }
         if (m.loading) {
-            items(2, key = { "sk$it" }) {
-                AndroidView(
-                    factory = { c ->
-                        val inf = android.view.LayoutInflater.from(c)
-                        val v = inf.inflate(R.layout.item_music_skeleton, android.widget.FrameLayout(c), false)
-                        val rows = v.findViewById<android.widget.LinearLayout>(R.id.skRows)
-                        repeat(4) { rows.addView(inf.inflate(R.layout.item_music_skeleton_row, rows, false)) }
-                        v
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            items(2, key = { "sk$it" }) { MusicSkeleton() }
         }
     }
 }

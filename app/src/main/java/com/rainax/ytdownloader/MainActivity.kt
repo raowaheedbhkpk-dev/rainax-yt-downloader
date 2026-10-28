@@ -106,8 +106,8 @@ class MainActivity : AppCompatActivity() {
                 video.fullscreen -> video.exitFullscreen()
                 selecting && tab == 1 -> exitSelection()
                 tab == 1 && library.back() -> {}
-                tab == 2 -> b.bottomNav.selectedItemId = R.id.nav_downloads      // Settings -> back to You
-                tab != 0 -> b.bottomNav.selectedItemId = R.id.nav_home
+                tab == 2 -> selectNav(R.id.nav_downloads)      // Settings -> back to You
+                tab != 0 -> selectNav(R.id.nav_home)
                 video.isOpen && !video.minimized -> video.minimize()
                 home.clearPicks() -> {}
                 home.back() -> {}
@@ -170,7 +170,7 @@ class MainActivity : AppCompatActivity() {
             download = { u, t, audio -> showDownloadSheet(listOf(u), preferAudio = audio, knownTitle = t) },
             openChannel = { url, name, avatar ->
                 video.minimize()                     // keeps playing in the mini player
-                if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+                if (tab != 0) selectNav(R.id.nav_home)
                 home.openChannel(url, name, avatar)
             },
             signIn = { onAccountClick() }
@@ -216,32 +216,10 @@ class MainActivity : AppCompatActivity() {
         home.onMenu = { openExplore() }
         home.onTheme = { showThemePopup(it) }
         home.onVoice = { startVoiceSearch() }
-        home.onAllSubs = { b.bottomNav.selectedItemId = R.id.nav_subs }
+        home.onAllSubs = { selectNav(R.id.nav_subs) }
 
-        b.bottomNav.setOnItemSelectedListener {
-            Haptics.tick(b.bottomNav)
-            // a little bounce on the tapped tab (the middle one is the red "+")
-            if (it.itemId == R.id.nav_social) b.navCard.fab?.let { f -> Motion.bounce(f) }
-            else b.bottomNav.findViewById<View>(it.itemId)?.let { item -> Motion.bounce(item) }
-            val chosen = when (it.itemId) {
-                R.id.nav_home -> { showTab(0); true }
-                R.id.nav_shorts -> {
-                    // Shorts open full screen (the tab you were on stays selected), like YouTube
-                    video.minimize()
-                    music.collapse()
-                    ShortsActivity.open(this, 0)
-                    false
-                }
-                R.id.nav_social -> { showTab(3); true }
-                R.id.nav_downloads -> { showTab(1); true }
-                R.id.nav_subs -> { showTab(4); true }
-                else -> false
-            }
-            if (chosen) b.navCard.select(it.itemId)      // the red bar slides over to it
-            chosen
-        }
-        // the red square "+" in the middle of the bar: Add (download from a link)
-        b.navCard.fab?.setOnClickListener { b.bottomNav.selectedItemId = R.id.nav_social }
+        b.updatePill.setContent { RxTheme { UpdatePill(updatePill) } }
+        b.navCard.setContent { RxTheme { BottomBar(nav) { id -> Haptics.tick(b.navCard); nav.tapped = id; nav.tapCount++; selectNav(id) } } }
 
         Ui.noRestore(b.root)        // every page: chips and switches come from the app, not from a replay
         // Anything left in the queue (app or service was killed) continues automatically
@@ -256,12 +234,12 @@ class MainActivity : AppCompatActivity() {
             // Theme switch rebuilds the screen: reopen the video page (the player keeps playing)
             pendingVideo = savedInstanceState.getString("videoUrl")
             val saved = savedInstanceState.getInt("tab", 0)
-            b.bottomNav.selectedItemId = when (saved) {
+            selectNav(when (saved) {
                 1, 2 -> R.id.nav_downloads
                 3 -> R.id.nav_social
                 4 -> R.id.nav_subs
                 else -> R.id.nav_home
-            }
+            })
             if (saved == 2) showTab(2)                     // Settings (opened from You)
         }
 
@@ -313,12 +291,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Tablets / wide screens: the bottom bar keeps a phone-like width, the Home feed uses columns. */
     internal fun fitWideScreen() {
-        // the bottom bar is full width (flat, like YouTube); on wide screens its buttons stay close together
-        val wide = resources.configuration.screenWidthDp >= 600
-        val lp = b.bottomNav.layoutParams as android.widget.FrameLayout.LayoutParams
-        lp.width = if (wide) (560 * resources.displayMetrics.density).toInt() else android.widget.FrameLayout.LayoutParams.MATCH_PARENT
-        lp.gravity = android.view.Gravity.CENTER_HORIZONTAL
-        b.bottomNav.layoutParams = lp
+        // the bottom bar keeps its buttons within a phone-like width by itself (BottomBar)
         if (::home.isInitialized) home.applyColumns()
     }
 
@@ -377,18 +350,13 @@ class MainActivity : AppCompatActivity() {
             signIn.launch(Intent(this, SignInActivity::class.java))
             return
         }
-        val sb = com.rainax.ytdownloader.databinding.SheetAccountBinding.inflate(layoutInflater)
         val dialog = BottomSheetDialog(this)
-        dialog.setContentView(sb.root)
         val p = YtAccount.profile(this)
-        sb.accName.text = p?.name ?: "Signed in"
-        sb.accHandle.text = p?.handle.orEmpty()
-        sb.accHandle.isVisible = !p?.handle.isNullOrBlank()
-        Img.load(sb.accAvatar, p?.avatar, circle = true, widthPx = 200)
-        sb.accSignOut.setOnClickListener {
-            dialog.dismiss()
-            signOut()
+        val view = androidx.compose.ui.platform.ComposeView(this)
+        view.setContent {
+            RxTheme { AccountSheet(p?.name ?: "Signed in", p?.handle, p?.avatar) { dialog.dismiss(); signOut() } }
         }
+        dialog.setContentView(view)
         dialog.show()
     }
 
@@ -595,7 +563,7 @@ class MainActivity : AppCompatActivity() {
         if (c.mediaItemCount > 0 && c.playbackState != androidx.media3.common.Player.STATE_IDLE &&
             id != null && FastExtractor.supports(id) && id != video.url
         ) {
-            if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+            if (tab != 0) selectNav(R.id.nav_home)
             video.follow(c)
         }
         music.sync()
@@ -605,7 +573,7 @@ class MainActivity : AppCompatActivity() {
         if (index != 1 && selecting) exitSelection()
         val old = tab
         tab = index
-        val pages = listOf(hm.root, pl, st, so, sb)
+        val pages = listOf(hm, pl, st, so, sb)
         pages.forEachIndexed { i, page ->
             page.animate().cancel()
             page.alpha = 1f
@@ -645,7 +613,7 @@ class MainActivity : AppCompatActivity() {
         pillHidden = full
         renderUpdatePill(latestTasks)
         // mini music bar: songs loaded, big player closed, no video open
-        b.musicMini.root.isVisible = music.active && !music.expanded && !video.isOpen && !full
+        b.musicMini.isVisible = music.active && !music.expanded && !video.isOpen && !full
         // the banner hides in full screen and comes back after (only once an ad has loaded)
         val mini = video.isOpen && !full && (video.minimized || tab != 0)
         val wasMini = b.miniPlayer.root.isVisible
@@ -669,7 +637,7 @@ class MainActivity : AppCompatActivity() {
     internal fun setupMiniPlayer() {
         val m = b.miniPlayer
         m.root.setOnClickListener {
-            if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+            if (tab != 0) selectNav(R.id.nav_home)
             video.expand()
         }
         m.miniPlay.setOnClickListener {
@@ -816,7 +784,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Home tab with nothing on top (for lists opened from other places). */
     internal fun goHome() {
-        if (tab != 0) b.bottomNav.selectedItemId = R.id.nav_home
+        if (tab != 0) selectNav(R.id.nav_home)
         music.collapse()
     }
 
@@ -847,38 +815,38 @@ class MainActivity : AppCompatActivity() {
 
     /** The bottom bar's You icon: your profile picture when signed in (like YouTube), the person icon otherwise. */
     internal fun updateNavAvatar() {
-        val item = b.bottomNav.menu.findItem(R.id.nav_downloads) ?: return
         val url = if (YtAccount.isSignedIn(this)) YtAccount.profile(this)?.avatar?.takeIf { it.isNotBlank() } else null
-        if (url == null) {
-            if (navAvatarUrl != null) item.setIcon(R.drawable.ic_nav_you)
-            navAvatarUrl = null
-            return
+        navAvatarUrl = url
+        nav.avatar = url
+    }
+
+    /** The bottom bar (Compose, BottomBar.kt). */
+    internal val nav = NavUi()
+
+    /** A place in the bottom bar was chosen (by a tap, or by the app). */
+    internal fun selectNav(id: Int) {
+        val chosen = when (id) {
+            R.id.nav_home -> { showTab(0); true }
+            R.id.nav_shorts -> {
+                // Shorts open full screen (the tab you were on stays selected), like YouTube
+                video.minimize()
+                music.collapse()
+                ShortsActivity.open(this, 0)
+                false
+            }
+            R.id.nav_social -> { showTab(3); true }
+            R.id.nav_downloads -> { showTab(1); true }
+            R.id.nav_subs -> { showTab(4); true }
+            else -> false
         }
-        if (url == navAvatarUrl) return
-        lifecycleScope.launch {
-            val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { Img.bitmap(url, 160) }.getOrNull() }
-                ?: return@launch
-            if (isDestroyed) return@launch
-            val size = (26 * resources.displayMetrics.density).toInt()
-            item.icon = NavAvatarDrawable(bmp, size, ContextCompat.getColor(this@MainActivity, R.color.rx_text))
-            navAvatarUrl = url
-        }
+        if (chosen) nav.selected = id                   // the red bar slides over to it
     }
 
     internal var exploreOpen = false
 
-    /** One place in the side menu. */
-    internal class MenuRow(val label: String, val row: android.widget.LinearLayout, val iconBox: android.widget.FrameLayout,
-                          val icon: ImageView, val text: TextView, val badge: TextView) {
-        /** social sites: their coloured round badge stays as the icon's background */
-        var socialBadge: android.graphics.drawable.Drawable? = null
-    }
-
-    internal val menuRows = mutableListOf<MenuRow>()
-    internal val menuLabels = mutableListOf<TextView>()
+    /** What the side menu shows (Compose, SideMenu.kt). */
+    internal val menu = SideMenuUi()
     private var menuActive = "Home"     // (private: an internal var would clash with setMenuActive())
-    internal var menuText = 0
-    internal var menuIcon = 0
 
     /**
      * The side menu (≡): a floating card in the app's colours (light, dark, AMOLED): header with bell and ✕, your
@@ -886,192 +854,66 @@ class MainActivity : AppCompatActivity() {
      * Closes with ✕, Back, a tap outside, or a swipe to the left.
      */
     internal fun setupExplore() {
-        val e = b.explore
-        val d = resources.displayMetrics.density
-        fun dp(v: Int) = (v * d).toInt()
-        e.exploreScrim.setOnClickListener { closeExplore() }
-        e.menuBell.setOnClickListener { closeExplore(); home.openNotifications() }
-        e.menuProfile.setOnClickListener { closeExplore(); onAccountClick() }
-        e.menuSearch.setOnClickListener {
-            closeExplore()
-            goHome()
-            b.root.postDelayed({ home.openSearch() }, 200)
-        }
-        e.menuClose.setOnClickListener { closeExplore() }
-        menuText = ContextCompat.getColor(this, R.color.rx_text)
-        menuIcon = menuText
-        // the card's colours come from the theme (white, dark grey, or pure black for AMOLED)
-        fun attrColor(a: Int): Int {
-            val tv = android.util.TypedValue()
-            theme.resolveAttribute(a, tv, true)
-            return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
-        }
-        e.explorePanel.background = android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(attrColor(R.attr.rxBg), attrColor(R.attr.rxBg))
-        ).apply {
-            cornerRadius = 2 * d
-            setStroke((1 * d).toInt().coerceAtLeast(1), ContextCompat.getColor(this@MainActivity, R.color.menu_stroke))
-        }
-        e.menuBrand.text = android.text.SpannableStringBuilder("RAINAX ").apply {
-            val start = length
-            append("Tube")
-            setSpan(android.text.style.ForegroundColorSpan(Ui.accent(this@MainActivity)), start, length, 0)
-        }
-        // width: 300dp, or less on small phones (always leaves room to tap outside)
-        e.explorePanel.layoutParams = e.explorePanel.layoutParams.apply {
-            width = minOf((300 * d).toInt(), (resources.displayMetrics.widthPixels * 0.84f).toInt())
-        }
-        // clear of the status bar and the gesture bar
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(e.root) { _, insets ->
-            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            (e.explorePanel.layoutParams as ViewGroup.MarginLayoutParams).apply {
-                topMargin = bars.top + dp(10)
-                bottomMargin = bars.bottom + dp(12)
-                marginStart = bars.left + dp(10)
-            }
-            e.explorePanel.requestLayout()
-            insets
-        }
-        e.root.requestApplyInsets()
-        // swipe left to close: the dark layer fades with the panel
-        e.explorePanel.onDrag = { shown -> e.exploreScrim.alpha = shown.coerceIn(0f, 1f) }
-        e.explorePanel.onSwipedClosed = { closeExplore() }
-
-        var chapter = 0
-        fun section(title: String) {
-            chapter++
-            val tv = TextView(this).apply {
-                text = String.format(java.util.Locale.US, "%02d — %s", chapter, title)      // Cinema chapters
-                textSize = 10f
-                letterSpacing = 0.25f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.rx_gold))
-                setPadding(dp(20), dp(14), dp(12), dp(6))
-            }
-            menuLabels += tv
-            e.exploreList.addView(tv)
-        }
-        fun add(icon: Int, label: String, action: () -> Unit) {
-            val row = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(dp(14), 0, dp(14), 0)
-                isClickable = true
-                isFocusable = true
-                contentDescription = label
-                stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(this@MainActivity, R.animator.rx_press)
-            }
-            val box = android.widget.FrameLayout(this).apply { setBackgroundResource(R.drawable.bg_menu_icon) }
-            val iv = ImageView(this).apply {
-                if (icon != 0) setImageResource(icon)
-                imageTintList = android.content.res.ColorStateList.valueOf(menuIcon)
-            }
-            box.addView(iv, android.widget.FrameLayout.LayoutParams(dp(17), dp(17), android.view.Gravity.CENTER))
-            row.addView(box, android.widget.LinearLayout.LayoutParams(dp(32), dp(32)))
-            val tv = TextView(this).apply {
-                text = label
-                textSize = 14f
-                maxLines = 1
-                setTextColor(menuText)
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.rx_body)
-            }
-            row.addView(tv, android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(14) })
-            val badge = TextView(this).apply {
-                setBackgroundResource(R.drawable.bg_menu_badge)
-                gravity = android.view.Gravity.CENTER
-                textSize = 10f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(android.graphics.Color.WHITE)
-                isVisible = false
-            }
-            row.addView(badge, android.widget.LinearLayout.LayoutParams(dp(20), dp(20)))
-            val r = MenuRow(label, row, box, iv, tv, badge)
-            menuRows += r
-            row.setOnClickListener {
-                setMenuActive(label)
-                // a moment to see the red bar move, then go
-                b.root.postDelayed({ closeExplore(); action() }, 140)
-            }
-            e.exploreList.addView(row, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)))
-        }
-
-        section("MENU")
-        add(R.drawable.ic_nav_home, "Home") { goHome() }
-        add(R.drawable.ic_shorts, "Shorts") { video.minimize(); ShortsActivity.open(this, 0) }
-        add(R.drawable.ic_nav_subs, "Subscriptions") { b.bottomNav.selectedItemId = R.id.nav_subs }
-        add(R.drawable.ic_download, "Downloads") { b.bottomNav.selectedItemId = R.id.nav_downloads }
-        add(R.drawable.ic_history, "History") { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") }
-        add(R.drawable.ic_watch_later, "Watch later") { openHomeList("Watch later", "acc:VLWL") }
-        add(R.drawable.ic_thumb_up, "Liked videos") { openHomeList("Liked videos", "acc:VLLL") }
-        section("DISCOVER")
-        add(R.drawable.ic_music_note, "Music") { goHome(); video.minimize(); home.showMusic() }
-        add(R.drawable.ic_trending, "Trending") { openHomeList("Trending", "q:trending") }
-        add(R.drawable.ic_gaming, "Gaming") { openHomeList("Gaming", "q:gaming") }
-        add(R.drawable.ic_news, "News") { openHomeList("News", "q:news today") }
-        add(R.drawable.ic_sports, "Sports") { openHomeList("Sports", "q:sports highlights") }
-        add(R.drawable.ic_movie, "Movies") { openHomeList("Movies", "q:full movie") }
-        add(R.drawable.ic_podcast, "Podcasts") { openHomeList("Podcasts", "q:podcast") }
-        add(R.drawable.ic_live, "Live") { openHomeList("Live", "q:live now") }
-        section("GENERAL")
-        add(R.drawable.ic_link, "Download from a link") { b.bottomNav.selectedItemId = R.id.nav_social }
-        add(R.drawable.ic_gear, "Settings") {
-            if (tab != 1) b.bottomNav.selectedItemId = R.id.nav_downloads
-            showTab(2)
-        }
-        add(R.drawable.ic_close, "Sign out") { askSignOut() }
-
+        menu.entries = listOf(
+            MenuEntry(R.drawable.ic_nav_home, "Home", "MENU") { goHome() },
+            MenuEntry(R.drawable.ic_shorts, "Shorts", "MENU") { video.minimize(); ShortsActivity.open(this, 0) },
+            MenuEntry(R.drawable.ic_nav_subs, "Subscriptions", "MENU") { selectNav(R.id.nav_subs) },
+            MenuEntry(R.drawable.ic_download, "Downloads", "MENU") { selectNav(R.id.nav_downloads) },
+            MenuEntry(R.drawable.ic_history, "History", "MENU") { openHomeList("History", if (YtAccount.isSignedIn(this)) "acc:FEhistory" else "local:history") },
+            MenuEntry(R.drawable.ic_watch_later, "Watch later", "MENU") { openHomeList("Watch later", "acc:VLWL") },
+            MenuEntry(R.drawable.ic_thumb_up, "Liked videos", "MENU") { openHomeList("Liked videos", "acc:VLLL") },
+            MenuEntry(R.drawable.ic_music_note, "Music", "DISCOVER") { goHome(); video.minimize(); home.showMusic() },
+            MenuEntry(R.drawable.ic_trending, "Trending", "DISCOVER") { openHomeList("Trending", "q:trending") },
+            MenuEntry(R.drawable.ic_gaming, "Gaming", "DISCOVER") { openHomeList("Gaming", "q:gaming") },
+            MenuEntry(R.drawable.ic_news, "News", "DISCOVER") { openHomeList("News", "q:news today") },
+            MenuEntry(R.drawable.ic_sports, "Sports", "DISCOVER") { openHomeList("Sports", "q:sports highlights") },
+            MenuEntry(R.drawable.ic_movie, "Movies", "DISCOVER") { openHomeList("Movies", "q:full movie") },
+            MenuEntry(R.drawable.ic_podcast, "Podcasts", "DISCOVER") { openHomeList("Podcasts", "q:podcast") },
+            MenuEntry(R.drawable.ic_live, "Live", "DISCOVER") { openHomeList("Live", "q:live now") },
+            MenuEntry(R.drawable.ic_link, "Download from a link", "GENERAL") { selectNav(R.id.nav_social) },
+            MenuEntry(R.drawable.ic_gear, "Settings", "GENERAL") {
+                if (tab != 1) selectNav(R.id.nav_downloads)
+                showTab(2)
+            },
+            MenuEntry(R.drawable.ic_close, "Sign out", "GENERAL") { askSignOut() }
+        )
         val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull()
-        e.exploreVersion.text = "RAINAX Tube" + (version?.let { " v$it" } ?: "")
+        menu.version = "RAINAX Tube" + (version?.let { " v$it" } ?: "")
+        val actions = SideMenuActions(
+            close = { closeExplore() },
+            bell = { closeExplore(); home.openNotifications() },
+            profile = { closeExplore(); onAccountClick() },
+            search = {
+                closeExplore()
+                goHome()
+                b.root.postDelayed({ home.openSearch() }, 200)
+            },
+            pick = { e ->
+                setMenuActive(e.label)
+                // a moment to see the red bar move, then go
+                b.root.postDelayed({ closeExplore(); e.action() }, 140)
+            }
+        )
+        b.explore.setContent { RxTheme { SideMenu(menu, actions) } }
         setMenuActive("Home")
     }
 
     /** The red bar moves to [label] (the open place). */
     internal fun setMenuActive(label: String) {
         menuActive = label
-        menuRows.forEach { r ->
-            val on = r.label == label
-            if (on) {
-                r.row.background = ContextCompat.getDrawable(this, R.drawable.bg_menu_active)
-                r.row.background.alpha = 0
-                android.animation.ObjectAnimator.ofInt(r.row.background, "alpha", 0, 255).setDuration(180).start()
-                if (r.socialBadge == null) r.iconBox.background = null
-            } else {
-                r.row.background = null
-                if (r.socialBadge != null) r.iconBox.background = r.socialBadge else r.iconBox.setBackgroundResource(R.drawable.bg_menu_icon)
-            }
-            r.text.setTypeface(r.text.typeface, if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
-            r.text.setTextColor(if (on) android.graphics.Color.WHITE else menuText)
-            r.icon.imageTintList = android.content.res.ColorStateList.valueOf(if (on) android.graphics.Color.WHITE else menuIcon)
-        }
+        menu.active = label
     }
 
     /** Account, open place and badges, fresh each time the menu opens. */
     internal fun refreshMenu() {
-        val e = b.explore
         val signedIn = YtAccount.isSignedIn(this)
         val p = if (signedIn) YtAccount.profile(this) else null
-        e.menuName.text = p?.name?.takeIf { it.isNotBlank() } ?: if (signedIn) "Signed in" else "Not signed in"
-        e.menuAccountHint.text = if (signedIn) "⇄  Switch account" else "Tap to sign in to YouTube"
-        if (p?.avatar != null) {
-            e.menuAvatar.imageTintList = null
-            e.menuAvatar.setPadding(0, 0, 0, 0)
-            Img.load(e.menuAvatar, p.avatar, circle = true, widthPx = 120)
-        } else {
-            Img.load(e.menuAvatar, null)
-            e.menuAvatar.setImageResource(R.drawable.ic_person)
-            val pad = (8 * resources.displayMetrics.density).toInt()
-            e.menuAvatar.setPadding(pad, pad, pad, pad)
-            e.menuAvatar.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.rx_text2))
-        }
-        menuRows.firstOrNull { it.label == "Sign out" }?.row?.isVisible = signedIn
-        listOf("Watch later", "Liked videos").forEach { l -> menuRows.firstOrNull { it.label == l }?.row?.isVisible = signedIn }
-        // downloads in progress: a red count, like the reference's "My List" badge
-        val active = latestTasks.count { it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING }
-        menuRows.firstOrNull { it.label == "Downloads" }?.badge?.let { bd ->
-            bd.isVisible = active > 0
-            bd.text = if (active > 9) "9+" else active.toString()
-        }
+        menu.signedIn = signedIn
+        menu.name = p?.name?.takeIf { it.isNotBlank() } ?: if (signedIn) "Signed in" else "Not signed in"
+        menu.hint = if (signedIn) "⇄  Switch account" else "Tap to sign in to YouTube"
+        menu.avatar = p?.avatar
+        // downloads in progress: a red count
+        menu.downloads = latestTasks.count { it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING }
         setMenuActive(when (tab) {
             1 -> "Downloads"
             2 -> "Settings"
@@ -1083,35 +925,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun openExplore() {
-        val e = b.explore
         if (exploreOpen) return
         exploreOpen = true
         refreshMenu()
-        val d = resources.displayMetrics.density
-        // the card slides in from the side and fades up; its places rise in one after another
-        e.explorePanel.animate().cancel()
-        e.explorePanel.translationX = -(e.explorePanel.layoutParams.width + 40 * d)
-        e.explorePanel.alpha = 0.6f
-        e.root.isVisible = true
-        e.explorePanel.animate().translationX(0f).alpha(1f).setDuration(300)
-            .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start()
-        e.exploreScrim.alpha = 0f
-        e.exploreScrim.animate().alpha(1f).setDuration(240).start()
-        menuRows.filter { it.row.isVisible }.forEachIndexed { i, r ->
-            r.row.alpha = 0f
-            r.row.translationX = -24 * d
-            r.row.animate().alpha(1f).translationX(0f).setStartDelay(60L + i * 18L).setDuration(220).start()
-        }
+        b.explore.isVisible = true
+        menu.opened++
+        menu.open = true
         blurBehindMenu(true)
     }
 
     internal fun closeExplore() {
-        val e = b.explore
         if (!exploreOpen) return
         exploreOpen = false
-        e.exploreScrim.animate().alpha(0f).setDuration(180).start()
-        e.explorePanel.animate().translationX(-(e.explorePanel.width + 40 * resources.displayMetrics.density)).alpha(0.6f).setDuration(200)
-            .withEndAction { if (!exploreOpen) e.root.isVisible = false }.start()
+        menu.open = false
+        b.explore.postDelayed({ if (!exploreOpen) b.explore.isVisible = false }, 230)
         blurBehindMenu(false)
     }
 
@@ -1195,6 +1022,9 @@ class MainActivity : AppCompatActivity() {
 
     /** True in full screen (video, music): the update pill waits. */
     internal var pillHidden = false
+
+    /** The app-update pill above the bottom bar (Compose, BottomBar.kt). */
+    internal val updatePill = UpdatePillUi()
 
     internal var pillPadded = false
 

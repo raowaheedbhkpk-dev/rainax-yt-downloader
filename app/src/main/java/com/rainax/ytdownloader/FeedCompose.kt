@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -131,8 +132,8 @@ class FeedModel(
     var chapters: List<Pair<String, String>> = emptyList()
     var onNeedChapter: ((String) -> Unit)? = null
     var onChapterMore: ((String) -> Unit)? = null
-    var weekStats: (() -> VideoAdapter.WeekStats)? = null
-    internal var week: VideoAdapter.WeekStats? = null
+    var weekStats: (() -> WeekStats)? = null
+    internal var week: WeekStats? = null
         private set
     var moviesId: String? = null
     internal val chapterItems = HashMap<String, List<VideoItem>>()
@@ -269,6 +270,28 @@ class FeedModel(
     }
 }
 
+/** Your week on RAINAX (the magazine's small stats card). */
+class WeekStats(val watchedMs: Long, val videos: Int, val downloads: Int, val topChannel: String?)
+
+/** Up next / Mix: a sheet with the small video rows (the same rows as search results). */
+@Composable
+internal fun UpNextSheet(title: String, sub: String, m: FeedModel) {
+    val rx = LocalRx.current
+    @Suppress("UNUSED_VARIABLE") val v = m.version
+    val list = m.all()
+    Column(Modifier.fillMaxWidth().background(rx.surface)) {
+        Text(title, Modifier.padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 2.dp), color = rx.text, fontSize = 20.sp,
+            fontWeight = FontWeight.Bold, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(sub, Modifier.padding(start = 18.dp, end = 18.dp, bottom = 10.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body)
+        LazyColumn(
+            Modifier.fillMaxWidth().height((LocalConfiguration.current.screenHeightDp * 0.6f).dp)
+                .nestedScroll(androidx.compose.ui.platform.rememberNestedScrollInteropConnection())
+        ) {
+            items(list.size) { i -> SmallVideoRow(m, list[i]) }
+        }
+    }
+}
+
 /** What HomeScreen shows in its list area: one [FeedModel], or grey placeholders. */
 class FeedHost(val view: androidx.compose.ui.platform.ComposeView) {
     var model by mutableStateOf<FeedModel?>(null)
@@ -281,6 +304,10 @@ class FeedHost(val view: androidx.compose.ui.platform.ComposeView) {
         private set
     /** Room at the bottom (the picks bar). */
     var bottomPad by mutableIntStateOf(16)
+    /** Pull to refresh is loading the new list (the film countdown shows). */
+    var refreshing by mutableStateOf(false)
+    /** The Music tab's soft glow at the top, in the playing song's colour (null = none). */
+    var glow by mutableStateOf<Int?>(null)
     internal var riseKey by mutableIntStateOf(0)
     internal var toTop by mutableIntStateOf(0)
     internal var restore by mutableStateOf<Pair<Int, Int>?>(null)
@@ -700,7 +727,7 @@ private fun GridTile(m: FeedModel, item: VideoItem, modifier: Modifier, big: Boo
 
 /** Your week: hours watched, videos, downloads, and your top channel. */
 @Composable
-private fun WeekCard(w: VideoAdapter.WeekStats) {
+private fun WeekCard(w: WeekStats) {
     val rx = LocalRx.current
     val minutes = w.watchedMs / 60_000
     val (num, label) = if (minutes >= 60) String.format(java.util.Locale.US, "%.1f", minutes / 60.0) to "HOURS WATCHED"
@@ -834,23 +861,6 @@ private fun Ticket(m: FeedModel, item: VideoItem) {
                 fontFamily = RxFonts.display, letterSpacing = 0.3.em, maxLines = 1, softWrap = false)
             Text(videoBadge(item), Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp), color = colorResource(R.color.rx_on_picture2),
                 fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-// ---------- placeholders ----------
-
-/** Grey placeholders in the shape of what is coming: the magazine (cover, section, Top 5) or a video list. */
-@Composable
-private fun FeedSkeleton(magazine: Boolean) {
-    val layouts = if (magazine) listOf(R.layout.item_skeleton_cover, R.layout.item_skeleton_section) + List(4) { R.layout.item_skeleton_chart }
-    else List(5) { R.layout.item_skeleton }
-    Column(Modifier.fillMaxSize()) {
-        layouts.forEach { id ->
-            AndroidView(
-                factory = { c -> android.view.LayoutInflater.from(c).inflate(id, FrameLayout(c), false) },
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }

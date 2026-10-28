@@ -389,7 +389,7 @@ private fun EmptyDownloads(act: MainActivity) {
             fontFamily = RxFonts.body, textAlign = TextAlign.Center
         )
         Button(
-            onClick = { act.b.bottomNav.selectedItemId = R.id.nav_home },
+            onClick = { act.selectNav(R.id.nav_home) },
             modifier = Modifier.padding(top = 24.dp).height(48.dp),
             shape = RoundedCornerShape(2.dp),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)

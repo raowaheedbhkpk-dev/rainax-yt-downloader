@@ -46,6 +46,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.ui.viewinterop.AndroidView
 
 /*
@@ -74,6 +80,57 @@ class MusicPageUi {
     var buffered by mutableIntStateOf(0)
     var pos by mutableStateOf("0:00")
     var dur by mutableStateOf("0:00")
+    /** The mini bar: the song's small cover and the bar's colour (the cover's, darker). */
+    var miniArt by mutableStateOf<String?>(null)
+    var miniTone by mutableIntStateOf(0xFF1E1E24.toInt())
+}
+
+class MusicMiniActions(val open: () -> Unit, val play: () -> Unit, val next: () -> Unit, val close: () -> Unit)
+
+/** Mini music bar above the bottom bar (like YouTube Music): tap to open the player; ✕ or swipe sideways to close. */
+@Composable
+internal fun MusicMiniBar(ui: MusicPageUi, a: MusicMiniActions) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val shift = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    var width by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(1) }
+    val drag = androidx.compose.foundation.gestures.rememberDraggableState { d -> scope.launch { shift.snapTo(shift.value + d) } }
+    Box(
+        Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp).height(64.dp)
+            .onSizeChanged { width = it.width.coerceAtLeast(1) }
+            .graphicsLayer {
+                translationX = shift.value
+                alpha = (1f - kotlin.math.abs(shift.value) / width).coerceIn(0.2f, 1f)
+            }
+            .background(Color(ui.miniTone), RoundedCornerShape(2.dp))
+            .draggable(drag, androidx.compose.foundation.gestures.Orientation.Horizontal, onDragStopped = {
+                if (kotlin.math.abs(shift.value) > width * 0.35f) {
+                    shift.animateTo(if (shift.value > 0) width.toFloat() else -width.toFloat(), androidx.compose.animation.core.tween(160))
+                    a.close()
+                    shift.snapTo(0f)
+                } else shift.animateTo(0f, androidx.compose.animation.core.tween(160))
+            })
+            .clickable { a.open() }
+            .semantics { contentDescription = "Music playing. Tap to open the player" }
+    ) {
+        Row(Modifier.fillMaxSize().padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(46.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
+                SquareArt(ui.miniArt, Modifier.fillMaxSize(), 200)
+            }
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(ui.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+                Text(ui.artist, color = colorResource(R.color.rx_on_picture2), fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+            }
+            IconBox(if (ui.playing) R.drawable.ic_p_pause else R.drawable.ic_p_play, "Play or pause", 48.dp, 12.dp) { a.play() }
+            IconBox(R.drawable.ic_p_next, "Next", 48.dp, 12.dp) { a.next() }
+            IconBox(R.drawable.ic_close, "Stop the music", 44.dp, 12.dp) { a.close() }
+        }
+        // how far the song is
+        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 14.dp).fillMaxWidth().height(2.dp).background(Color(0x33FFFFFF))) {
+            Box(Modifier.fillMaxWidth(ui.part / 1000f).height(2.dp).background(Color.White))
+        }
+    }
 }
 
 class MusicPageActions(

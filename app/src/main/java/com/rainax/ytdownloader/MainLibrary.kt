@@ -255,62 +255,49 @@ internal fun MainActivity.checkUpdateReady(all: List<DownloadTask>) {
  * "v12.3 READY" with INSTALL. Paused or failed: CONTINUE / RETRY. Nothing to show: hidden.
  */
 internal fun MainActivity.renderUpdatePill(all: List<DownloadTask>) {
-    val pill = b.updatePill
+    val pill = updatePill
     val t = all.firstOrNull {
         it.format.startsWith(AppUpdater.TASK_PREFIX) &&
             it.format.removePrefix(AppUpdater.TASK_PREFIX).let { v -> AppUpdater.isNewer(this, v) && v != AppPrefs.badRelease(this) }
     }
-    if (t == null || pillHidden) { pill.isVisible = false; padForPill(false); return }
+    if (t == null || pillHidden) { pill.shown = false; b.updatePill.isVisible = false; padForPill(false); return }
     val v = t.format.removePrefix(AppUpdater.TASK_PREFIX)
     val done = t.status == Status.DONE
-    b.updateDot.isVisible = done
-    b.updateRing.isVisible = !done
+    pill.done = done
     when (t.status) {
         Status.DONE -> {
-            b.updateTitle.text = "v$v READY"
-            b.updateSub.text = "Tap Install to update"
-            b.updateAction.text = "Install"
+            pill.title = "v$v READY"
+            pill.sub = "Tap Install to update"
+            pill.action = "Install"
         }
         Status.PAUSED, Status.FAILED -> {
-            b.updateRing.isIndeterminate = false
-            b.updateRing.setProgressCompat(t.progress.coerceIn(0, 100), false)
-            b.updateTitle.text = "v$v · ${t.progress.coerceIn(0, 100)}%"
-            b.updateSub.text = if (t.status == Status.FAILED) "Couldn't get the update" else "Update paused"
-            b.updateAction.text = if (t.status == Status.FAILED) "Retry" else "Continue"
+            pill.progress = t.progress.coerceIn(0, 100)
+            pill.title = "v$v · ${t.progress.coerceIn(0, 100)}%"
+            pill.sub = if (t.status == Status.FAILED) "Couldn't get the update" else "Update paused"
+            pill.action = if (t.status == Status.FAILED) "Retry" else "Continue"
         }
         else -> {
             val known = t.progress in 1..100
-            if (b.updateRing.isIndeterminate != !known) {
-                b.updateRing.visibility = View.INVISIBLE                  // (the indicator can't switch while shown)
-                b.updateRing.isIndeterminate = !known
-                b.updateRing.visibility = View.VISIBLE
-            }
-            if (known) b.updateRing.setProgressCompat(t.progress, true)
-            b.updateTitle.text = if (known) "v$v · ${t.progress}%" else "v$v"
-            b.updateSub.text = when (t.status) {
+            pill.progress = if (known) t.progress else -1
+            pill.title = if (known) "v$v · ${t.progress}%" else "v$v"
+            pill.sub = when (t.status) {
                 Status.WAITING -> t.message.ifBlank { "Waiting for the internet" }
                 Status.QUEUED -> "Update queued…"
                 else -> "Getting the update…"
             }
-            b.updateAction.text = "Install"
+            pill.action = "Install"
         }
     }
-    val actionOn = done || t.status == Status.PAUSED || t.status == Status.FAILED
-    b.updateAction.alpha = if (actionOn) 1f else 0.35f
-    val act = {
+    pill.actionOn = done || t.status == Status.PAUSED || t.status == Status.FAILED
+    pill.onAction = {
         when (t.status) {
             Status.DONE -> installUpdate(t)
             Status.PAUSED, Status.FAILED -> DownloadService.send(this, DownloadService.ACTION_RESUME, t.id)
             else -> message("The update is still downloading. Install shows when it's ready")
         }
     }
-    b.updateAction.setOnClickListener { act() }
-    pill.setOnClickListener { act() }
-    pill.contentDescription = "${b.updateTitle.text}. ${b.updateSub.text}"
-    if (!pill.isVisible) {
-        pill.isVisible = true
-        Motion.popIn(pill)
-    }
+    pill.shown = true
+    b.updatePill.isVisible = true
     padForPill(true)
 }
 
@@ -320,14 +307,7 @@ internal fun MainActivity.renderYouBadge(all: List<DownloadTask>) {
         !it.format.startsWith(AppUpdater.TASK_PREFIX) &&
             (it.status == Status.RUNNING || it.status == Status.QUEUED || it.status == Status.WAITING)
     }
-    if (n == 0) { b.bottomNav.removeBadge(R.id.nav_downloads); return }
-    b.bottomNav.getOrCreateBadge(R.id.nav_downloads).apply {
-        number = n
-        maxNumber = 99
-        backgroundColor = Ui.accent(this@renderYouBadge)
-        badgeTextColor = android.graphics.Color.WHITE
-        isVisible = true
-    }
+    nav.badge = n
 }
 
 /**
@@ -340,7 +320,7 @@ internal fun MainActivity.padForPill(on: Boolean) {
     val px = (64 * resources.displayMetrics.density).toInt()
     Ui.pillExtra = if (on) px else 0
     val extra = px * (if (on) 1 else -1)
-    val pages = b.homePage.root.parent as? android.view.ViewGroup ?: return
+    val pages = b.homePage.parent as? android.view.ViewGroup ?: return
     fun walk(v: View) {
         if (v is androidx.recyclerview.widget.RecyclerView || v is androidx.core.widget.NestedScrollView || v is android.widget.ScrollView) {
             v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, (v.paddingBottom + extra).coerceAtLeast(0))

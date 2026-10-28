@@ -58,16 +58,6 @@ interface PreviewList {
     fun cards(): List<PreviewCard>
 }
 
-/** A RecyclerView of [VideoAdapter] rows. */
-private class RecyclerPreviewList(val rv: RecyclerView) : PreviewList {
-    override val view: View get() = rv
-    override val idle get() = rv.scrollState == RecyclerView.SCROLL_STATE_IDLE
-    override val padTop get() = rv.paddingTop
-    override val padBottom get() = rv.paddingBottom
-    override fun cards(): List<PreviewCard> =
-        (0 until rv.childCount).mapNotNull { rv.getChildViewHolder(rv.getChildAt(it)) as? VideoAdapter.Row }
-}
-
 /**
  * A Compose list (Home's feed): its video cards register themselves while they are on screen, and the list
  * tells when it scrolls and rests.
@@ -76,7 +66,8 @@ class ComposePreviewList(override val view: View) : PreviewList {
     private val shown = LinkedHashSet<PreviewCard>()
     override var idle = true
         private set
-    override val padTop get() = 0
+    /** Room covered at the top (Home's top bar sits in the same view). */
+    override var padTop = 0
     override var padBottom = 0
     override fun cards(): List<PreviewCard> = shown.filter { it.thumbBox.isAttachedToWindow }
 
@@ -143,33 +134,6 @@ object FeedAutoplay {
             if (p.isPlaying) { lastUrl = url; lastPos = pos }
             main.postDelayed(this, 500)
         }
-    }
-
-    /** Lets [rv] (a list of big video cards) play its videos while it rests. */
-    fun attach(rv: RecyclerView) {
-        if (app == null) app = rv.context.applicationContext
-        lists.removeAll { it.get() == null || (it.get() as? RecyclerPreviewList)?.rv === rv }
-        val list = RecyclerPreviewList(rv)
-        lists += WeakReference(list)
-        rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) schedule() else main.removeCallbacks(pick)
-            }
-
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (hostList === list) verify()
-                if (recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE) schedule()      // moved by the app
-            }
-        })
-        rv.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
-            override fun onChildViewAttachedToWindow(view: View) {
-                if (rv.scrollState == RecyclerView.SCROLL_STATE_IDLE) schedule()          // new videos shown
-            }
-
-            override fun onChildViewDetachedFromWindow(view: View) {}
-        })
-        // rows are bound again after list changes: keep the video with its card
-        rv.viewTreeObserver.addOnGlobalLayoutListener { if (hostList === list) verify() }
     }
 
     /** A Compose list (see [ComposePreviewList]). */

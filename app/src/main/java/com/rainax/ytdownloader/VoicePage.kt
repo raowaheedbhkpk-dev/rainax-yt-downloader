@@ -1,6 +1,5 @@
 package com.rainax.ytdownloader
 
-import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -8,8 +7,48 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowInsetsControllerCompat
-import com.rainax.ytdownloader.databinding.PageVoiceBinding
 
 /**
  * RAINAX's own voice search screen: a dark page with a status pill (Listening / Searching / Try again),
@@ -18,8 +57,17 @@ import com.rainax.ytdownloader.databinding.PageVoiceBinding
  */
 class VoicePage(private val act: AppCompatActivity, private val onResult: (String) -> Unit) {
 
-    private val b = PageVoiceBinding.inflate(act.layoutInflater)
-    private val dialog = Dialog(act, R.style.Theme_Rainax_Page)
+    /** Drawn with Jetpack Compose (it replaced page_voice.xml); the glowing orb stays its own drawn view. */
+    private val dialog = androidx.activity.ComponentDialog(act, R.style.Theme_Rainax_Page)
+    private val orb = VoiceOrb(act)
+    private var status by mutableStateOf("LISTENING")
+    private var words by mutableStateOf<String?>(null)
+    private var wordsColor by mutableIntStateOf(R.color.voice_hint)
+    private var hint by mutableStateOf("")
+    private var lang by mutableStateOf("")
+    private var dotBlink by mutableStateOf(true)
+    private var dotDim by mutableStateOf(false)
+    private var bump by mutableIntStateOf(0)
     private var recognizer: SpeechRecognizer? = null
     private var listening = false
     private var done = false
@@ -31,17 +79,16 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
     private val hintTick = object : Runnable {
         override fun run() {
             if (!dialog.isShowing) return
-            b.vHint.animate().alpha(0f).setDuration(220).withEndAction {
-                hintIndex = (hintIndex + 1) % hints.size
-                b.vHint.text = "Try saying  “${hints[hintIndex]}”"
-                b.vHint.animate().alpha(1f).setDuration(260).start()
-            }.start()
-            b.vHint.postDelayed(this, 2800)
+            hintIndex = (hintIndex + 1) % hints.size
+            hint = "Try saying  “${hints[hintIndex]}”"
+            orb.postDelayed(this, 2800)
         }
     }
 
     fun show() {
-        dialog.setContentView(b.root)
+        val view = ComposeView(act)
+        view.setContent { RxTheme { Page() } }
+        dialog.setContentView(view)
         dialog.window?.let { w ->
             w.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
             // the page's own colour (night or warm paper), with dark icons on the light one
@@ -54,14 +101,12 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
                 isAppearanceLightNavigationBars = !night
             }
         }
-        b.vClose.setOnClickListener { dialog.dismiss() }
-        b.vMic.setOnClickListener { if (listening) recognizer?.stopListening() else start() }
         hintIndex = (hints.indices).random()
-        b.vHint.text = "Try saying  “${hints[hintIndex]}”"
-        b.vLang.text = java.util.Locale.getDefault().displayLanguage.takeIf { it.isNotBlank() }?.let { "Listening in $it" }.orEmpty()
+        hint = "Try saying  “${hints[hintIndex]}”"
+        lang = java.util.Locale.getDefault().displayLanguage.takeIf { it.isNotBlank() }?.let { "Listening in $it" }.orEmpty()
         dialog.setOnDismissListener { release() }
         dialog.show()
-        b.vHint.postDelayed(hintTick, 2800)
+        orb.postDelayed(hintTick, 2800)
         start()
     }
 
@@ -84,7 +129,7 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
     private val listener = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) { state(STATE_LISTENING) }
         override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) { b.vOrb.setLevel(rmsdB) }
+        override fun onRmsChanged(rmsdB: Float) { orb.setLevel(rmsdB) }
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() { state(STATE_THINKING) }
         override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -101,7 +146,7 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
             setText(text)
             state(STATE_THINKING)
             // a short look at what was heard, then search it
-            b.root.postDelayed({
+            orb.postDelayed({
                 if (dialog.isShowing) { dialog.dismiss(); onResult(text) }
             }, 450)
         }
@@ -119,50 +164,99 @@ class VoicePage(private val act: AppCompatActivity, private val onResult: (Strin
         }
     }
 
-    private fun color(id: Int) = androidx.core.content.ContextCompat.getColor(act, id)
-
     private fun setText(text: String?) {
         if (text.isNullOrBlank()) {
-            b.vText.text = "Speak now…"
-            b.vText.setTextColor(color(R.color.voice_hint))
+            words = null
+            wordsColor = R.color.voice_hint
         } else {
-            b.vText.text = text
-            b.vText.setTextColor(color(R.color.voice_text))
+            words = text
+            wordsColor = R.color.voice_text
         }
     }
 
     private fun state(s: Int, error: String? = null) {
         listening = s == STATE_LISTENING
-        b.vDot.animate().cancel()
         when (s) {
             STATE_LISTENING -> {
-                b.vStatus.text = "LISTENING"
-                b.vOrb.mode = VoiceOrb.MODE_LISTENING
-                blinkDot()
+                status = "LISTENING"
+                orb.mode = VoiceOrb.MODE_LISTENING
+                dotBlink = true
+                dotDim = false
             }
             STATE_THINKING -> {
-                b.vStatus.text = "SEARCHING"
-                b.vOrb.mode = VoiceOrb.MODE_THINKING
-                b.vDot.alpha = 1f
+                status = "SEARCHING"
+                orb.mode = VoiceOrb.MODE_THINKING
+                dotBlink = false
+                dotDim = false
             }
             else -> {
-                b.vStatus.text = "TAP THE MIC TO TRY AGAIN"
-                b.vOrb.mode = VoiceOrb.MODE_IDLE
-                b.vDot.alpha = 0.4f
-                b.vText.text = error ?: "Didn't catch that"
-                b.vText.setTextColor(color(R.color.voice_text2))
-                Motion.bounce(b.vMic)
+                status = "TAP THE MIC TO TRY AGAIN"
+                orb.mode = VoiceOrb.MODE_IDLE
+                dotBlink = false
+                dotDim = true
+                words = error ?: "Didn't catch that"
+                wordsColor = R.color.voice_text2
+                bump++
             }
         }
     }
 
-    private fun blinkDot() {
-        b.vDot.animate().alpha(if (b.vDot.alpha > 0.6f) 0.25f else 1f).setDuration(520)
-            .withEndAction { if (listening && dialog.isShowing) blinkDot() }.start()
+    // ---------- drawing ----------
+
+    @Composable
+    private fun Page() {
+        val text = colorResource(R.color.voice_text)
+        Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_voice_page).systemBarsPadding()) {
+            Box(Modifier.padding(8.dp).size(48.dp).clickable { dialog.dismiss() }.semantics { contentDescription = "Close" }.padding(12.dp)) {
+                Image(painterResource(R.drawable.ic_close), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(text))
+            }
+            // ● Listening / Searching / Tap to try again
+            Row(
+                Modifier.align(Alignment.TopCenter).padding(top = 14.dp).height(36.dp).rxDrawableBg(R.drawable.bg_voice_status)
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val blink = remember { Animatable(1f) }
+                LaunchedEffect(dotBlink, dotDim) {
+                    if (dotBlink) while (true) {
+                        blink.animateTo(0.25f, tween(520)); blink.animateTo(1f, tween(520))
+                    } else blink.snapTo(if (dotDim) 0.4f else 1f)
+                }
+                Box(Modifier.size(8.dp).alpha(blink.value).rxDrawableBg(R.drawable.bg_voice_dot))
+                Text(status, Modifier.padding(start = 8.dp), color = text, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.06.em, fontFamily = RxFonts.body)
+            }
+            // your words, live
+            Text(
+                (words ?: "Speak now…").uppercase(),
+                Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 120.dp),
+                color = colorResource(wordsColor), fontSize = 32.sp, lineHeight = 36.sp, fontFamily = RxFonts.display,
+                textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis
+            )
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(hint, Modifier.padding(horizontal = 32.dp), color = colorResource(R.color.voice_text2), fontSize = 14.sp,
+                    fontFamily = RxFonts.body, textAlign = TextAlign.Center)
+                Box(Modifier.padding(top = 8.dp).size(280.dp), contentAlignment = Alignment.Center) {
+                    AndroidView(factory = { (orb.parent as? android.view.ViewGroup)?.removeView(orb); orb }, modifier = Modifier.fillMaxSize())
+                    val press = remember { Animatable(1f) }
+                    LaunchedEffect(bump) { if (bump > 0) { press.animateTo(1.12f, tween(120)); press.animateTo(1f, tween(220)) } }
+                    Box(
+                        Modifier.size(84.dp).scale(press.value).clip(CircleShape).rxDrawableBg(R.drawable.bg_nav_fab)
+                            .clickable { if (listening) recognizer?.stopListening() else start() }
+                            .semantics { contentDescription = "Microphone" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(painterResource(R.drawable.ic_mic), null, Modifier.size(34.dp), colorFilter = ColorFilter.tint(Color.White))
+                    }
+                }
+                if (lang.isNotEmpty()) Text(lang, Modifier.padding(top = 4.dp), color = colorResource(R.color.voice_muted), fontSize = 12.sp,
+                    fontFamily = RxFonts.body)
+            }
+        }
     }
 
     private fun release() {
-        b.vHint.removeCallbacks(hintTick)
+        orb.removeCallbacks(hintTick)
         listening = false
         runCatching { recognizer?.cancel() }
         runCatching { recognizer?.destroy() }

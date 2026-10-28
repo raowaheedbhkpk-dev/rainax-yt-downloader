@@ -20,7 +20,8 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.rainax.ytdownloader.databinding.PageVideoBinding
 import kotlinx.coroutines.CancellationException
@@ -46,6 +47,8 @@ class VideoScreen(
 ) {
     /** What the page under the player shows (Compose, VideoPage.kt). */
     private val vp = VideoPageUi()
+    /** The buttons over the video and the bars under the list (Compose, VideoChrome.kt). */
+    private val vc = VideoChromeUi()
     private val related = FeedModel(true, { open(it.url, it.title, it.uploader, thumb = it.thumb) }, { download(it.url, it.title, false) })
 
     /** The video shown (null when the page is closed). */
@@ -86,26 +89,34 @@ class VideoScreen(
         )
         vb.videoList.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         vb.videoList.setContent { RxTheme { VideoPageScreen(vp, related, actions) } }
-        vb.videoClose.setOnClickListener { minimize() }
+        val chromeActions = VideoChromeActions(
+            close = { minimize() },
+            settings = { showPlayerMenu() },
+            lock = { setLocked(true) },
+            unlock = { setLocked(false) },
+            closeStats = { showStats(false) },
+            picksView = { PicksSheet.show(act) { downloadMany(it) } },
+            picksClear = { Picks.clear() },
+            picksDownload = {
+                val list = Picks.all()
+                if (list.isNotEmpty()) {
+                    Picks.clear()
+                    downloadMany(list)
+                }
+            },
+            next = { showUpNext() }
+        )
+        vb.videoOverlay.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        vb.videoOverlay.setContent { RxTheme { VideoOverlay(vc, chromeActions) } }
+        vb.videoBottom.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        vb.videoBottom.setContent { RxTheme { VideoBottomBars(vc, chromeActions) } }
         vb.playerView.setFullscreenButtonClickListener { full -> setFullscreen(full) }
-        vb.videoSettings.setOnClickListener { showPlayerMenu() }
         // the top buttons (close, quality) appear and hide together with the player controls
-        vb.playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v -> vb.playerTop.visibility = v })
-        vb.vNextBar.setOnClickListener { showUpNext() }
+        vb.playerView.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v -> vc.topShown = v == View.VISIBLE })
         // + on Up next videos: pick several and download them together (the same picks as on Home)
         related.onPick = { Picks.toggle(it); if (Picks.has(it.url) && Picks.size <= Picks.SAMPLE) vm.warm(it.url) }
         related.isPicked = { Picks.has(it) }
         Picks.listen { showPicks() }
-        vb.vPickClear.setOnClickListener { Picks.clear() }
-        vb.vPickCount.setOnClickListener { PicksSheet.show(act) { downloadMany(it) } }
-        vb.vPickDownload.setOnClickListener {
-            val list = Picks.all()
-            if (list.isEmpty()) return@setOnClickListener
-            Picks.clear()
-            downloadMany(list)
-        }
-        vb.playerUnlock.setOnClickListener { setLocked(false) }
-        vb.videoLock.setOnClickListener { setLocked(true) }
         setupGestures()
     }
 
@@ -114,10 +125,9 @@ class VideoScreen(
 
     private fun showPicks() {
         val n = Picks.size
-        vb.vPickBar.isVisible = n > 0 && !fullscreen
-        vb.vPickCount.text = if (n == 1) "1 selected · View" else "$n selected · View"
-        vb.vPickDownload.text = if (n > 1) "Download $n" else "Download"
-        if (n > 0) vb.vNextBar.isVisible = false else showNextBar(details)
+        vc.picks = n
+        vc.picksShown = n > 0 && !fullscreen
+        if (n > 0) vc.nextTitle = null else showNextBar(details)
         related.redraw()
     }
 
@@ -147,57 +157,35 @@ class VideoScreen(
         val here = youtubeId(d?.url)
         // the Mix's next video once it's loaded (like YouTube), else the first Up next video
         val next = mix?.firstOrNull { it.seconds >= 0 && youtubeId(it.url) != here } ?: d?.related?.firstOrNull { it.seconds > 0 }
-        vb.vNextBar.isVisible = next != null && !fullscreen && Picks.size == 0
-        if (next == null || d == null) return
-        vb.vNextTitle.text = "Next: " + next.title
-        vb.vNextFrom.text = "Mix - " + d.title
+        if (next == null || d == null || fullscreen || Picks.size > 0) { vc.nextTitle = null; return }
+        vc.nextTitle = "Next: " + next.title
+        vc.nextFrom = "Mix - " + d.title
     }
 
     private fun showUpNext() {
         val d = details ?: return
         if (d.related.isEmpty()) return
         val dialog = BottomSheetDialog(act)
-        val box = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
-        val dp = act.resources.displayMetrics.density
-        val head = android.widget.TextView(act).apply {
-            text = "Mix - " + d.title
-            setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text))
-            textSize = 20f
-            setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setPadding((18 * dp).toInt(), (18 * dp).toInt(), (18 * dp).toInt(), (2 * dp).toInt())
-        }
-        val sub = android.widget.TextView(act).apply {
-            text = "Mixes are playlists made for you"
-            setTextColor(androidx.core.content.ContextCompat.getColor(act, R.color.rx_text2))
-            textSize = 14f
-            setPadding((18 * dp).toInt(), 0, (18 * dp).toInt(), (10 * dp).toInt())
-        }
-        val list = androidx.recyclerview.widget.RecyclerView(act)
-        list.layoutManager = LinearLayoutManager(act)
-        val rows = VideoAdapter(false, {
+        val rows = FeedModel(false, {
             dialog.dismiss()
             open(it.url, it.title, it.uploader, thumb = it.thumb)
         }, { download(it.url, it.title, false) })
-        rows.onPick = { Picks.toggle(it); if (Picks.has(it.url) && Picks.size <= Picks.SAMPLE) vm.warm(it.url); rows.notifyDataSetChanged() }
+        rows.onPick = { Picks.toggle(it); if (Picks.has(it.url) && Picks.size <= Picks.SAMPLE) vm.warm(it.url); rows.redraw() }
         rows.isPicked = { Picks.has(it) }
-        list.adapter = rows
         // YouTube's Mix (a different list from Up next); Up next only when YouTube has no Mix for this video
         rows.submit(mix?.takeIf { it.isNotEmpty() } ?: d.related.filter { !it.isPlaylist && !it.isChannel })
+        var sub by androidx.compose.runtime.mutableStateOf(if (mix == null) "Loading the Mix…" else "Mixes are playlists made for you")
         if (mix == null) {
-            sub.text = "Loading the Mix…"
             act.lifecycleScope.launch {
                 mixJob?.join()
                 if (!dialog.isShowing) return@launch
-                sub.text = "Mixes are playlists made for you"
+                sub = "Mixes are playlists made for you"
                 mix?.takeIf { it.isNotEmpty() }?.let { rows.submit(it) }
             }
         }
-        box.addView(head)
-        box.addView(sub)
-        box.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (act.resources.displayMetrics.heightPixels * 0.6).toInt()))
-        dialog.setContentView(box)
+        val view = androidx.compose.ui.platform.ComposeView(act)
+        view.setContent { RxTheme { UpNextSheet("Mix - " + d.title, sub, rows) } }
+        dialog.setContentView(view)
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         dialog.show()
     }
@@ -209,7 +197,6 @@ class VideoScreen(
     private val seekReset = Runnable { seekSum = 0; seekSide = 0 }
     private var swipeMode = 0                   // 0 none yet, 1 brightness, 2 volume, -1 not ours
     private var swipeStart = 0f
-    private val hudHide = Runnable { vb.gestureHud.animate().alpha(0f).setDuration(250).withEndAction { vb.gestureHud.isVisible = false }.start() }
 
     /**
      * On the video:
@@ -272,16 +259,9 @@ class VideoScreen(
         val dur = p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
         p.seekTo((p.currentPosition + side * 10_000L).coerceIn(0L, dur))
         Haptics.tick(vb.playerView)
-        val hint = if (side < 0) vb.seekHintBack else vb.seekHintFwd
-        val other = if (side < 0) vb.seekHintFwd else vb.seekHintBack
-        other.alpha = 0f
-        hint.text = if (side < 0) "«  ${seekSum}s" else "${seekSum}s  »"
-        hint.animate().cancel()
-        hint.alpha = 1f
-        hint.scaleX = 0.9f; hint.scaleY = 0.9f
-        hint.animate().scaleX(1f).scaleY(1f).setDuration(120).withEndAction {
-            hint.animate().alpha(0f).setStartDelay(550).setDuration(250).start()
-        }.start()
+        vc.seekSide = side
+        vc.seekText = if (side < 0) "«  ${seekSum}s" else "${seekSum}s  »"
+        vc.seekTick++
         vb.playerView.removeCallbacks(seekReset)
         vb.playerView.postDelayed(seekReset, 800)
     }
@@ -326,14 +306,9 @@ class VideoScreen(
 
     private fun showHud(mode: Int, value: Float) {
         val pct = (value * 100).toInt()
-        vb.gestureIcon.setImageResource(if (mode == 1) R.drawable.ic_brightness else if (pct == 0) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
-        vb.gestureBar.setProgressCompat(pct, false)
-        vb.gestureText.text = "$pct%"
-        vb.gestureHud.removeCallbacks(hudHide)
-        vb.gestureHud.animate().cancel()
-        vb.gestureHud.alpha = 1f
-        vb.gestureHud.isVisible = true
-        vb.gestureHud.postDelayed(hudHide, 700)
+        vc.hudMode = mode
+        vc.hudPct = pct
+        vc.hudTick++
     }
 
     // ---------- Lock screen ----------
@@ -343,11 +318,11 @@ class VideoScreen(
     /** Lock screen: the player ignores touches (for kids, or in a pocket) until Unlock is tapped. */
     private fun setLocked(on: Boolean) {
         locked = on
-        vb.playerLock.isVisible = on
+        vc.locked = on
         if (on) {
             vb.playerView.hideController()
             vb.playerView.useController = false
-            vb.playerTop.visibility = View.GONE
+            vc.topShown = false
         } else {
             vb.playerView.useController = true
             vb.playerView.showController()
@@ -496,12 +471,12 @@ class VideoScreen(
         /** Auto quality: show the quality the player chose right now (it changes with the network). */
         override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
             if (autoMode && videoSize.height > 0) {
-                vb.qualityBadge.text = "AUTO " + qualityLabel(videoSize.height, 0, short = false).trim().substringBefore(' ')
+                vc.quality = "AUTO " + qualityLabel(videoSize.height, 0, short = false).trim().substringBefore(' ')
             }
         }
 
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-            vb.playerLoading.isVisible = false
+            vc.loading = false
         }
     }
 
@@ -513,8 +488,8 @@ class VideoScreen(
     }
 
     private fun showPlaceholder(on: Boolean) {
-        vb.playerThumb.isVisible = on
-        vb.playerLoading.isVisible = on
+        vc.thumbShown = on
+        vc.loading = on
     }
 
     private fun currentTitle(): String? = details?.title ?: vp.title.takeIf { it.isNotBlank() }
@@ -546,7 +521,7 @@ class VideoScreen(
         vp.upNextShown = false
         vp.chapters = emptyList()
         vp.markedChapter = -1
-        vb.vNextBar.isVisible = false
+        vc.nextTitle = null
         if (locked && !resume) setLocked(false)          // the next song/video keeps the lock
         vp.subscribeShown = false
         vp.rateShown = false
@@ -565,7 +540,7 @@ class VideoScreen(
             p.currentMediaItem?.mediaMetadata?.extras?.getBoolean(EXTRA_VIDEO) == true
         if (!keep) {
             p?.pause()
-            Img.load(vb.playerThumb, thumb ?: youtubeThumb(clean), widthPx = 960)
+            vc.thumb = thumb ?: youtubeThumb(clean)
             showPlaceholder(true)
         } else {
             showPlaceholder(false)
@@ -586,7 +561,7 @@ class VideoScreen(
             } catch (e: Exception) {
                 if (this@VideoScreen.url != clean) return@launch
                 vp.loading = false
-                vb.playerLoading.isVisible = false
+                vc.loading = false
                 val text = friendlyError(e.message ?: "Couldn't open this video")
                 showError(if (text == NO_INTERNET) text else text + "\nYou can still try Download.")
             }
@@ -724,8 +699,7 @@ class VideoScreen(
         val adaptive = AppPrefs.playerQuality(act) <= 0 && src.dash != null
         val chosen = if (src.audio != null && !adaptive) pick(d) else null
         autoMode = adaptive
-        vb.qualityBadge.text = if (adaptive) "AUTO" else chosen?.let { qualityLabel(it.height, it.fps, short = true) }.orEmpty()
-        vb.qualityBadge.isVisible = adaptive || chosen != null
+        vc.quality = if (adaptive) "AUTO" else chosen?.let { qualityLabel(it.height, it.fps, short = true) }
         if (adaptive) RxMediaSourceFactory.putManifest(d.url, src.dash!!)
         val pictureUrl = chosen?.url ?: src.video
         val uri = when {
@@ -800,7 +774,7 @@ class VideoScreen(
         related.submit(d.related)
         vp.upNextShown = d.related.isNotEmpty()
         showNextBar(d)
-        vb.playerTitle.text = d.title
+        vc.title = d.title
         showChapterMarks(d)
         onChanged()                            // the mini player shows the real title
     }
@@ -929,44 +903,34 @@ class VideoScreen(
      */
     private fun showDescription() {
         val d = details ?: return
-        val sb = com.rainax.ytdownloader.databinding.SheetDescriptionBinding.inflate(act.layoutInflater)
         val dialog = BottomSheetDialog(act)
-        dialog.setContentView(sb.root)
-        sb.descTitle.text = d.title
-        sb.descLikes.text = if (likeCount > 0) YtCatalog.count(likeCount) else if (d.likes > 0) YtCatalog.count(d.likes) else "–"
-        sb.descViews.text = if (d.views >= 0) YtCatalog.count(d.views) else "–"
-        sb.descDate.text = d.date ?: d.uploaded ?: "–"
-
-        // chapters, with the one playing now marked
-        if (d.chapters.size >= 2) {
-            sb.descChapterBox.isVisible = true
-            val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: -1L
-            val now = if (pos >= 0) d.chapters.indexOfLast { it.startMs <= pos } else -1
-            d.chapters.forEachIndexed { i, c ->
-                val row = act.layoutInflater.inflate(R.layout.item_desc_chapter, sb.descChapters, false)
-                row.findViewById<android.widget.TextView>(R.id.chTime).text = YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }
-                row.findViewById<android.widget.TextView>(R.id.chTitle).text = c.title.ifBlank { "Chapter ${i + 1}" }
-                row.findViewById<View>(R.id.chNow).isVisible = i == now
-                row.setOnClickListener { seekHere(c.startMs, dialog) }
-                sb.descChapters.addView(row)
+        val pos = player()?.takeIf { it.currentMediaItem?.mediaId == d.url }?.currentPosition ?: -1L
+        val now = if (pos >= 0) d.chapters.indexOfLast { it.startMs <= pos } else -1
+        val chapters = if (d.chapters.size < 2) emptyList() else d.chapters.mapIndexed { i, c ->
+            DescChapter(YtCatalog.duration(c.startMs / 1000).ifBlank { "0:00" }, c.title.ifBlank { "Chapter ${i + 1}" }, i == now, c.startMs)
+        }
+        val desc = d.description.trim()
+        val text = if (desc.isEmpty()) androidx.compose.ui.text.AnnotatedString("No description") else richDescription(desc, dialog)
+        val view = androidx.compose.ui.platform.ComposeView(act)
+        view.setContent {
+            RxTheme {
+                DescriptionSheet(
+                    d.title,
+                    if (likeCount > 0) YtCatalog.count(likeCount) else if (d.likes > 0) YtCatalog.count(d.likes) else "–",
+                    if (d.views >= 0) YtCatalog.count(d.views) else "–",
+                    d.date ?: d.uploaded ?: "–",
+                    chapters, text
+                ) { ms -> seekHere(ms, dialog) }
             }
         }
-
-        val desc = d.description.trim()
-        if (desc.isEmpty()) {
-            sb.descText.text = "No description"
-        } else {
-            sb.descText.text = richDescription(desc, dialog)
-            sb.descText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
-            sb.descText.highlightColor = android.graphics.Color.TRANSPARENT
-        }
+        dialog.setContentView(view)
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = true
         dialog.show()
     }
 
     /** The description with every link and timestamp handled inside the app (see [openDescLink]). */
-    private fun richDescription(desc: String, dialog: BottomSheetDialog): CharSequence {
+    private fun richDescription(desc: String, dialog: BottomSheetDialog): androidx.compose.ui.text.AnnotatedString {
         val html = desc.contains('<')
         val text = android.text.SpannableStringBuilder(
             if (html) HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT) else desc
@@ -981,25 +945,29 @@ class VideoScreen(
                 text.setSpan(android.text.style.URLSpan("rxseek:$sec"), m.range.first, m.range.last + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        val primary = Ui.accent(act)
+        val primary = androidx.compose.ui.graphics.Color(Ui.accent(act))
+        val plain = text.toString()
+        val out = androidx.compose.ui.text.AnnotatedString.Builder(plain)
         for (span in text.getSpans(0, text.length, android.text.style.URLSpan::class.java)) {
             val start = text.getSpanStart(span)
             val end = text.getSpanEnd(span)
+            if (start < 0 || end > plain.length || start >= end) continue
             val link = span.url
             val isTime = link.startsWith("rxseek:") || seekSeconds(link) != null && youtubeId(absolute(link)) == youtubeId(url)
-            text.removeSpan(span)
-            text.setSpan(object : android.text.style.ClickableSpan() {
-                override fun onClick(widget: View) = openDescLink(link, dialog)
-                override fun updateDrawState(ds: android.text.TextPaint) {
-                    ds.color = primary
-                    ds.isUnderlineText = false
-                    ds.isFakeBoldText = isTime                  // timestamps stand out like on YouTube
-                }
-            }, start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            // every link and timestamp is handled inside the app; timestamps stand out like on YouTube
+            val style = androidx.compose.ui.text.SpanStyle(
+                color = primary,
+                fontWeight = if (isTime) androidx.compose.ui.text.font.FontWeight.Bold else null
+            )
+            out.addLink(
+                androidx.compose.ui.text.LinkAnnotation.Clickable(link, androidx.compose.ui.text.TextLinkStyles(style)) { openDescLink(link, dialog) },
+                start, end
+            )
         }
-        return text
+        return out.toAnnotatedString()
     }
 
+    /** "https://..." or "/watch?v=..." as a full address. */
     private fun absolute(link: String): String = when {
         link.startsWith("//") -> "https:$link"
         link.startsWith("/") -> "https://www.youtube.com$link"
@@ -1144,7 +1112,7 @@ class VideoScreen(
             Opt("Loop video", if (looping) "On" else "Off", R.drawable.ic_repeat_one) { setLoop(!looping) },
             Opt("Ambient mode", if (AppPrefs.ambientMode(act)) "On" else "Off", R.drawable.ic_set_palette) { setAmbient(!AppPrefs.ambientMode(act)) },
             Opt("Cinema mode", if (AppPrefs.cinemaMode(act)) "On" else "Off", R.drawable.ic_film_reel) { setCinema(!AppPrefs.cinemaMode(act)) },
-            Opt("Stats for nerds", if (vb.statsText.isVisible) "On" else null, R.drawable.ic_equalizer) { showStats(!vb.statsText.isVisible) },
+            Opt("Stats for nerds", if (vc.stats != null) "On" else null, R.drawable.ic_equalizer) { showStats(vc.stats == null) },
             Opt("Lock screen", null, R.drawable.ic_lock) { setLocked(true) },
             Opt("Share", null, R.drawable.ic_share) { share() }
         ))
@@ -1196,17 +1164,18 @@ class VideoScreen(
 
     private val statsTick = object : Runnable {
         override fun run() {
-            if (!vb.statsText.isVisible) return
-            vb.statsText.text = statsText()
-            vb.statsText.postDelayed(this, 1000)
+            if (!statsOn) return
+            vc.stats = statsText()
+            vb.root.postDelayed(this, 1000)
         }
     }
 
+    private var statsOn = false
+
     private fun showStats(on: Boolean) {
-        vb.statsText.removeCallbacks(statsTick)
-        vb.statsText.isVisible = on
-        vb.statsText.setOnClickListener { showStats(false) }
-        if (on) statsTick.run()
+        vb.root.removeCallbacks(statsTick)
+        statsOn = on
+        if (on) statsTick.run() else vc.stats = null
     }
 
     private fun statsText(): String {
@@ -1459,12 +1428,12 @@ class VideoScreen(
         lp.weight = if (on) 1f else 0f
         vb.playerBox.layoutParams = lp
         vb.videoList.isVisible = !on
-        vb.videoClose.isVisible = !on
-        vb.videoLock.isVisible = on
+        vc.closeShown = !on
+        vc.lockShown = on
         if (!on) resetBrightness()
-        vb.playerTitle.visibility = if (on) View.VISIBLE else View.INVISIBLE
-        vb.playerTitle.text = currentTitle().orEmpty()
-        if (on) { vb.vNextBar.isVisible = false; vb.vPickBar.isVisible = false } else showPicks()
+        vc.titleShown = on
+        vc.title = currentTitle().orEmpty()
+        if (on) { vc.nextTitle = null; vc.picksShown = false } else showPicks()
         act.requestedOrientation =
             if (on) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         val ctl = WindowCompat.getInsetsController(act.window, act.window.decorView)

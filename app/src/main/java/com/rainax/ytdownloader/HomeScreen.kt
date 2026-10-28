@@ -16,8 +16,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.chip.Chip
-import com.rainax.ytdownloader.databinding.PageHomeBinding
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -34,7 +32,8 @@ import org.schabi.newpipe.extractor.Page
  */
 class HomeScreen(
     private val act: AppCompatActivity,
-    private val hm: PageHomeBinding,
+    /** Home's page: top bar, chips, the lists and the overlay, all Jetpack Compose in this one view. */
+    private val hm: androidx.compose.ui.platform.ComposeView,
     private val vm: MainViewModel,
     private val openVideo: (VideoItem) -> Unit,
     private val download: (VideoItem) -> Unit,
@@ -45,7 +44,7 @@ class HomeScreen(
     /** List keys where For you is showing popular videos (more pages come from the popular list). */
     private val popularFallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     /** The video lists and the Music tab (Compose, FeedCompose.kt / MusicHome.kt). */
-    private val feed = FeedHost(hm.feedCompose)
+    private val feed = FeedHost(hm)
     /** The top bars, chips, suggestions, error and picks bar (Compose, HomeTop.kt). */
     private val chrome = HomeChrome()
     /** Autoplay in feed for Home's lists. */
@@ -77,8 +76,12 @@ class HomeScreen(
     private var channelSubscribed: Boolean? = null
     /** The channel tab shown ("Videos", "Shorts"…); null until the channel's first page came. */
     private var channelTab: String? = null
-    private val channelHeader = com.rainax.ytdownloader.databinding.ItemChannelHeaderBinding.inflate(act.layoutInflater)
-    private val channelAdapter = FeedModel(false, { open(it) }, { download(it) }).also { it.header = channelHeader.root }
+    /** A channel's banner, name, Subscribe and tabs (Compose, ChannelHeaderUi.kt): the top of its list. */
+    private val chUi = ChannelHeaderUi()
+    private val channelHeaderView = androidx.compose.ui.platform.ComposeView(act).apply {
+        setContent { RxTheme { ChannelHeader(chUi, { toggleChannelSubscribe() }, { label -> pickChannelTab(label) }) } }
+    }
+    private val channelAdapter = FeedModel(false, { open(it) }, { download(it) }).also { it.header = channelHeaderView }
 
     private val bigAdapter = FeedModel(true, { open(it) }, { download(it) }).also {
         it.hero = true
@@ -104,10 +107,7 @@ class HomeScreen(
     )
     private var musicSeenVersion = -1
     /** Soft glow at the top of the Music tab, in the colour of the song playing (like YouTube Music). */
-    private val musicGlow = android.graphics.drawable.GradientDrawable(
-        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-        intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(Ui.accent(act), 0x30), android.graphics.Color.TRANSPARENT)
-    )
+    private var musicGlow = androidx.core.graphics.ColorUtils.setAlphaComponent(Ui.accent(act), 0x30)
     /**
      * A list opened from the side menu, the bell or the You tab (title bar with Back):
      * "acc:<YouTube list>" (needs the account), "q:<topic search>" or "local:history".
@@ -142,7 +142,7 @@ class HomeScreen(
             val w = WatchHistory.week(act)
             val since = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
             val dl = TaskRepository.tasks.value.count { it.status == Status.DONE && it.createdAt >= since && !it.format.startsWith(AppUpdater.TASK_PREFIX) }
-            VideoAdapter.WeekStats(w.watchedMs, w.videos, dl, w.topChannel)
+            WeekStats(w.watchedMs, w.videos, dl, w.topChannel)
         }
         bigAdapter.onNeedChapter = { id -> loadChapter(id) }
         bigAdapter.onChapterMore = { id -> openTab(id) }
@@ -159,7 +159,7 @@ class HomeScreen(
         }
         val cached = vm.feedCache["tab:$id"]
         if (cached != null) {
-            hm.root.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
+            hm.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
             return
         }
         act.lifecycleScope.launch {
@@ -171,7 +171,7 @@ class HomeScreen(
                 null
             }
             if (res != null && res.items.isNotEmpty()) vm.feedCache["tab:$id"] = res.items to res.next
-            hm.root.post { bigAdapter.setChapter(id, pick(res?.items.orEmpty())) }
+            hm.post { bigAdapter.setChapter(id, pick(res?.items.orEmpty())) }
         }
     }
 
@@ -204,8 +204,7 @@ class HomeScreen(
         if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
         // the Music tab's rows or a video list, with the Music tab's soft glow behind it
         if (isMusic) feed.showMusic(musicHome) else feed.show(adapter)
-        val bg = if (isMusic) musicGlow else null
-        if (hm.feedCompose.background !== bg) hm.feedCompose.background = bg
+        feed.glow = if (isMusic) musicGlow else null
         FeedAutoplay.refresh()
     }
     private fun fillSearch(text: String) {
@@ -216,7 +215,7 @@ class HomeScreen(
 
     private fun removeRecent(q: String) {
         AppPrefs.removeSearch(act, q)
-        Haptics.tick(hm.root)
+        Haptics.tick(hm)
         suggest(chrome.search)
         Notify.show(act, "Removed from recent searches")
     }
@@ -249,14 +248,10 @@ class HomeScreen(
         shelf.openAllSubs = { onAllSubs() }
         tabs = computeTabs()
         updateAccountIcon()
-        hm.root.isFocusableInTouchMode = true
+        hm.isFocusableInTouchMode = true
         applyColumns()
-        hm.feedCompose.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        hm.feedCompose.setContent { RxTheme { FeedScreen(feed) } }
         feed.onNearEnd = { load(reset = false) }
         FeedAutoplay.attach(feed.preview)
-        // pull to refresh only when the list showing is at its top
-        hm.feedRefresh.setOnChildScrollUpCallback { _, _ -> feed.canScrollUp() }
         chrome.dark = Ui.isDark(act)
         val actions = HomeChromeActions(
             menu = { onMenu() },
@@ -285,26 +280,8 @@ class HomeScreen(
                 }
             }
         )
-        hm.homeTop.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        hm.homeTop.setContent { RxTheme { HomeTopBar(chrome, actions) } }
-        hm.homeOverlay.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        hm.homeOverlay.setContent { RxTheme { HomeOverlay(chrome, actions) } }
-
-        // pull down: fresh list (not the saved one)
-        // the round spinner is hidden: a film countdown shows instead (see countdown())
-        hm.feedRefresh.setColorSchemeColors(android.graphics.Color.TRANSPARENT)
-        hm.feedRefresh.setProgressBackgroundColorSchemeColor(android.graphics.Color.TRANSPARENT)
-        hm.feedRefresh.setOnRefreshListener {
-            countdown()
-            if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
-            if (!isMusic && bigAdapter.magazine) {                    // the magazine's chapters come fresh too
-                (MAG_CHAPTERS.map { it.second } + MAG_MOVIES).forEach { vm.feedCache.remove("tab:$it") }
-                bigAdapter.clearChapters()
-            }
-            if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
-            load(reset = true, pulled = true)
-        }
-        channelHeader.chSubscribe.setOnClickListener { toggleChannelSubscribe() }
+        hm.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        hm.setContent { RxTheme { HomePage(chrome, actions, feed) { pulled() } } }
 
         // + on every video: pick several, then download them together
         listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter, specialAdapter).forEach { a ->
@@ -316,6 +293,20 @@ class HomeScreen(
         buildTabs()
         applyListAdapter()
         load(reset = true)
+    }
+
+    /** Pull down: a fresh list (not the saved one); a film countdown shows while it loads. */
+    private fun pulled() {
+        run {
+            feed.refreshing = true
+            if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
+            if (!isMusic && bigAdapter.magazine) {                    // the magazine's chapters come fresh too
+                (MAG_CHAPTERS.map { it.second } + MAG_MOVIES).forEach { vm.feedCache.remove("tab:$it") }
+                bigAdapter.clearChapters()
+            }
+            if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
+            load(reset = true, pulled = true)
+        }
     }
 
     /** A chip was chosen: that tab (Home) or kind of result (search). */
@@ -637,18 +628,19 @@ class HomeScreen(
         channel = null
         channelSubscribed = null
         channelTab = null
-        channelHeader.chTabs.removeAllViews()
-        channelHeader.chSubscribe.isVisible = true
+        chUi.tabs = emptyList()
+        chUi.tab = null
+        chUi.subscribeShown = true
         chrome.title = name.orEmpty()
         chrome.titleDownload = false
         chrome.bar = 2
         chrome.chipsShown = false
-        channelHeader.chHeadName.text = name.orEmpty()
-        channelHeader.chHeadMeta.text = ""
-        channelHeader.chHeadDesc.isVisible = false
-        Img.load(channelHeader.chHeadAvatar, avatar, circle = true, widthPx = 200)
-        Img.load(channelHeader.chBanner, null)
-        Ui.subscribeButton(channelHeader.chSubscribe, false)
+        chUi.name = name.orEmpty()
+        chUi.meta = ""
+        chUi.desc = ""
+        chUi.avatar = avatar
+        chUi.banner = null
+        chUi.subscribed = false
         vm.feedCache.keys.removeAll { it.startsWith("ch:$url:") }      // the header comes with the first page
         applyListAdapter()
         load(reset = true)
@@ -657,37 +649,21 @@ class HomeScreen(
     private fun fillChannel(d: ChannelDetails) {
         channel = d
         chrome.title = d.name
-        channelHeader.chHeadName.text = d.name
-        channelHeader.chHeadMeta.text = if (d.subscribers >= 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
-        channelHeader.chHeadDesc.text = d.description
-        channelHeader.chHeadDesc.isVisible = d.description.isNotBlank()
+        chUi.name = d.name
+        chUi.meta = if (d.subscribers >= 0) YtCatalog.count(d.subscribers) + " subscribers" else ""
+        chUi.desc = d.description
         // (keep the picture already shown when YouTube's answer has none)
-        if (d.avatar != null) Img.load(channelHeader.chHeadAvatar, d.avatar, circle = true, widthPx = 200)
-        Img.load(channelHeader.chBanner, d.banner, widthPx = 1080)
+        if (d.avatar != null) chUi.avatar = d.avatar
+        chUi.banner = d.banner
         // your own channel: no Subscribe button (like YouTube)
         val me = if (YtAccount.isSignedIn(act)) YtAccount.profile(act) else null
         val handle = me?.handle?.trim()?.removePrefix("@")?.takeIf { it.isNotBlank() }
         val own = me != null && ((handle != null && d.url.contains("@$handle", true)) || me.name.equals(d.name, true))
-        channelHeader.chSubscribe.isVisible = !own
+        chUi.subscribeShown = !own
         // Videos / Shorts / Live / Playlists
         channelTab = d.tab
-        channelHeader.chTabs.setOnCheckedStateChangeListener(null)
-        channelHeader.chTabs.removeAllViews()
-        d.tabs.forEach { label ->
-            val chip = act.layoutInflater.inflate(R.layout.item_chip, channelHeader.chTabs, false) as Chip
-            chip.id = View.generateViewId()
-            chip.text = label
-            chip.tag = label
-            channelHeader.chTabs.addView(chip)
-            if (label == d.tab) chip.isChecked = true
-        }
-        channelHeader.chTabs.isVisible = d.tabs.size > 1
-        channelHeader.chTabs.setOnCheckedStateChangeListener { group, ids ->
-            val label = ids.firstOrNull()?.let { group.findViewById<View>(it)?.tag as? String } ?: return@setOnCheckedStateChangeListener
-            if (label == channelTab || channelUrl != d.url) return@setOnCheckedStateChangeListener
-            channelTab = label
-            load(reset = true)
-        }
+        chUi.tabs = d.tabs
+        chUi.tab = d.tab
         if (own) return
         val id = d.id
         if (id != null && YtAccount.isSignedIn(act)) {
@@ -695,9 +671,18 @@ class HomeScreen(
                 val sub = withContext(Dispatchers.IO) { runCatching { YtAccount.channelSubscribed(id) }.getOrNull() }
                 if (channel?.id != id) return@launch
                 channelSubscribed = sub
-                Ui.subscribeButton(channelHeader.chSubscribe, sub == true)
+                chUi.subscribed = sub == true
             }
         }
+    }
+
+    /** Videos / Shorts / Live / Playlists on a channel's page. */
+    private fun pickChannelTab(label: String) {
+        val d = channel ?: return
+        if (label == channelTab || channelUrl != d.url) return
+        channelTab = label
+        chUi.tab = label
+        load(reset = true)
     }
 
     private fun toggleChannelSubscribe() {
@@ -708,12 +693,12 @@ class HomeScreen(
         val id = channel?.id ?: return
         val now = channelSubscribed == true
         channelSubscribed = !now
-        Ui.subscribeButton(channelHeader.chSubscribe, !now)
+        chUi.subscribed = !now
         act.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { YtAccount.subscribe(id, !now) }.isSuccess }
             if (!ok) {
                 channelSubscribed = now
-                Ui.subscribeButton(channelHeader.chSubscribe, now)
+                chUi.subscribed = now
                 Notify.show(act, "Couldn't change the subscription. Try again")
             }
             vm.feedCache.keys.removeAll { it.startsWith("tab:acc:") }
@@ -757,7 +742,8 @@ class HomeScreen(
         android.graphics.Color.colorToHSV(c, hsv)
         val glow = if (hsv[1] < 0.1f) Ui.accent(act)
         else android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1].coerceAtMost(0.8f), 0.9f))
-        musicGlow.colors = intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(glow, 0x38), android.graphics.Color.TRANSPARENT)
+        musicGlow = androidx.core.graphics.ColorUtils.setAlphaComponent(glow, 0x38)
+        if (isMusic) feed.glow = musicGlow
     }
 
     /** The song playing in the Music player (its cover in the rows shows the equalizer). */
@@ -806,7 +792,7 @@ class HomeScreen(
         val local = if (mood == null) listenAgain(recent) else null
         vm.musicCache[key]?.let {
             musicHome.submit(listOfNotNull(local) + it, false)
-            hm.feedRefresh.isRefreshing = false
+            feed.refreshing = false
             applyListAdapter()
             return
         }
@@ -824,7 +810,7 @@ class HomeScreen(
                             if (items.isNotEmpty()) {
                                 results[i] = MusicSection(row.title, items, row.kind)
                                 musicHome.submit(listOfNotNull(local) + results.filterNotNull(), true)
-                                hm.feedRefresh.isRefreshing = false
+                                feed.refreshing = false
                             }
                         } catch (e: CancellationException) {
                             throw e
@@ -834,7 +820,7 @@ class HomeScreen(
                     }
                 }
             }
-            hm.feedRefresh.isRefreshing = false
+            feed.refreshing = false
             val list = results.filterNotNull()
             musicHome.submit(listOfNotNull(local) + list, false)
             if (list.isEmpty()) showError(failed?.message ?: "Couldn't load music. Check your internet")
@@ -865,7 +851,7 @@ class HomeScreen(
             chrome.error = null
             val cached = vm.feedCache[cacheKey()]
             if (cached != null) {
-                hm.feedRefresh.isRefreshing = false
+                feed.refreshing = false
                 // the saved list (after a theme / accent change the screen is rebuilt and shows it at once):
                 // set the magazine, shelf and adapter first, or Home fell back to the old "Top pick" layout
                 applyListAdapter()
@@ -942,47 +928,23 @@ class HomeScreen(
                 vm.feedCache[key] = a.all() to next
                 chrome.loading = false
                 applyListAdapter()
-                hm.feedRefresh.isRefreshing = false
+                feed.refreshing = false
                 if (reset) feed.scrollToTop()
                 if (reset && res.items.isEmpty()) showError(if (q != null) "No results for \"$q\"" else emptyText(sp ?: tabId))
                 // a short page that doesn't fill the screen can't be scrolled: load the next one by itself
-                if (added > 0 && next != null) hm.root.postDelayed({
+                if (added > 0 && next != null) hm.postDelayed({
                     if (loadJob?.isActive != true && !isMusic && !feed.canScrollDown()) load(reset = false)
                 }, 300)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 chrome.loading = false
-                hm.feedRefresh.isRefreshing = false
+                feed.refreshing = false
                 applyListAdapter()
                 a.loadingMore = false
                 if (reset || a.count == 0) showError(e.message ?: "Couldn't load. Check your internet")
             }
         }
-    }
-
-    /** Pull to refresh: 3 · 2 · 1 like an old film leader, round and round until the new list is in. */
-    private fun countdown() {
-        val v = hm.feedCountdown
-        if (v.isVisible) return
-        v.isVisible = true
-        v.alpha = 0f
-        v.animate().alpha(1f).setDuration(150).start()
-        var n = 3
-        val tick = object : Runnable {
-            override fun run() {
-                if (!hm.feedRefresh.isRefreshing) {
-                    v.animate().alpha(0f).setDuration(180).withEndAction { v.isVisible = false }.start()
-                    return
-                }
-                v.text = n.toString()
-                v.scaleX = 1.25f; v.scaleY = 1.25f
-                v.animate().scaleX(1f).scaleY(1f).setDuration(260).start()
-                n = if (n == 1) 3 else n - 1
-                v.postDelayed(this, 520)
-            }
-        }
-        v.post(tick)
     }
 
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
