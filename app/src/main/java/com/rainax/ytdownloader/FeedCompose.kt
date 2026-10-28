@@ -226,7 +226,7 @@ class FeedModel(
         }
         if (magazine && n >= 9 && items.take(9).none { it.isChannel }) {
             var chapterNo = 0
-            fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t) }
+            fun label(t: String): String { chapterNo++; return String.format(java.util.Locale.US, "%02d — %s", chapterNo, t.uppercase()) }
             video(0, COVER)
             if (header != null && headerEarly) raw += "h" to { k -> Slot.Header(k) }
             label("Today").let { l -> raw += "s:$l" to { k -> Slot.Section(l, "Top 5 right now", k) } }
@@ -464,13 +464,13 @@ private fun RoundButton(icon: Int, label: String, tint: Color, size: Int, pad: I
 private fun SectionHead(label: String, title: String, onMore: (() -> Unit)?) {
     val rx = LocalRx.current
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 10.dp)) {
-        Text(label, color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+        Text(label, color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
         Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, color = rx.text, fontSize = 22.sp, fontFamily = RxFonts.display)
+            Text(title.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display)
             Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(1.dp).background(rx.divider))
             if (onMore != null) {
-                Text("More", Modifier.height(36.dp).clickable(onClick = onMore).padding(horizontal = 4.dp, vertical = 10.dp),
-                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+                Text("MORE", Modifier.height(36.dp).clickable(onClick = onMore).padding(horizontal = 4.dp, vertical = 10.dp),
+                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
             }
         }
     }
@@ -484,7 +484,7 @@ private fun SmallVideoRow(m: FeedModel, item: VideoItem) {
     val rx = LocalRx.current
     val view = LocalView.current
     Row(Modifier.fillMaxWidth().openAndHold(m, item, view).padding(horizontal = 12.dp, vertical = 7.dp)) {
-        Box(Modifier.size(168.dp, 94.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+        Box(Modifier.size(168.dp, 94.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 360)
             Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.BottomEnd).padding(5.dp))
             WatchBar(item, Modifier.align(Alignment.BottomStart))
@@ -546,9 +546,9 @@ private fun HeroCard(m: FeedModel, item: VideoItem) {
             Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.TopEnd).padding(12.dp))
             WatchBar(item, Modifier.align(Alignment.BottomStart))
             Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 18.dp)) {
-                Text("Top pick", Modifier.rxDrawableBg(R.drawable.bg_hero_tag).padding(horizontal = 8.dp, vertical = 3.dp),
-                    color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
-                Text(item.title, Modifier.padding(top = 10.dp), color = Color.White, fontSize = 32.sp, lineHeight = 33.sp,
+                Text("TOP PICK", Modifier.rxDrawableBg(R.drawable.bg_hero_tag).padding(horizontal = 8.dp, vertical = 3.dp),
+                    color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+                Text(item.title.uppercase(), Modifier.padding(top = 10.dp), color = Color.White, fontSize = 32.sp, lineHeight = 33.sp,
                     fontFamily = RxFonts.display, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.padding(end = 8.dp).size(22.dp).clip(CircleShape).rxDrawableBg(R.drawable.bg_avatar)) {
@@ -565,18 +565,18 @@ private fun HeroCard(m: FeedModel, item: VideoItem) {
                 }
                 Row(Modifier.padding(top = 16.dp).fillMaxWidth()) {
                     Button(
-                        onClick = { m.onOpen(item) }, modifier = Modifier.weight(1f).height(50.dp).padding(end = 10.dp), shape = RoundedCornerShape(12.dp),
+                        onClick = { m.onOpen(item) }, modifier = Modifier.weight(1f).height(50.dp).padding(end = 10.dp), shape = RoundedCornerShape(2.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
                     ) {
                         Image(painterResource(R.drawable.ic_play), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.Black))
-                        Text("Play", Modifier.padding(start = 8.dp), letterSpacing = 0.01.em, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                        Text("PLAY", Modifier.padding(start = 8.dp), letterSpacing = 0.1.em, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                     }
                     Button(
-                        onClick = { m.onDownload(item) }, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(12.dp),
+                        onClick = { m.onDownload(item) }, modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(2.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = Color.White)
                     ) {
                         Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
-                        Text("Download", Modifier.padding(start = 8.dp), letterSpacing = 0.01.em, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                        Text("DOWNLOAD", Modifier.padding(start = 8.dp), letterSpacing = 0.1.em, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                     }
                 }
             }
@@ -590,15 +590,15 @@ private fun CoverCard(m: FeedModel, item: VideoItem) {
     val rx = LocalRx.current
     val view = LocalView.current
     Column(Modifier.fillMaxWidth().openAndHold(m, item, view).padding(bottom = 8.dp)) {
-        Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb_big)) {
+        Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb_big)) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 1080)
             Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.BottomEnd).padding(8.dp))
             WatchBar(item, Modifier.align(Alignment.BottomStart))
         }
-        Text(listOf("Cover story", item.uploader).filter { it.isNotBlank() }.joinToString(" · "),
+        Text(listOf("Cover story", item.uploader).filter { it.isNotBlank() }.joinToString(" · ").uppercase(),
             Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp), color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            letterSpacing = 0.01.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(item.title, Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp), color = rx.text, fontSize = 32.sp, lineHeight = 34.sp,
+            letterSpacing = 0.2.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(item.title.uppercase(), Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp), color = rx.text, fontSize = 32.sp, lineHeight = 34.sp,
             fontFamily = RxFonts.display, maxLines = 3, overflow = TextOverflow.Ellipsis)
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 10.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(metaShort(item), Modifier.weight(1f), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 1)
@@ -623,7 +623,7 @@ private fun WideCard(m: FeedModel, item: VideoItem) {
         Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp).fillMaxWidth().background(rx.card).openAndHold(m, item, view).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(124.dp, 70.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb_big)) {
+        Box(Modifier.size(124.dp, 70.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb_big)) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 360)
             Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.BottomEnd).padding(4.dp), small = true)
         }
@@ -649,10 +649,10 @@ private fun ChartRow(m: FeedModel, item: VideoItem, place: Int) {
         val first = place == 1
         Text(
             place.toString(), Modifier.width(44.dp).semantics { contentDescription = "Number $place" },
-            color = if (first) rx.accentText else rx.text, fontSize = 34.sp, fontFamily = RxFonts.display,
+            color = if (first) rx.accentText else rx.text, fontSize = 44.sp, fontFamily = RxFonts.display,
             style = if (first) TextStyle.Default else TextStyle(drawStyle = TextStroke(width = 1.5f * density))
         )
-        Box(Modifier.size(112.dp, 63.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb_big)) {
+        Box(Modifier.size(112.dp, 63.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb_big)) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 360)
             Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.BottomEnd).padding(4.dp), small = true)
         }
@@ -681,13 +681,13 @@ private fun EditorsGrid(m: FeedModel, list: List<VideoItem>) {
 @Composable
 private fun GridTile(m: FeedModel, item: VideoItem, modifier: Modifier, big: Boolean) {
     val view = LocalView.current
-    Box(modifier.clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb_big).openAndHold(m, item, view)) {
+    Box(modifier.clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb_big).openAndHold(m, item, view)) {
         RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = if (big) 720 else 480)
         Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_hero_scrim))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(if (big) 12.dp else 9.dp)) {
-            Text(item.uploader, color = colorResource(R.color.rx_cinema_gold), fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                letterSpacing = 0.01.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (big) Text(item.title, Modifier.padding(top = 3.dp), color = Color.White, fontSize = 20.sp, lineHeight = 22.sp,
+            Text(item.uploader.uppercase(), color = colorResource(R.color.rx_cinema_gold), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                letterSpacing = 0.18.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (big) Text(item.title.uppercase(), Modifier.padding(top = 3.dp), color = Color.White, fontSize = 20.sp, lineHeight = 22.sp,
                 fontFamily = RxFonts.display, maxLines = 4, overflow = TextOverflow.Ellipsis)
             else Text(item.title, Modifier.padding(top = 3.dp), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold,
                 fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -709,14 +709,14 @@ private fun WeekCard(w: VideoAdapter.WeekStats) {
         Modifier.padding(start = 16.dp, end = 16.dp, top = 26.dp).fillMaxWidth().background(rx.card).padding(16.dp)
             .semantics { contentDescription = "Your week: $num ${label.lowercase()}, ${w.videos} videos, ${w.downloads} downloads" }
     ) {
-        Text("Your week on RAINAX", color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+        Text("YOUR WEEK ON RAINAX", color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
         Box(Modifier.padding(top = 10.dp).size(44.dp, 3.dp).background(rx.accent))
         Row(Modifier.fillMaxWidth().padding(top = 14.dp)) {
             listOf(Triple(num, label, rx.text), Triple(w.videos.toString(), "VIDEOS", rx.text), Triple(w.downloads.toString(), "DOWNLOADS", rx.accentText))
                 .forEach { (n, l, c) ->
                     Column(Modifier.weight(1f)) {
-                        Text(n, color = c, fontSize = 26.sp, fontFamily = RxFonts.display)
-                        Text(l, Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+                        Text(n, color = c, fontSize = 32.sp, fontFamily = RxFonts.display)
+                        Text(l, Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
                     }
                 }
         }
@@ -746,13 +746,13 @@ private fun ChapterRow(m: FeedModel, s: FeedModel.Slot.Chapter) {
 @Composable
 private fun Poster(m: FeedModel, item: VideoItem) {
     val view = LocalView.current
-    Box(Modifier.padding(horizontal = 4.dp).size(132.dp, 196.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb_big).openAndHold(m, item, view)) {
+    Box(Modifier.padding(horizontal = 4.dp).size(132.dp, 196.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb_big).openAndHold(m, item, view)) {
         RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 480)
         Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_hero_scrim))
         Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.TopEnd).padding(6.dp), small = true)
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(9.dp)) {
             Text(item.title, color = Color.White, fontSize = 14.sp, lineHeight = 16.sp, fontFamily = RxFonts.display, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            Text(item.uploader, Modifier.padding(top = 4.dp), color = colorResource(R.color.rx_cinema_text2), fontSize = 12.sp, fontFamily = RxFonts.body,
+            Text(item.uploader, Modifier.padding(top = 4.dp), color = colorResource(R.color.rx_cinema_text2), fontSize = 10.sp, fontFamily = RxFonts.body,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -768,11 +768,11 @@ private fun MoviesBand(m: FeedModel, s: FeedModel.Slot.Movies) {
     val films = got.orEmpty().let { all -> all.filter { it.seconds >= 3000 }.let { f -> if (f.size >= 3) f else all } }
     Column(Modifier.padding(top = 26.dp).fillMaxWidth().background(colorResource(R.color.rx_cinema_deep)).padding(vertical = 14.dp)) {
         Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(6.dp).rxDrawableBg(R.drawable.bg_marquee_bulbs))
-        Text(s.label, Modifier.fillMaxWidth().padding(top = 14.dp), color = colorResource(R.color.rx_on_picture2), fontSize = 12.sp,
-            fontWeight = FontWeight.Bold, letterSpacing = 0.01.em, textAlign = TextAlign.Center)
+        Text(s.label, Modifier.fillMaxWidth().padding(top = 14.dp), color = colorResource(R.color.rx_on_picture2), fontSize = 10.sp,
+            fontWeight = FontWeight.Bold, letterSpacing = 0.3.em, textAlign = TextAlign.Center)
         Text(
-            "NOW SHOWING", Modifier.fillMaxWidth().padding(top = 2.dp), textAlign = TextAlign.Center, letterSpacing = 0.01.em,
-            style = TextStyle(color = gold, fontSize = 26.sp, fontFamily = RxFonts.display,
+            "NOW SHOWING", Modifier.fillMaxWidth().padding(top = 2.dp), textAlign = TextAlign.Center, letterSpacing = 0.22.em,
+            style = TextStyle(color = gold, fontSize = 32.sp, fontFamily = RxFonts.display,
                 shadow = Shadow(colorResource(R.color.rx_cinema_gold_glow), blurRadius = 28f))
         )
         LazyRow(Modifier.padding(top = 12.dp).fillMaxWidth().height(196.dp), contentPadding = PaddingValues(horizontal = 10.dp)) {
@@ -781,7 +781,7 @@ private fun MoviesBand(m: FeedModel, s: FeedModel.Slot.Movies) {
         val more = m.onChapterMore
         if (more != null) {
             Text("ALL MOVIES  ›", Modifier.align(Alignment.CenterHorizontally).height(40.dp).clickable { more(s.id) }.padding(horizontal = 12.dp, vertical = 12.dp),
-                color = gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+                color = gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.2.em)
         }
         Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp).fillMaxWidth().height(6.dp).rxDrawableBg(R.drawable.bg_marquee_bulbs))
     }
@@ -827,13 +827,13 @@ private fun Ticket(m: FeedModel, item: VideoItem) {
             Text(item.title, Modifier.padding(top = 8.dp), color = Color.White, fontSize = 14.sp, lineHeight = 16.sp, fontFamily = RxFonts.display,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOf(item.uploader, item.views.takeIf { it >= 0 }?.let { YtCatalog.count(it) + " views" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" · "),
-                Modifier.padding(top = 3.dp), color = colorResource(R.color.rx_cinema_gold), fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 1)
+                Modifier.padding(top = 3.dp), color = colorResource(R.color.rx_cinema_gold), fontSize = 10.sp, fontFamily = RxFonts.body, maxLines = 1)
         }
         Box(Modifier.align(Alignment.CenterEnd).width(64.dp).fillMaxHeight()) {
             Text("ADMIT ONE", Modifier.align(Alignment.Center).graphicsLayer { rotationZ = -90f }, color = rx.accentText, fontSize = 14.sp,
-                fontFamily = RxFonts.display, letterSpacing = 0.01.em, maxLines = 1, softWrap = false)
+                fontFamily = RxFonts.display, letterSpacing = 0.3.em, maxLines = 1, softWrap = false)
             Text(videoBadge(item), Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp), color = colorResource(R.color.rx_on_picture2),
-                fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

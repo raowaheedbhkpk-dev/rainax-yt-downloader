@@ -63,7 +63,7 @@ internal fun OptionList(title: String, opts: List<RxOption>, fill: Boolean = fal
             .padding(top = 8.dp, bottom = 16.dp)
     ) {
         if (title.isNotBlank()) {
-            Text(title, Modifier.padding(horizontal = 20.dp, vertical = 10.dp), color = rx.text, fontSize = 20.sp,
+            Text(title.uppercase(), Modifier.padding(horizontal = 20.dp, vertical = 10.dp), color = rx.text, fontSize = 20.sp,
                 fontFamily = RxFonts.display, letterSpacing = 0.02.em, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Column(
@@ -124,7 +124,7 @@ class SavePlaylistUi {
 internal fun SavePlaylistSheet(ui: SavePlaylistUi, toggle: (YtAccount.PlaylistOption) -> Unit, newPlaylist: () -> Unit) {
     val rx = LocalRx.current
     Column(Modifier.fillMaxWidth().background(rx.surface).padding(bottom = 12.dp)) {
-        Text("Save video to…", Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
+        Text("SAVE VIDEO TO…", Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
             color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display)
         val list = ui.list
         if (list == null) LinearProgressIndicator(Modifier.fillMaxWidth(), color = rx.accent, trackColor = rx.surfaceAlt)

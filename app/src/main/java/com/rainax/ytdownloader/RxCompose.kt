@@ -73,15 +73,11 @@ class RxColors(
 
 val LocalRx = staticCompositionLocalOf<RxColors> { error("RxTheme missing") }
 
-/**
- * RAINAX's fonts. Headings ([display]) used to be a tall capital-letter film face; they are now the same
- * friendly body face in bold (easier to read, in normal sentence case).
- */
+/** RAINAX's own fonts: the tall display face for headings, the body face for text. */
 object RxFonts {
     val display = FontFamily(
-        Font(R.font.rx_body_bold, FontWeight.Normal),
-        Font(R.font.rx_body_bold, FontWeight.SemiBold),
-        Font(R.font.rx_body_bold, FontWeight.Bold)
+        Font(R.font.rx_display, FontWeight.Normal),
+        Font(R.font.rx_display_semibold, FontWeight.SemiBold)
     )
     val body = FontFamily(
         Font(R.font.rx_body_regular, FontWeight.Normal),
@@ -126,9 +122,6 @@ fun Modifier.rxDrawableBg(id: Int): Modifier {
     }
 }
 
-/** How much bigger the app's text is than the phone's normal size. */
-private const val TEXT_SCALE = 1.06f
-
 /** Wrap every Compose screen in this: Material 3 in RAINAX's colours and fonts. */
 @Composable
 fun RxTheme(content: @Composable () -> Unit) {
@@ -143,10 +136,7 @@ fun RxTheme(content: @Composable () -> Unit) {
         background = rx.bg, onBackground = rx.text, surface = rx.surface, onSurface = rx.text,
         surfaceVariant = rx.card, onSurfaceVariant = rx.text2, outline = rx.divider
     )
-    // all text a little bigger (easier to read), on top of the phone's own text size setting
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val roomy = remember(density) { androidx.compose.ui.unit.Density(density.density, density.fontScale * TEXT_SCALE) }
-    CompositionLocalProvider(LocalRx provides rx, androidx.compose.ui.platform.LocalDensity provides roomy) {
+    CompositionLocalProvider(LocalRx provides rx) {
         MaterialTheme(colorScheme = scheme, content = content)
     }
 }

@@ -34,17 +34,27 @@ class RxDialogBuilder(
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(24f), dp(24f), dp(24f), dp(6f))
             }
-            // just the title (the red bar and the small "RAINAX TUBE / CONFIRM" line above it were taken out: calmer)
+            box.addView(View(ctx).apply {
+                setBackgroundColor(Ui.accent(ctx))
+            }, LinearLayout.LayoutParams(dp(40f), dp(3f)))
+            box.addView(TextView(ctx).apply {
+                text = if (title.trim().endsWith("?")) "CONFIRM" else "RAINAX TUBE"
+                setTextColor(ContextCompat.getColor(ctx, R.color.rx_gold))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                typeface = Typeface.DEFAULT_BOLD
+                letterSpacing = 0.25f
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(14f) })
             box.addView(TextView(ctx).apply {
                 text = title
                 setTextColor(ContextCompat.getColor(ctx, R.color.rx_text))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-                typeface = runCatching { ResourcesCompat.getFont(ctx, R.font.rx_body_bold) }.getOrNull() ?: Typeface.DEFAULT_BOLD
-                isAllCaps = false
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
+                typeface = runCatching { ResourcesCompat.getFont(ctx, R.font.rx_display) }.getOrNull() ?: Typeface.DEFAULT_BOLD
+                isAllCaps = true
                 letterSpacing = 0.01f
                 setLineSpacing(0f, 1.05f)
                 isAccessibilityHeading = true
-            }, LinearLayout.LayoutParams(-1, -2))
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4f) })
             return box
         }
     }

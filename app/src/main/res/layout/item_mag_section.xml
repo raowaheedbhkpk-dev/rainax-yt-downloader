@@ -12,7 +12,7 @@
         android:id="@+id/magLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:letterSpacing="0.01"
+        android:letterSpacing="0.25"
         android:textColor="@color/rx_gold"
         android:textSize="10sp"
         android:textStyle="bold" />
@@ -28,9 +28,9 @@
             android:id="@+id/magTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/rx_body_bold"
+            android:fontFamily="@font/rx_display"
             android:includeFontPadding="false"
-            android:textAllCaps="false"
+            android:textAllCaps="true"
             android:textColor="@color/rx_text"
             android:textSize="24sp" />
 
@@ -47,10 +47,10 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackground"
             android:gravity="center"
-            android:letterSpacing="0.01"
+            android:letterSpacing="0.15"
             android:paddingHorizontal="@dimen/rx_space_4"
             android:text="More"
-            android:textAllCaps="false"
+            android:textAllCaps="true"
             android:textColor="@color/rx_gold"
             android:textSize="12sp"
             android:textStyle="bold"

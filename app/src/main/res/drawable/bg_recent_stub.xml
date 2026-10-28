@@ -3,7 +3,7 @@
 <ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#22888888">
     <item>
         <layer-list>
-            <item><shape android:shape="rectangle"><solid android:color="?attr/rxCard" /><corners android:radius="999dp" /></shape></item>
+            <item><shape android:shape="rectangle"><solid android:color="?attr/rxCard" /><corners android:radius="2dp" /></shape></item>
             <item android:gravity="start" android:width="3dp"><shape android:shape="rectangle"><solid android:color="?attr/rxAccent" /></shape></item>
         </layer-list>
     </item>

@@ -107,7 +107,6 @@ internal fun SettingsScreen(act: MainActivity) {
 
     // folder, "All files access" and the last MP3 note change outside this screen (MainActivity.renderFolder)
     val folder = remember(tick) { FileStore.describe(act) }
-    var magazine by remember { mutableStateOf(AppPrefs.magazineHome(act)) }
     val needsAllFiles = remember(tick) { act.needsAllFiles() }
     val mp3 = remember(tick) { AppPrefs.lastMp3Report(act) }
     val version = remember {
@@ -115,13 +114,11 @@ internal fun SettingsScreen(act: MainActivity) {
     }
 
     val chapters = listOf(
-        SetChapter("Startup", listOf(
+        SetChapter("STARTUP", listOf(
             SetOpt("Opening title", "A one-second RAINAX title card when the app starts",
-                SetEnd.Toggle(opening) { opening = it; AppPrefs.setOpeningTitle(act, it) }),
-            SetOpt("Magazine-style Home", "Cover story, Top 5 and chapters. Off: a simple list of videos",
-                SetEnd.Toggle(magazine) { magazine = it; AppPrefs.setMagazineHome(act, it); act.home.applyHomeStyle() })
+                SetEnd.Toggle(opening) { opening = it; AppPrefs.setOpeningTitle(act, it) })
         )),
-        SetChapter("Downloads", listOf(
+        SetChapter("DOWNLOADS", listOf(
             SetOpt("Simultaneous downloads", "How many files download at the same time",
                 SetEnd.Choice(listOf("1" to 1, "2" to 2, "3" to 3, "4" to 4), parallel) {
                     parallel = it; AppPrefs.setMaxParallel(act, it); act.nudgeService()
@@ -134,7 +131,7 @@ internal fun SettingsScreen(act: MainActivity) {
                 SetEnd.Open { act.openBatterySettings() }),
             SetOpt("Last MP3", null, SetEnd.Note("Last MP3: $mp3"), visible = mp3.isNotBlank())
         )),
-        SetChapter("Playback", listOf(
+        SetChapter("PLAYBACK", listOf(
             SetOpt("Autoplay in feed", "The video you stop on plays silently in the list",
                 SetEnd.Choice(listOf("Always" to 2, "Wi-Fi only" to 1, "Off" to 0), autoplay) {
                     autoplay = it; AppPrefs.setFeedAutoplay(act, it); FeedAutoplay.refresh()
@@ -142,13 +139,13 @@ internal fun SettingsScreen(act: MainActivity) {
             SetOpt("Continue where you left off", "Videos start again where you stopped",
                 SetEnd.Toggle(resume) { resume = it; AppPrefs.setResumeVideos(act, it) })
         )),
-        SetChapter("Storage", listOf(
+        SetChapter("STORAGE", listOf(
             SetOpt("Saved in", folder, SetEnd.Plain),
             SetOpt("Allow all files access", "Needed to save in your Downloads folder",
                 SetEnd.Open { act.openAllFilesSettings(thenInstallAsk = false) }, visible = needsAllFiles),
             SetOpt("Private folder", "Hidden videos behind your PIN", SetEnd.Open { PrivateActivity.open(act) })
         )),
-        SetChapter("Privacy", listOf(
+        SetChapter("PRIVACY", listOf(
             SetOpt("Pause watch history", "Nothing you watch is saved, here or on your YouTube account",
                 SetEnd.Toggle(historyPaused) {
                     historyPaused = it
@@ -173,7 +170,7 @@ internal fun SettingsScreen(act: MainActivity) {
             }),
             SetOpt("Clear watch history", "Continue watching and resume points", SetEnd.Open { act.askClearWatchHistory() })
         )),
-        SetChapter("About", listOf(
+        SetChapter("ABOUT", listOf(
             SetOpt("Check for app update", null, SetEnd.Open { AppUpdater.check(act, manual = true) }),
             SetOpt("Rate us on APKPure", "A good review helps a lot", SetEnd.Open { AppShare.rate(act) }),
             SetOpt("Share RAINAX Tube", "Send the app to a friend", SetEnd.Open { AppShare.share(act) })
@@ -191,7 +188,7 @@ internal fun SettingsScreen(act: MainActivity) {
         // title with the accent bar, version on the right
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp), verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
-                Text("Settings", color = rx.text, fontSize = 26.sp, fontFamily = RxFonts.display, lineHeight = 32.sp)
+                Text("SETTINGS", color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display, lineHeight = 34.sp)
                 Box(Modifier.padding(top = 6.dp).width(40.dp).height(3.dp).background(rx.accent))
             }
             Text("v$version", color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body)
@@ -200,8 +197,8 @@ internal fun SettingsScreen(act: MainActivity) {
         // search
         Row(
             Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp).fillMaxWidth().height(44.dp)
-                .background(rx.surface, RoundedCornerShape(12.dp))
-                .border(1.dp, rx.outline, RoundedCornerShape(12.dp))
+                .background(rx.surface, RoundedCornerShape(2.dp))
+                .border(1.dp, rx.outline, RoundedCornerShape(2.dp))
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -246,7 +243,7 @@ internal fun SettingsScreen(act: MainActivity) {
 
             // the look: four little screens for the theme, then the accent rings
             Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp).fillMaxWidth().background(rx.surface).padding(14.dp)) {
-                Text("Appearance", color = rx.accentText, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                Text("APPEARANCE", color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
                 Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
                     listOf(
                         Triple(0, "System", R.drawable.bg_prev_system),
@@ -264,7 +261,7 @@ internal fun SettingsScreen(act: MainActivity) {
                         ) {
                             Box(
                                 Modifier.fillMaxWidth().height(60.dp).rxDrawableBg(pic)
-                                    .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(12.dp))
+                                    .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(2.dp))
                             )
                             Text(
                                 label, Modifier.padding(top = 6.dp), fontSize = 12.sp, fontFamily = RxFonts.body,
@@ -283,9 +280,9 @@ internal fun SettingsScreen(act: MainActivity) {
                         (0 until 5).map { grid[(start + it) % grid.size] }.forEach { id -> Swatch(act, id, cur, rx) }
                     }
                     Text(
-                        if (allAccents) "Less  ‹" else "All 16  ›",
+                        if (allAccents) "LESS  ‹" else "ALL 16  ›",
                         Modifier.height(44.dp).clickable { allAccents = !allAccents }.padding(horizontal = 8.dp).padding(top = 13.dp),
-                        color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em
+                        color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.1.em
                     )
                 }
                 if (allAccents) {
@@ -310,7 +307,7 @@ internal fun SettingsScreen(act: MainActivity) {
             if (!searching) {
                 Text(
                     ch.label, Modifier.padding(start = 20.dp, top = 26.dp, bottom = 4.dp),
-                    color = rx.accentText, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body
+                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em
                 )
             }
             rows.forEach { o ->
@@ -341,7 +338,7 @@ internal fun SettingsScreen(act: MainActivity) {
 @Composable
 private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: String, on: Boolean, toggle: () -> Unit) {
     val rx = LocalRx.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(2.dp)
     val fg = if (on) Color.White else rx.text
     Column(
         modifier.padding(4.dp).height(76.dp)
@@ -413,7 +410,7 @@ private fun OptionRow(o: SetOpt) {
                         selected = sel,
                         onClick = { if (!sel) end.pick(value) },
                         label = { Text(label, fontFamily = RxFonts.body, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal) },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(2.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = rx.surface, labelColor = rx.text,
                             selectedContainerColor = rx.accent, selectedLabelColor = rx.onAccent

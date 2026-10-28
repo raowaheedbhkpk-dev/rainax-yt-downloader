@@ -154,7 +154,7 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                         fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (c.titleDownload) {
                         Button(
-                            onClick = { a.titleDownload() }, modifier = Modifier.height(40.dp), shape = RoundedCornerShape(12.dp),
+                            onClick = { a.titleDownload() }, modifier = Modifier.height(40.dp), shape = RoundedCornerShape(2.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                         ) {
@@ -169,9 +169,9 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     }
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Image(rxDrawable(R.drawable.ic_logo, 28), null, Modifier.size(28.dp))
-                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.01.em)
+                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.06.em)
                         Text("TUBE", Modifier.padding(start = 3.dp), color = rx.accentText, fontSize = 20.sp, fontFamily = RxFonts.display,
-                            fontWeight = FontWeight.SemiBold, letterSpacing = 0.01.em)
+                            fontWeight = FontWeight.SemiBold, letterSpacing = 0.06.em)
                     }
                     Box(Modifier.size(48.dp).clickable { a.theme(view) }.semantics { contentDescription = "Theme" }, contentAlignment = Alignment.Center) {
                         Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(22.dp),
@@ -278,7 +278,7 @@ internal fun HomeOverlay(c: HomeChrome, a: HomeChromeActions) {
                 Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(rx.accent))
                 Text(err, Modifier.padding(top = 12.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center)
                 Button(
-                    onClick = { a.retry() }, modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(12.dp),
+                    onClick = { a.retry() }, modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
                 ) { Text("Try again", fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
                 if (c.errorOffline) {
@@ -296,7 +296,7 @@ internal fun HomeOverlay(c: HomeChrome, a: HomeChromeActions) {
                     color = rx.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
                 TextButton(onClick = { a.picksClear() }) { Text("Clear", color = rx.accentText, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
                 Button(
-                    onClick = { a.picksDownload() }, modifier = Modifier.height(44.dp), shape = RoundedCornerShape(12.dp),
+                    onClick = { a.picksDownload() }, modifier = Modifier.height(44.dp), shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                 ) {
                     Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
@@ -320,8 +320,8 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
         if (c.stubs.isNotEmpty()) {
             item(key = "stubs") {
                 Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
-                    Text("Recent searches", Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.gold, fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+                    Text("RECENT SEARCHES", Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.gold, fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp)) {
                         itemsIndexed(c.stubs) { _, s -> RecentStub(s, a) }
                     }
@@ -335,8 +335,8 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { a.clearHistory() }.padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Image(painterResource(R.drawable.ic_delete), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.accentText))
-                        Text("Clear search history", Modifier.padding(start = 20.dp), color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.01.em, fontFamily = RxFonts.body)
+                        Text("CLEAR SEARCH HISTORY", Modifier.padding(start = 20.dp), color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.08.em, fontFamily = RxFonts.body)
                     }
                     Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp).fillMaxWidth().height(1.dp).background(rx.divider))
                 }
@@ -344,7 +344,7 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
         }
         if (c.mayLike.isNotEmpty()) {
             item(key = "mayLike") {
-                Text("You may like", Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), color = rx.text, fontSize = 24.sp,
+                Text("YOU MAY LIKE", Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), color = rx.text, fontSize = 24.sp,
                     fontFamily = RxFonts.display)
             }
             itemsIndexed(c.mayLike, key = { i, s -> "m$i:" + s.text }) { _, s -> SugRow(s, a) }

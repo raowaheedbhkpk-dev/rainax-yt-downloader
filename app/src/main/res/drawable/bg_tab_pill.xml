@@ -4,5 +4,5 @@
         android:angle="0"
         android:endColor="?attr/rxAccent"
         android:startColor="?attr/rxAccent" />
-    <corners android:radius="999dp" />
+    <corners android:radius="2dp" />
 </shape>

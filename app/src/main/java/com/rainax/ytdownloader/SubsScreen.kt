@@ -176,7 +176,7 @@ class SubsScreen(
         val rx = LocalRx.current
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().height(56.dp).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Subscriptions", Modifier.weight(1f), color = rx.text, fontSize = 22.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+                Text("SUBSCRIPTIONS", Modifier.weight(1f), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
                 IconButton(onClick = { load(reset = true, fresh = true) }) {
                     Image(painterResource(R.drawable.ic_refresh), "Refresh", Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
                 }
@@ -237,7 +237,7 @@ class SubsScreen(
                         if (action != null) {
                             Button(
                                 onClick = { if (YtAccount.isSignedIn(act)) load(reset = true, fresh = true) else signIn() },
-                                modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(2.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                             ) { Text(action, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
                         }

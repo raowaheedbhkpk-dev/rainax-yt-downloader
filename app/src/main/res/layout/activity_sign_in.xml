@@ -24,8 +24,8 @@
             app:tint="@color/rx_text" />
 
         <TextView
-            android:fontFamily="@font/rx_body_bold"
-            android:textAllCaps="false"
+            android:fontFamily="@font/rx_display"
+            android:textAllCaps="true"
             android:letterSpacing="0.02"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -109,8 +109,8 @@
                 </LinearLayout>
 
                 <TextView
-                    android:fontFamily="@font/rx_body_bold"
-                    android:textAllCaps="false"
+                    android:fontFamily="@font/rx_display"
+                    android:textAllCaps="true"
                     android:letterSpacing="0.02"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

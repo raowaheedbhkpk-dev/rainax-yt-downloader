@@ -16,7 +16,7 @@
         android:id="@+id/magRank"
         android:layout_width="44dp"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/rx_body_bold"
+        android:fontFamily="@font/rx_display"
         android:includeFontPadding="false"
         android:textColor="@color/rx_text"
         android:textSize="44sp" />

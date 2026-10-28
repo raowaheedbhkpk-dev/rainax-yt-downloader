@@ -178,7 +178,7 @@ private fun YouHeader(act: MainActivity, s: YouState) {
                 OutlinedButton(
                     onClick = { act.onAccountClick() },
                     modifier = Modifier.height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(2.dp),
                     border = BorderStroke(1.dp, rx.outline),
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
@@ -201,7 +201,7 @@ private fun YouHeader(act: MainActivity, s: YouState) {
                 else Image(painterResource(R.drawable.ic_person), null, Modifier.size(52.dp), colorFilter = ColorFilter.tint(rx.text2))
             }
             Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                Text(s.name, color = rx.text, fontSize = 22.sp, fontFamily = RxFonts.display, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(s.name.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(s.handle, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -210,14 +210,14 @@ private fun YouHeader(act: MainActivity, s: YouState) {
                 OutlinedButton(
                     onClick = { act.askSignOut() },
                     modifier = Modifier.weight(1f).height(42.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(2.dp),
                     border = BorderStroke(1.dp, rx.outline)
                 ) { Text("Sign out", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
             } else {
                 Button(
                     onClick = { act.signIn.launch(android.content.Intent(act, SignInActivity::class.java)) },
                     modifier = Modifier.weight(1f).height(42.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = Color.White)
                 ) {
                     Image(painterResource(R.drawable.ic_person), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
@@ -263,11 +263,11 @@ internal fun RxChip(label: String, selected: Boolean, icon: Int? = null, onClick
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+        label = { Text(label.uppercase(), fontFamily = RxFonts.body, fontWeight = FontWeight.Bold, letterSpacing = 0.08.em, fontSize = 13.sp) },
         leadingIcon = if (icon != null) {
             { Image(painterResource(icon), null, Modifier.size(16.dp), colorFilter = ColorFilter.tint(if (selected) rx.onAccent else rx.text)) }
         } else null,
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(2.dp),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = rx.surface, labelColor = rx.text,
             selectedContainerColor = rx.accent, selectedLabelColor = rx.onAccent
@@ -363,12 +363,12 @@ private fun SmallButton(label: String, modifier: Modifier, danger: Boolean = fal
     val rx = LocalRx.current
     val red = colorResource(R.color.rx_error)
     if (danger) {
-        OutlinedButton(onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(12.dp),
+        OutlinedButton(onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(2.dp),
             border = BorderStroke(1.dp, rx.outline), contentPadding = PaddingValues(horizontal = 4.dp)) {
             Text(label, color = red, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     } else {
-        Button(onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(12.dp),
+        Button(onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(2.dp),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text),
             contentPadding = PaddingValues(horizontal = 4.dp)) {
             Text(label, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold, maxLines = 1)
@@ -381,8 +381,8 @@ private fun EmptyDownloads(act: MainActivity) {
     val rx = LocalRx.current
     Column(Modifier.fillMaxSize().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(96.dp), colorFilter = ColorFilter.tint(rx.accent))
-        Text("Coming soon", Modifier.padding(top = 18.dp), color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
-        Text("No downloads yet", Modifier.padding(top = 4.dp), color = rx.text, fontSize = 22.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center)
+        Text("COMING SOON", Modifier.padding(top = 18.dp), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
+        Text("NO DOWNLOADS YET", Modifier.padding(top = 4.dp), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center)
         Text(
             "The show starts when you tap Download. You can also share a TikTok, Instagram or Facebook link to RAINAX.",
             Modifier.padding(start = 40.dp, end = 40.dp, top = 8.dp), color = rx.text2, fontSize = 14.sp,
@@ -391,7 +391,7 @@ private fun EmptyDownloads(act: MainActivity) {
         Button(
             onClick = { act.b.bottomNav.selectedItemId = R.id.nav_home },
             modifier = Modifier.padding(top = 24.dp).height(48.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(2.dp),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
         ) {
             Image(painterResource(R.drawable.ic_play), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
@@ -412,7 +412,7 @@ private fun CollectionShelf(act: MainActivity, s: YouState, playable: List<Downl
     val u = s.meter
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Your storage", Modifier.weight(1f), color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+            Text("YOUR STORAGE", Modifier.weight(1f), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
             if (u != null) Text("${StorageMeter.short(u.videoBytes + u.audioBytes)} USED", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.display)
         }
         Column(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp).fillMaxWidth().background(colorResource(R.color.film_bg)).padding(horizontal = 6.dp)) {
@@ -434,7 +434,7 @@ private fun CollectionShelf(act: MainActivity, s: YouState, playable: List<Downl
             )
         }
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("My collection", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display)
+            Text("MY COLLECTION", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display)
             Box(Modifier.padding(start = 12.dp).weight(1f).height(1.dp).background(rx.divider))
         }
         LazyRow(Modifier.fillMaxWidth().padding(top = 12.dp).height(168.dp), contentPadding = PaddingValues(horizontal = 0.dp)) {
@@ -466,7 +466,7 @@ private fun ShelfCase(act: MainActivity, t: DownloadTask) {
         }
         Text(
             kind, Modifier.align(Alignment.TopEnd).padding(5.dp).rxDrawableBg(R.drawable.bg_hero_tag).padding(horizontal = 5.dp, vertical = 1.dp),
-            color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em
+            color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.1.em
         )
         Text(
             t.title, Modifier.align(Alignment.BottomStart).padding(start = 7.dp).padding(7.dp),
@@ -498,7 +498,7 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
 
     Column(
         Modifier.padding(horizontal = 4.dp, vertical = 5.dp).fillMaxWidth()
-            .background(rx.card, RoundedCornerShape(12.dp))
+            .background(rx.card, RoundedCornerShape(2.dp))
             .combinedClickable(
                 onClick = { if (selecting) act.toggleSelect(t) else act.openOrWatch(t) },
                 onLongClick = { act.startSelect(t) }
@@ -548,7 +548,7 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
                         Status.DONE -> null
                     }
                     if (pill != null && live == null) {
-                        Text(pill.first, Modifier.padding(end = 8.dp).background(pill.second.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+                        Text(pill.first, Modifier.padding(end = 8.dp).background(pill.second.copy(alpha = 0.14f), RoundedCornerShape(2.dp))
                             .padding(horizontal = 8.dp, vertical = 2.dp), color = pill.second, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                     }
                     Text(
@@ -628,7 +628,7 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
 private fun Stat(label: String, value: Pair<String, String>, modifier: Modifier) {
     val rx = LocalRx.current
     Column(modifier) {
-        Text(label, color = rx.text2, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.01.em)
+        Text(label, color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.2.em)
         Text(
             buildAnnotatedString {
                 append(value.first)
@@ -746,7 +746,7 @@ private fun LibraryList(act: MainActivity, s: YouState) {
         // search
         Row(
             Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp).fillMaxWidth().height(44.dp)
-                .background(rx.surface, RoundedCornerShape(12.dp)).border(1.dp, rx.outline, RoundedCornerShape(12.dp))
+                .background(rx.surface, RoundedCornerShape(2.dp)).border(1.dp, rx.outline, RoundedCornerShape(2.dp))
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -768,7 +768,7 @@ private fun LibraryList(act: MainActivity, s: YouState) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (showPlaylists) {
                 Button(
-                    onClick = { lib.newPlaylist() }, modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(12.dp),
+                    onClick = { lib.newPlaylist() }, modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                 ) {
                     Image(painterResource(R.drawable.ic_add), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
@@ -778,7 +778,7 @@ private fun LibraryList(act: MainActivity, s: YouState) {
                 val on = files.isNotEmpty()
                 Button(
                     onClick = { lib.playList(files, 0, shuffle = false) }, enabled = on,
-                    modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                 ) {
                     Image(painterResource(R.drawable.ic_play), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
@@ -786,7 +786,7 @@ private fun LibraryList(act: MainActivity, s: YouState) {
                 }
                 Button(
                     onClick = { if (files.isNotEmpty()) lib.playList(files, files.indices.random(), shuffle = true) }, enabled = on,
-                    modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
                 ) {
                     Image(painterResource(R.drawable.ic_shuffle), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.text))
@@ -824,7 +824,7 @@ private fun LibraryList(act: MainActivity, s: YouState) {
 private fun LibCard(onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
     val rx = LocalRx.current
     Row(
-        Modifier.padding(4.dp).fillMaxWidth().background(rx.card, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(8.dp),
+        Modifier.padding(4.dp).fillMaxWidth().background(rx.card, RoundedCornerShape(2.dp)).clickable(onClick = onClick).padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) { content() }
 }

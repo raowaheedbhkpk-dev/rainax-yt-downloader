@@ -199,7 +199,7 @@ class HomeScreen(
         val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null && special == null
         val wantHeader = if (shelfHere) shelf.root else null
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
-        bigAdapter.magazine = shelfHere && AppPrefs.magazineHome(act)    // the magazine look only when chosen in Settings
+        bigAdapter.magazine = shelfHere            // the first tab reads like a magazine
         if (shelfHere) shelf.refresh()
         if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
         // the Music tab's rows or a video list, with the Music tab's soft glow behind it
@@ -391,12 +391,6 @@ class HomeScreen(
      */
     fun applyColumns() {
         // the Compose feed lays out its own columns (FeedScreen)
-    }
-
-    /** Settings › Magazine-style Home changed: Home's first tab is laid out again. */
-    fun applyHomeStyle() {
-        applyListAdapter()
-        feed.redraw()
     }
 
     /** Home is on screen again: newest Continue watching row and watched bars. */
@@ -995,7 +989,7 @@ class HomeScreen(
     private fun showSkeleton() {
         chrome.loading = false
         feed.showSkeleton(adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
-            channelUrl == null && special == null && AppPrefs.magazineHome(act))
+            channelUrl == null && special == null)
     }
 
     /** Signed in or out: new chips and lists. */

@@ -44,7 +44,7 @@
             android:layout_marginTop="18dp"
             android:background="@drawable/bg_countdown"
             android:elevation="6dp"
-            android:fontFamily="@font/rx_body_bold"
+            android:fontFamily="@font/rx_display"
             android:gravity="center"
             android:importantForAccessibility="no"
             android:includeFontPadding="false"

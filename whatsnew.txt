@@ -1,4 +1,4 @@
-New: a friendlier, simpler look across the app: normal sentence-case titles instead of all capitals, bigger text, round buttons and softer corners, calmer dialogs, a simple video list on Home (the magazine look is now a Settings switch) and "Library" in the bottom bar
+Back to the earlier look (the v18.2 design changes were undone)
 Fix: age-restricted videos now play and download when you are signed in with an 18+ YouTube account; Google sign-in shows "This browser or app may not be secure" less often (tries again as Firefox when it does)
 Fix: the build error in the Music player's comments count (whole app now on Jetpack Compose)
 Cleanup: removed old screen files, 29 unused pictures and the ViewPager2 library left over from the move to Jetpack Compose (smaller app)
