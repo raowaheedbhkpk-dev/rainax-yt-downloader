@@ -1,3 +1,4 @@
+Fix: the app closed when the theme button on Home was tapped
 New: the rest of the app moved to Jetpack Compose in one go: bottom bar, side menu, Home page with pull to refresh, Continue watching and Shorts strip, channel page header, video page buttons and bars, Up next and Mix list, picks list, music mini bar, update pill, voice search, sign-in screen and loading placeholders
 New: the account sheet, the video description sheet and the theme menu rebuilt with Jetpack Compose
 Settings: a cleaner, more even layout (same spacing everywhere, calmer section names, matching thin icons)

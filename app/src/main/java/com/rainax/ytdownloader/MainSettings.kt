@@ -1,8 +1,5 @@
 package com.rainax.ytdownloader
 
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.setViewTreeViewModelStoreOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import android.Manifest
 import android.app.DownloadManager
 import android.content.ClipData
@@ -88,26 +85,38 @@ internal fun MainActivity.chooseAccent(v: Int) {
  * sixteen accent rings (with a back arrow); picking one closes it and the app redraws in that colour.
  */
 internal fun MainActivity.showThemePopup(anchor: View) {
+    // A small window under the button. It is a ComponentDialog (not a PopupWindow): a dialog gives its Compose
+    // content the screen's lifecycle by itself. In a PopupWindow, Compose looked for it on the popup's own
+    // window, found none and the app crashed (v18.6).
     val d = resources.displayMetrics.density
-    val width = (288 * d).toInt()
+    val dialog = androidx.activity.ComponentDialog(this)
+    dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
     val view = androidx.compose.ui.platform.ComposeView(this)
-    // a popup is its own window: the Compose view gets the screen's lifecycle by hand
-    view.setViewTreeLifecycleOwner(this)
-    view.setViewTreeSavedStateRegistryOwner(this)
-    view.setViewTreeViewModelStoreOwner(this)
-    val pw = android.widget.PopupWindow(view, width, ViewGroup.LayoutParams.WRAP_CONTENT, true)
-    pw.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-    pw.isOutsideTouchable = true
-    pw.elevation = 12 * d
     val mode = AppPrefs.themeMode(this)
     view.setContent {
         RxTheme {
             ThemeMenu(this, mode, Accents.of(AppPrefs.accent(this)).name,
-                pick = { m -> pw.dismiss(); chooseTheme(m) },
-                accent = { v -> pw.dismiss(); chooseAccent(v) })
+                pick = { m -> dialog.dismiss(); chooseTheme(m) },
+                accent = { v -> dialog.dismiss(); chooseAccent(v) })
         }
     }
-    pw.showAsDropDown(anchor, 0, 0, android.view.Gravity.END)
+    dialog.setContentView(view)
+    dialog.setCanceledOnTouchOutside(true)
+    dialog.window?.let { w ->
+        w.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        w.setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        w.setDimAmount(0.15f)
+        // right under the button, at the right edge (like the old drop-down)
+        val at = IntArray(2)
+        anchor.getLocationOnScreen(at)
+        w.setGravity(android.view.Gravity.TOP or android.view.Gravity.END)
+        w.attributes = w.attributes.apply {
+            x = (resources.displayMetrics.widthPixels - (at[0] + anchor.width)).coerceAtLeast((8 * d).toInt())
+            y = at[1] + anchor.height - (androidx.core.view.ViewCompat.getRootWindowInsets(anchor)
+                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars())?.top ?: 0)
+        }
+    }
+    dialog.show()
 }
 
 /**
