@@ -271,8 +271,8 @@ internal fun RxChip(label: String, selected: Boolean, icon: Int? = null, onClick
             } else null,
             shape = RoundedCornerShape(50),
             colors = FilterChipDefaults.filterChipColors(
-                containerColor = rx.card, labelColor = rx.text,
-                selectedContainerColor = rx.text, selectedLabelColor = rx.bg
+                containerColor = rx.surface, labelColor = rx.text,
+                selectedContainerColor = rx.text, selectedLabelColor = rx.onAccent
             ),
             border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected,
                 borderColor = Color.Transparent, selectedBorderColor = Color.Transparent)

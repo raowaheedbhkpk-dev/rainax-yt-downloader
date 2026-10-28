@@ -304,6 +304,8 @@ class FeedHost(val view: androidx.compose.ui.platform.ComposeView) {
         private set
     /** Room at the bottom (the picks bar). */
     var bottomPad by mutableIntStateOf(16)
+    /** Extra room at the bottom for Home's floating tab bar (the list passes under it). */
+    var floatingBar by mutableIntStateOf(0)
     /** Pull to refresh is loading the new list (the film countdown shows). */
     var refreshing by mutableStateOf(false)
     /** The Music tab's soft glow at the top, in the playing song's colour (null = none). */
@@ -350,7 +352,7 @@ internal fun FeedScreen(host: FeedHost) {
         val ms = rememberLazyListState()
         host.list = ms
         LaunchedEffect(host.toTop) { if (host.toTop > 0) ms.scrollToItem(0) }
-        MusicHomeScreen(music, ms, host.bottomPad)
+        MusicHomeScreen(music, ms, host.bottomPad + host.floatingBar)
         return
     }
     val m = host.model ?: return
@@ -368,7 +370,7 @@ internal fun FeedScreen(host: FeedHost) {
             host.preview.setScrolling(moving)
         }
     }
-    host.preview.padBottom = with(LocalDensity.current) { host.bottomPad.dp.roundToPx() }
+    host.preview.padBottom = with(LocalDensity.current) { (host.bottomPad + host.floatingBar).dp.roundToPx() }
 
     val w = LocalConfiguration.current.screenWidthDp
     val cols = when { w >= 1000 -> 3; w >= 600 -> 2; else -> 1 }
@@ -387,7 +389,7 @@ internal fun FeedScreen(host: FeedHost) {
             out
         }
     }
-    LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(bottom = host.bottomPad.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(bottom = (host.bottomPad + host.floatingBar).dp)) {
         items(rows.size, key = { i -> rows[i].joinToString("|") { it.key } }) { i ->
             val row = rows[i]
             Rise(host.riseKey, i) {

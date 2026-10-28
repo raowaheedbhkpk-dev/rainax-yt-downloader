@@ -6,6 +6,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -207,6 +210,72 @@ internal fun UpdatePill(ui: UpdatePillUi) {
                 Text(ui.action.uppercase(), color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     letterSpacing = 0.15.em)
             }
+        }
+    }
+}
+
+/**
+ * Home's floating tab bar (iOS style): a rounded bar with Home, Shorts, Subs and You, and the round "+" (download
+ * from a link) beside it. It floats over the list; the progressive blur sits behind it (HomePage).
+ */
+@Composable
+internal fun FloatingTabBar(ui: NavUi, pick: (Int) -> Unit) {
+    val rx = LocalRx.current
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp, top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            Modifier.weight(1f).height(64.dp)
+                .shadow(10.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x22000000), spotColor = Color(0x22000000))
+                .background(rx.surface.copy(alpha = 0.92f), RoundedCornerShape(32.dp))
+                .border(0.5.dp, rx.outline, RoundedCornerShape(32.dp))
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TABS.filter { it.id != R.id.nav_social }.forEach { t ->
+                val on = ui.selected == t.id
+                val color = if (on) rx.text else rx.text2
+                Column(
+                    Modifier.weight(1f).fillMaxSize().scale(Bounce(ui, t.id))
+                        .clickable(remember { MutableInteractionSource() }, null) { pick(t.id) }
+                        .semantics { contentDescription = if (t.id == R.id.nav_subs) "Subscriptions" else t.label },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                ) {
+                    Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+                        val pic = ui.avatar
+                        if (t.id == R.id.nav_downloads && pic != null) {
+                            Box(Modifier.size(26.dp).clip(CircleShape).background(if (on) rx.text else Color.Transparent).padding(if (on) 1.5.dp else 0.dp)) {
+                                RxNetImage(pic, Modifier.fillMaxSize().clip(CircleShape), circle = true, widthPx = 160)
+                            }
+                        } else {
+                            Image(painterResource(t.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(color))
+                        }
+                        if (t.id == R.id.nav_downloads && ui.badge > 0) {
+                            Box(
+                                Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp).size(16.dp).background(rx.text, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(if (ui.badge > 99) "99+" else ui.badge.toString(), color = rx.bg, fontSize = 9.sp, lineHeight = 9.sp)
+                            }
+                        }
+                    }
+                    Text(t.label, Modifier.padding(top = 3.dp), color = color, fontSize = 11.sp,
+                        fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
+                        fontFamily = ModernFonts.family, maxLines = 1)
+                }
+            }
+        }
+        // the round "+": download from a link
+        Box(
+            Modifier.padding(start = 10.dp).size(56.dp).scale(Bounce(ui, R.id.nav_social))
+                .shadow(10.dp, CircleShape, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
+                .background(rx.text, CircleShape).clip(CircleShape)
+                .clickable { pick(R.id.nav_social) }.semantics { contentDescription = "Add: download from a link" },
+            contentAlignment = Alignment.Center
+        ) {
+            Image(painterResource(R.drawable.ic_nav_plus), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.bg))
         }
     }
 }

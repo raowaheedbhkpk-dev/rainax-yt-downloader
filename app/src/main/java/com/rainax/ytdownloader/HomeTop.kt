@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -147,6 +148,27 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
     val view = LocalView.current
     val modern = LocalModern.current
     Column(Modifier.fillMaxWidth()) {
+        if (modern && c.bar == 0) {
+            // iOS style: small buttons on top, then a large bold title (it stays at the top; the list scrolls under)
+            Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp, 48.dp).clickable { a.menu() }.semantics { contentDescription = "Menu" }, contentAlignment = Alignment.Center) {
+                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
+                }
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.size(48.dp).clickable { a.theme(view) }.semantics { contentDescription = "Theme" }, contentAlignment = Alignment.Center) {
+                    Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(22.dp),
+                        colorFilter = ColorFilter.tint(rx.text))
+                }
+                SearchIcon(a)
+            }
+            Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 16.dp, bottom = 6.dp), verticalAlignment = Alignment.Bottom) {
+                Text("Home", color = rx.text, fontSize = 34.sp, lineHeight = 40.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.02).em)
+                Spacer(Modifier.weight(1f))
+                Text("Rainax Tube", Modifier.padding(bottom = 7.dp), color = rx.text2, fontSize = 13.sp, fontFamily = ModernFonts.family,
+                    fontWeight = FontWeight.SemiBold)
+            }
+        } else
         Box(Modifier.fillMaxWidth().height(if (modern) 64.dp else 60.dp)) {
             when (c.bar) {
                 1 -> SearchBar(c, a)
@@ -248,7 +270,7 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
         TopIcon(R.drawable.ic_back, "Back") { a.back() }
         Row(
             Modifier.weight(1f).height(if (modern) 48.dp else 54.dp).padding(end = 8.dp).then(
-                if (modern) Modifier.background(rx.card, RoundedCornerShape(50)) else Modifier.rxDrawableBg(R.drawable.bg_search_focus)
+                if (modern) Modifier.background(rx.surface, RoundedCornerShape(50)) else Modifier.rxDrawableBg(R.drawable.bg_search_focus)
             ).padding(start = 18.dp, end = if (modern) 5.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

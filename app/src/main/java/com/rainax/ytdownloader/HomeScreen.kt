@@ -243,7 +243,11 @@ class HomeScreen(
     /** All on the channels row: the Subscriptions tab (set by the main screen). */
     var onAllSubs: () -> Unit = {}
 
+    /** Home's own floating tab bar (set by the main screen before [setup]); the list passes under it. */
+    var navBar: (@androidx.compose.runtime.Composable () -> Unit)? = null
+
     fun setup() {
+        if (navBar != null) feed.floatingBar = 92
         shelf.openChannel = { openChannel(it.url, it.title, it.thumb) }
         shelf.openAllSubs = { onAllSubs() }
         tabs = computeTabs()
@@ -281,7 +285,7 @@ class HomeScreen(
             }
         )
         hm.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        hm.setContent { RxTheme { HomePage(chrome, actions, feed) { pulled() } } }
+        hm.setContent { RxTheme { HomePage(chrome, actions, feed, navBar) { pulled() } } }
 
         // + on every video: pick several, then download them together
         listOf(bigAdapter, smallAdapter, playlistAdapter, channelAdapter, specialAdapter).forEach { a ->

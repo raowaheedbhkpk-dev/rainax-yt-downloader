@@ -162,6 +162,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         home = HomeScreen(this, hm, vm, { openItem(it) }, { showDownloadSheet(listOf(it.url), knownTitle = it.title.ifBlank { null }) }) { onAccountClick() }
+        // Home has its own floating tab bar with a progressive blur behind it (the new look, Home first)
+        home.navBar = { FloatingTabBar(nav) { id -> Haptics.tick(b.navCard); nav.tapped = id; nav.tapCount++; selectNav(id) } }
         home.setup()
         fitWideScreen()
         home.downloadMany = { list -> showDownloadSheet(list.map { it.url }) }
@@ -597,6 +599,9 @@ class MainActivity : AppCompatActivity() {
     /** The tab the chrome was last laid out for (the video page only animates when it opens on the same tab). */
     internal var chromeTab = 0
 
+    /** Home is showing with its own floating tab bar (the normal bottom bar is hidden). */
+    internal var homeOwnsBar = false
+
     /** Video page over Home, bottom bar hidden in fullscreen, Back handling. */
     internal fun updateChrome() {
         if (!::music.isInitialized) return
@@ -609,7 +614,10 @@ class MainActivity : AppCompatActivity() {
         chromeTab = tab
         if (wasShown && !vp.root.isVisible && tab == 0) home.onShown()      // back on Home: fresh watched bars
         val full = video.fullscreen
-        b.navCard.isVisible = !full                    // the bottom bar (hidden in full screen)
+        // the bottom bar: hidden in full screen, and on Home (Home draws its own floating one)
+        homeOwnsBar = tab == 0 && !(video.isOpen && !video.minimized) && !full
+        b.navCard.isVisible = !full && !homeOwnsBar
+        b.updatePill.translationY = if (homeOwnsBar) -92 * resources.displayMetrics.density else 0f
         pillHidden = full
         renderUpdatePill(latestTasks)
         // mini music bar: songs loaded, big player closed, no video open
@@ -717,7 +725,8 @@ class MainActivity : AppCompatActivity() {
             val loc = IntArray(2); val rootLoc = IntArray(2)
             bottomView.getLocationInWindow(loc); root.getLocationInWindow(rootLoc)
             (loc[1] - rootLoc[1]).toFloat()
-        } else root.height - (insets?.bottom ?: 0).toFloat()
+        } else root.height - (insets?.bottom ?: 0).toFloat() -
+            (if (homeOwnsBar) 92 * resources.displayMetrics.density else 0f)       // Home's floating tab bar
         // stay above the Library's selection buttons (Delete / Remove) while selecting
         val bottomLimit = if (tab == 1 && you.selecting && you.actionsTop > 0) {
             val rootLoc = IntArray(2)
@@ -1033,7 +1042,7 @@ class MainActivity : AppCompatActivity() {
     // =====================================================================
 
     /** Messages sit above the ad banner (never over it) or above the bottom bar. */
-    internal fun snackAnchor(): View = b.navCard
+    internal fun snackAnchor(): View? = if (homeOwnsBar) null else b.navCard
 
     internal fun message(text: String) {
         Snackbar.make(b.root, text, Snackbar.LENGTH_SHORT).setAnchorView(snackAnchor()).show()

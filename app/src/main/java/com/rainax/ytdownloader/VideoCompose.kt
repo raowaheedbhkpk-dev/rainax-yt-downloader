@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
@@ -101,12 +102,17 @@ internal fun VideoCard(
         if (!item.isPlaylist && !item.isChannel && item.seconds >= 0) FastExtractor.lookAhead(item.url)
     }
     val modern = LocalModern.current
+    val cardShape = RoundedCornerShape(16.dp)
     Column(
-        Modifier.fillMaxWidth().padding(bottom = if (modern) 26.dp else 18.dp)
+        (if (modern) Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp).fillMaxWidth()
+            // modern: a white card with soft corners and a light shadow
+            .shadow(3.dp, cardShape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
+            .background(rx.surface, cardShape).clip(cardShape)
+        else Modifier.fillMaxWidth().padding(bottom = 18.dp))
             .combinedClickable(onClick = { onOpen(item) }, onLongClick = menu?.let { m -> { m(item, view) } })
     ) {
         Box(
-            if (modern) Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(20.dp)).background(rx.card)
+            if (modern) Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(rx.card)
             else Modifier.fillMaxWidth().aspectRatio(16f / 9f).rxDrawableBg(R.drawable.bg_thumb_big)
         ) {
             val card = if (preview != null) androidx.compose.runtime.remember(item.url) { ComposeCard(ctx, item) } else null
@@ -148,7 +154,8 @@ internal fun VideoCard(
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(start = if (modern) 18.dp else 12.dp, top = if (modern) 14.dp else 12.dp, end = if (modern) 10.dp else 6.dp),
+        Row(Modifier.fillMaxWidth().padding(start = if (modern) 14.dp else 12.dp, top = if (modern) 12.dp else 12.dp, end = if (modern) 8.dp else 6.dp,
+                bottom = if (modern) 14.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.align(Alignment.Top).size(if (modern) 38.dp else 36.dp).clip(CircleShape).then(
                 if (modern) Modifier.background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_avatar))) {

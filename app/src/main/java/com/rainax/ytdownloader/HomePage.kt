@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -38,29 +39,47 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun HomePage(chrome: HomeChrome, a: HomeChromeActions, feed: FeedHost, onPull: () -> Unit) = RxModern {
-    // Home is the first screen in the new "Modern Minimalism" look (ModernStyle.kt): black and white, soft and airy
-    Column(Modifier.fillMaxSize().background(LocalRx.current.bg)) {
-        // the top bar's height: autoplay in feed doesn't count cards hidden under it
-        Box(Modifier.fillMaxWidth().onSizeChanged { feed.preview.padTop = it.height }) { HomeTopBar(chrome, a) }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            val pull = rememberPullToRefreshState()
-            PullToRefreshBox(
-                isRefreshing = feed.refreshing,
-                onRefresh = onPull,
-                state = pull,
-                modifier = Modifier.fillMaxSize(),
-                indicator = { FilmCountdown(feed.refreshing) }
-            ) {
-                val glow = if (LocalModern.current) null else feed.glow       // (no colour in the black-and-white look)
-                Box(
-                    Modifier.fillMaxSize().then(
-                        if (glow != null) Modifier.background(Brush.verticalGradient(listOf(Color(glow), Color.Transparent))) else Modifier
-                    )
-                ) { FeedScreen(feed) }
+internal fun HomePage(
+    chrome: HomeChrome, a: HomeChromeActions, feed: FeedHost,
+    /** Home's own floating tab bar (null = the app's normal bottom bar shows). */
+    navBar: (@Composable () -> Unit)?,
+    onPull: () -> Unit
+) = RxModern {
+    // Home is the first screen in the new look (ModernStyle.kt): iOS-like off-white page, white cards, a large
+    // title, and a floating tab bar with a progressive blur behind it
+    val rx = LocalRx.current
+    val blur = rememberProgressiveBlur()
+    val zone = with(androidx.compose.ui.platform.LocalDensity.current) { 100.dp.toPx() }
+    Box(Modifier.fillMaxSize().background(rx.bg)) {
+        Column(
+            Modifier.fillMaxSize().then(
+                if (navBar != null) Modifier.drawWithContent { drawWithProgressiveBlur(blur, zone, rx.bg) { this@drawWithContent.drawContent() } }
+                else Modifier
+            )
+        ) {
+            // the top bar's height: autoplay in feed doesn't count cards hidden under it
+            Box(Modifier.fillMaxWidth().onSizeChanged { feed.preview.padTop = it.height }) { HomeTopBar(chrome, a) }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                val pull = rememberPullToRefreshState()
+                PullToRefreshBox(
+                    isRefreshing = feed.refreshing,
+                    onRefresh = onPull,
+                    state = pull,
+                    modifier = Modifier.fillMaxSize(),
+                    indicator = { FilmCountdown(feed.refreshing) }
+                ) {
+                    val glow = if (LocalModern.current) null else feed.glow       // (no colour in the black-and-white look)
+                    Box(
+                        Modifier.fillMaxSize().then(
+                            if (glow != null) Modifier.background(Brush.verticalGradient(listOf(Color(glow), Color.Transparent))) else Modifier
+                        )
+                    ) { FeedScreen(feed) }
+                }
+                // suggestions, spinner, error and the picks bar stay above the floating tab bar
+                Box(Modifier.fillMaxSize().padding(bottom = if (navBar != null) 88.dp else 0.dp)) { HomeOverlay(chrome, a) }
             }
-            HomeOverlay(chrome, a)
         }
+        if (navBar != null) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) { navBar() }
     }
 }
 
