@@ -4,14 +4,14 @@
     <item>
         <shape>
             <solid android:color="?attr/rxAccentContainer" />
-            <corners android:radius="2dp" />
+            <corners android:radius="520dp" />
         </shape>
     </item>
     <item android:bottom="4dp" android:left="4dp" android:right="4dp" android:top="4dp">
         <shape>
             <solid android:color="?attr/rxSurface" />
             <stroke android:width="2dp" android:color="?attr/rxAccent" />
-            <corners android:radius="2dp" />
+            <corners android:radius="520dp" />
         </shape>
     </item>
 </layer-list>

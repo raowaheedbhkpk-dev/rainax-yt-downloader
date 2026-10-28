@@ -40,7 +40,7 @@ private fun pulse(): Float {
 }
 
 @Composable
-private fun Block(modifier: Modifier, shape: Shape = RoundedCornerShape(2.dp)) {
+private fun Block(modifier: Modifier, shape: Shape = RoundedCornerShape(12.dp)) {
     Box(modifier.background(LocalRx.current.surfaceAlt, shape))
 }
 

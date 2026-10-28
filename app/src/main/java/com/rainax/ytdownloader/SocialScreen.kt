@@ -142,13 +142,13 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AppBadge(app, 24.dp, 10)
-                    Text(app.name.uppercase(), Modifier.padding(start = 8.dp), color = rx.text, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.12.em)
+                    Text(app.name, Modifier.padding(start = 8.dp), color = rx.text, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.12.em)
                 }
             }
         }
 
         // the link box
-        Text("PASTE A LINK", Modifier.padding(top = 18.dp), color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+        Text("Paste a link", Modifier.padding(top = 18.dp), color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
         val link = act.extractUrls(s.input).firstOrNull()
         val linkApp = link?.let { SocialApps.of(it) }
         Row(
@@ -196,14 +196,14 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(painterResource(R.drawable.ic_paste), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.text))
-                Text("PASTE", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+                Text("Paste", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
             }
             Row(
                 Modifier.weight(1.6f).height(52.dp).rxDrawableBg(R.drawable.bg_social_red_btn).clickable { go() },
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
-                Text("DOWNLOAD", Modifier.padding(start = 8.dp), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.em)
+                Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
+                Text("Download", Modifier.padding(start = 8.dp), color = rx.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
             }
         }
 
@@ -217,10 +217,10 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
             ) {
                 if (app != null) AppBadge(app, 30.dp, 12)
                 else Box(Modifier.size(30.dp).background(rx.accent, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
-                    Text("↓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("↓", color = rx.onAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    "COPIED · ${(app?.name ?: "video link").uppercase()}", Modifier.weight(1f).padding(horizontal = 12.dp),
+                    "Copied · ${app?.name ?: "video link"}", Modifier.weight(1f).padding(horizontal = 12.dp),
                     color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.06.em, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
                 Box(Modifier.padding(vertical = 6.dp).width(2.dp).fillMaxHeight().rxDrawableBg(R.drawable.bg_dash_vertical))
@@ -231,8 +231,8 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                         s.clipUrl = null
                         act.showDownloadSheet(listOf(clip))
                     },
-                    modifier = Modifier.width(88.dp).fillMaxHeight(), shape = RoundedCornerShape(2.dp)
-                ) { Text("GET IT", color = rx.accentText, fontSize = 14.sp, fontFamily = RxFonts.display, letterSpacing = 0.1.em) }
+                    modifier = Modifier.width(88.dp).fillMaxHeight(), shape = RoundedCornerShape(12.dp)
+                ) { Text("Get it", color = rx.accentText, fontSize = 14.sp, fontFamily = RxFonts.display, letterSpacing = 0.em) }
             }
         }
 
@@ -242,7 +242,7 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(rx.divider))
 
-        Text("HOW IT WORKS", Modifier.padding(top = 20.dp), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
+        Text("How it works", Modifier.padding(top = 20.dp), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
         listOf(
             "01" to "Copy the link in TikTok, Instagram, Facebook or YouTube (Share › Copy link)",
             "02" to "Paste it here, or share it straight to RAINAX",
@@ -279,7 +279,7 @@ private fun StatusSaverCard(act: MainActivity, st: StatusUi) {
             }
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text("WHATSAPP STATUS SAVER", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+            Text("WhatsApp status saver", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.em)
             Text(st.sub, Modifier.padding(top = 1.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body)
         }
         if (st.refreshShown) {
@@ -314,7 +314,7 @@ private fun StatusSaverCard(act: MainActivity, st: StatusUi) {
             Text(st.askText, color = rx.text2, fontSize = 14.sp, lineHeight = 20.sp, fontFamily = RxFonts.body)
             Button(
                 onClick = { saver.allowAccess() }, modifier = Modifier.padding(top = 12.dp).fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(2.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White)
+                shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White)
             ) {
                 Image(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
                 Text("Allow access", Modifier.padding(start = 8.dp), fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)
@@ -350,7 +350,7 @@ private fun StatusSaverCard(act: MainActivity, st: StatusUi) {
     if (st.saveAllShown) {
         Button(
             onClick = { saver.saveAll() }, enabled = st.saveAllEnabled,
-            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(48.dp), shape = RoundedCornerShape(2.dp),
+            modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
         ) {
             Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.text))
@@ -367,7 +367,7 @@ private fun StatusTile(saver: StatusSaver, item: StatusSaver.Item, showSave: Boo
     }
     val saved = saver.isSaved(item)
     Box(
-        Modifier.padding(4.dp).fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_status_thumb)
+        Modifier.padding(4.dp).fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_status_thumb)
             .clickable { saver.open(item) }
     ) {
         val b = bmp

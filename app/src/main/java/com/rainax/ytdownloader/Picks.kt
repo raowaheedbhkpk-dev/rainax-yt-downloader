@@ -129,7 +129,7 @@ private fun PicksList(picks: List<VideoItem>, clear: () -> Unit, remove: (VideoI
             items(picks.size, key = { i -> picks[i].url }) { i ->
                 val item = picks[i]
                 Row(Modifier.fillMaxWidth().height(64.dp).padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
+                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
                         RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 240)
                     }
                     Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -147,7 +147,7 @@ private fun PicksList(picks: List<VideoItem>, clear: () -> Unit, remove: (VideoI
         }
         Button(
             onClick = download, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp).fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(2.dp), colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+            shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
         ) {
             Image(painterResource(R.drawable.ic_download), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.onAccent))
             Text(if (n > 1) "Download $n" else "Download", Modifier.padding(start = 8.dp), fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)

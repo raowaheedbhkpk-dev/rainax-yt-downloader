@@ -232,7 +232,7 @@ private fun Header(ui: VideoPageUi, a: VideoPageActions) {
         // the first comment
         if (ui.commentsShown) {
             Column(
-                Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surfaceAlt, RoundedCornerShape(2.dp))
+                Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surfaceAlt, RoundedCornerShape(12.dp))
                     .clickable { a.comments() }.padding(14.dp)
             ) {
                 Text(ui.commentsTitle, color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)

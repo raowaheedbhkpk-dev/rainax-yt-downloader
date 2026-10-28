@@ -101,7 +101,7 @@ internal fun MusicMiniBar(ui: MusicPageUi, a: MusicMiniActions) {
                 translationX = shift.value
                 alpha = (1f - kotlin.math.abs(shift.value) / width).coerceIn(0.2f, 1f)
             }
-            .background(Color(ui.miniTone), RoundedCornerShape(2.dp))
+            .background(Color(ui.miniTone), RoundedCornerShape(12.dp))
             .draggable(drag, androidx.compose.foundation.gestures.Orientation.Horizontal, onDragStopped = {
                 if (kotlin.math.abs(shift.value) > width * 0.35f) {
                     shift.animateTo(if (shift.value > 0) width.toFloat() else -width.toFloat(), androidx.compose.animation.core.tween(160))
@@ -113,7 +113,7 @@ internal fun MusicMiniBar(ui: MusicPageUi, a: MusicMiniActions) {
             .semantics { contentDescription = "Music playing. Tap to open the player" }
     ) {
         Row(Modifier.fillMaxSize().padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(46.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
+            Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
                 SquareArt(ui.miniArt, Modifier.fillMaxSize(), 200)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {

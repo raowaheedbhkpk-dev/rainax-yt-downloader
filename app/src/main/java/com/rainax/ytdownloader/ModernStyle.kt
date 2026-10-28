@@ -46,7 +46,7 @@ fun monoColors(rx: RxColors): RxColors {
         surface = cardBg,
         card = soft,
         text = text,
-        text2 = if (d) Color(0xFF98989F) else Color(0xFF8E8E93),
+        text2 = if (d) Color(0xFF98989F) else Color(0xFF6C6C70),
         divider = if (d) Color(0xFF38383A) else Color(0xFFE5E5EA),
         accent = text,
         accentText = text,
@@ -81,4 +81,4 @@ fun rxHeadCase(s: String): String = if (LocalModern.current) s else s.uppercase(
 
 /** Cards and pictures: soft rounded corners in the modern look, nearly square in the classic one. */
 @Composable
-fun rxShape(modern: Int = 16): Shape = if (LocalModern.current) RoundedCornerShape(modern.dp) else RoundedCornerShape(2.dp)
+fun rxShape(modern: Int = 16): Shape = if (LocalModern.current) RoundedCornerShape(modern.dp) else RoundedCornerShape(12.dp)

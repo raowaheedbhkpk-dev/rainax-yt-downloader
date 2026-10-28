@@ -191,7 +191,7 @@ class SignInActivity : AppCompatActivity() {
                 Box(Modifier.size(48.dp).clickable { finish() }.semantics { contentDescription = "Close" }.padding(12.dp)) {
                     Image(painterResource(R.drawable.ic_close), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
                 }
-                Text("SIGN IN WITH YOUTUBE", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 20.sp,
+                Text("Sign in with YouTube", Modifier.weight(1f).padding(start = 8.dp), color = rx.text, fontSize = 20.sp,
                     fontFamily = RxFonts.display, letterSpacing = 0.02.em)
                 Image(painterResource(R.drawable.ic_lock), null, Modifier.padding(end = 12.dp).size(26.dp), colorFilter = ColorFilter.tint(rx.text2))
             }
@@ -215,10 +215,10 @@ class SignInActivity : AppCompatActivity() {
                 Box(Modifier.size(72.dp).rxDrawableBg(R.drawable.ic_logo))          // (a layer-list: drawn as a picture)
                 Image(painterResource(R.drawable.ic_swap_h), null, Modifier.padding(horizontal = 12.dp).size(40.dp), colorFilter = ColorFilter.tint(rx.text2))
                 Box(Modifier.size(72.dp).rxDrawableBg(R.drawable.bg_play_badge).padding(20.dp)) {
-                    Image(painterResource(R.drawable.ic_p_play), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(Color.White))
+                    Image(painterResource(R.drawable.ic_p_play), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(LocalRx.current.onAccent))
                 }
             }
-            Text("SIGN IN WITH YOUTUBE", Modifier.padding(top = 20.dp), color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display,
+            Text("Sign in with YouTube", Modifier.padding(top = 20.dp), color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display,
                 textAlign = TextAlign.Center)
             Text("to unlock these features", Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 16.sp, fontFamily = RxFonts.body)
             Column(Modifier.padding(top = 20.dp).fillMaxWidth()) {
@@ -230,7 +230,7 @@ class SignInActivity : AppCompatActivity() {
             }
             Button(
                 onClick = { startSignIn() }, modifier = Modifier.padding(top = 20.dp).fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(2.dp), colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+                shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
             ) { Text("Sign in", fontSize = 16.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold) }
             Text(
                 "You sign in on Google's own page. RAINAX Tube never sees your password, and you can sign out any time.",

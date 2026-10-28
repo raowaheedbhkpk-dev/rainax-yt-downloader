@@ -201,7 +201,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
             }
             if (modern) Text(text, color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-0.02).em)
-            else Text(text.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+            else Text(text, color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
         }
     }
 

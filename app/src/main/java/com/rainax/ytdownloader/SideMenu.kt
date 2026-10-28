@@ -113,8 +113,8 @@ internal fun SideMenu(ui: SideMenuUi, a: SideMenuActions) {
             Modifier.systemBarsPadding().padding(start = 10.dp, top = 10.dp, bottom = 12.dp).width(panelW).fillMaxHeight()
                 .offset { IntOffset(shift.value.roundToInt(), 0) }
                 .graphicsLayer { alpha = 0.6f + 0.4f * shown }
-                .background(rx.bg, RoundedCornerShape(2.dp))
-                .border(1.dp, colorResource(R.color.menu_stroke), RoundedCornerShape(2.dp))
+                .background(rx.bg, RoundedCornerShape(12.dp))
+                .border(1.dp, colorResource(R.color.menu_stroke), RoundedCornerShape(12.dp))
                 .draggable(drag, Orientation.Horizontal, onDragStopped = { v ->
                     if (shift.value < -panelPx * 0.4f || v < -1500f) a.close()
                     else scope.launch { shift.animateTo(0f, tween(180)) }
@@ -215,7 +215,7 @@ private fun MenuRow(e: MenuEntry, ui: SideMenuUi, index: Int, a: SideMenuActions
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal, fontFamily = RxFonts.body, maxLines = 1)
         if (e.label == "Downloads" && ui.downloads > 0) {
             Box(Modifier.size(20.dp).rxDrawableBg(R.drawable.bg_menu_badge), contentAlignment = Alignment.Center) {
-                Text(if (ui.downloads > 9) "9+" else ui.downloads.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(if (ui.downloads > 9) "9+" else ui.downloads.toString(), color = LocalRx.current.onAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         } else Spacer(Modifier.width(0.dp))
     }

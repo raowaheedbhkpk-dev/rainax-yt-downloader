@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- RAINAX "Cinema Pro", dark: near black, film red, gold -->
-    <color name="rx_bg">#0A0A0A</color>
-    <color name="rx_surface">#141414</color>
-    <color name="rx_card">#111111</color>
-    <color name="rx_surface_alt">#1E1E1E</color>
-    <color name="rx_text">#F2F2F2</color>
-    <color name="rx_text2">#9A9A9A</color>
+    <color name="rx_bg">#1C1C1E</color>
+    <color name="rx_surface">#2C2C2E</color>
+    <color name="rx_card">#2C2C2E</color>
+    <color name="rx_surface_alt">#3A3A3C</color>
+    <color name="rx_text">#FFFFFF</color>
+    <color name="rx_text2">#98989F</color>
     <color name="rx_outline">#1FFFFFFF</color>
-    <color name="rx_divider">#1AFFFFFF</color>
+    <color name="rx_divider">#1FFFFFFF</color>
     <color name="rx_divider_strong">#40FFFFFF</color>
-    <color name="rx_primary">#D7263D</color>
-    <color name="rx_primary_text">#E8455A</color>
-    <color name="rx_on_primary">#FFFFFF</color>
-    <color name="rx_primary_container">#29D7263D</color>
-    <color name="rx_on_primary_container">#FF8A97</color>
-    <color name="rx_accent">#E8B44A</color>
+    <color name="rx_primary">#FFFFFF</color>
+    <color name="rx_primary_text">#FFFFFF</color>
+    <color name="rx_on_primary">#000000</color>
+    <color name="rx_primary_container">#3A3A3C</color>
+    <color name="rx_on_primary_container">#FFFFFF</color>
+    <color name="rx_accent">#98989F</color>
     <color name="rx_error">#FF6B63</color>
     <color name="rx_error_container">#4A1D24</color>
-    <color name="rx_chip_on">#F2F2F2</color>
+    <color name="rx_chip_on">#FFFFFF</color>
     <color name="rx_chip_on_text">#000000</color>
 
-    <color name="rx_bg_top">#0A0A0A</color>
-    <color name="rx_bg_bottom">#0A0A0A</color>
+    <color name="rx_bg_top">#1C1C1E</color>
+    <color name="rx_bg_bottom">#1C1C1E</color>
     <color name="rx_glow_coral">#00000000</color>
     <color name="rx_glow_blue">#00000000</color>
-    <color name="rx_glass_nav">#0A0A0A</color>
+    <color name="rx_glass_nav">#1C1C1E</color>
 
     <!-- download sheet (dark) -->
-    <color name="dl_bg_top">#0A0A0A</color>
-    <color name="dl_bg_bottom">#0A0A0A</color>
-    <color name="dl_text">#F2F2F2</color>
-    <color name="dl_text2">#9A9A9A</color>
-    <color name="dl_accent">#D7263D</color>
-    <color name="dl_accent_text">#FF6B7B</color>
-    <color name="dl_handle">#333333</color>
-    <color name="dl_close_bg">#1E1E1E</color>
-    <color name="dl_close_icon">#F2F2F2</color>
-    <color name="dl_tabs_bg">#1A1A1A</color>
-    <color name="dl_card_bg">#121212</color>
-    <color name="dl_card_stroke">#262626</color>
-    <color name="dl_card_recommended">#E8B44A</color>
-    <color name="dl_card_selected_bg">#2A1014</color>
-    <color name="dl_more_stroke">#333333</color>
-    <color name="dl_more_icon_bg">#1E1E1E</color>
-    <color name="dl_bar_bg">#0A0A0A</color>
-    <color name="dl_bar_line">#1F1F1F</color>
+    <color name="dl_bg_top">#1C1C1E</color>
+    <color name="dl_bg_bottom">#1C1C1E</color>
+    <color name="dl_text">#FFFFFF</color>
+    <color name="dl_text2">#98989F</color>
+    <color name="dl_accent">#FFFFFF</color>
+    <color name="dl_accent_text">#FFFFFF</color>
+    <color name="dl_handle">#48484A</color>
+    <color name="dl_close_bg">#3A3A3C</color>
+    <color name="dl_close_icon">#FFFFFF</color>
+    <color name="dl_tabs_bg">#2C2C2E</color>
+    <color name="dl_card_bg">#2C2C2E</color>
+    <color name="dl_card_stroke">#38383A</color>
+    <color name="dl_card_recommended">#FFFFFF</color>
+    <color name="dl_card_selected_bg">#3A3A3C</color>
+    <color name="dl_more_stroke">#48484A</color>
+    <color name="dl_more_icon_bg">#3A3A3C</color>
+    <color name="dl_bar_bg">#1C1C1E</color>
+    <color name="dl_bar_line">#38383A</color>
     <!-- side menu (light / dark: values-night) -->
     <color name="menu_fill">#17FFFFFF</color>
     <color name="menu_stroke">#24FFFFFF</color>
     <color name="menu_label">#80FFFFFF</color>
-    <color name="rx_gold">#E8B44A</color>
-    <color name="rx_switch_off">#333333</color>
+    <color name="rx_gold">#98989F</color>
+    <color name="rx_switch_off">#48484A</color>
     <!-- accent choices (Settings › Accent) -->
     <color name="rx_accent_gold">#E8B44A</color>
     <color name="rx_accent_teal">#2EC4B6</color>
@@ -63,16 +63,16 @@
     <color name="rx_on_accent_teal_container">#7EE3D9</color>
     <color name="rx_on_accent_purple_container">#C4B1FC</color>
     <!-- voice search page and film-strip surfaces (follow light / dark) -->
-    <color name="voice_bg">#0B0A0F</color>
-    <color name="voice_glow">#552A0612</color>
+    <color name="voice_bg">#1C1C1E</color>
+    <color name="voice_glow">#00000000</color>
     <color name="voice_text">#FFFFFF</color>
     <color name="voice_text2">#99FFFFFF</color>
     <color name="voice_hint">#66FFFFFF</color>
     <color name="voice_muted">#55FFFFFF</color>
     <color name="voice_chip_bg">#1AFFFFFF</color>
     <color name="voice_chip_stroke">#22FFFFFF</color>
-    <color name="film_bg">#141414</color>
-    <color name="film_track">#2A2A2A</color>
+    <color name="film_bg">#2C2C2E</color>
+    <color name="film_track">#3A3A3C</color>
     <color name="film_text">#FFFFFF</color>
     <!-- the other twelve accents (Settings › Accent) -->
     <color name="rx_accent_violet">#8A69FF</color>
@@ -111,4 +111,10 @@
     <color name="rx_accent_rose">#D25862</color>
     <color name="rx_accent_rose_container">#33D25862</color>
     <color name="rx_on_accent_rose_container">#E59CA2</color>
+    <!-- black and white (v19.2) -->
+    <color name="rx_logo_start">#3A3A3C</color>
+    <color name="rx_logo_end">#2C2C2E</color>
+    <color name="rx_grad_start">#3A3A3C</color>
+    <color name="rx_grad_end">#2C2C2E</color>
+    <color name="rx_snack_bg">#FF3A3A3C</color>
 </resources>

@@ -122,7 +122,7 @@ private fun Lock(ui: PrivateUi, pattern: PatternView, a: PrivateActions) {
             Image(painterResource(R.drawable.ic_back), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
         }
         Box(Modifier.padding(top = 12.dp).size(72.dp).rxDrawableBg(R.drawable.bg_private_badge), contentAlignment = Alignment.Center) {
-            Image(painterResource(R.drawable.ic_lock), null, Modifier.size(34.dp), colorFilter = ColorFilter.tint(Color.White))
+            Image(painterResource(R.drawable.ic_lock), null, Modifier.size(34.dp), colorFilter = ColorFilter.tint(LocalRx.current.onAccent))
         }
         Text(ui.title, Modifier.padding(top = 16.dp), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.body,
             fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
@@ -205,7 +205,7 @@ private fun PasswordBox(ui: PrivateUi, a: PrivateActions) {
         Button(
             onClick = { a.submitPassword() }, enabled = !ui.busy,
             modifier = Modifier.padding(top = 14.dp).fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(2.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
         ) { Text(ui.okText, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold) }
     }
@@ -219,7 +219,7 @@ private fun Vault(ui: PrivateUi, a: PrivateActions) {
             Box(Modifier.size(44.dp).clickable { a.close() }.semantics { contentDescription = "Back" }.padding(10.dp)) {
                 Image(painterResource(R.drawable.ic_back), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
             }
-            Text("PRIVATE FOLDER", Modifier.weight(1f).padding(start = 6.dp), color = rx.text, fontSize = 24.sp,
+            Text("Private folder", Modifier.weight(1f).padding(start = 6.dp), color = rx.text, fontSize = 24.sp,
                 fontFamily = RxFonts.display, letterSpacing = 0.02.em)
             Box(Modifier.size(44.dp).clickable { a.vaultMenu() }.semantics { contentDescription = "More" }.padding(10.dp)) {
                 Image(painterResource(R.drawable.ic_more), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
@@ -260,7 +260,7 @@ private fun VaultRow(item: PrivateVault.Item, a: PrivateActions) {
         Modifier.fillMaxWidth().height(64.dp).clickable { a.play(item) }.semantics { contentDescription = item.title }.padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(52.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_song_art), contentAlignment = Alignment.Center) {
             val bmp = thumb
             if (bmp != null) {
                 Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)

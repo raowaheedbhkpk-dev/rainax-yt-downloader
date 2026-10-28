@@ -75,7 +75,8 @@ object AppPrefs {
     fun setBackgroundPlay(c: Context, v: Boolean) = p(c).edit().putBoolean("bg_play", v).apply()
 
     /** 0 = follow the phone, 1 = light, 2 = dark, 3 = AMOLED black */
-    fun themeMode(c: Context) = p(c).getInt("theme_mode", 0)
+    /** 0 System, 1 Light, 2 Dark (v19.2: AMOLED, the old 3, is now just Dark). */
+    fun themeMode(c: Context) = p(c).getInt("theme_mode", 0).let { if (it == 3) 2 else it }
     fun setThemeMode(c: Context, v: Int) = p(c).edit().putInt("theme_mode", v).apply()
 
     /** Folder chosen by the user (a document-tree Uri), or empty for the default Downloads/rainax-yt-downloader. */

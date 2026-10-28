@@ -77,6 +77,12 @@ private val TABS = listOf(
 
 @Composable
 internal fun BottomBar(ui: NavUi, pick: (Int) -> Unit) {
+    // v19.2: every tab gets the floating bar (icons only, round "+"), on the page colour
+    Box(Modifier.fillMaxWidth().background(LocalRx.current.bg)) { FloatingTabBar(ui, pick) }
+}
+
+@Composable
+private fun OldBottomBar(ui: NavUi, pick: (Int) -> Unit) {
     val rx = LocalRx.current
     val ctx = LocalContext.current
     val strip = if (AppPrefs.themeMode(ctx) == 3) Color.Black else rx.bg
@@ -146,7 +152,7 @@ private fun Tab(ui: NavUi, t: NavTab, onClick: () -> Unit) {
                 }
             }
         }
-        Text(t.label.uppercase(), Modifier.padding(top = 4.dp), color = color, fontSize = 10.sp, letterSpacing = 0.1.em,
+        Text(t.label, Modifier.padding(top = 4.dp), color = color, fontSize = 10.sp, letterSpacing = 0.1.em,
             fontFamily = RxFonts.body, maxLines = 1)
     }
 }
@@ -198,7 +204,7 @@ internal fun UpdatePill(ui: UpdatePillUi) {
                 else androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), color = gold, trackColor = track, strokeWidth = 3.dp)
             }
             Column(Modifier.padding(start = 10.dp)) {
-                Text(ui.title.uppercase(), color = Color.White, fontSize = 14.sp, fontFamily = RxFonts.display, maxLines = 1)
+                Text(ui.title, color = Color.White, fontSize = 14.sp, fontFamily = RxFonts.display, maxLines = 1)
                 Text(ui.sub, Modifier.widthIn(max = 170.dp), color = androidx.compose.ui.res.colorResource(R.color.rx_cinema_text3), fontSize = 10.sp,
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
@@ -207,7 +213,7 @@ internal fun UpdatePill(ui: UpdatePillUi) {
                     .padding(horizontal = 14.dp).alpha(if (ui.actionOn) 1f else 0.35f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(ui.action.uppercase(), color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                Text(ui.action, color = LocalRx.current.onAccent, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     letterSpacing = 0.15.em)
             }
         }
@@ -235,35 +241,34 @@ internal fun FloatingTabBar(ui: NavUi, pick: (Int) -> Unit) {
         ) {
             TABS.filter { it.id != R.id.nav_social }.forEach { t ->
                 val on = ui.selected == t.id
-                val color = if (on) rx.text else rx.text2
-                Column(
+                val color = rx.text
+                Box(
                     Modifier.weight(1f).fillMaxSize().scale(Bounce(ui, t.id))
                         .clickable(remember { MutableInteractionSource() }, null) { pick(t.id) }
-                        .semantics { contentDescription = if (t.id == R.id.nav_subs) "Subscriptions" else t.label },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                        .semantics { contentDescription = (if (t.id == R.id.nav_subs) "Subscriptions" else t.label) + if (on) ", chosen" else "" },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+                    // icons only (v19.2): the chosen one sits in a round black (white in dark) circle
+                    Box(Modifier.size(48.dp).background(if (on) rx.text else Color.Transparent, CircleShape), contentAlignment = Alignment.Center) {
                         val pic = ui.avatar
                         if (t.id == R.id.nav_downloads && pic != null) {
-                            Box(Modifier.size(26.dp).clip(CircleShape).background(if (on) rx.text else Color.Transparent).padding(if (on) 1.5.dp else 0.dp)) {
-                                RxNetImage(pic, Modifier.fillMaxSize().clip(CircleShape), circle = true, widthPx = 160)
+                            Box(Modifier.size(if (on) 34.dp else 28.dp).clip(CircleShape)) {
+                                RxNetImage(pic, Modifier.fillMaxSize(), circle = true, widthPx = 160)
                             }
                         } else {
-                            Image(painterResource(t.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(color))
-                        }
-                        if (t.id == R.id.nav_downloads && ui.badge > 0) {
-                            Box(
-                                Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp).size(16.dp).background(rx.text, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(if (ui.badge > 99) "99+" else ui.badge.toString(), color = rx.bg, fontSize = 9.sp, lineHeight = 9.sp)
-                            }
+                            Image(painterResource(t.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(if (on) rx.bg else color))
                         }
                     }
-                    Text(t.label, Modifier.padding(top = 3.dp), color = color, fontSize = 11.sp,
-                        fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
-                        fontFamily = ModernFonts.family, maxLines = 1)
+                    if (t.id == R.id.nav_downloads && ui.badge > 0) {
+                        Box(
+                            Modifier.align(Alignment.Center).offset(x = 14.dp, y = (-14).dp).size(18.dp)
+                                .background(if (on) rx.bg else rx.text, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(if (ui.badge > 99) "99+" else ui.badge.toString(), color = if (on) rx.text else rx.bg, fontSize = 9.sp, lineHeight = 9.sp,
+                                fontFamily = ModernFonts.family, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }

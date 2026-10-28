@@ -29,7 +29,7 @@ class VoiceOrb @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     /** The accent colour (Settings), gold, and a deeper shade of the accent. */
     private val colors = Ui.accent(context).let { acc ->
-        intArrayOf(acc, 0xFFE8B44A.toInt(), androidx.core.graphics.ColorUtils.blendARGB(acc, 0xFF000000.toInt(), 0.25f))
+        intArrayOf(acc, 0xFF8E8E93.toInt(), androidx.core.graphics.ColorUtils.blendARGB(acc, 0xFF000000.toInt(), 0.25f))
     }
     private val blobPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SCREEN

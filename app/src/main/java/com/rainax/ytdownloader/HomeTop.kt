@@ -181,7 +181,7 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     if (c.titleDownload) {
                         Button(
                             onClick = { a.titleDownload() }, modifier = Modifier.height(40.dp),
-                            shape = if (modern) RoundedCornerShape(50) else RoundedCornerShape(2.dp),
+                            shape = if (modern) RoundedCornerShape(50) else RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                         ) {

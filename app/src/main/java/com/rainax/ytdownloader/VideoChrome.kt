@@ -203,7 +203,7 @@ internal fun VideoBottomBars(ui: VideoChromeUi, a: VideoChromeActions) {
                 Text("Clear", Modifier.clickable { a.picksClear() }.padding(horizontal = 12.dp, vertical = 10.dp), color = rx.accentText,
                     fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
                 Row(
-                    Modifier.height(44.dp).background(rx.accent, RoundedCornerShape(2.dp)).clickable { a.picksDownload() }.padding(horizontal = 16.dp),
+                    Modifier.height(44.dp).background(rx.accent, RoundedCornerShape(12.dp)).clickable { a.picksDownload() }.padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))

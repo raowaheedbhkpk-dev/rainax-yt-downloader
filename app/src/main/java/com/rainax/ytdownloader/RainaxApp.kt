@@ -8,7 +8,8 @@ class RainaxApp : Application() {
     override fun onCreate() {
         super.onCreate()
         app = this
-        YtAccount.load(this)                                  // the YouTube sign-in, for age-restricted videos too
+        YtAccount.load(this)
+        if (AppPrefs.accent(this) != 0) AppPrefs.setAccent(this, 0)   // v19.2: black and white only; the app icon goes back to the normal one                                  // the YouTube sign-in, for age-restricted videos too
         // more open connections kept for reuse (6 per download, plus the extractor and pictures)
         System.setProperty("http.maxConnections", "16")
         // Load Android's WebView once now, before any screen exists. The first WebView in the app (the YouTube

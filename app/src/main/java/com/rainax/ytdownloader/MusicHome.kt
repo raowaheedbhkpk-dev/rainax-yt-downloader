@@ -161,13 +161,13 @@ private fun Shelf(m: MusicHome, s: MusicSection) {
         Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).padding(start = 16.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 val label = labelFor(s)
-                if (label.isNotEmpty()) Text(label.uppercase(), Modifier.padding(bottom = 2.dp), color = rx.text2, fontSize = 12.sp, letterSpacing = 0.04.em, fontFamily = RxFonts.body)
-                Text(s.title.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (label.isNotEmpty()) Text(label, Modifier.padding(bottom = 2.dp), color = rx.text2, fontSize = 12.sp, letterSpacing = 0.04.em, fontFamily = RxFonts.body)
+                Text(s.title, color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (s.kind == MusicSection.SONGS && s.items.size > 1) {
                 OutlinedButton(
                     onClick = { m.play(s.items, 0, s.title, false) }, modifier = Modifier.padding(start = 8.dp).height(36.dp),
-                    shape = RoundedCornerShape(2.dp), contentPadding = PaddingValues(horizontal = 14.dp)
+                    shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 14.dp)
                 ) { Text("Play all", color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
             }
         }
@@ -206,7 +206,7 @@ private fun SongRow(m: MusicHome, song: VideoItem) {
             .padding(start = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(52.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
+        Box(Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_song_art)) {
             SquareArt(MusicArt.small(song.url, song.thumb), Modifier.fillMaxSize(), 240)
             if (playing) {
                 Box(Modifier.fillMaxSize().rxDrawableBg(R.drawable.bg_song_now).padding(14.dp)) {
@@ -232,7 +232,7 @@ private fun CoverCard(m: MusicHome, song: VideoItem) {
         Modifier.padding(horizontal = 6.dp).width(140.dp)
             .combinedClickable(onClick = { m.play(listOf(song), 0, song.title, true) }, onLongClick = { m.songMenu(song) })
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
             SquareArt(MusicArt.small(song.url, song.thumb), Modifier.fillMaxSize(), 400,
                 listOfNotNull(youtubeId(song.url)?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }))
         }
@@ -246,7 +246,7 @@ private fun CoverCard(m: MusicHome, song: VideoItem) {
 private fun PlaylistCard(m: MusicHome, item: VideoItem) {
     val rx = LocalRx.current
     Column(Modifier.padding(horizontal = 6.dp).width(156.dp).clickable { m.openPlaylist(item) }) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 400)
             Box(
                 Modifier.align(Alignment.BottomEnd).padding(6.dp).size(40.dp).rxDrawableBg(R.drawable.bg_mini_button)

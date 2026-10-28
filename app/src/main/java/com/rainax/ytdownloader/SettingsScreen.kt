@@ -186,7 +186,7 @@ internal fun SettingsScreen(act: MainActivity) {
         // title with the accent bar, version on the right
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp), verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
-                Text("SETTINGS", color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display, lineHeight = 34.sp)
+                Text("Settings", color = rx.text, fontSize = 32.sp, fontFamily = RxFonts.display, lineHeight = 34.sp)
                 Box(Modifier.padding(top = 8.dp).width(40.dp).height(3.dp).background(rx.accent))
             }
             Text("v$version", color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body)
@@ -195,8 +195,8 @@ internal fun SettingsScreen(act: MainActivity) {
         // search
         Row(
             Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().height(48.dp)
-                .background(rx.surface, RoundedCornerShape(2.dp))
-                .border(1.dp, rx.outline, RoundedCornerShape(2.dp))
+                .background(rx.surface, RoundedCornerShape(12.dp))
+                .border(1.dp, rx.outline, RoundedCornerShape(12.dp))
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -239,15 +239,14 @@ internal fun SettingsScreen(act: MainActivity) {
                 }
             }
 
-            // the look: four little screens for the theme, then the accent rings
+            // the look: three little screens (System, Light, Dark); black and white only, so no accent rings
             Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth().background(rx.surface).padding(16.dp)) {
                 Text("Appearance", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                 Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
                     listOf(
                         Triple(0, "System", R.drawable.bg_prev_system),
                         Triple(1, "Light", R.drawable.bg_prev_light),
-                        Triple(2, "Dark", R.drawable.bg_prev_dark),
-                        Triple(3, "AMOLED", R.drawable.bg_prev_amoled)
+                        Triple(2, "Dark", R.drawable.bg_prev_dark)
                     ).forEach { (m, label, pic) ->
                         val chosen = m == themeMode
                         Column(
@@ -259,7 +258,7 @@ internal fun SettingsScreen(act: MainActivity) {
                         ) {
                             Box(
                                 Modifier.fillMaxWidth().height(60.dp).rxDrawableBg(pic)
-                                    .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(2.dp))
+                                    .border(if (chosen) 2.5.dp else 1.dp, if (chosen) rx.accent else rx.outline, RoundedCornerShape(14.dp))
                             )
                             Text(
                                 label, Modifier.padding(top = 8.dp), fontSize = 12.sp, fontFamily = RxFonts.body,
@@ -268,31 +267,6 @@ internal fun SettingsScreen(act: MainActivity) {
                             )
                         }
                     }
-                }
-                // the current accent and the next few; ALL 16 opens every ring
-                Row(Modifier.padding(top = 8.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f).height(48.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val cur = AppPrefs.accent(act)
-                        val grid = Accents.GRID
-                        val start = grid.indexOf(cur).coerceAtLeast(0)
-                        (0 until 5).map { grid[(start + it) % grid.size] }.forEach { id -> Swatch(act, id, cur, rx) }
-                    }
-                    Text(
-                        if (allAccents) "Less" else "All 16",
-                        Modifier.height(48.dp).clickable { allAccents = !allAccents }.padding(horizontal = 8.dp).padding(top = 14.dp),
-                        color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body
-                    )
-                }
-                if (allAccents) {
-                    AndroidView(
-                        factory = { c ->
-                            android.widget.LinearLayout(c).apply {
-                                orientation = android.widget.LinearLayout.VERTICAL
-                                AccentSwatch.fill(this, AppPrefs.accent(act), R.attr.rxSurface) { v -> act.chooseAccent(v) }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
@@ -336,7 +310,7 @@ internal fun SettingsScreen(act: MainActivity) {
 @Composable
 private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: String, on: Boolean, toggle: () -> Unit) {
     val rx = LocalRx.current
-    val shape = RoundedCornerShape(2.dp)
+    val shape = RoundedCornerShape(12.dp)
     val fg = if (on) Color.White else rx.text
     Column(
         modifier.padding(4.dp).height(80.dp)
@@ -408,7 +382,7 @@ private fun OptionRow(o: SetOpt) {
                         selected = sel,
                         onClick = { if (!sel) end.pick(value) },
                         label = { Text(label, fontFamily = RxFonts.body, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal) },
-                        shape = RoundedCornerShape(2.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = rx.surface, labelColor = rx.text,
                             selectedContainerColor = rx.accent, selectedLabelColor = rx.onAccent

@@ -63,7 +63,7 @@ internal fun OptionList(title: String, opts: List<RxOption>, fill: Boolean = fal
             .padding(top = 8.dp, bottom = 16.dp)
     ) {
         if (title.isNotBlank()) {
-            Text(title.uppercase(), Modifier.padding(horizontal = 20.dp, vertical = 10.dp), color = rx.text, fontSize = 20.sp,
+            Text(title, Modifier.padding(horizontal = 20.dp, vertical = 10.dp), color = rx.text, fontSize = 20.sp,
                 fontFamily = RxFonts.display, letterSpacing = 0.02.em, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Column(

@@ -75,14 +75,18 @@ val LocalRx = staticCompositionLocalOf<RxColors> { error("RxTheme missing") }
 
 /** RAINAX's own fonts: the tall display face for headings, the body face for text. */
 object RxFonts {
+    // v19.2: the whole app uses the new look's one face (Plus Jakarta Sans). Titles: its extra-bold weight.
     val display = FontFamily(
-        Font(R.font.rx_display, FontWeight.Normal),
-        Font(R.font.rx_display_semibold, FontWeight.SemiBold)
+        Font(R.font.rx_modern_extrabold, FontWeight.Normal),
+        Font(R.font.rx_modern_extrabold, FontWeight.SemiBold),
+        Font(R.font.rx_modern_extrabold, FontWeight.Bold)
     )
     val body = FontFamily(
-        Font(R.font.rx_body_regular, FontWeight.Normal),
-        Font(R.font.rx_body_semibold, FontWeight.SemiBold),
-        Font(R.font.rx_body_bold, FontWeight.Bold)
+        Font(R.font.rx_modern_regular, FontWeight.Normal),
+        Font(R.font.rx_modern_medium, FontWeight.Medium),
+        Font(R.font.rx_modern_bold, FontWeight.SemiBold),
+        Font(R.font.rx_modern_bold, FontWeight.Bold),
+        Font(R.font.rx_modern_extrabold, FontWeight.ExtraBold)
     )
 }
 
@@ -126,7 +130,8 @@ fun Modifier.rxDrawableBg(id: Int): Modifier {
 @Composable
 fun RxTheme(content: @Composable () -> Unit) {
     val ctx = LocalContext.current
-    val rx = remember(ctx) { RxColors.of(ctx) }
+    // v19.2: every screen is in the new black-and-white look (ModernStyle.kt)
+    val rx = remember(ctx) { monoColors(RxColors.of(ctx)) }
     val scheme = if (rx.dark) darkColorScheme(
         primary = rx.accent, onPrimary = rx.onAccent, primaryContainer = rx.accentContainer,
         background = rx.bg, onBackground = rx.text, surface = rx.surface, onSurface = rx.text,
@@ -136,7 +141,24 @@ fun RxTheme(content: @Composable () -> Unit) {
         background = rx.bg, onBackground = rx.text, surface = rx.surface, onSurface = rx.text,
         surfaceVariant = rx.card, onSurfaceVariant = rx.text2, outline = rx.divider
     )
-    CompositionLocalProvider(LocalRx provides rx) {
-        MaterialTheme(colorScheme = scheme, content = content)
+    val type = remember { rxTypography() }
+    CompositionLocalProvider(LocalRx provides rx, LocalModern provides true) {
+        MaterialTheme(colorScheme = scheme, typography = type, content = content)
     }
+}
+
+/** Material's text styles in the app's one face, so a Text without a font still matches. */
+private fun rxTypography(): androidx.compose.material3.Typography {
+    val t = androidx.compose.material3.Typography()
+    val f = ModernFonts.family
+    return androidx.compose.material3.Typography(
+        displayLarge = t.displayLarge.copy(fontFamily = f), displayMedium = t.displayMedium.copy(fontFamily = f),
+        displaySmall = t.displaySmall.copy(fontFamily = f), headlineLarge = t.headlineLarge.copy(fontFamily = f),
+        headlineMedium = t.headlineMedium.copy(fontFamily = f), headlineSmall = t.headlineSmall.copy(fontFamily = f),
+        titleLarge = t.titleLarge.copy(fontFamily = f), titleMedium = t.titleMedium.copy(fontFamily = f),
+        titleSmall = t.titleSmall.copy(fontFamily = f), bodyLarge = t.bodyLarge.copy(fontFamily = f),
+        bodyMedium = t.bodyMedium.copy(fontFamily = f), bodySmall = t.bodySmall.copy(fontFamily = f),
+        labelLarge = t.labelLarge.copy(fontFamily = f), labelMedium = t.labelMedium.copy(fontFamily = f),
+        labelSmall = t.labelSmall.copy(fontFamily = f)
+    )
 }

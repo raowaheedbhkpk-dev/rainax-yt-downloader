@@ -113,20 +113,18 @@ object Ui {
     }
 
     /** The accent colour chosen in Settings (one of the sixteen in [Accents]), as a colour resource. */
-    fun accentRes(c: android.content.Context): Int = Accents.of(AppPrefs.accent(c)).color
+    fun accentRes(c: android.content.Context): Int = R.color.rx_primary      // v19.2: black and white only (no accent choice)
 
     /** The accent colour itself (right for light and dark; works with any context, services too). */
     fun accent(c: android.content.Context): Int = ContextCompat.getColor(c, accentRes(c))
 
     /** The accent for small text (film red is a touch lighter in the dark theme so it stays readable). */
     fun accentText(c: android.content.Context): Int =
-        ContextCompat.getColor(c, if (AppPrefs.accent(c) == 0) R.color.rx_primary_text else accentRes(c))
+        ContextCompat.getColor(c, R.color.rx_primary_text)
 
     /** Every screen: buttons, bars, chips and switches take the chosen accent (?attr/rxAccent). */
     fun applyAccent(a: android.app.Activity) {
-        val id = AppPrefs.accent(a)
-        if (id == 0) return                                  // film red is the theme's own
-        a.theme.applyStyle(Accents.of(id).style, true)
+        // v19.2: black and white only; the theme's own colours are used (no accent overlay)
     }
 
     /** Like / dislike / save pill: red icon when active. */

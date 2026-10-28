@@ -72,7 +72,7 @@ internal fun AccountSheet(name: String, handle: String?, avatar: String?, signOu
         Button(
             onClick = signOut,
             modifier = Modifier.padding(top = 20.dp).fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(2.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.accentText)
         ) { Text("Sign out", fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold, fontSize = 15.sp) }
     }
@@ -93,7 +93,7 @@ internal fun DescriptionSheet(
             .verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp)
     ) {
         Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).rxDrawableBg(R.drawable.bg_handle))
-        Label("DESCRIPTION", Modifier.padding(top = 16.dp))
+        Label("Description", Modifier.padding(top = 16.dp))
         Text(title, Modifier.padding(top = 6.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)
         Row(Modifier.padding(top = 16.dp).fillMaxWidth().rxDrawableBg(R.drawable.bg_desc_card).padding(vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -104,7 +104,7 @@ internal fun DescriptionSheet(
             Stat(date, "Uploaded", Modifier.weight(1f))
         }
         if (chapters.size >= 2) {
-            Label("CHAPTERS", Modifier.padding(top = 20.dp))
+            Label("Chapters", Modifier.padding(top = 20.dp))
             Column(Modifier.padding(top = 8.dp).fillMaxWidth().rxDrawableBg(R.drawable.bg_desc_card).padding(vertical = 4.dp)) {
                 chapters.forEach { c ->
                     Row(
@@ -121,7 +121,7 @@ internal fun DescriptionSheet(
                 }
             }
         }
-        Label("ABOUT THIS VIDEO", Modifier.padding(top = 20.dp))
+        Label("About this video", Modifier.padding(top = 20.dp))
         Text(text, Modifier.padding(top = 8.dp).fillMaxWidth().rxDrawableBg(R.drawable.bg_desc_card).padding(14.dp),
             color = rx.text, fontSize = 14.sp, lineHeight = 20.sp, fontFamily = RxFonts.body)
     }
@@ -148,41 +148,13 @@ private fun Stat(value: String, label: String, modifier: Modifier) {
 @Composable
 internal fun ThemeMenu(act: MainActivity, mode: Int, accentName: String, pick: (Int) -> Unit, accent: (Int) -> Unit) {
     val rx = LocalRx.current
-    var accents by remember { mutableStateOf(false) }
-    Column(Modifier.width(288.dp).rxDrawableBg(R.drawable.bg_theme_popup).padding(vertical = 8.dp)) {
-        if (!accents) {
-            Text("APPEARANCE", Modifier.padding(start = 16.dp, top = 8.dp, bottom = 6.dp), color = rx.text2, fontSize = 12.sp,
-                fontWeight = FontWeight.Bold, letterSpacing = 0.15.em, fontFamily = RxFonts.body)
+    Column(Modifier.width(240.dp).rxDrawableBg(R.drawable.bg_theme_popup).padding(vertical = 8.dp)) {
+        run {
+            Text("Appearance", Modifier.padding(start = 16.dp, top = 8.dp, bottom = 6.dp), color = rx.text2, fontSize = 12.sp,
+                fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
             ModeRow(R.drawable.ic_theme_system, "System", mode == 0) { pick(0) }
             ModeRow(R.drawable.ic_brightness, "Light", mode == 1) { pick(1) }
-            ModeRow(R.drawable.ic_moon, "Dark", mode == 2 || mode == 3) { if (mode != 3) pick(2) }   // AMOLED already is dark
-            Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(rx.divider))
-            Row(
-                Modifier.fillMaxWidth().height(48.dp).clickable { accents = true }.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(Modifier.size(18.dp).rxDrawableBg(R.drawable.bg_theme_dot))
-                Text("Theme", Modifier.weight(1f).padding(start = 14.dp), color = rx.text, fontSize = 15.sp, fontFamily = RxFonts.body)
-                Text(accentName, color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body)
-                Image(painterResource(R.drawable.ic_chevron), null, Modifier.padding(start = 6.dp).size(18.dp), colorFilter = ColorFilter.tint(rx.text2))
-            }
-        } else {
-            Row(
-                Modifier.fillMaxWidth().height(48.dp).clickable { accents = false }.padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(painterResource(R.drawable.ic_back), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
-                Text("Theme", Modifier.padding(start = 12.dp), color = rx.text, fontSize = 15.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold)
-            }
-            AndroidView(
-                factory = { c ->
-                    android.widget.LinearLayout(c).apply {
-                        orientation = android.widget.LinearLayout.VERTICAL
-                        AccentSwatch.fill(this, AppPrefs.accent(act), R.attr.rxSurface) { v -> postDelayed({ accent(v) }, 140) }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-            )
+            ModeRow(R.drawable.ic_moon, "Dark", mode == 2 || mode == 3) { pick(2) }
         }
     }
 }

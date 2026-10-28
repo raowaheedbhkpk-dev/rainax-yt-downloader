@@ -140,7 +140,7 @@ class WelcomeActivity : AppCompatActivity() {
                     val al = animateFloatAsState(if (on) 1f else 0.35f, label = "dotAlpha").value
                     Box(
                         Modifier.padding(horizontal = 4.dp).width(w).height(8.dp).alpha(al)
-                            .background(if (on) rx.accent else rx.text2, RoundedCornerShape(2.dp))
+                            .background(if (on) rx.accent else rx.text2, RoundedCornerShape(12.dp))
                     )
                 }
             }
@@ -148,7 +148,7 @@ class WelcomeActivity : AppCompatActivity() {
             Button(
                 onClick = { if (!last) scope.launch { pager.animateScrollToPage(pos + 1) } else finishGuide() },
                 modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 24.dp).height(56.dp),
-                shape = RoundedCornerShape(2.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
             ) {
                 Text(if (last) "Get started" else "Next", fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)

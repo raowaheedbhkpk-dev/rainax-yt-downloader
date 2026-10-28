@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- "Cinema Pro": near-black (or warm paper) pages, sharp corners, film red + gold accents.
-         Oswald (SIL Open Font License) is the title face (@font/rx_display), the phone's own font for text.
+         Oswald (SIL Open Font License) is the title face (@font/rx_body), the phone's own font for text.
          One theme for light and dark. Colours come from values/colors.xml and values-night/colors.xml,
          so every screen follows the same palette. forceDarkAllowed=false stops phone makers
          (Xiaomi/MIUI, Oppo, ...) from re-colouring the app on their own. -->
@@ -24,7 +24,7 @@
     <style name="Widget.Rainax.SnackbarButton" parent="Widget.Material3.Button.TextButton.Snackbar">
         <item name="android:textColor">@color/rx_cinema_gold</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
     </style>
     <style name="Widget.Rainax.SnackbarText" parent="Widget.Material3.Snackbar.TextView">
@@ -38,7 +38,7 @@
     <!-- every corner in the Cinema look: sharp (2dp just softens the pixels) -->
     <style name="ShapeAppearance.Rainax.Sharp" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">2dp</item>
+        <item name="cornerSize">14dp</item>
     </style>
 
     <style name="Theme.Rainax" parent="Theme.Material3.DayNight.NoActionBar">
@@ -197,9 +197,9 @@
     </style>
     <style name="Widget.Rainax.Dialog.Positive" parent="Widget.Material3.Button">
         <item name="backgroundTint">?attr/rxAccent</item>
-        <item name="android:textColor">@color/rx_white</item>
-        <item name="cornerRadius">2dp</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/rx_on_primary</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
@@ -209,15 +209,15 @@
         <item name="strokeColor">@color/rx_text</item>
         <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/rx_text</item>
-        <item name="cornerRadius">2dp</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
     </style>
     <style name="Widget.Rainax.Dialog.Neutral" parent="Widget.Material3.Button.TextButton.Dialog">
         <item name="android:textColor">@color/rx_gold</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.12</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -256,13 +256,13 @@
     </style>
 
     <style name="ShapeAppearance.Rainax.Large" parent="ShapeAppearance.Material3.LargeComponent">
-        <item name="cornerSize">4dp</item>
+        <item name="cornerSize">20dp</item>
     </style>
 
     <!-- action buttons (Like, Share, Subscribe ...): sharp like the rest of Cinema Pro -->
     <style name="ShapeAppearance.Rainax.Pill" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">2dp</item>
+        <item name="cornerSize">50%</item>
     </style>
     <!-- avatars stay round -->
     <style name="ShapeAppearance.Rainax.Round" parent="">
@@ -272,8 +272,8 @@
 
     <style name="ShapeAppearance.Rainax.Sheet" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">4dp</item>
-        <item name="cornerSizeTopRight">4dp</item>
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
@@ -300,16 +300,16 @@
         <item name="android:fontFamily">@font/rx_body</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">12sp</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
         <item name="android:letterSpacing">0.08</item>
     </style>
 
     <!-- bottom bar labels: small, like YouTube -->
     <style name="TextAppearance.Rainax.Nav" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:textSize">10sp</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
         <item name="android:letterSpacing">0.1</item>
         <item name="android:fontFamily">@font/rx_body</item>
         <item name="fontFamily">@font/rx_body</item>
@@ -317,10 +317,10 @@
 
     <!-- titles -->
     <style name="TextAppearance.Rainax.Display" parent="">
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
         <item name="android:textColor">@color/rx_text</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0.02</item>
     </style>
 
@@ -329,7 +329,7 @@
         <item name="android:textColor">@color/rx_on_primary</item>
         <item name="iconTint">@color/rx_on_primary</item>
         <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
-        <item name="cornerRadius">2dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
         <item name="android:minHeight">48dp</item>
@@ -342,7 +342,7 @@
         <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
         <item name="strokeColor">?attr/rxOutline</item>
         <item name="strokeWidth">1dp</item>
-        <item name="cornerRadius">2dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -353,7 +353,7 @@
         <item name="android:textColor">@color/rx_text</item>
         <item name="iconTint">@color/rx_text</item>
         <item name="android:textAppearance">@style/TextAppearance.Rainax.Button</item>
-        <item name="cornerRadius">2dp</item>
+        <item name="cornerRadius">24dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
     </style>
@@ -381,7 +381,7 @@
     <style name="Widget.Rainax.Chip.Filter" parent="Widget.Material3.Chip.Filter">
         <item name="chipBackgroundColor">@color/rx_chip_bg</item>
         <item name="android:textColor">@color/rx_chip_text</item>
-        <item name="checkedIconTint">@color/rx_white</item>
+        <item name="checkedIconTint">@color/rx_on_primary</item>
         <item name="android:textAppearance">@style/TextAppearance.Rainax.ChipCaps</item>
         <item name="chipStrokeWidth">1dp</item>
         <item name="chipStrokeColor">@color/rx_chip_stroke</item>
@@ -431,7 +431,7 @@
         <item name="tabIndicatorGravity">stretch</item>
         <item name="tabIndicatorFullWidth">true</item>
         <item name="tabIndicatorAnimationMode">elastic</item>
-        <item name="tabSelectedTextColor">@color/rx_white</item>
+        <item name="tabSelectedTextColor">@color/rx_on_primary</item>
         <item name="tabTextColor">@color/rx_text2</item>
         <item name="tabRippleColor">@android:color/transparent</item>
         <item name="tabMode">fixed</item>
@@ -442,7 +442,7 @@
 
     <style name="TextAppearance.Rainax.Tab" parent="TextAppearance.Material3.TitleSmall">
         <item name="android:textStyle">bold</item>
-        <item name="textAllCaps">true</item>
+        <item name="textAllCaps">false</item>
         <item name="android:letterSpacing">0.08</item>
     </style>
 
@@ -512,18 +512,18 @@
     </style>
     <style name="TextAppearance.Rainax.Type.Title" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textSize">20sp</item>
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
     </style>
     <style name="TextAppearance.Rainax.Type.Headline" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textSize">24sp</item>
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
     </style>
     <style name="TextAppearance.Rainax.Type.Display" parent="TextAppearance.Material3.HeadlineLarge">
         <item name="android:textSize">32sp</item>
-        <item name="android:fontFamily">@font/rx_display</item>
-        <item name="fontFamily">@font/rx_display</item>
+        <item name="android:fontFamily">@font/rx_body</item>
+        <item name="fontFamily">@font/rx_body</item>
     </style>
     <style name="ThemeOverlay.Rainax.Accent.Violet" parent="">
         <item name="rxAccent">@color/rx_accent_violet</item>
