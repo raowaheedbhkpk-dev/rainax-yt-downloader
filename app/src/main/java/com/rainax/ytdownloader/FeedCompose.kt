@@ -427,7 +427,9 @@ private fun Slot(m: FeedModel, host: FeedHost, s: FeedModel.Slot) {
         }
         is FeedModel.Slot.Video -> when (s.style) {
             FeedModel.CHANNEL -> ChannelRowView(s.item) { m.onOpen(it) }
-            FeedModel.HERO -> HeroCard(m, s.item)
+            // (the modern look keeps the first video a normal card: no film poster)
+            FeedModel.HERO -> if (LocalModern.current) VideoCard(s.item, m.onOpen, m.onDownload, m.onMore, host.preview, m.onPick, m.isPicked)
+                else HeroCard(m, s.item)
             FeedModel.COVER -> CoverCard(m, s.item)
             FeedModel.WIDE -> WideCard(m, s.item)
             else -> if (m.isBig) VideoCard(s.item, m.onOpen, m.onDownload, m.onMore, host.preview, m.onPick, m.isPicked)
@@ -479,8 +481,10 @@ private fun metaShort(item: VideoItem): String = listOfNotNull(
 
 @Composable
 private fun RoundButton(icon: Int, label: String, tint: Color, size: Int, pad: Int, bg: Int = R.drawable.bg_circle_btn, onClick: () -> Unit) {
+    val modern = LocalModern.current
     Box(
-        Modifier.size(size.dp).rxDrawableBg(bg).clickable(onClick = onClick).semantics { contentDescription = label }.padding(pad.dp)
+        Modifier.size(size.dp).then(if (modern) Modifier.clip(CircleShape).background(LocalRx.current.card) else Modifier.rxDrawableBg(bg))
+            .clickable(onClick = onClick).semantics { contentDescription = label }.padding(pad.dp)
     ) {
         Image(painterResource(icon), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(tint))
     }
@@ -490,10 +494,13 @@ private fun RoundButton(icon: Int, label: String, tint: Color, size: Int, pad: I
 @Composable
 private fun SectionHead(label: String, title: String, onMore: (() -> Unit)?) {
     val rx = LocalRx.current
-    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 10.dp)) {
-        Text(label, color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
+    val modern = LocalModern.current
+    Column(Modifier.fillMaxWidth().padding(start = if (modern) 18.dp else 16.dp, end = 16.dp, top = 26.dp, bottom = 10.dp)) {
+        Text(label, color = rx.gold, fontSize = if (modern) 12.sp else 10.sp, fontWeight = FontWeight.Bold,
+            letterSpacing = if (modern) 0.05.em else 0.25.em, fontFamily = rxBodyFont())
         Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(title.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display)
+            Text(rxHeadCase(title), color = rx.text, fontSize = if (modern) 22.sp else 24.sp, fontFamily = rxHeadFont(),
+                fontWeight = if (modern) FontWeight.ExtraBold else FontWeight.Normal)
             Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(1.dp).background(rx.divider))
             if (onMore != null) {
                 Text("MORE", Modifier.height(36.dp).clickable(onClick = onMore).padding(horizontal = 4.dp, vertical = 10.dp),
@@ -510,15 +517,17 @@ private fun SectionHead(label: String, title: String, onMore: (() -> Unit)?) {
 private fun SmallVideoRow(m: FeedModel, item: VideoItem) {
     val rx = LocalRx.current
     val view = LocalView.current
-    Row(Modifier.fillMaxWidth().openAndHold(m, item, view).padding(horizontal = 12.dp, vertical = 7.dp)) {
-        Box(Modifier.size(168.dp, 94.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+    val modern = LocalModern.current
+    Row(Modifier.fillMaxWidth().openAndHold(m, item, view).padding(horizontal = if (modern) 16.dp else 12.dp, vertical = if (modern) 9.dp else 7.dp)) {
+        Box(Modifier.size(168.dp, 94.dp).clip(rxShape(14)).then(if (modern) Modifier.background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_thumb))) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), widthPx = 360)
             Badge(videoBadge(item), item.seconds < 0, Modifier.align(Alignment.BottomEnd).padding(5.dp))
             WatchBar(item, Modifier.align(Alignment.BottomStart))
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(item.title, color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(videoMeta(item), Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(item.title, color = rx.text, fontSize = 14.sp, fontWeight = if (modern) FontWeight.Bold else FontWeight.SemiBold, fontFamily = rxBodyFont(),
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(videoMeta(item), Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 12.sp, fontFamily = rxBodyFont(), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Row(Modifier.align(Alignment.Bottom), verticalAlignment = Alignment.CenterVertically) {
             val picker = m.onPick
@@ -550,12 +559,12 @@ private fun ChannelRowView(item: VideoItem, onOpen: (VideoItem) -> Unit) {
             RxNetImage(item.thumb, Modifier.fillMaxSize(), circle = true, widthPx = 160)
         }
         Column(Modifier.weight(1f).padding(start = 16.dp)) {
-            Text(item.title, color = rx.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.title, color = rx.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             val meta = item.uploaded ?: listOfNotNull(
                 item.views.takeIf { it >= 0 }?.let { YtCatalog.count(it) + " subscribers" },
                 item.count.takeIf { it > 0 }?.let { "$it videos" }
             ).joinToString(" • ")
-            Text(meta, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(meta, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Image(painterResource(R.drawable.ic_chevron_down), null, Modifier.size(20.dp).graphicsLayer { rotationZ = -90f }, colorFilter = ColorFilter.tint(rx.text2))
     }

@@ -38,8 +38,9 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun HomePage(chrome: HomeChrome, a: HomeChromeActions, feed: FeedHost, onPull: () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
+internal fun HomePage(chrome: HomeChrome, a: HomeChromeActions, feed: FeedHost, onPull: () -> Unit) = RxModern {
+    // Home is the first screen in the new "Modern Minimalism" look (ModernStyle.kt): black and white, soft and airy
+    Column(Modifier.fillMaxSize().background(LocalRx.current.bg)) {
         // the top bar's height: autoplay in feed doesn't count cards hidden under it
         Box(Modifier.fillMaxWidth().onSizeChanged { feed.preview.padTop = it.height }) { HomeTopBar(chrome, a) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -51,7 +52,7 @@ internal fun HomePage(chrome: HomeChrome, a: HomeChromeActions, feed: FeedHost, 
                 modifier = Modifier.fillMaxSize(),
                 indicator = { FilmCountdown(feed.refreshing) }
             ) {
-                val glow = feed.glow
+                val glow = if (LocalModern.current) null else feed.glow       // (no colour in the black-and-white look)
                 Box(
                     Modifier.fillMaxSize().then(
                         if (glow != null) Modifier.background(Brush.verticalGradient(listOf(Color(glow), Color.Transparent))) else Modifier
@@ -83,6 +84,6 @@ private fun BoxScope.FilmCountdown(running: Boolean) {
         Modifier.align(Alignment.TopCenter).padding(top = 18.dp).size(56.dp).alpha(fade.value).rxDrawableBg(R.drawable.bg_countdown),
         contentAlignment = Alignment.Center
     ) {
-        Text(n.toString(), Modifier.scale(pop.value), color = Color.White, fontSize = 24.sp, fontFamily = RxFonts.display)
+        Text(n.toString(), Modifier.scale(pop.value), color = Color.White, fontSize = 24.sp, fontFamily = rxHeadFont())
     }
 }

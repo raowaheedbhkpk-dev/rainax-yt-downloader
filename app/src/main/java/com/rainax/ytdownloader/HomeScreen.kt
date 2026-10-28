@@ -79,7 +79,7 @@ class HomeScreen(
     /** A channel's banner, name, Subscribe and tabs (Compose, ChannelHeaderUi.kt): the top of its list. */
     private val chUi = ChannelHeaderUi()
     private val channelHeaderView = androidx.compose.ui.platform.ComposeView(act).apply {
-        setContent { RxTheme { ChannelHeader(chUi, { toggleChannelSubscribe() }, { label -> pickChannelTab(label) }) } }
+        setContent { RxTheme { RxModern { ChannelHeader(chUi, { toggleChannelSubscribe() }, { label -> pickChannelTab(label) }) } } }
     }
     private val channelAdapter = FeedModel(false, { open(it) }, { download(it) }).also { it.header = channelHeaderView }
 

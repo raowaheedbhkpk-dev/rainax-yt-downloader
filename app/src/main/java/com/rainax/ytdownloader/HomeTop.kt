@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -144,22 +145,25 @@ class HomeChromeActions(
 internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
     val rx = LocalRx.current
     val view = LocalView.current
+    val modern = LocalModern.current
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(60.dp)) {
+        Box(Modifier.fillMaxWidth().height(if (modern) 64.dp else 60.dp)) {
             when (c.bar) {
                 1 -> SearchBar(c, a)
                 2 -> Row(Modifier.fillMaxSize().padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     TopIcon(R.drawable.ic_back, "Back") { a.back() }
-                    Text(c.title, Modifier.weight(1f).padding(start = 4.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.body,
-                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(c.title, Modifier.weight(1f).padding(start = 4.dp), color = rx.text, fontSize = if (modern) 22.sp else 20.sp,
+                        fontFamily = rxBodyFont(), fontWeight = if (modern) FontWeight.ExtraBold else FontWeight.SemiBold, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
                     if (c.titleDownload) {
                         Button(
-                            onClick = { a.titleDownload() }, modifier = Modifier.height(40.dp), shape = RoundedCornerShape(2.dp),
+                            onClick = { a.titleDownload() }, modifier = Modifier.height(40.dp),
+                            shape = if (modern) RoundedCornerShape(50) else RoundedCornerShape(2.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                         ) {
                             Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
-                            Text("Download all", Modifier.padding(start = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                            Text("Download all", Modifier.padding(start = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = rxBodyFont())
                         }
                     }
                 }
@@ -167,10 +171,19 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     Box(Modifier.size(44.dp, 48.dp).clickable { a.menu() }.semantics { contentDescription = "Menu" }, contentAlignment = Alignment.Center) {
                         Image(painterResource(R.drawable.ic_menu), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
                     }
-                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    if (modern) Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        // modern: a black (white in dark) rounded square with the download arrow, the name in one clean face
+                        Box(Modifier.size(30.dp).background(rx.text, RoundedCornerShape(9.dp)).padding(6.dp)) {
+                            Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.bg))
+                        }
+                        Text("Rainax", Modifier.padding(start = 10.dp), color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family,
+                            fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em)
+                        Text("Tube", Modifier.padding(start = 4.dp), color = rx.text2, fontSize = 22.sp, fontFamily = ModernFonts.family,
+                            fontWeight = FontWeight.Medium, letterSpacing = (-0.02).em)
+                    } else Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Image(rxDrawable(R.drawable.ic_logo, 28), null, Modifier.size(28.dp))
-                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.06.em)
-                        Text("TUBE", Modifier.padding(start = 3.dp), color = rx.accentText, fontSize = 20.sp, fontFamily = RxFonts.display,
+                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = rxHeadFont(), letterSpacing = 0.06.em)
+                        Text("TUBE", Modifier.padding(start = 3.dp), color = rx.accentText, fontSize = 20.sp, fontFamily = rxHeadFont(),
                             fontWeight = FontWeight.SemiBold, letterSpacing = 0.06.em)
                     }
                     Box(Modifier.size(48.dp).clickable { a.theme(view) }.semantics { contentDescription = "Theme" }, contentAlignment = Alignment.Center) {
@@ -185,8 +198,8 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
             val chipList = rememberLazyListState()
             LaunchedEffect(c.chipSel, c.chips) { if (c.chipSel in c.chips.indices) chipList.animateScrollToItem((c.chipSel - 1).coerceAtLeast(0)) }
             LazyRow(
-                Modifier.fillMaxWidth().padding(vertical = 4.dp), state = chipList,
-                contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.fillMaxWidth().padding(top = 4.dp, bottom = if (modern) 10.dp else 4.dp), state = chipList,
+                contentPadding = PaddingValues(horizontal = if (modern) 16.dp else 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 itemsIndexed(c.chips) { i, label ->
                     RxChip(label, selected = i == c.chipSel) { if (i != c.chipSel) { Haptics.tick(view); a.chip(i) } }
@@ -230,21 +243,24 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val fade by animateFloatAsState(if (shown) 1f else 0f, tween(200), label = "searchIn")
+    val modern = LocalModern.current
     Row(Modifier.fillMaxSize().padding(horizontal = 4.dp).alpha(fade), verticalAlignment = Alignment.CenterVertically) {
         TopIcon(R.drawable.ic_back, "Back") { a.back() }
         Row(
-            Modifier.weight(1f).height(54.dp).padding(end = 8.dp).rxDrawableBg(R.drawable.bg_search_focus).padding(start = 18.dp, end = 8.dp),
+            Modifier.weight(1f).height(if (modern) 48.dp else 54.dp).padding(end = 8.dp).then(
+                if (modern) Modifier.background(rx.card, RoundedCornerShape(50)) else Modifier.rxDrawableBg(R.drawable.bg_search_focus)
+            ).padding(start = 18.dp, end = if (modern) 5.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(painterResource(R.drawable.ic_search), null, Modifier.padding(end = 10.dp).size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (c.input.text.isEmpty()) Text("Search YouTube or paste a link", color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body,
+                if (c.input.text.isEmpty()) Text("Search YouTube or paste a link", color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont(),
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
                 BasicTextField(
                     value = c.input,
                     onValueChange = { v -> val changed = v.text != c.input.text; c.input = v; if (changed) a.typed(v.text) },
                     singleLine = true,
-                    textStyle = TextStyle(color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body),
+                    textStyle = TextStyle(color = rx.text, fontSize = 14.sp, fontFamily = rxBodyFont()),
                     cursorBrush = SolidColor(rx.accent),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { a.submit(c.input.text) }),
@@ -258,9 +274,11 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
                 ) { Image(painterResource(R.drawable.ic_close), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text2)) }
             } else {
                 Box(
-                    Modifier.padding(start = 6.dp).size(38.dp).rxDrawableBg(R.drawable.bg_mic_red).clickable { a.voice() }
+                    Modifier.padding(start = 6.dp).size(38.dp).then(
+                        if (modern) Modifier.background(rx.text, CircleShape) else Modifier.rxDrawableBg(R.drawable.bg_mic_red)
+                    ).clickable { a.voice() }
                         .semantics { contentDescription = "Search with your voice" }.padding(9.dp)
-                ) { Image(painterResource(R.drawable.ic_mic), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(Color.White)) }
+                ) { Image(painterResource(R.drawable.ic_mic), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.bg else Color.White)) }
             }
         }
     }
@@ -276,31 +294,31 @@ internal fun HomeOverlay(c: HomeChrome, a: HomeChromeActions) {
         if (err != null && !c.suggestOpen) {
             Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(rx.accent))
-                Text(err, Modifier.padding(top = 12.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center)
+                Text(err, Modifier.padding(top = 12.dp), color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont(), textAlign = TextAlign.Center)
                 Button(
-                    onClick = { a.retry() }, modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(2.dp),
+                    onClick = { a.retry() }, modifier = Modifier.padding(top = 16.dp), shape = rxShape(24),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
-                ) { Text("Try again", fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
+                ) { Text("Try again", fontFamily = rxBodyFont(), fontWeight = FontWeight.Bold) }
                 if (c.errorOffline) {
-                    TextButton(onClick = { a.netSettings() }) { Text("Internet settings", color = rx.accentText, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
+                    TextButton(onClick = { a.netSettings() }) { Text("Internet settings", color = rx.accentText, fontFamily = rxBodyFont(), fontWeight = FontWeight.Bold) }
                 }
             }
         }
         if (c.picks > 0 && !c.suggestOpen) {
             Row(
                 Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = 12.dp).fillMaxWidth().height(60.dp)
-                    .rxDrawableBg(R.drawable.bg_glass_nav).padding(start = 18.dp, end = 8.dp),
+                    .then(if (LocalModern.current) Modifier.background(rx.card, RoundedCornerShape(24.dp)) else Modifier.rxDrawableBg(R.drawable.bg_glass_nav)).padding(start = 18.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(if (c.picks == 1) "1 selected · View" else "${c.picks} selected · View", Modifier.weight(1f).clickable { a.picksView() },
-                    color = rx.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = RxFonts.body)
-                TextButton(onClick = { a.picksClear() }) { Text("Clear", color = rx.accentText, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
+                    color = rx.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = rxBodyFont())
+                TextButton(onClick = { a.picksClear() }) { Text("Clear", color = rx.accentText, fontFamily = rxBodyFont(), fontWeight = FontWeight.Bold) }
                 Button(
-                    onClick = { a.picksDownload() }, modifier = Modifier.height(44.dp), shape = RoundedCornerShape(2.dp),
+                    onClick = { a.picksDownload() }, modifier = Modifier.height(44.dp), shape = rxShape(24),
                     colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                 ) {
                     Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
-                    Text(if (c.picks > 1) "Download ${c.picks}" else "Download", Modifier.padding(start = 8.dp), fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                    Text(if (c.picks > 1) "Download ${c.picks}" else "Download", Modifier.padding(start = 8.dp), fontWeight = FontWeight.Bold, fontFamily = rxBodyFont())
                 }
             }
         }
@@ -320,7 +338,7 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
         if (c.stubs.isNotEmpty()) {
             item(key = "stubs") {
                 Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
-                    Text("RECENT SEARCHES", Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.gold, fontSize = 10.sp,
+                    Text(rxHeadCase("Recent searches"), Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.gold, fontSize = 10.sp,
                         fontWeight = FontWeight.Bold, letterSpacing = 0.25.em)
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp)) {
                         itemsIndexed(c.stubs) { _, s -> RecentStub(s, a) }
@@ -335,8 +353,8 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { a.clearHistory() }.padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Image(painterResource(R.drawable.ic_delete), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.accentText))
-                        Text("CLEAR SEARCH HISTORY", Modifier.padding(start = 20.dp), color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.08.em, fontFamily = RxFonts.body)
+                        Text(rxHeadCase("Clear search history"), Modifier.padding(start = 20.dp), color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.08.em, fontFamily = rxBodyFont())
                     }
                     Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp).fillMaxWidth().height(1.dp).background(rx.divider))
                 }
@@ -344,8 +362,8 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
         }
         if (c.mayLike.isNotEmpty()) {
             item(key = "mayLike") {
-                Text("YOU MAY LIKE", Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), color = rx.text, fontSize = 24.sp,
-                    fontFamily = RxFonts.display)
+                Text(rxHeadCase("You may like"), Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), color = rx.text, fontSize = 24.sp,
+                    fontFamily = rxHeadFont())
             }
             itemsIndexed(c.mayLike, key = { i, s -> "m$i:" + s.text }) { _, s -> SugRow(s, a) }
         }
@@ -366,7 +384,7 @@ private fun RecentStub(s: Sug, a: HomeChromeActions) {
                 .semantics { contentDescription = "Search ${s.text}. Hold for edit or remove" }
                 .padding(horizontal = 14.dp),
             contentAlignment = Alignment.CenterStart
-        ) { Text(s.text, color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        ) { Text(s.text, color = rx.text, fontSize = 14.sp, fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis) }
         RecentMenu(menu, { menu = false }, s.text, a)
     }
 }
@@ -374,9 +392,9 @@ private fun RecentStub(s: Sug, a: HomeChromeActions) {
 @Composable
 private fun RecentMenu(open: Boolean, close: () -> Unit, q: String, a: HomeChromeActions) {
     DropdownMenu(expanded = open, onDismissRequest = close) {
-        DropdownMenuItem(text = { Text("Search", fontFamily = RxFonts.body) }, onClick = { close(); a.submit(q) })
-        DropdownMenuItem(text = { Text("Edit", fontFamily = RxFonts.body) }, onClick = { close(); a.fill(q) })
-        DropdownMenuItem(text = { Text("Remove", fontFamily = RxFonts.body) }, onClick = { close(); a.removeRecent(q) })
+        DropdownMenuItem(text = { Text("Search", fontFamily = rxBodyFont()) }, onClick = { close(); a.submit(q) })
+        DropdownMenuItem(text = { Text("Edit", fontFamily = rxBodyFont()) }, onClick = { close(); a.fill(q) })
+        DropdownMenuItem(text = { Text("Remove", fontFamily = rxBodyFont()) }, onClick = { close(); a.removeRecent(q) })
     }
 }
 
@@ -397,8 +415,8 @@ private fun SugRow(s: Sug, a: HomeChromeActions) {
         ) {
             Image(painterResource(s.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
             Column(Modifier.weight(1f).padding(start = 20.dp)) {
-                Text(s.text, color = rx.text, fontSize = 16.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (!s.sub.isNullOrBlank()) Text(s.sub, color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(s.text, color = rx.text, fontSize = 16.sp, fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (!s.sub.isNullOrBlank()) Text(s.sub, color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (s.thumb != null) {
                 Box(Modifier.padding(start = 10.dp).size(72.dp, 40.dp).rxDrawableBg(R.drawable.bg_thumb)) {

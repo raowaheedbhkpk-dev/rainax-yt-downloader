@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -99,11 +100,15 @@ internal fun VideoCard(
     androidx.compose.runtime.LaunchedEffect(item.url) {
         if (!item.isPlaylist && !item.isChannel && item.seconds >= 0) FastExtractor.lookAhead(item.url)
     }
+    val modern = LocalModern.current
     Column(
-        Modifier.fillMaxWidth().padding(bottom = 18.dp)
+        Modifier.fillMaxWidth().padding(bottom = if (modern) 26.dp else 18.dp)
             .combinedClickable(onClick = { onOpen(item) }, onLongClick = menu?.let { m -> { m(item, view) } })
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).rxDrawableBg(R.drawable.bg_thumb_big)) {
+        Box(
+            if (modern) Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(20.dp)).background(rx.card)
+            else Modifier.fillMaxWidth().aspectRatio(16f / 9f).rxDrawableBg(R.drawable.bg_thumb_big)
+        ) {
             val card = if (preview != null) androidx.compose.runtime.remember(item.url) { ComposeCard(ctx, item) } else null
             if (card != null && preview != null) {
                 card.item = item
@@ -122,7 +127,12 @@ internal fun VideoCard(
             }
             val badge = card?.badge?.toString() ?: videoBadge(item)
             if (badge.isNotEmpty()) {
-                Text(
+                if (modern) Text(
+                    badge,
+                    Modifier.align(Alignment.BottomEnd).padding(10.dp).background(Color(0xB3000000), RoundedCornerShape(50))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = ModernFonts.family
+                ) else Text(
                     badge,
                     Modifier.align(Alignment.BottomEnd).padding(8.dp)
                         .rxDrawableBg(if (item.seconds < 0) R.drawable.bg_live else R.drawable.bg_duration)
@@ -138,20 +148,24 @@ internal fun VideoCard(
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, top = 12.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.align(Alignment.Top).size(36.dp).clip(CircleShape).rxDrawableBg(R.drawable.bg_avatar)) {
+        Row(Modifier.fillMaxWidth().padding(start = if (modern) 18.dp else 12.dp, top = if (modern) 14.dp else 12.dp, end = if (modern) 10.dp else 6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.align(Alignment.Top).size(if (modern) 38.dp else 36.dp).clip(CircleShape).then(
+                if (modern) Modifier.background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_avatar))) {
                 RxNetImage(item.avatar, Modifier.fillMaxSize(), circle = true, widthPx = 96)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(item.title, color = rx.text, fontSize = 16.sp, lineHeight = 21.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(videoMeta(item), Modifier.padding(top = 3.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = rx.text, fontSize = 16.sp, lineHeight = if (modern) 22.sp else 21.sp, fontFamily = rxBodyFont(),
+                    fontWeight = if (modern) FontWeight.Bold else FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(videoMeta(item), Modifier.padding(top = if (modern) 4.dp else 3.dp), color = rx.text2, fontSize = if (modern) 13.sp else 12.sp,
+                    fontFamily = rxBodyFont(), maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (onPick != null && !item.isPlaylist && !item.isChannel && item.seconds >= 0) {
                 val on = isPicked(item.url)
                 Box(
-                    Modifier.padding(start = 4.dp).size(40.dp).rxDrawableBg(R.drawable.bg_circle_btn).clickable { onPick(item) }
+                    Modifier.padding(start = 4.dp).size(40.dp).then(
+                        if (modern) Modifier.clip(CircleShape).background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
+                    ).clickable { onPick(item) }
                         .semantics { contentDescription = if (on) "Selected. Tap to unselect" else "Select for download" }.padding(10.dp)
                 ) {
                     Image(painterResource(if (on) R.drawable.ic_check else R.drawable.ic_add), null, Modifier.fillMaxSize(),
@@ -159,10 +173,12 @@ internal fun VideoCard(
                 }
             }
             Box(
-                Modifier.padding(start = 6.dp).size(42.dp).rxDrawableBg(R.drawable.bg_circle_btn).clickable { onDownload(item) }
+                Modifier.padding(start = 6.dp).size(42.dp).then(
+                    if (modern) Modifier.clip(CircleShape).background(rx.text) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
+                ).clickable { onDownload(item) }
                     .semantics { contentDescription = "Download" }.padding(10.dp)
             ) {
-                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.accent))
+                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.bg else rx.accent))
             }
             if (menu != null) {
                 Box(

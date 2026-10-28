@@ -61,7 +61,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     private var shortsToStart by mutableIntStateOf(0)
 
     val root: View = ComposeView(act).apply {
-        setContent { RxTheme { Shelf() } }
+        setContent { RxTheme { RxModern { Shelf() } } }
     }
 
     private var shownVersion = -1
@@ -157,7 +157,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                         items(channels.size) { i -> ChannelAvatar(channels[i]) { openChannel(it) } }
                     }
                     Text("All", Modifier.height(48.dp).clickable { openAllSubs() }.padding(horizontal = 16.dp, vertical = 14.dp),
-                        color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                        color = rx.accentText, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = rxBodyFont())
                 }
             }
             val watching = continueList
@@ -183,8 +183,9 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                 LazyRow(state = state, contentPadding = PaddingValues(horizontal = 12.dp)) {
                     items(strip.size) { i -> ShortCard(strip[i], i, w) }
                 }
-                // clear gap and a thin line before the next video, like YouTube
-                Box(Modifier.padding(top = 22.dp, bottom = 16.dp).fillMaxWidth().height(6.dp).background(rx.surfaceAlt))
+                // clear gap and a thin line before the next video, like YouTube (modern: just air)
+                if (LocalModern.current) Box(Modifier.padding(top = 28.dp).fillMaxWidth().height(1.dp))
+                else Box(Modifier.padding(top = 22.dp, bottom = 16.dp).fillMaxWidth().height(6.dp).background(rx.surfaceAlt))
             }
         }
     }
@@ -192,11 +193,15 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     @Composable
     private fun Heading(text: String, icon: Int?) {
         val rx = LocalRx.current
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        val modern = LocalModern.current
+        Row(Modifier.fillMaxWidth().padding(start = if (modern) 18.dp else 16.dp, end = 16.dp, top = if (modern) 10.dp else 6.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Image(painterResource(icon), null, Modifier.padding(end = 8.dp).size(26.dp), colorFilter = ColorFilter.tint(rx.accent))
+                Image(painterResource(icon), null, Modifier.padding(end = 8.dp).size(if (modern) 22.dp else 26.dp), colorFilter = ColorFilter.tint(rx.accent))
             }
-            Text(text.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
+            if (modern) Text(text, color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-0.02).em)
+            else Text(text.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
         }
     }
 
@@ -213,7 +218,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                 )
                 .semantics { contentDescription = e.title.ifBlank { "Video" } }
         ) {
-            Box(Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_thumb)) {
+            Box(Modifier.fillMaxWidth().height(130.dp).clip(rxShape(16)).background(rx.card)) {
                 RxNetImage(e.thumb ?: youtubeId(e.url)?.let { "https://i.ytimg.com/vi/$it/mqdefault.jpg" }, Modifier.fillMaxSize(), widthPx = 440)
                 Text(YtCatalog.duration((e.durMs - e.posMs) / 1000) + " left",
                     Modifier.align(Alignment.BottomEnd).padding(start = 6.dp, end = 6.dp, bottom = 9.dp).rxDrawableBg(R.drawable.bg_duration)
@@ -226,22 +231,22 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                 }
             }
             Text(e.title.ifBlank { "Video" }, Modifier.padding(start = 2.dp, end = 2.dp, top = 8.dp), color = rx.text, fontSize = 14.sp,
-                fontWeight = FontWeight.Bold, fontFamily = RxFonts.body, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis)
+                fontWeight = FontWeight.Bold, fontFamily = rxBodyFont(), maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis)
             Text(e.uploader, Modifier.padding(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 2.dp), color = rx.text2, fontSize = 12.sp,
-                fontFamily = RxFonts.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 
     @Composable
     private fun ShortCard(item: VideoItem, index: Int, w: androidx.compose.ui.unit.Dp) {
         Box(
-            Modifier.padding(horizontal = 4.dp).width(w).height(w * 16 / 9).clip(RoundedCornerShape(2.dp)).rxDrawableBg(R.drawable.bg_short_card)
+            Modifier.padding(horizontal = 4.dp).width(w).height(w * 16 / 9).clip(rxShape(20)).background(LocalRx.current.card)
                 .clickable { ShortsActivity.open(act, index) }.semantics { contentDescription = item.title }
         ) {
             RxNetImage(shortThumb(item), Modifier.fillMaxSize(), widthPx = 360)
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(96.dp).rxDrawableBg(R.drawable.bg_short_scrim))
-            Text(item.title, Modifier.align(Alignment.BottomStart).padding(10.dp), color = Color.White, fontSize = 14.sp,
-                fontWeight = FontWeight.Bold, fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(item.title, Modifier.align(Alignment.BottomStart).padding(12.dp), color = Color.White, fontSize = 14.sp,
+                fontWeight = FontWeight.Bold, fontFamily = rxBodyFont(), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 

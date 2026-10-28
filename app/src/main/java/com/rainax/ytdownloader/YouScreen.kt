@@ -260,6 +260,25 @@ private fun LibraryChips(act: MainActivity, s: YouState) {
 @Composable
 internal fun RxChip(label: String, selected: Boolean, icon: Int? = null, onClick: () -> Unit) {
     val rx = LocalRx.current
+    if (LocalModern.current) {
+        // modern: a soft grey pill, black (white in dark) when chosen, words as written
+        FilterChip(
+            selected = selected,
+            onClick = onClick,
+            label = { Text(label, fontFamily = ModernFonts.family, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, fontSize = 14.sp) },
+            leadingIcon = if (icon != null) {
+                { Image(painterResource(icon), null, Modifier.size(16.dp), colorFilter = ColorFilter.tint(if (selected) rx.onAccent else rx.text)) }
+            } else null,
+            shape = RoundedCornerShape(50),
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = rx.card, labelColor = rx.text,
+                selectedContainerColor = rx.text, selectedLabelColor = rx.bg
+            ),
+            border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected,
+                borderColor = Color.Transparent, selectedBorderColor = Color.Transparent)
+        )
+        return
+    }
     FilterChip(
         selected = selected,
         onClick = onClick,

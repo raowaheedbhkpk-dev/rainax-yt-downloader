@@ -59,14 +59,15 @@ internal fun ChannelHeader(ui: ChannelHeaderUi, subscribe: () -> Unit, pickTab: 
                 RxNetImage(ui.avatar, Modifier.fillMaxSize(), circle = true, widthPx = 200)
             }
             Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                Text(ui.name.uppercase(), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em,
+                Text(rxHeadCase(ui.name), color = rx.text, fontSize = 24.sp, fontFamily = rxHeadFont(),
+                    fontWeight = if (LocalModern.current) FontWeight.ExtraBold else FontWeight.Normal, letterSpacing = 0.02.em,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (ui.meta.isNotEmpty()) Text(ui.meta, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body)
+                if (ui.meta.isNotEmpty()) Text(ui.meta, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont())
             }
         }
         if (ui.desc.isNotBlank()) {
             Text(ui.desc, Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp), color = rx.text2, fontSize = 14.sp,
-                fontFamily = RxFonts.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                fontFamily = rxBodyFont(), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (ui.subscribeShown) {
             val on = ui.subscribed
@@ -77,7 +78,7 @@ internal fun ChannelHeader(ui: ChannelHeaderUi, subscribe: () -> Unit, pickTab: 
                 contentAlignment = Alignment.Center
             ) {
                 Text(if (on) "Subscribed" else "Subscribe", color = if (on) rx.text else rx.bg, fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                    fontWeight = FontWeight.Bold, fontFamily = rxBodyFont())
             }
         }
         // Videos / Shorts / Live / Playlists, like YouTube's channel tabs
