@@ -135,9 +135,9 @@ internal fun VideoCard(
             if (badge.isNotEmpty()) {
                 if (modern) Text(
                     badge,
-                    Modifier.align(Alignment.BottomEnd).padding(10.dp).background(Color(0xB3000000), RoundedCornerShape(50))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = ModernFonts.family
+                    Modifier.align(Alignment.BottomEnd).padding(10.dp).background(Color(0xBF000000), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = ModernFonts.family
                 ) else Text(
                     badge,
                     Modifier.align(Alignment.BottomEnd).padding(8.dp)
@@ -181,11 +181,12 @@ internal fun VideoCard(
             }
             Box(
                 Modifier.padding(start = 6.dp).size(42.dp).then(
-                    if (modern) Modifier.clip(CircleShape).background(rx.text) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
+                    if (modern) Modifier.clip(CircleShape).background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
                 ).clickable { onDownload(item) }
-                    .semantics { contentDescription = "Download" }.padding(10.dp)
+                    .semantics { contentDescription = "Download" }.padding(11.dp)
             ) {
-                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.bg else rx.accent))
+                // layout A: a soft grey round button, so the title stays the first thing you see
+                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.text else rx.accent))
             }
             if (menu != null) {
                 Box(

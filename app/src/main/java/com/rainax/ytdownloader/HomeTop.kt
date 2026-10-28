@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -149,24 +150,24 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
     val modern = LocalModern.current
     Column(Modifier.fillMaxWidth()) {
         if (modern && c.bar == 0) {
-            // iOS style: small buttons on top, then a large bold title (it stays at the top; the list scrolls under)
-            Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp, 48.dp).clickable { a.menu() }.semantics { contentDescription = "Menu" }, contentAlignment = Alignment.Center) {
-                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
-                }
-                Spacer(Modifier.weight(1f))
-                Box(Modifier.size(48.dp).clickable { a.theme(view) }.semantics { contentDescription = "Theme" }, contentAlignment = Alignment.Center) {
-                    Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(22.dp),
+            // layout A "Clean feed": the large bold title on the left, round white buttons on the right
+            // (theme, search — hold for voice — and your picture, which opens the menu)
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val avatar = remember { YtAccount.profile(ctx)?.avatar }
+            Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Home", Modifier.weight(1f), color = rx.text, fontSize = 34.sp, lineHeight = 40.sp, fontFamily = ModernFonts.family,
+                    fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em, maxLines = 1)
+                RoundTopButton("Theme", onClick = { a.theme(view) }) {
+                    Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(20.dp),
                         colorFilter = ColorFilter.tint(rx.text))
                 }
-                SearchIcon(a)
-            }
-            Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 16.dp, bottom = 6.dp), verticalAlignment = Alignment.Bottom) {
-                Text("Home", color = rx.text, fontSize = 34.sp, lineHeight = 40.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.02).em)
-                Spacer(Modifier.weight(1f))
-                Text("Rainax Tube", Modifier.padding(bottom = 7.dp), color = rx.text2, fontSize = 13.sp, fontFamily = ModernFonts.family,
-                    fontWeight = FontWeight.SemiBold)
+                RoundTopButton("Search", onClick = { a.openSearch() }, onLong = { a.voice() }) {
+                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
+                }
+                RoundTopButton("Menu", onClick = { a.menu() }) {
+                    if (avatar != null) RxNetImage(avatar, Modifier.fillMaxSize(), circle = true, widthPx = 120)
+                    else Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
+                }
             }
         } else
         Box(Modifier.fillMaxWidth().height(if (modern) 64.dp else 60.dp)) {
@@ -229,6 +230,19 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
             }
         }
     }
+}
+
+/** A 44dp round white button for Home's title row (layout A). */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RoundTopButton(label: String, onClick: () -> Unit, onLong: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val rx = LocalRx.current
+    Box(
+        Modifier.padding(start = 8.dp).size(44.dp).clip(CircleShape).background(rx.surface)
+            .combinedClickable(onClick = onClick, onLongClick = onLong)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center
+    ) { content() }
 }
 
 /** The search icon: tap opens the search box, hold speaks straight away. */
