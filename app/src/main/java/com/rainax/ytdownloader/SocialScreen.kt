@@ -199,11 +199,11 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                 Text("Paste", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
             }
             Row(
-                Modifier.weight(1.6f).height(52.dp).clip(RoundedCornerShape(50)).background(rx.accent).clickable { go() },
+                Modifier.weight(1.6f).height(52.dp).clip(RoundedCornerShape(50)).background(RxRed).clickable { go() },
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
-                Text("Download", Modifier.padding(start = 8.dp), color = rx.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
+                Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
+                Text("Download", Modifier.padding(start = 8.dp), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
             }
         }
 

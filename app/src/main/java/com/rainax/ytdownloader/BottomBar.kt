@@ -197,12 +197,12 @@ internal fun FloatingTabBar(ui: NavUi, pick: (Int) -> Unit) {
         // the round "+": download from a link
         Box(
             Modifier.padding(start = 10.dp).size(56.dp).scale(Bounce(ui, R.id.nav_social))
-                .shadow(10.dp, CircleShape, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
-                .background(rx.text, CircleShape).clip(CircleShape)
+                .shadow(10.dp, CircleShape, ambientColor = Color(0x55E6002E), spotColor = Color(0x55E6002E))
+                .background(RxRed, CircleShape).clip(CircleShape)
                 .clickable { pick(R.id.nav_social) }.semantics { contentDescription = "Add: download from a link" },
             contentAlignment = Alignment.Center
         ) {
-            Image(painterResource(R.drawable.ic_nav_plus), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.bg))
+            Image(painterResource(R.drawable.ic_nav_plus), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(Color.White))
         }
     }
 }

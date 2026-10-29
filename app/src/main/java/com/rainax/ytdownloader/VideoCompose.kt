@@ -132,7 +132,7 @@ internal fun VideoCard(
             if (badge.isNotEmpty()) {
                 Text(
                     badge,
-                    Modifier.align(Alignment.BottomEnd).padding(10.dp).background(Color(0xBF000000), RoundedCornerShape(6.dp))
+                    Modifier.align(Alignment.BottomEnd).padding(10.dp).background(if (item.seconds < 0) RxRed else Color(0xBF000000), RoundedCornerShape(6.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp),
                     color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = ModernFonts.family
                 )
@@ -140,7 +140,7 @@ internal fun VideoCard(
             val watched = if (item.isPlaylist || item.isChannel) -1f else WatchHistory.progress(ctx, item.url)
             if (watched > 0f) {
                 Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color(0x66FFFFFF))) {
-                    Box(Modifier.weight(watched.coerceIn(0.01f, 1f)).height(3.dp).background(rx.accent))
+                    Box(Modifier.weight(watched.coerceIn(0.01f, 1f)).height(3.dp).background(RxRed))
                     if (watched < 1f) Box(Modifier.weight(1f - watched.coerceIn(0.01f, 0.99f)).height(3.dp))
                 }
             }

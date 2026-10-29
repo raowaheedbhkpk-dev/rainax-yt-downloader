@@ -1,3 +1,4 @@
+New: one colour, used sparingly: YouTube-style red on the round + button, how much of a video you watched, LIVE, and the big Download buttons (download sheet, video page, + page). Everything else stays black and white, in light and dark
 Fix: the menu button (≡) on Home always shows the menu icon; it showed your YouTube picture after signing in, which looked like a profile button (your picture stays on You in the tab bar)
 New: see-through glass like the tab bar on the side menu, the download (formats) sheet, every menu and sheet (⋮, Comments, Up next, Queue, Description, Save to playlist, Picks, Account), the theme menu and the confirmation boxes. Shorts now has the floating tab bar too: tap Home, Music, You or + to go there straight away
 Fix: v20.0 did not build (three left-over lines in the Home list code); same app as v20.0 otherwise

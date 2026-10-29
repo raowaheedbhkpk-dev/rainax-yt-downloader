@@ -78,3 +78,9 @@ fun glassColors(rx: RxColors): RxColors {
         onAccent = rx.onAccent, outline = rx.outline, surfaceAlt = rx.surfaceAlt, gold = rx.gold, dark = rx.dark
     )
 }
+
+/**
+ * The one colour (v20.4): YouTube-style red, used sparingly: the round "+", how much of a video you watched,
+ * LIVE, and the big Download button. Everything else stays black and white. (#E6002E keeps white text readable.)
+ */
+val RxRed = Color(0xFFE6002E)

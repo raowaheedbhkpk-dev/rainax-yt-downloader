@@ -192,11 +192,11 @@ private fun Header(ui: VideoPageUi, a: VideoPageActions) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
-                Modifier.height(40.dp).background(rx.accent, CircleShape).clip(CircleShape).clickable { a.download() }.padding(horizontal = 22.dp),
+                Modifier.height(40.dp).background(RxRed, CircleShape).clip(CircleShape).clickable { a.download() }.padding(horizontal = 22.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(painterResource(R.drawable.ic_download), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.onAccent))
-                Text("Download", Modifier.padding(start = 8.dp), color = rx.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                Image(painterResource(R.drawable.ic_download), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(Color.White))
+                Text("Download", Modifier.padding(start = 8.dp), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
             }
             if (ui.chaptersShown) PillButton(R.drawable.ic_chapters, "Chapters", false) { a.chapters() }
             if (ui.rateShown) {

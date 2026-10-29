@@ -221,7 +221,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                     color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 val part = e.fraction.coerceIn(0f, 1f)
                 Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color(0x66FFFFFF))) {
-                    if (part > 0f) Box(Modifier.weight(part.coerceAtLeast(0.01f)).height(3.dp).background(rx.accent))
+                    if (part > 0f) Box(Modifier.weight(part.coerceAtLeast(0.01f)).height(3.dp).background(RxRed))
                     if (part < 1f) Box(Modifier.weight((1f - part).coerceAtLeast(0.01f)).height(3.dp))
                 }
             }

@@ -53,7 +53,6 @@
     <color name="dl_card_bg">#FFFFFF</color>
     <color name="dl_more_stroke">#D1D1D6</color>
     <color name="dl_more_icon_bg">#E5E5EA</color>
-    <color name="dl_bar_bg">#F2F2F7</color>
     <color name="dl_bar_line">#E5E5EA</color>
     <!-- side menu (light / dark: values-night) -->
     <color name="menu_fill">#0D000000</color>

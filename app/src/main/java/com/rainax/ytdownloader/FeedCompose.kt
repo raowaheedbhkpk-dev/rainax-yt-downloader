@@ -357,8 +357,8 @@ private fun Modifier.openAndHold(m: FeedModel, item: VideoItem, view: View): Mod
 private fun Badge(text: String, live: Boolean, modifier: Modifier, small: Boolean = false) {
     if (text.isEmpty()) return
     Text(
-        text, modifier.rxDrawableBg(if (live) R.drawable.bg_live else R.drawable.bg_duration)
-            .padding(horizontal = if (small) 4.dp else 6.dp, vertical = 1.dp),
+        text, modifier.background(if (live) RxRed else Color(0xBF000000), RoundedCornerShape(6.dp))
+            .padding(horizontal = if (small) 5.dp else 7.dp, vertical = 2.dp),
         color = Color.White, fontSize = if (small) 10.sp else 12.sp, fontWeight = FontWeight.Bold
     )
 }
@@ -370,7 +370,7 @@ private fun WatchBar(item: VideoItem, modifier: Modifier) {
     if (watched <= 0f) return
     val rx = LocalRx.current
     Row(modifier.fillMaxWidth().height(3.dp).background(Color(0x66FFFFFF))) {
-        Box(Modifier.weight(watched.coerceIn(0.01f, 1f)).height(3.dp).background(rx.accent))
+        Box(Modifier.weight(watched.coerceIn(0.01f, 1f)).height(3.dp).background(RxRed))
         if (watched < 1f) Box(Modifier.weight(1f - watched.coerceIn(0.01f, 0.99f)).height(3.dp))
     }
 }

@@ -276,9 +276,9 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
                 modifier = Modifier.height(52.dp).alpha(if (ui.canDownload) 1f else 0.5f),
                 shape = RoundedCornerShape(50),
                 contentPadding = PaddingValues(horizontal = 28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+                colors = ButtonDefaults.buttonColors(containerColor = RxRed, contentColor = Color.White)
             ) {
-                Image(painterResource(R.drawable.ic_dl_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
+                Image(painterResource(R.drawable.ic_dl_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(Color.White))
                 Text("Download", Modifier.padding(start = 10.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em, fontFamily = RxFonts.body)
             }
         }
