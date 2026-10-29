@@ -152,9 +152,7 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
     Column(Modifier.fillMaxWidth()) {
         if (c.bar == 0) {
             // layout A "Clean feed": the large bold title on the left, round white buttons on the right
-            // (theme, search — hold for voice — and your picture, which opens the menu)
-            val ctx = androidx.compose.ui.platform.LocalContext.current
-            val avatar = remember { YtAccount.profile(ctx)?.avatar }
+            // (theme, search — hold for voice — and the menu ≡; your picture is on the tab bar's You)
             Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Home", Modifier.weight(1f), color = rx.text, fontSize = 34.sp, lineHeight = 40.sp, fontFamily = ModernFonts.family,
                     fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em, maxLines = 1)
@@ -166,8 +164,7 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
                 }
                 RoundTopButton("Menu", onClick = { a.menu() }) {
-                    if (avatar != null) RxNetImage(avatar, Modifier.fillMaxSize(), circle = true, widthPx = 120)
-                    else Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
+                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
                 }
             }
         } else
