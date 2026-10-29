@@ -297,8 +297,8 @@ internal fun SettingsScreen(act: MainActivity) {
 @Composable
 private fun IconBox(icon: Int) {
     val rx = LocalRx.current
-    Box(Modifier.padding(end = 14.dp).size(30.dp).clip(RoundedCornerShape(8.dp)).background(rx.text), contentAlignment = Alignment.Center) {
-        Image(painterResource(icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.bg))
+    Box(Modifier.padding(end = 14.dp).size(30.dp).clip(RoundedCornerShape(8.dp)).background(rx.accent), contentAlignment = Alignment.Center) {
+        Image(painterResource(icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.onAccent))
     }
 }
 

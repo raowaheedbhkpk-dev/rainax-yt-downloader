@@ -158,13 +158,13 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em, maxLines = 1)
                 RoundTopButton("Theme", onClick = { a.theme(view) }, onPlaced = { r -> ThemeAnchor.rect = r }) {
                     Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(20.dp),
-                        colorFilter = ColorFilter.tint(rx.text))
+                        colorFilter = ColorFilter.tint(rx.accent))
                 }
                 RoundTopButton("Search", onClick = { a.openSearch() }, onLong = { a.voice() }) {
-                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
+                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
                 }
                 RoundTopButton("Menu", onClick = { a.menu() }) {
-                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
+                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
                 }
             }
         } else
@@ -278,10 +278,10 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
             } else {
                 Box(
                     Modifier.padding(start = 6.dp).size(38.dp).then(
-                        Modifier.background(rx.text, CircleShape)
+                        Modifier.background(rx.accent, CircleShape)
                     ).clickable { a.voice() }
                         .semantics { contentDescription = "Search with your voice" }.padding(9.dp)
-                ) { Image(painterResource(R.drawable.ic_mic), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.bg)) }
+                ) { Image(painterResource(R.drawable.ic_mic), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.onAccent)) }
             }
         }
     }

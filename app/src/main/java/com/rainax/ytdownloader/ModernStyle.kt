@@ -28,7 +28,7 @@ object ModernFonts {
 }
 
 /**
- * The black-and-white colours, iOS 17 style: an off-white page (#F2F2F7) with white cards in light, #1C1C1E
+ * The colours, iOS 17 style, red and white (v20.5): an off-white page (#F2F2F7) with white cards in light, #1C1C1E
  * with #2C2C2E cards in dark. [RxColors.card] is the soft fill inside cards (small round buttons, placeholders).
  */
 fun monoColors(rx: RxColors): RxColors {
@@ -44,10 +44,11 @@ fun monoColors(rx: RxColors): RxColors {
         text = text,
         text2 = if (d) Color(0xFF98989F) else Color(0xFF6C6C70),
         divider = if (d) Color(0xFF38383A) else Color(0xFFE5E5EA),
-        accent = text,
-        accentText = text,
-        accentContainer = soft,
-        onAccent = if (d) Color(0xFF000000) else Color(0xFFFFFFFF),
+        // v20.5 "W1": red where black (white in dark) used to mark what's chosen and the main buttons
+        accent = RxRed,
+        accentText = if (d) Color(0xFFFF5470) else Color(0xFFD70029),
+        accentContainer = if (d) Color(0xFF4A1C24) else Color(0xFFFFE8EC),
+        onAccent = Color(0xFFFFFFFF),
         outline = if (d) Color(0xFF38383A) else Color(0xFFE5E5EA),
         surfaceAlt = if (d) Color(0xFF3A3A3C) else Color(0xFFE5E5EA),
         gold = if (d) Color(0xFFA1A1AA) else Color(0xFF6B6B70),

@@ -178,11 +178,11 @@ private fun Header(ui: VideoPageUi, a: VideoPageActions) {
             if (ui.subscribeShown) {
                 val on = ui.subscribed
                 Box(
-                    Modifier.padding(start = 8.dp).height(36.dp).background(if (on) rx.surfaceAlt else rx.text, CircleShape).clip(CircleShape)
+                    Modifier.padding(start = 8.dp).height(36.dp).background(if (on) rx.surfaceAlt else rx.accent, CircleShape).clip(CircleShape)
                         .clickable { a.subscribe() }.padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(if (on) "Subscribed" else "Subscribe", color = if (on) rx.text else rx.bg, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
+                    Text(if (on) "Subscribed" else "Subscribe", color = if (on) rx.text else rx.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
                 }
             }
         }

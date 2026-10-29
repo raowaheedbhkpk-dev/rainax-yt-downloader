@@ -378,7 +378,7 @@ private fun WatchBar(item: VideoItem, modifier: Modifier) {
 @Composable
 private fun RoundButton(icon: Int, label: String, tint: Color, size: Int, pad: Int, bg: Int = R.drawable.bg_circle_btn, onClick: () -> Unit) {
     Box(
-        Modifier.size(size.dp).then(Modifier.clip(CircleShape).background(LocalRx.current.card))
+        Modifier.size(size.dp).then(Modifier.clip(CircleShape).background(if (tint == LocalRx.current.accent) LocalRx.current.accentContainer else LocalRx.current.card))
             .clickable(onClick = onClick).semantics { contentDescription = label }.padding(pad.dp)
     ) {
         Image(painterResource(icon), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(tint))

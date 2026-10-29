@@ -171,23 +171,23 @@ internal fun FloatingTabBar(ui: NavUi, pick: (Int) -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     // icons only (v19.2): the chosen one sits in a round black (white in dark) circle
-                    Box(Modifier.size(48.dp).background(if (on) rx.text else Color.Transparent, CircleShape), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(48.dp).background(if (on) rx.accent else Color.Transparent, CircleShape), contentAlignment = Alignment.Center) {
                         val pic = ui.avatar
                         if (t.id == R.id.nav_downloads && pic != null) {
                             Box(Modifier.size(if (on) 34.dp else 28.dp).clip(CircleShape)) {
                                 RxNetImage(pic, Modifier.fillMaxSize(), circle = true, widthPx = 160)
                             }
                         } else {
-                            Image(painterResource(t.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(if (on) rx.bg else color))
+                            Image(painterResource(t.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(if (on) rx.onAccent else rx.text2))
                         }
                     }
                     if (t.id == R.id.nav_downloads && ui.badge > 0) {
                         Box(
                             Modifier.align(Alignment.Center).offset(x = 14.dp, y = (-14).dp).size(18.dp)
-                                .background(if (on) rx.bg else rx.text, CircleShape),
+                                .background(if (on) Color.White else rx.accent, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(if (ui.badge > 99) "99+" else ui.badge.toString(), color = if (on) rx.text else rx.bg, fontSize = 9.sp, lineHeight = 9.sp,
+                            Text(if (ui.badge > 99) "99+" else ui.badge.toString(), color = if (on) rx.accent else Color.White, fontSize = 9.sp, lineHeight = 9.sp,
                                 fontFamily = ModernFonts.family, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         }
                     }

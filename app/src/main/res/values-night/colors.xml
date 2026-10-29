@@ -9,11 +9,11 @@
     <color name="rx_text2">#98989F</color>
     <color name="rx_outline">#1FFFFFFF</color>
     <color name="rx_divider">#1FFFFFFF</color>
-    <color name="rx_primary">#FFFFFF</color>
-    <color name="rx_primary_text">#FFFFFF</color>
-    <color name="rx_on_primary">#000000</color>
-    <color name="rx_primary_container">#3A3A3C</color>
-    <color name="rx_on_primary_container">#FFFFFF</color>
+    <color name="rx_primary">#E6002E</color>
+    <color name="rx_primary_text">#FF5470</color>
+    <color name="rx_on_primary">#FFFFFF</color>
+    <color name="rx_primary_container">#4A1C24</color>
+    <color name="rx_on_primary_container">#FFB3C0</color>
     <color name="rx_accent">#98989F</color>
     <color name="rx_error">#FF6B63</color>
     <color name="rx_error_container">#4A1D24</color>
@@ -50,8 +50,11 @@
     <color name="voice_chip_stroke">#22FFFFFF</color>
     <!-- the other twelve accents (Settings › Accent) -->
     <!-- black and white (v19.2) -->
-    <color name="rx_grad_start">#3A3A3C</color>
+    <color name="rx_grad_start">#E6002E</color>
     <color name="rx_snack_bg">#FF3A3A3C</color>
     <!-- see-through card for boxes (v20.2), over the blurred screen -->
     <color name="rx_glass">#CC2C2C2E</color>
+    <!-- red and white (v20.5) -->
+    <color name="dl_accent_text">#FF5470</color>
+    <color name="dl_card_recommended">#FF5470</color>
 </resources>

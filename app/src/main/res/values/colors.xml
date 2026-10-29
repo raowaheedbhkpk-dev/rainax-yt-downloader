@@ -10,12 +10,12 @@
     <color name="rx_text2">#6C6C70</color>
     <color name="rx_outline">#1F000000</color>
     <color name="rx_divider">#14000000</color>
-    <color name="rx_primary">#000000</color>
+    <color name="rx_primary">#E6002E</color>
     <!-- film red for small text (dark theme uses a lighter red so it stays readable on black) -->
-    <color name="rx_primary_text">#000000</color>
+    <color name="rx_primary_text">#D70029</color>
     <color name="rx_on_primary">#FFFFFF</color>
-    <color name="rx_primary_container">#E5E5EA</color>
-    <color name="rx_on_primary_container">#000000</color>
+    <color name="rx_primary_container">#FFE8EC</color>
+    <color name="rx_on_primary_container">#B80025</color>
     <color name="rx_accent">#6C6C70</color>
     <color name="rx_error">#CC0000</color>
     <color name="rx_error_container">#FFE3E3</color>
@@ -28,7 +28,7 @@
 
     <!-- in-app logo (red). The launcher icon keeps its own colours below. -->
 
-    <color name="rx_grad_start">#1C1C1E</color>
+    <color name="rx_grad_start">#E6002E</color>
     <color name="rx_white">#FFFFFF</color>
     <color name="rx_black">#000000</color>
 

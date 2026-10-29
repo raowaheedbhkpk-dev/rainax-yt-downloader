@@ -172,12 +172,12 @@ internal fun VideoCard(
             }
             Box(
                 Modifier.padding(start = 6.dp).size(36.dp).then(
-                    Modifier.clip(CircleShape).background(rx.card)
+                    Modifier.clip(CircleShape).background(rx.accentContainer)
                 ).clickable { onDownload(item) }
                     .semantics { contentDescription = "Download" }.padding(9.dp)
             ) {
-                // layout A: a soft grey round button, so the title stays the first thing you see
-                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
+                // a soft pink round button with a red arrow (W1)
+                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.accent))
             }
             if (menu != null) {
                 Box(

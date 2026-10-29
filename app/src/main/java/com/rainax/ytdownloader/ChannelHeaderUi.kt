@@ -73,11 +73,11 @@ internal fun ChannelHeader(ui: ChannelHeaderUi, subscribe: () -> Unit, pickTab: 
             val on = ui.subscribed
             Box(
                 Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp).fillMaxWidth().height(44.dp)
-                    .background(if (on) rx.surfaceAlt else rx.text, RoundedCornerShape(50))
+                    .background(if (on) rx.surfaceAlt else rx.accent, RoundedCornerShape(50))
                     .clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = subscribe),
                 contentAlignment = Alignment.Center
             ) {
-                Text(if (on) "Subscribed" else "Subscribe", color = if (on) rx.text else rx.bg, fontSize = 14.sp,
+                Text(if (on) "Subscribed" else "Subscribe", color = if (on) rx.text else rx.onAccent, fontSize = 14.sp,
                     fontWeight = FontWeight.Bold, fontFamily = rxBodyFont())
             }
         }

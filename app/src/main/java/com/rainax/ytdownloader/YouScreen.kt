@@ -271,7 +271,7 @@ internal fun RxChip(label: String, selected: Boolean, icon: Int? = null, onClick
         shape = RoundedCornerShape(50),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = rx.surface, labelColor = rx.text,
-            selectedContainerColor = rx.text, selectedLabelColor = rx.onAccent
+            selectedContainerColor = rx.accent, selectedLabelColor = rx.onAccent
         ),
         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected,
             borderColor = Color.Transparent, selectedBorderColor = Color.Transparent)
@@ -424,7 +424,7 @@ private fun CollectionShelf(act: MainActivity, s: YouState, playable: List<Downl
                 if (u != null) {
                     val all = (u.videoBytes + u.audioBytes + u.freeBytes).coerceAtLeast(1L).toFloat()
                     if (u.videoBytes > 0) Box(Modifier.weight((u.videoBytes / all).coerceAtLeast(0.01f)).fillMaxHeight().background(rx.accent))
-                    if (u.audioBytes > 0) Box(Modifier.weight((u.audioBytes / all).coerceAtLeast(0.01f)).fillMaxHeight().background(rx.text2))
+                    if (u.audioBytes > 0) Box(Modifier.weight((u.audioBytes / all).coerceAtLeast(0.01f)).fillMaxHeight().background(rx.accent.copy(alpha = 0.45f)))
                     Spacer(Modifier.weight((u.freeBytes / all).coerceAtLeast(0.0001f)))
                 }
             }
