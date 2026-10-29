@@ -375,10 +375,6 @@ private fun WatchBar(item: VideoItem, modifier: Modifier) {
     }
 }
 
-    item.views.takeIf { it >= 0 }?.let { YtCatalog.count(it) + if (item.seconds < 0) " watching" else " views" },
-    item.uploaded?.takeIf { it.isNotBlank() }
-).joinToString(" · ")
-
 @Composable
 private fun RoundButton(icon: Int, label: String, tint: Color, size: Int, pad: Int, bg: Int = R.drawable.bg_circle_btn, onClick: () -> Unit) {
     Box(
