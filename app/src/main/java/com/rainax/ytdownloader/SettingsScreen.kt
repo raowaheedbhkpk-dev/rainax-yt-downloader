@@ -297,8 +297,8 @@ internal fun SettingsScreen(act: MainActivity) {
 @Composable
 private fun IconBox(icon: Int) {
     val rx = LocalRx.current
-    Box(Modifier.padding(end = 14.dp).size(30.dp).clip(RoundedCornerShape(8.dp)).background(rx.accent), contentAlignment = Alignment.Center) {
-        Image(painterResource(icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.onAccent))
+    Box(Modifier.padding(end = 14.dp).size(30.dp).clip(RoundedCornerShape(8.dp)).background(rx.text), contentAlignment = Alignment.Center) {
+        Image(painterResource(icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.bg))
     }
 }
 
@@ -365,7 +365,8 @@ private fun OptionRow(o: SetOpt) {
                 checked = end.on,
                 onCheckedChange = { end.set(it) },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = rx.onAccent, checkedTrackColor = rx.accent,
+                    // black and white (white and black in dark), as before the red
+                    checkedThumbColor = rx.bg, checkedTrackColor = rx.text,
                     uncheckedThumbColor = Color.White, uncheckedTrackColor = rx.surfaceAlt, uncheckedBorderColor = Color.Transparent,
                     checkedBorderColor = Color.Transparent
                 )

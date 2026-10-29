@@ -158,13 +158,13 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em, maxLines = 1)
                 RoundTopButton("Theme", onClick = { a.theme(view) }, onPlaced = { r -> ThemeAnchor.rect = r }) {
                     Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(20.dp),
-                        colorFilter = ColorFilter.tint(rx.accentText))
+                        colorFilter = ColorFilter.tint(rx.text))
                 }
                 RoundTopButton("Search", onClick = { a.openSearch() }, onLong = { a.voice() }) {
-                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accentText))
+                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
                 }
                 RoundTopButton("Menu", onClick = { a.menu() }) {
-                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accentText))
+                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
                 }
             }
         } else
