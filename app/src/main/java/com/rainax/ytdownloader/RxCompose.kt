@@ -143,7 +143,7 @@ fun RxTheme(content: @Composable () -> Unit) {
         surfaceVariant = rx.card, onSurfaceVariant = rx.text2, outline = rx.divider
     )
     val type = remember { rxTypography() }
-    CompositionLocalProvider(LocalRx provides rx, LocalModern provides true) {
+    CompositionLocalProvider(LocalRx provides rx) {
         MaterialTheme(colorScheme = scheme, typography = type, content = content)
     }
 }

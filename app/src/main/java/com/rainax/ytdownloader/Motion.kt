@@ -40,15 +40,6 @@ object Motion {
         v.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(QUICK).setInterpolator(settle).start()
     }
 
-    /** The search box opens: grows a touch and fades in. */
-    fun focusIn(v: View) {
-        v.animate().cancel()
-        v.alpha = 0f
-        v.scaleX = 0.94f
-        v.scaleY = 0.94f
-        v.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(220).setInterpolator(settle).start()
-    }
-
     /** A tapped tab icon: a short springy bounce. */
     fun bounce(v: View) {
         v.animate().cancel()

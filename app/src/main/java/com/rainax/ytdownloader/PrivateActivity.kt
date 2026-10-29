@@ -40,10 +40,7 @@ class PrivateActivity : AppCompatActivity() {
     private var playing = false           // opened the player from here: don't lock on return
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
-        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
-        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         patternView = PatternView(this)
         patternView.onPattern = { dots ->

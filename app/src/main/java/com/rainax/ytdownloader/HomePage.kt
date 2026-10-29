@@ -46,9 +46,8 @@ internal fun HomePage(
     /** Home's own floating tab bar (null = the app's normal bottom bar shows). */
     navBar: (@Composable () -> Unit)?,
     onPull: () -> Unit
-) = RxModern {
-    // Home is the first screen in the new look (ModernStyle.kt): iOS-like off-white page, white cards, a large
-    // title, and a floating tab bar with a progressive blur behind it
+) {
+    // iOS-like off-white page, white cards, a large title, and a floating tab bar with a progressive blur behind it
     val rx = LocalRx.current
     val source = androidx.compose.ui.graphics.rememberGraphicsLayer()
     val zone = with(androidx.compose.ui.platform.LocalDensity.current) { 100.dp.toPx() }
@@ -72,14 +71,15 @@ internal fun HomePage(
                     onRefresh = onPull,
                     state = pull,
                     modifier = Modifier.fillMaxSize(),
-                    indicator = { FilmCountdown(feed.refreshing) }
-                ) {
-                    val glow = if (LocalModern.current) null else feed.glow       // (no colour in the black-and-white look)
-                    Box(
-                        Modifier.fillMaxSize().then(
-                            if (glow != null) Modifier.background(Brush.verticalGradient(listOf(Color(glow), Color.Transparent))) else Modifier
+                    // the normal round pull indicator (v19.8: the film countdown went with the Cinema look)
+                    indicator = {
+                        androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator(
+                            state = pull, isRefreshing = feed.refreshing, modifier = Modifier.align(Alignment.TopCenter),
+                            containerColor = rx.surface, color = rx.text
                         )
-                    ) { FeedScreen(feed) }
+                    }
+                ) {
+                    FeedScreen(feed)
                 }
                 // suggestions, spinner, error and the picks bar stay above the floating tab bar
                 Box(Modifier.fillMaxSize().padding(bottom = if (navBar != null) 88.dp else 0.dp)) { HomeOverlay(chrome, a) }
@@ -99,26 +99,3 @@ internal fun HomePage(
     }
 }
 
-/** Pull to refresh: 3 · 2 · 1 like an old film leader, round and round until the new list is in. */
-@Composable
-private fun BoxScope.FilmCountdown(running: Boolean) {
-    if (!running) return
-    var n by remember { mutableIntStateOf(3) }
-    val pop = remember { Animatable(1f) }
-    val fade = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        fade.animateTo(1f, tween(150))
-        while (true) {
-            pop.snapTo(1.25f)
-            pop.animateTo(1f, tween(260))
-            kotlinx.coroutines.delay(260)
-            n = if (n == 1) 3 else n - 1
-        }
-    }
-    Box(
-        Modifier.align(Alignment.TopCenter).padding(top = 18.dp).size(56.dp).alpha(fade.value).rxDrawableBg(R.drawable.bg_countdown),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(n.toString(), Modifier.scale(pop.value), color = Color.White, fontSize = 24.sp, fontFamily = rxHeadFont())
-    }
-}

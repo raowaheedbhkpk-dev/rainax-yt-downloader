@@ -129,9 +129,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
-        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         b = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(b.root)
         goImmersive()

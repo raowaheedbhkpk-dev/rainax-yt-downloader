@@ -149,9 +149,8 @@ class HomeChromeActions(
 internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
     val rx = LocalRx.current
     val view = LocalView.current
-    val modern = LocalModern.current
     Column(Modifier.fillMaxWidth()) {
-        if (modern && c.bar == 0) {
+        if (c.bar == 0) {
             // layout A "Clean feed": the large bold title on the left, round white buttons on the right
             // (theme, search — hold for voice — and your picture, which opens the menu)
             val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -172,18 +171,18 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                 }
             }
         } else
-        Box(Modifier.fillMaxWidth().height(if (modern) 64.dp else 60.dp)) {
+        Box(Modifier.fillMaxWidth().height(64.dp)) {
             when (c.bar) {
                 1 -> SearchBar(c, a)
-                2 -> Row(Modifier.fillMaxSize().padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                else -> Row(Modifier.fillMaxSize().padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     TopIcon(R.drawable.ic_back, "Back") { a.back() }
-                    Text(c.title, Modifier.weight(1f).padding(start = 4.dp), color = rx.text, fontSize = if (modern) 22.sp else 20.sp,
-                        fontFamily = rxBodyFont(), fontWeight = if (modern) FontWeight.ExtraBold else FontWeight.SemiBold, maxLines = 1,
+                    Text(c.title, Modifier.weight(1f).padding(start = 4.dp), color = rx.text, fontSize = 22.sp,
+                        fontFamily = rxBodyFont(), fontWeight = FontWeight.ExtraBold, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
                     if (c.titleDownload) {
                         Button(
                             onClick = { a.titleDownload() }, modifier = Modifier.height(40.dp),
-                            shape = if (modern) RoundedCornerShape(50) else RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(50),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
                         ) {
@@ -192,39 +191,14 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                         }
                     }
                 }
-                else -> Row(Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(44.dp, 48.dp).clickable { a.menu() }.semantics { contentDescription = "Menu" }, contentAlignment = Alignment.Center) {
-                        Image(painterResource(R.drawable.ic_menu), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
-                    }
-                    if (modern) Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        // modern: a black (white in dark) rounded square with the download arrow, the name in one clean face
-                        Box(Modifier.size(30.dp).background(rx.text, RoundedCornerShape(9.dp)).padding(6.dp)) {
-                            Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.bg))
-                        }
-                        Text("Rainax", Modifier.padding(start = 10.dp), color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family,
-                            fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em)
-                        Text("Tube", Modifier.padding(start = 4.dp), color = rx.text2, fontSize = 22.sp, fontFamily = ModernFonts.family,
-                            fontWeight = FontWeight.Medium, letterSpacing = (-0.02).em)
-                    } else Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Image(rxDrawable(R.drawable.ic_logo, 28), null, Modifier.size(28.dp))
-                        Text("RAINAX", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 20.sp, fontFamily = rxHeadFont(), letterSpacing = 0.em)
-                        Text("TUBE", Modifier.padding(start = 3.dp), color = rx.accentText, fontSize = 20.sp, fontFamily = rxHeadFont(),
-                            fontWeight = FontWeight.SemiBold, letterSpacing = 0.em)
-                    }
-                    Box(Modifier.size(48.dp).clickable { a.theme(view) }.semantics { contentDescription = "Theme" }, contentAlignment = Alignment.Center) {
-                        Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(22.dp),
-                            colorFilter = ColorFilter.tint(rx.text))
-                    }
-                    SearchIcon(a)
-                }
             }
         }
         if (c.chipsShown && c.chips.isNotEmpty()) {
             val chipList = rememberLazyListState()
             LaunchedEffect(c.chipSel, c.chips) { if (c.chipSel in c.chips.indices) chipList.animateScrollToItem((c.chipSel - 1).coerceAtLeast(0)) }
             LazyRow(
-                Modifier.fillMaxWidth().padding(top = 4.dp, bottom = if (modern) 10.dp else 4.dp), state = chipList,
-                contentPadding = PaddingValues(horizontal = if (modern) 16.dp else 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp), state = chipList,
+                contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 itemsIndexed(c.chips) { i, label ->
                     RxChip(label, selected = i == c.chipSel) { if (i != c.chipSel) { Haptics.tick(view); a.chip(i) } }
@@ -255,19 +229,6 @@ private fun RoundTopButton(
     ) { content() }
 }
 
-/** The search icon: tap opens the search box, hold speaks straight away. */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SearchIcon(a: HomeChromeActions) {
-    val rx = LocalRx.current
-    Box(
-        Modifier.size(48.dp).combinedClickable(onClick = { a.openSearch() }, onLongClick = { a.voice() }).semantics { contentDescription = "Search" },
-        contentAlignment = Alignment.Center
-    ) {
-        Image(painterResource(R.drawable.ic_search), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.text))
-    }
-}
-
 @Composable
 private fun TopIcon(icon: Int, label: String, onClick: () -> Unit) {
     val rx = LocalRx.current
@@ -289,13 +250,12 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val fade by animateFloatAsState(if (shown) 1f else 0f, tween(200), label = "searchIn")
-    val modern = LocalModern.current
     Row(Modifier.fillMaxSize().padding(horizontal = 4.dp).alpha(fade), verticalAlignment = Alignment.CenterVertically) {
         TopIcon(R.drawable.ic_back, "Back") { a.back() }
         Row(
-            Modifier.weight(1f).height(if (modern) 48.dp else 54.dp).padding(end = 8.dp).then(
-                if (modern) Modifier.background(rx.surface, RoundedCornerShape(50)) else Modifier.rxDrawableBg(R.drawable.bg_search_focus)
-            ).padding(start = 18.dp, end = if (modern) 5.dp else 8.dp),
+            Modifier.weight(1f).height(48.dp).padding(end = 8.dp).then(
+                Modifier.background(rx.surface, RoundedCornerShape(50))
+            ).padding(start = 18.dp, end = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(painterResource(R.drawable.ic_search), null, Modifier.padding(end = 10.dp).size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
@@ -321,10 +281,10 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
             } else {
                 Box(
                     Modifier.padding(start = 6.dp).size(38.dp).then(
-                        if (modern) Modifier.background(rx.text, CircleShape) else Modifier.rxDrawableBg(R.drawable.bg_mic_red)
+                        Modifier.background(rx.text, CircleShape)
                     ).clickable { a.voice() }
                         .semantics { contentDescription = "Search with your voice" }.padding(9.dp)
-                ) { Image(painterResource(R.drawable.ic_mic), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.bg else Color.White)) }
+                ) { Image(painterResource(R.drawable.ic_mic), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.bg)) }
             }
         }
     }
@@ -353,7 +313,7 @@ internal fun HomeOverlay(c: HomeChrome, a: HomeChromeActions) {
         if (c.picks > 0 && !c.suggestOpen) {
             Row(
                 Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = 12.dp).fillMaxWidth().height(60.dp)
-                    .then(if (LocalModern.current) Modifier.background(rx.card, RoundedCornerShape(24.dp)) else Modifier.rxDrawableBg(R.drawable.bg_glass_nav)).padding(start = 18.dp, end = 8.dp),
+                    .then(Modifier.background(rx.card, RoundedCornerShape(24.dp))).padding(start = 18.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(if (c.picks == 1) "1 selected · View" else "${c.picks} selected · View", Modifier.weight(1f).clickable { a.picksView() },
@@ -384,7 +344,7 @@ private fun Suggestions(c: HomeChrome, a: HomeChromeActions) {
         if (c.stubs.isNotEmpty()) {
             item(key = "stubs") {
                 Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
-                    Text(rxHeadCase("Recent searches"), Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.gold, fontSize = 10.sp,
+                    Text(rxHeadCase("Recent searches"), Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp), color = rx.text2, fontSize = 13.sp,
                         fontWeight = FontWeight.Bold, letterSpacing = 0.em)
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp)) {
                         itemsIndexed(c.stubs) { _, s -> RecentStub(s, a) }

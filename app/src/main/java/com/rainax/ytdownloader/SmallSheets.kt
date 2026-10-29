@@ -142,10 +142,10 @@ private fun Stat(value: String, label: String, modifier: Modifier) {
     }
 }
 
-// ---------- theme / accent menu ----------
+// ---------- theme menu ----------
 
 @Composable
-internal fun ThemeMenu(act: MainActivity, mode: Int, accentName: String, pick: (Int) -> Unit, accent: (Int) -> Unit) {
+internal fun ThemeMenu(mode: Int, pick: (Int) -> Unit) {
     val rx = LocalRx.current
     Column(Modifier.width(240.dp).rxDrawableBg(R.drawable.bg_theme_popup).padding(vertical = 8.dp)) {
         run {

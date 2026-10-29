@@ -72,10 +72,7 @@ class WelcomeActivity : AppCompatActivity() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)
-        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
-        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         setContent { RxTheme { Guide() } }
     }
 

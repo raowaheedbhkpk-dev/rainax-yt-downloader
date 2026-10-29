@@ -13,13 +13,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /*
- * "Modern Minimalism": the new look, on Home first. Black and white only (no accent colour), a clean geometric
- * face (Plus Jakarta Sans, SIL Open Font License), soft rounded cards and pill buttons, more air. Screens inside
- * [RxModern] get it; the rest of the app keeps the classic look.
+ * RAINAX's look (since v19.2 on every screen): black and white only (no accent colour), one clean geometric
+ * face (Plus Jakarta Sans, SIL Open Font License), soft rounded cards and pill buttons, more air.
  */
-
-/** True inside [RxModern]. */
-val LocalModern = staticCompositionLocalOf { false }
 
 object ModernFonts {
     val family = FontFamily(
@@ -59,26 +55,16 @@ fun monoColors(rx: RxColors): RxColors {
     )
 }
 
-/** Everything inside draws in the modern black-and-white look. */
+/** The text face. */
 @Composable
-fun RxModern(content: @Composable () -> Unit) {
-    val rx = LocalRx.current
-    val mono = remember(rx) { monoColors(rx) }
-    CompositionLocalProvider(LocalRx provides mono, LocalModern provides true, content = content)
-}
+fun rxBodyFont(): FontFamily = ModernFonts.family
 
-/** Text face: the modern one inside [RxModern], RAINAX's body face elsewhere. */
+/** The heading face (the same family; headings pick a heavier weight). */
 @Composable
-fun rxBodyFont(): FontFamily = if (LocalModern.current) ModernFonts.family else RxFonts.body
+fun rxHeadFont(): FontFamily = ModernFonts.family
 
-/** Heading face: the modern one (in sentence case) inside [RxModern], the tall film face elsewhere. */
-@Composable
-fun rxHeadFont(): FontFamily = if (LocalModern.current) ModernFonts.family else RxFonts.display
+/** Headings are written as they are (no capitals). */
+fun rxHeadCase(s: String): String = s
 
-/** Headings: as written in the modern look, in capitals in the classic one. */
-@Composable
-fun rxHeadCase(s: String): String = if (LocalModern.current) s else s.uppercase()
-
-/** Cards and pictures: soft rounded corners in the modern look, nearly square in the classic one. */
-@Composable
-fun rxShape(modern: Int = 16): Shape = if (LocalModern.current) RoundedCornerShape(modern.dp) else RoundedCornerShape(12.dp)
+/** Cards and pictures: soft rounded corners. */
+fun rxShape(radius: Int = 16): Shape = RoundedCornerShape(radius.dp)

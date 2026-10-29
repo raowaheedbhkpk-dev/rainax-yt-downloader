@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -128,31 +129,30 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
 
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 120.dp)) {
         Text("All-in-one downloader", color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Text("Save any\nvideo.", Modifier.padding(top = 6.dp), color = rx.text, fontSize = 44.sp, lineHeight = 44.sp, fontFamily = RxFonts.display)
-        Box(Modifier.padding(top = 12.dp).size(44.dp, 3.dp).background(rx.accent))
+        Text("Save any video", Modifier.padding(top = 2.dp), color = rx.text, fontSize = 32.sp, lineHeight = 38.sp, fontFamily = RxFonts.display)
 
         // the apps: tap one to open it (to copy a link) or its website
         Row(Modifier.padding(top = 14.dp).fillMaxWidth().horizontalScroll(rememberScrollState())) {
             listOf("TikTok", "Instagram", "Facebook", "YouTube").mapNotNull { n -> SocialApps.ALL.firstOrNull { it.name == n } }.forEach { app ->
                 Row(
-                    Modifier.padding(end = 8.dp).height(44.dp).rxDrawableBg(R.drawable.bg_social_tag)
+                    Modifier.padding(end = 8.dp).height(44.dp).clip(RoundedCornerShape(50)).background(rx.surface)
                         .clickable { if (!SocialApps.open(act, app)) act.message("Couldn't open ${app.name}") }
                         .semantics { contentDescription = "Open ${app.name}" }
                         .padding(start = 6.dp, end = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AppBadge(app, 24.dp, 10)
-                    Text(app.name, Modifier.padding(start = 8.dp), color = rx.text, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
+                    Text(app.name, Modifier.padding(start = 8.dp), color = rx.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
         // the link box
-        Text("Paste a link", Modifier.padding(top = 18.dp), color = rx.text2, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
+        Text("Paste a link", Modifier.padding(start = 4.dp, top = 20.dp), color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         val link = act.extractUrls(s.input).firstOrNull()
         val linkApp = link?.let { SocialApps.of(it) }
         Row(
-            Modifier.padding(top = 6.dp).fillMaxWidth().height(56.dp).rxDrawableBg(R.drawable.bg_social_box)
+            Modifier.padding(top = 6.dp).fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp)).background(rx.surface)
                 .padding(start = 8.dp, end = 4.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -183,12 +183,12 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
             Text(
                 if (linkApp != null) "${linkApp.name} link  ·  ${linkApp.what}"
                 else "Link from ${android.net.Uri.parse(link).host?.removePrefix("www.").orEmpty()}  ·  RAINAX will look for the video",
-                Modifier.padding(top = 8.dp), color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.04.em
+                Modifier.padding(start = 4.dp, top = 8.dp), color = rx.text2, fontSize = 12.sp, fontWeight = FontWeight.Medium
             )
         }
         Row(Modifier.padding(top = 10.dp).fillMaxWidth()) {
             Row(
-                Modifier.padding(end = 8.dp).weight(1f).height(52.dp).rxDrawableBg(R.drawable.bg_social_outline_btn)
+                Modifier.padding(end = 8.dp).weight(1f).height(52.dp).clip(RoundedCornerShape(50)).background(rx.surface)
                     .clickable {
                         val url = act.clipText()?.let { act.extractUrls(it).firstOrNull() }
                         if (url == null) act.message("Copy a video link first, then tap Paste") else { s.input = url; act.refreshClipStrip() }
@@ -199,7 +199,7 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                 Text("Paste", Modifier.padding(start = 8.dp), color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
             }
             Row(
-                Modifier.weight(1.6f).height(52.dp).rxDrawableBg(R.drawable.bg_social_red_btn).clickable { go() },
+                Modifier.weight(1.6f).height(52.dp).clip(RoundedCornerShape(50)).background(rx.accent).clickable { go() },
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))
@@ -212,18 +212,17 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
         if (clip != null) {
             val app = SocialApps.of(clip)
             Row(
-                Modifier.padding(top = 14.dp).fillMaxWidth().height(60.dp).rxDrawableBg(R.drawable.bg_social_ticket).padding(start = 12.dp),
+                Modifier.padding(top = 14.dp).fillMaxWidth().height(60.dp).clip(RoundedCornerShape(16.dp)).background(rx.surface).padding(start = 12.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (app != null) AppBadge(app, 30.dp, 12)
-                else Box(Modifier.size(30.dp).background(rx.accent, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
+                else Box(Modifier.size(30.dp).background(rx.accent, CircleShape), contentAlignment = Alignment.Center) {
                     Text("↓", color = rx.onAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     "Copied · ${app?.name ?: "video link"}", Modifier.weight(1f).padding(horizontal = 12.dp),
-                    color = rx.gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    color = rx.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-                Box(Modifier.padding(vertical = 6.dp).width(2.dp).fillMaxHeight().rxDrawableBg(R.drawable.bg_dash_vertical))
                 TextButton(
                     onClick = {
                         act.clipStripDone = clip
@@ -231,26 +230,28 @@ internal fun SocialScreen(act: MainActivity, s: SocialState, st: StatusUi) {
                         s.clipUrl = null
                         act.showDownloadSheet(listOf(clip))
                     },
-                    modifier = Modifier.width(88.dp).fillMaxHeight(), shape = RoundedCornerShape(12.dp)
-                ) { Text("Get it", color = rx.accentText, fontSize = 14.sp, fontFamily = RxFonts.display, letterSpacing = 0.em) }
+                    modifier = Modifier.height(40.dp), shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.textButtonColors(containerColor = rx.accent, contentColor = rx.onAccent)
+                ) { Text("Get it", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
             }
         }
 
-        Box(Modifier.padding(top = 24.dp).fillMaxWidth().height(1.dp).background(rx.divider))
-        Column(Modifier.fillMaxWidth().onGloballyPositioned { statusTop = it.positionInParent().y.toInt() }.padding(vertical = 14.dp)) {
+        Column(Modifier.padding(top = 24.dp).fillMaxWidth().onGloballyPositioned { statusTop = it.positionInParent().y.toInt() }
+            .clip(RoundedCornerShape(16.dp)).background(rx.surface).padding(16.dp)) {
             StatusSaverCard(act, st)
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(rx.divider))
 
-        Text("How it works", Modifier.padding(top = 20.dp), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
+        Text("How it works", Modifier.padding(start = 4.dp, top = 22.dp), color = rx.text2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         listOf(
             "01" to "Copy the link in TikTok, Instagram, Facebook or YouTube (Share › Copy link)",
             "02" to "Paste it here, or share it straight to RAINAX",
             "03" to "Pick HD or MP3 and download"
         ).forEach { (n, line) ->
-            Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
-                Text(n, Modifier.width(30.dp), color = rx.accentText, fontSize = 14.sp, fontFamily = RxFonts.display)
-                Text(line, Modifier.weight(1f), color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body)
+            Row(Modifier.padding(top = 10.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(28.dp).background(rx.surface, CircleShape), contentAlignment = Alignment.Center) {
+                    Text(n.trimStart('0'), color = rx.text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+                Text(line, Modifier.weight(1f).padding(start = 12.dp), color = rx.text, fontSize = 14.sp, fontFamily = RxFonts.body)
             }
         }
         Text(
@@ -279,7 +280,7 @@ private fun StatusSaverCard(act: MainActivity, st: StatusUi) {
             }
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text("WhatsApp status saver", color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, letterSpacing = 0.em)
+            Text("WhatsApp status saver", color = rx.text, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)
             Text(st.sub, Modifier.padding(top = 1.dp), color = rx.text2, fontSize = 12.sp, fontFamily = RxFonts.body)
         }
         if (st.refreshShown) {

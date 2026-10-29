@@ -125,8 +125,6 @@ class MainActivity : AppCompatActivity() {
     internal var blocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (AppPrefs.themeMode(this) == 3) setTheme(R.style.Theme_Rainax_Amoled)   // pure black
-        Ui.applyAccent(this)
         if (!Integrity.isOfficial(this)) {
             blocked = true
             super.onCreate(null)
@@ -134,7 +132,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
         super.onCreate(savedInstanceState)
-        Ui.applyAccent(this)      // again: for a chosen Light/Dark theme AppCompat re-applies the base theme here, which dropped the accent
         Ui.pillExtra = 0                      // (a rebuilt screen starts without the update pill's extra room)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
@@ -189,7 +186,6 @@ class MainActivity : AppCompatActivity() {
         music.setup()
         b.root.post { updateChrome() }          // at start (once everything is set up): Home shows only its own floating tab bar
         music.onNowPlaying = { home.musicNowPlaying(it) }
-        music.onTone = { home.musicTone(it) }
         lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { MusicHistory.recent(applicationContext) }   // read early, off the main thread
         home.musicPlay = { songs, index, from, radio -> music.play(songs, index, from, radio) }
         home.musicSongMenu = { music.songMenu(it) }
@@ -862,7 +858,7 @@ class MainActivity : AppCompatActivity() {
     private var menuActive = "Home"     // (private: an internal var would clash with setMenuActive())
 
     /**
-     * The side menu (≡): a floating card in the app's colours (light, dark, AMOLED): header with bell and ✕, your
+     * The side menu (≡): a floating card in the app's colours (light or dark): header with bell and ✕, your
      * account, search, then MENU / DISCOVER / GENERAL with a red bar on the open place and count badges.
      * Closes with ✕, Back, a tap outside, or a swipe to the left.
      */

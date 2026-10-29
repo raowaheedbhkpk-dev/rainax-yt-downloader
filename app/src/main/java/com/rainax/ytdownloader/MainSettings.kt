@@ -59,30 +59,19 @@ internal fun MainActivity.nudgeService() {
     if (needs) DownloadService.send(this, DownloadService.ACTION_PUMP)
 }
 
-/** 0 follow the phone, 1 light, 2 dark, 3 AMOLED black: saved, and every screen redraws in it. */
+/** 0 follow the phone, 1 light, 2 dark: saved, and every screen redraws in it. */
 internal fun MainActivity.chooseTheme(mode: Int) {
     val old = AppPrefs.themeMode(this)
     if (mode == old) return
     AppPrefs.setThemeMode(this, mode)
     StyleSync.themeChanged()
     RainaxApp.applyTheme(mode)      // recreates the screen with the new colours
-    // Dark <-> AMOLED keeps night mode, so rebuild the screen ourselves
-    if (old == 3 || mode == 3) window.decorView.post { if (!isDestroyed) recreate() }
     // safety net: if this phone didn't redraw the screen in the new mode, do it now
-    else window.decorView.postDelayed({ StyleSync.recheckMode() }, 700)
-}
-
-/** One of the sixteen accents: saved, every screen redraws in it, and the app icon follows later. */
-internal fun MainActivity.chooseAccent(v: Int) {
-    if (v == AppPrefs.accent(this)) return
-    AppPrefs.setAccent(this, v)
-    android.widget.Toast.makeText(this, "${Accents.of(v).name} · the app icon changes a minute after you leave the app", android.widget.Toast.LENGTH_LONG).show()
-    window.decorView.postDelayed({ if (!isDestroyed) recreate() }, 180)      // every screen in the new colour
+    window.decorView.postDelayed({ StyleSync.recheckMode() }, 700)
 }
 
 /**
- * Home's sun button: a small popup with System / Light / Dark and Theme. Theme turns the popup into the
- * sixteen accent rings (with a back arrow); picking one closes it and the app redraws in that colour.
+ * Home's theme button: a small popup with System / Light / Dark.
  */
 internal fun MainActivity.showThemePopup(anchor: View) {
     // A small window under the button. It is a ComponentDialog (not a PopupWindow): a dialog gives its Compose
@@ -95,9 +84,7 @@ internal fun MainActivity.showThemePopup(anchor: View) {
     val mode = AppPrefs.themeMode(this)
     view.setContent {
         RxTheme {
-            ThemeMenu(this, mode, Accents.of(AppPrefs.accent(this)).name,
-                pick = { m -> dialog.dismiss(); chooseTheme(m) },
-                accent = { v -> dialog.dismiss(); chooseAccent(v) })
+            ThemeMenu(mode, pick = { m -> dialog.dismiss(); chooseTheme(m) })
         }
     }
     dialog.setContentView(view)
@@ -105,7 +92,12 @@ internal fun MainActivity.showThemePopup(anchor: View) {
     dialog.window?.let { w ->
         w.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         w.setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        w.setDimAmount(0.15f)
+        w.setDimAmount(0.12f)
+        // a small menu: no blur behind it (the other boxes and sheets keep theirs)
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            w.attributes = w.attributes.apply { blurBehindRadius = 0 }
+        }
         // right under the button, at the right edge (like the old drop-down)
         // Home's round button tells where it is (the view passed in is the whole Home screen there)
         val at = IntArray(2)

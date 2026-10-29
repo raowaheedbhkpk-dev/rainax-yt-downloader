@@ -61,7 +61,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     private var shortsToStart by mutableIntStateOf(0)
 
     val root: View = ComposeView(act).apply {
-        setContent { RxTheme { RxModern { Shelf() } } }
+        setContent { RxTheme { Shelf() } }
     }
 
     private var shownVersion = -1
@@ -74,8 +74,6 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     private var subsLoading = false
     private var subsTriedAt = 0L
 
-    /** Videos you didn't finish are showing (the magazine then puts this shelf near the top). */
-    val hasContinue: Boolean get() = continueList.isNotEmpty()
 
     /** Called when Home shows: newest Continue watching list, and the Shorts strip (loaded once). */
     fun refresh() {
@@ -183,9 +181,8 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
                 LazyRow(state = state, contentPadding = PaddingValues(horizontal = 12.dp)) {
                     items(strip.size) { i -> ShortCard(strip[i], i, w) }
                 }
-                // clear gap and a thin line before the next video, like YouTube (modern: just air)
-                if (LocalModern.current) Box(Modifier.padding(top = 28.dp).fillMaxWidth().height(1.dp))
-                else Box(Modifier.padding(top = 22.dp, bottom = 16.dp).fillMaxWidth().height(6.dp).background(rx.surfaceAlt))
+                // some air before the next video
+                Box(Modifier.padding(top = 28.dp).fillMaxWidth().height(1.dp))
             }
         }
     }
@@ -193,15 +190,13 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
     @Composable
     private fun Heading(text: String, icon: Int?) {
         val rx = LocalRx.current
-        val modern = LocalModern.current
-        Row(Modifier.fillMaxWidth().padding(start = if (modern) 18.dp else 16.dp, end = 16.dp, top = if (modern) 10.dp else 6.dp, bottom = 12.dp),
+        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Image(painterResource(icon), null, Modifier.padding(end = 8.dp).size(if (modern) 22.dp else 26.dp), colorFilter = ColorFilter.tint(rx.accent))
+                Image(painterResource(icon), null, Modifier.padding(end = 8.dp).size(22.dp), colorFilter = ColorFilter.tint(rx.accent))
             }
-            if (modern) Text(text, color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
+            Text(text, color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-0.02).em)
-            else Text(text, color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, letterSpacing = 0.02.em)
         }
     }
 

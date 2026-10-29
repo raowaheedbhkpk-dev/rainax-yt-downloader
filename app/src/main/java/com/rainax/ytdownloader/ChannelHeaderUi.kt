@@ -60,7 +60,7 @@ internal fun ChannelHeader(ui: ChannelHeaderUi, subscribe: () -> Unit, pickTab: 
             }
             Column(Modifier.weight(1f).padding(start = 16.dp)) {
                 Text(rxHeadCase(ui.name), color = rx.text, fontSize = 24.sp, fontFamily = rxHeadFont(),
-                    fontWeight = if (LocalModern.current) FontWeight.ExtraBold else FontWeight.Normal, letterSpacing = 0.02.em,
+                    fontWeight = FontWeight.ExtraBold, letterSpacing = 0.02.em,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (ui.meta.isNotEmpty()) Text(ui.meta, Modifier.padding(top = 2.dp), color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont())
             }

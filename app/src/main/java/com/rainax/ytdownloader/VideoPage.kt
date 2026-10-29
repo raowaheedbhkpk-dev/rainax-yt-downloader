@@ -206,7 +206,7 @@ private fun Header(ui: VideoPageUi, a: VideoPageActions) {
             if (ui.saveShown) PillButton(R.drawable.ic_watch_later, "Save", ui.saved, onHold = { a.saveHold() }) { a.save() }
             PillButton(R.drawable.ic_share, "Share", false) { a.share() }
         }
-        // the chapter film strip
+        // the chapters: small rounded cards (the chosen one filled)
         if (ui.chapters.size >= 2) {
             val strip = rememberLazyListState()
             LaunchedEffect(ui.markedChapter) {
@@ -216,14 +216,16 @@ private fun Header(ui: VideoPageUi, a: VideoPageActions) {
                 items(ui.chapters.size) { i ->
                     val (time, name, _) = ui.chapters[i]
                     Column(
-                        Modifier.padding(horizontal = 2.dp).size(140.dp, 86.dp)
-                            .rxDrawableBg(if (i == ui.markedChapter) R.drawable.bg_film_frame_on else R.drawable.bg_film_frame)
+                        Modifier.padding(horizontal = 4.dp).size(140.dp, 76.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                            .background(if (i == ui.markedChapter) rx.accent else rx.surfaceAlt)
                             .clickable { a.chapter(i) }
                             .semantics { contentDescription = "Chapter ${i + 1}: $name" }
-                            .padding(horizontal = 10.dp, vertical = 14.dp)
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
-                        Text(time, color = rx.gold, fontSize = 14.sp, fontFamily = RxFonts.display)
-                        Text(name, Modifier.padding(top = 2.dp), color = colorResource(R.color.film_text), fontSize = 12.sp, fontFamily = RxFonts.body,
+                        val on = i == ui.markedChapter
+                        Text(time, color = if (on) rx.onAccent.copy(alpha = 0.7f) else rx.text2, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontFamily = RxFonts.body)
+                        Text(name, Modifier.padding(top = 2.dp), color = if (on) rx.onAccent else rx.text, fontSize = 13.sp, fontFamily = RxFonts.body,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }

@@ -142,7 +142,7 @@ internal fun LyricsScreen(ui: LyricsUi) {
     val text3 = colorResource(R.color.rx_cinema_text3)
     Column(Modifier.fillMaxWidth().background(colorResource(R.color.rx_cinema_bg)).padding(top = 10.dp)) {
         Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).background(colorResource(R.color.rx_cinema_line)))
-        Text("Lyrics", Modifier.fillMaxWidth().padding(top = 16.dp), color = colorResource(R.color.rx_cinema_gold), fontSize = 10.sp,
+        Text("Lyrics", Modifier.fillMaxWidth().padding(top = 16.dp), color = colorResource(R.color.rx_cinema_gold), fontSize = 12.sp,
             fontWeight = FontWeight.Bold, letterSpacing = 0.em, textAlign = TextAlign.Center)
         Text(ui.title, Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 6.dp), color = Color.White,
             fontSize = 24.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)

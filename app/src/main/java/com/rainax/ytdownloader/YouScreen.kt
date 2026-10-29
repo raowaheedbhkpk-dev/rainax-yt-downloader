@@ -260,38 +260,21 @@ private fun LibraryChips(act: MainActivity, s: YouState) {
 @Composable
 internal fun RxChip(label: String, selected: Boolean, icon: Int? = null, onClick: () -> Unit) {
     val rx = LocalRx.current
-    if (LocalModern.current) {
-        // modern: a soft grey pill, black (white in dark) when chosen, words as written
-        FilterChip(
-            selected = selected,
-            onClick = onClick,
-            label = { Text(label, fontFamily = ModernFonts.family, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, fontSize = 14.sp) },
-            leadingIcon = if (icon != null) {
-                { Image(painterResource(icon), null, Modifier.size(16.dp), colorFilter = ColorFilter.tint(if (selected) rx.onAccent else rx.text)) }
-            } else null,
-            shape = RoundedCornerShape(50),
-            colors = FilterChipDefaults.filterChipColors(
-                containerColor = rx.surface, labelColor = rx.text,
-                selectedContainerColor = rx.text, selectedLabelColor = rx.onAccent
-            ),
-            border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected,
-                borderColor = Color.Transparent, selectedBorderColor = Color.Transparent)
-        )
-        return
-    }
+    // a white pill, black (white in dark) when chosen
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold, letterSpacing = 0.em, fontSize = 13.sp) },
+        label = { Text(label, fontFamily = ModernFonts.family, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, fontSize = 14.sp) },
         leadingIcon = if (icon != null) {
             { Image(painterResource(icon), null, Modifier.size(16.dp), colorFilter = ColorFilter.tint(if (selected) rx.onAccent else rx.text)) }
         } else null,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(50),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = rx.surface, labelColor = rx.text,
-            selectedContainerColor = rx.accent, selectedLabelColor = rx.onAccent
+            selectedContainerColor = rx.text, selectedLabelColor = rx.onAccent
         ),
-        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected, borderColor = rx.outline, selectedBorderColor = rx.accent)
+        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected,
+            borderColor = Color.Transparent, selectedBorderColor = Color.Transparent)
     )
 }
 
@@ -399,18 +382,19 @@ private fun SmallButton(label: String, modifier: Modifier, danger: Boolean = fal
 private fun EmptyDownloads(act: MainActivity) {
     val rx = LocalRx.current
     Column(Modifier.fillMaxSize().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(96.dp), colorFilter = ColorFilter.tint(rx.accent))
-        Text("Coming soon", Modifier.padding(top = 18.dp), color = rx.gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.em)
-        Text("No downloads yet", Modifier.padding(top = 4.dp), color = rx.text, fontSize = 24.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center)
+        Box(Modifier.size(88.dp).clip(CircleShape).background(rx.surface), contentAlignment = Alignment.Center) {
+            Image(painterResource(R.drawable.ic_download), null, Modifier.size(38.dp), colorFilter = ColorFilter.tint(rx.text))
+        }
+        Text("No downloads yet", Modifier.padding(top = 18.dp), color = rx.text, fontSize = 22.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center)
         Text(
-            "The show starts when you tap Download. You can also share a TikTok, Instagram or Facebook link to RAINAX.",
+            "Tap Download on any video and it shows up here. You can also share a TikTok, Instagram or Facebook link to RAINAX.",
             Modifier.padding(start = 40.dp, end = 40.dp, top = 8.dp), color = rx.text2, fontSize = 14.sp,
             fontFamily = RxFonts.body, textAlign = TextAlign.Center
         )
         Button(
             onClick = { act.selectNav(R.id.nav_home) },
             modifier = Modifier.padding(top = 24.dp).height(48.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = rx.accent, contentColor = rx.onAccent)
         ) {
             Image(painterResource(R.drawable.ic_play), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.onAccent))

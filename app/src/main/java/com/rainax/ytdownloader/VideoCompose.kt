@@ -101,19 +101,16 @@ internal fun VideoCard(
     androidx.compose.runtime.LaunchedEffect(item.url) {
         if (!item.isPlaylist && !item.isChannel && item.seconds >= 0) FastExtractor.lookAhead(item.url)
     }
-    val modern = LocalModern.current
     val cardShape = RoundedCornerShape(16.dp)
     Column(
-        (if (modern) Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp).fillMaxWidth()
-            // modern: a white card with soft corners and a light shadow
+        // a white card with soft corners and a light shadow
+        Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp).fillMaxWidth()
             .shadow(3.dp, cardShape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
             .background(rx.surface, cardShape).clip(cardShape)
-        else Modifier.fillMaxWidth().padding(bottom = 18.dp))
             .combinedClickable(onClick = { onOpen(item) }, onLongClick = menu?.let { m -> { m(item, view) } })
     ) {
         Box(
-            if (modern) Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(rx.card)
-            else Modifier.fillMaxWidth().aspectRatio(16f / 9f).rxDrawableBg(R.drawable.bg_thumb_big)
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(rx.card)
         ) {
             val card = if (preview != null) androidx.compose.runtime.remember(item.url) { ComposeCard(ctx, item) } else null
             if (card != null && preview != null) {
@@ -133,17 +130,11 @@ internal fun VideoCard(
             }
             val badge = card?.badge?.toString() ?: videoBadge(item)
             if (badge.isNotEmpty()) {
-                if (modern) Text(
+                Text(
                     badge,
                     Modifier.align(Alignment.BottomEnd).padding(10.dp).background(Color(0xBF000000), RoundedCornerShape(6.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp),
                     color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = ModernFonts.family
-                ) else Text(
-                    badge,
-                    Modifier.align(Alignment.BottomEnd).padding(8.dp)
-                        .rxDrawableBg(if (item.seconds < 0) R.drawable.bg_live else R.drawable.bg_duration)
-                        .padding(horizontal = 5.dp, vertical = 1.dp),
-                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
                 )
             }
             val watched = if (item.isPlaylist || item.isChannel) -1f else WatchHistory.progress(ctx, item.url)
@@ -154,39 +145,39 @@ internal fun VideoCard(
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(start = if (modern) 14.dp else 12.dp, top = if (modern) 12.dp else 12.dp, end = if (modern) 8.dp else 6.dp,
-                bottom = if (modern) 14.dp else 0.dp),
+        Row(Modifier.fillMaxWidth().padding(start = 14.dp, top = 12.dp, end = 8.dp,
+                bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.align(Alignment.Top).size(if (modern) 38.dp else 36.dp).clip(CircleShape).then(
-                if (modern) Modifier.background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_avatar))) {
+            Box(Modifier.align(Alignment.Top).size(38.dp).clip(CircleShape).then(
+                Modifier.background(rx.card))) {
                 RxNetImage(item.avatar, Modifier.fillMaxSize(), circle = true, widthPx = 96)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(item.title, color = rx.text, fontSize = if (modern) 15.sp else 16.sp, lineHeight = if (modern) 20.sp else 21.sp, fontFamily = rxBodyFont(),
-                    fontWeight = if (modern) FontWeight.Bold else FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(videoMeta(item), Modifier.padding(top = if (modern) 4.dp else 3.dp), color = rx.text2, fontSize = if (modern) 13.sp else 12.sp,
-                    fontFamily = rxBodyFont(), maxLines = if (modern) 1 else 2, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = rx.text, fontSize = 15.sp, lineHeight = 20.sp, fontFamily = rxBodyFont(),
+                    fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(videoMeta(item), Modifier.padding(top = 4.dp), color = rx.text2, fontSize = 13.sp,
+                    fontFamily = rxBodyFont(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (onPick != null && !item.isPlaylist && !item.isChannel && item.seconds >= 0) {
                 val on = isPicked(item.url)
                 Box(
-                    Modifier.padding(start = 4.dp).size(if (modern) 36.dp else 40.dp).then(
-                        if (modern) Modifier.clip(CircleShape).background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
+                    Modifier.padding(start = 4.dp).size(36.dp).then(
+                        Modifier.clip(CircleShape).background(rx.card)
                     ).clickable { onPick(item) }
-                        .semantics { contentDescription = if (on) "Selected. Tap to unselect" else "Select for download" }.padding(if (modern) 9.dp else 10.dp)
+                        .semantics { contentDescription = if (on) "Selected. Tap to unselect" else "Select for download" }.padding(9.dp)
                 ) {
                     Image(painterResource(if (on) R.drawable.ic_check else R.drawable.ic_add), null, Modifier.fillMaxSize(),
                         colorFilter = ColorFilter.tint(if (on) rx.accent else rx.text))
                 }
             }
             Box(
-                Modifier.padding(start = 6.dp).size(if (modern) 36.dp else 42.dp).then(
-                    if (modern) Modifier.clip(CircleShape).background(rx.card) else Modifier.rxDrawableBg(R.drawable.bg_circle_btn)
+                Modifier.padding(start = 6.dp).size(36.dp).then(
+                    Modifier.clip(CircleShape).background(rx.card)
                 ).clickable { onDownload(item) }
-                    .semantics { contentDescription = "Download" }.padding(if (modern) 9.dp else 11.dp)
+                    .semantics { contentDescription = "Download" }.padding(9.dp)
             ) {
                 // layout A: a soft grey round button, so the title stays the first thing you see
-                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(if (modern) rx.text else rx.accent))
+                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.text))
             }
             if (menu != null) {
                 Box(

@@ -32,9 +32,7 @@ class QuickDownloadActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Ui.applyAccent(this)
         super.onCreate(savedInstanceState)
-        Ui.applyAccent(this)
         if (savedInstanceState != null || !Integrity.isOfficial(this)) { finish(); return }
         handle(intent)
     }

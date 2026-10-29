@@ -144,7 +144,7 @@ private class OpeningView(context: Context) : View(context) {
     private val inOut = PathInterpolator(0.65f, 0f, 0.35f, 1f)
     private val bounce = PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
 
-    private val display: Typeface = runCatching { ResourcesCompat.getFont(context, R.font.rx_display) }.getOrNull() ?: Typeface.DEFAULT_BOLD
+    private val display: Typeface = runCatching { ResourcesCompat.getFont(context, R.font.rx_modern_extrabold) }.getOrNull() ?: Typeface.DEFAULT_BOLD
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply { typeface = display }
     private val tagPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Typeface.DEFAULT_BOLD

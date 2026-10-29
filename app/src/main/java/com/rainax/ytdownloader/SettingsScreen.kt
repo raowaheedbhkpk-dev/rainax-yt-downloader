@@ -60,8 +60,8 @@ import androidx.compose.ui.viewinterop.AndroidView
  * Every value is read straight from AppPrefs when the screen is made and saved the moment it changes. There is
  * no "put the old screen back" step any more, so nothing can replay an old switch or chip on top of the saved
  * choice: the cause of the settings that seemed to reset themselves after a theme or colour change.
- * The look is the same Cinema Pro page as before: big title with an accent bar, quick tiles, the appearance
- * card, gold chapter labels and one clean row per option.
+ * The look (v19.7, "S1"): iOS Settings: a large title, a soft search box, Appearance as one segmented
+ * switch, and every option in white rounded groups with a small icon box.
  */
 
 /** One option row: a title, a short line, and what sits at its end. */
@@ -105,7 +105,6 @@ internal fun SettingsScreen(act: MainActivity) {
     var autoplay by remember(tick) { mutableStateOf(AppPrefs.feedAutoplay(act).let { if (it in 0..2) it else 2 }) }
     var themeMode by remember(tick) { mutableStateOf(AppPrefs.themeMode(act)) }
     var query by remember { mutableStateOf("") }
-    var allAccents by remember { mutableStateOf(false) }
 
     // folder, "All files access" and the last MP3 note change outside this screen (MainActivity.renderFolder)
     val folder = remember(tick) { FileStore.describe(act) }
@@ -301,48 +300,6 @@ private fun IconBox(icon: Int) {
     Box(Modifier.padding(end = 14.dp).size(30.dp).clip(RoundedCornerShape(8.dp)).background(rx.text), contentAlignment = Alignment.Center) {
         Image(painterResource(icon), null, Modifier.size(17.dp), colorFilter = ColorFilter.tint(rx.bg))
     }
-}
-
-/** A quick tile: filled with the accent when on, the plain surface with a thin frame when off. */
-@Composable
-private fun QuickTile(modifier: Modifier, icon: Int, title: String, prefix: String, on: Boolean, toggle: () -> Unit) {
-    val rx = LocalRx.current
-    val shape = RoundedCornerShape(12.dp)
-    val fg = if (on) rx.onAccent else rx.text
-    Column(
-        modifier.padding(4.dp).height(80.dp)
-            .background(if (on) rx.accent else rx.surface, shape)
-            .clickable(onClick = toggle)
-            .semantics { contentDescription = "$title, ${if (on) "on" else "off"}" }
-            .padding(16.dp)
-    ) {
-        Image(painterResource(icon), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(fg))
-        Spacer(Modifier.weight(1f))
-        Text(title, color = fg, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(prefix + if (on) "On" else "Off", color = if (on) rx.onAccent.copy(alpha = 0.75f) else rx.text2,
-            fontSize = 12.sp, fontFamily = RxFonts.body, maxLines = 1)
-    }
-}
-
-/** One accent ring (the same drawn ring as the full grid). */
-@Composable
-private fun Swatch(act: MainActivity, id: Int, cur: Int, rx: RxColors) {
-    val acc = Accents.of(id)
-    AndroidView(
-        factory = { c ->
-            val hole = android.graphics.Color.argb(
-                (rx.surface.alpha * 255).toInt(), (rx.surface.red * 255).toInt(),
-                (rx.surface.green * 255).toInt(), (rx.surface.blue * 255).toInt()
-            )
-            AccentSwatch(c, androidx.core.content.ContextCompat.getColor(c, acc.color), hole).apply {
-                chosen = id == cur
-                contentDescription = acc.name + if (id == cur) ", chosen" else ""
-                setOnClickListener { if (id != cur) { chosen = true; act.chooseAccent(id) } }
-            }
-        },
-        modifier = Modifier.size(44.dp)
-    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

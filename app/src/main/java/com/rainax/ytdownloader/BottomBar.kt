@@ -82,90 +82,12 @@ internal fun BottomBar(ui: NavUi, pick: (Int) -> Unit) {
 }
 
 @Composable
-private fun OldBottomBar(ui: NavUi, pick: (Int) -> Unit) {
-    val rx = LocalRx.current
-    val ctx = LocalContext.current
-    val strip = if (AppPrefs.themeMode(ctx) == 3) Color.Black else rx.bg
-    Box(Modifier.fillMaxWidth().height(66.dp).background(strip)) {
-        Box(Modifier.fillMaxWidth().height(0.7.dp).background(rx.divider))
-        // on wide screens the buttons stay close together (a phone-like width)
-        BoxWithConstraints(Modifier.align(Alignment.TopCenter).widthIn(max = 560.dp).fillMaxWidth().height(66.dp)) {
-            val slot = maxWidth / TABS.size
-            val density = LocalDensity.current
-            val index = TABS.indexOfFirst { it.id == ui.selected }.coerceAtLeast(0)
-            val target = with(density) { (slot * index + slot / 2 - 14.dp).toPx() }
-            val x = remember { Animatable(target) }
-            LaunchedEffect(target) { x.animateTo(target, tween(320, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) }
-            Row(Modifier.fillMaxSize()) {
-                TABS.forEach { t ->
-                    Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                        if (t.id == R.id.nav_social) Fab(ui) { pick(t.id) } else Tab(ui, t) { pick(t.id) }
-                    }
-                }
-            }
-            // the red bar above the chosen tab (not above the "+", which is red itself)
-            if (ui.selected != R.id.nav_social) {
-                Box(Modifier.offset { IntOffset(x.value.roundToInt(), 0) }.width(28.dp).height(3.dp).background(rx.accent))
-            }
-        }
-    }
-}
-
-@Composable
 private fun Bounce(ui: NavUi, id: Int): Float {
     val s = remember { Animatable(1f) }
     LaunchedEffect(ui.tapCount) {
         if (ui.tapCount > 0 && ui.tapped == id) { s.animateTo(0.86f, tween(90)); s.animateTo(1f, tween(180)) }
     }
     return s.value
-}
-
-@Composable
-private fun Tab(ui: NavUi, t: NavTab, onClick: () -> Unit) {
-    val rx = LocalRx.current
-    val on = ui.selected == t.id
-    val color = if (on) rx.text else rx.text2
-    val label = t.label
-    Column(
-        Modifier.fillMaxSize().scale(Bounce(ui, t.id))
-            .clickable(remember { MutableInteractionSource() }, null, onClick = onClick)
-            .semantics { contentDescription = if (t.id == R.id.nav_subs) "Subscriptions" else label }
-            .padding(top = 9.dp, bottom = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
-            val pic = ui.avatar
-            if (t.id == R.id.nav_downloads && pic != null) {
-                // signed in: your round profile picture, with a ring on the chosen tab
-                Box(Modifier.size(26.dp).clip(CircleShape).background(if (on) rx.text else Color.Transparent).padding(if (on) 1.5.dp else 0.dp)) {
-                    RxNetImage(pic, Modifier.fillMaxSize().clip(CircleShape), circle = true, widthPx = 160)
-                }
-            } else {
-                Image(painterResource(t.icon), null, Modifier.size(24.dp), colorFilter = ColorFilter.tint(color))
-            }
-            if (t.id == R.id.nav_downloads && ui.badge > 0) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp).size(16.dp).background(rx.accent, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(if (ui.badge > 99) "99+" else ui.badge.toString(), color = Color.White, fontSize = 9.sp, lineHeight = 9.sp)
-                }
-            }
-        }
-        Text(t.label, Modifier.padding(top = 4.dp), color = color, fontSize = 10.sp, letterSpacing = 0.em,
-            fontFamily = RxFonts.body, maxLines = 1)
-    }
-}
-
-@Composable
-private fun Fab(ui: NavUi, onClick: () -> Unit) {
-    Box(
-        Modifier.size(48.dp).scale(Bounce(ui, R.id.nav_social)).rxDrawableBg(R.drawable.bg_nav_fab)
-            .clickable(onClick = onClick).semantics { contentDescription = "Add: download from a link" },
-        contentAlignment = Alignment.Center
-    ) {
-        Image(painterResource(R.drawable.ic_nav_plus), null, Modifier.size(24.dp))
-    }
 }
 
 /** The app-update pill above the bottom bar (Compose; it replaced the views in activity_main.xml). */
@@ -197,23 +119,23 @@ internal fun UpdatePill(ui: UpdatePillUi) {
             Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
                 val gold = androidx.compose.ui.res.colorResource(R.color.rx_cinema_gold)
                 val track = androidx.compose.ui.res.colorResource(R.color.rx_cinema_track)
-                if (ui.done) Box(Modifier.size(9.dp).background(LocalRx.current.accent))
+                if (ui.done) Box(Modifier.size(9.dp).background(Color.White, CircleShape))
                 else if (ui.progress in 0..100) androidx.compose.material3.CircularProgressIndicator(
                     progress = { ui.progress / 100f }, modifier = Modifier.size(28.dp), color = gold, trackColor = track, strokeWidth = 3.dp
                 )
                 else androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), color = gold, trackColor = track, strokeWidth = 3.dp)
             }
             Column(Modifier.padding(start = 10.dp)) {
-                Text(ui.title, color = Color.White, fontSize = 14.sp, fontFamily = RxFonts.display, maxLines = 1)
+                Text(ui.title, color = Color.White, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
                 Text(ui.sub, Modifier.widthIn(max = 170.dp), color = androidx.compose.ui.res.colorResource(R.color.rx_cinema_text3), fontSize = 10.sp,
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             Box(
-                Modifier.padding(start = 12.dp).height(34.dp).background(LocalRx.current.accent).clickable { ui.onAction() }
+                Modifier.padding(start = 12.dp).height(34.dp).clip(CircleShape).background(Color.White).clickable { ui.onAction() }
                     .padding(horizontal = 14.dp).alpha(if (ui.actionOn) 1f else 0.35f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(ui.action, color = LocalRx.current.onAccent, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                Text(ui.action, color = Color.Black, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     letterSpacing = 0.em)
             }
         }

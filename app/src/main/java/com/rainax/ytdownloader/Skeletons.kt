@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -48,37 +49,22 @@ private fun Block(modifier: Modifier, shape: Shape = RoundedCornerShape(12.dp)) 
 private fun Line(width: Dp?, height: Dp, modifier: Modifier = Modifier) =
     Block((if (width == null) modifier.fillMaxWidth() else modifier.width(width)).height(height))
 
-/** Placeholders for Home: the magazine (cover, section, Top 5) or a list of big video cards. */
+/** Placeholders for Home: a list of big white video cards. */
 @Composable
-internal fun FeedSkeleton(magazine: Boolean) {
+internal fun FeedSkeleton() {
+    // the shape of Home's white video cards (v20.0)
     val a = pulse()
-    Column(Modifier.fillMaxSize().alpha(a)) {
-        if (magazine) {
-            Block(Modifier.fillMaxWidth().aspectRatio(4f / 5f))
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 10.dp)) {
-                Line(80.dp, 10.dp)
-                Line(200.dp, 22.dp, Modifier.padding(top = 6.dp))
-            }
-            repeat(4) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Block(Modifier.size(28.dp, 40.dp))
-                    Block(Modifier.padding(start = 12.dp).size(120.dp, 68.dp))
+    val rx = LocalRx.current
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+    Column(Modifier.fillMaxSize().alpha(a).padding(top = 4.dp)) {
+        repeat(4) {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp).fillMaxWidth().clip(shape).background(rx.surface)) {
+                Block(Modifier.fillMaxWidth().aspectRatio(16f / 9f), androidx.compose.ui.graphics.RectangleShape)
+                Row(Modifier.fillMaxWidth().padding(start = 14.dp, top = 12.dp, end = 56.dp, bottom = 14.dp)) {
+                    Block(Modifier.size(38.dp), CircleShape)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Line(null, 14.dp)
-                        Line(100.dp, 12.dp, Modifier.padding(top = 8.dp))
-                    }
-                }
-            }
-        } else {
-            repeat(5) {
-                Column(Modifier.padding(bottom = 18.dp)) {
-                    Block(Modifier.fillMaxWidth().aspectRatio(16f / 9f))
-                    Row(Modifier.fillMaxWidth().padding(start = 12.dp, top = 12.dp, end = 56.dp)) {
-                        Block(Modifier.size(36.dp), CircleShape)
-                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Line(null, 14.dp)
-                            Line(160.dp, 12.dp, Modifier.padding(top = 8.dp))
-                        }
+                        Line(160.dp, 12.dp, Modifier.padding(top = 8.dp))
                     }
                 }
             }

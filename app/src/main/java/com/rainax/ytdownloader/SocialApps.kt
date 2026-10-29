@@ -67,14 +67,7 @@ object SocialApps {
         return null
     }
 
-    /** Shows [app] on a badge: its real icon when installed (no text), else its coloured tag with the short name. */
-    fun showOn(badge: android.widget.TextView, app: App) {
-        val real = icon(badge.context, app)
-        badge.background = real ?: badge(app, badge.context)
-        badge.text = if (real != null) "" else app.short
-    }
-
-    /** The tag (app not installed): the app's colours as a soft diagonal blend, square like Cinema Pro. */
+    /** The tag (app not installed): the app's colours as a soft diagonal blend, with soft round corners. */
     fun badge(app: App, context: Context): GradientDrawable =
         GradientDrawable(GradientDrawable.Orientation.TL_BR, if (app.colors.size == 1) intArrayOf(app.colors[0], app.colors[0]) else app.colors).apply {
             shape = GradientDrawable.RECTANGLE

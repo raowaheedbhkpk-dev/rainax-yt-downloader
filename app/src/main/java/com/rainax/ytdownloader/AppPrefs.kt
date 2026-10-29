@@ -11,7 +11,6 @@ object AppPrefs {
     fun maxParallel(c: Context) = p(c).getInt("max_parallel", 3)
     fun setMaxParallel(c: Context, v: Int) = p(c).edit().putInt("max_parallel", v).apply()
 
-
     /** Autoplay in feed: 2 = always, 1 = on Wi-Fi only, 0 = off. */
     fun feedAutoplay(c: Context) = p(c).getInt("feed_autoplay", 2)
     fun setFeedAutoplay(c: Context, v: Int) = p(c).edit().putInt("feed_autoplay", v).apply()
@@ -74,15 +73,9 @@ object AppPrefs {
     fun backgroundPlay(c: Context) = p(c).getBoolean("bg_play", true)
     fun setBackgroundPlay(c: Context, v: Boolean) = p(c).edit().putBoolean("bg_play", v).apply()
 
-    /** 0 = follow the phone, 1 = light, 2 = dark, 3 = AMOLED black */
     /** 0 System, 1 Light, 2 Dark (v19.2: AMOLED, the old 3, is now just Dark). */
     fun themeMode(c: Context) = p(c).getInt("theme_mode", 0).let { if (it == 3) 2 else it }
     fun setThemeMode(c: Context, v: Int) = p(c).edit().putInt("theme_mode", v).apply()
-
-    /** Folder chosen by the user (a document-tree Uri), or empty for the default Downloads/rainax-yt-downloader. */
-    fun saveTree(c: Context) = p(c).getString("save_tree", "").orEmpty()
-    fun setSaveTree(c: Context, v: String) = p(c).edit().putString("save_tree", v).apply()
-
 
     fun autoRetry(c: Context) = p(c).getBoolean("auto_retry", true)
     fun setAutoRetry(c: Context, v: Boolean) = p(c).edit().putBoolean("auto_retry", v).apply()
@@ -101,7 +94,7 @@ object AppPrefs {
 
     /** Offer to download video links copied in other apps (on by default). */
     /** Video page: soft glow in the video's colours below the player (dark theme), like YouTube. */
-    /** Settings › Accent: 0 film red, 1 gold, 2 teal, 3 purple. */
+    /** The old accent choice (since v19.2 always 0; kept so the app icon goes back to the normal one). */
     fun accent(c: Context) = p(c).getInt("accent", 0)
     fun setAccent(c: Context, v: Int) = p(c).edit().putInt("accent", v).apply()
 

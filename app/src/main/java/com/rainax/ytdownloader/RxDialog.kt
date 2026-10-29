@@ -11,9 +11,8 @@ import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
- * Every confirmation box in the app, in the "Cinema Pro" look: a short red bar, a small gold label
- * (CONFIRM for questions) and the title in big Oswald capitals, like a scene title in a film.
- * Buttons, corners and the dark dim come from ThemeOverlay.Rainax.Dialog.
+ * Every confirmation box in the app: the title in bold Plus Jakarta Sans (v19.9: the Cinema bar and label
+ * above it are gone). Buttons, corners, the dim and the blur come from ThemeOverlay.Rainax.Dialog.
  */
 class RxDialogBuilder(
     context: Context,
@@ -34,27 +33,15 @@ class RxDialogBuilder(
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(24f), dp(24f), dp(24f), dp(6f))
             }
-            box.addView(View(ctx).apply {
-                setBackgroundColor(Ui.accent(ctx))
-            }, LinearLayout.LayoutParams(dp(40f), dp(3f)))
-            box.addView(TextView(ctx).apply {
-                text = if (title.trim().endsWith("?")) "Confirm" else "RAINAX Tube"
-                setTextColor(ContextCompat.getColor(ctx, R.color.rx_gold))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                typeface = Typeface.DEFAULT_BOLD
-                letterSpacing = 0f
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(14f) })
             box.addView(TextView(ctx).apply {
                 text = title
                 setTextColor(ContextCompat.getColor(ctx, R.color.rx_text))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
-                typeface = runCatching { ResourcesCompat.getFont(ctx, R.font.rx_display) }.getOrNull() ?: Typeface.DEFAULT_BOLD
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 21f)
+                typeface = runCatching { ResourcesCompat.getFont(ctx, R.font.rx_modern_bold) }.getOrNull() ?: Typeface.DEFAULT_BOLD
                 isAllCaps = false
-                letterSpacing = 0.01f
-                setLineSpacing(0f, 1.05f)
+                setLineSpacing(0f, 1.1f)
                 isAccessibilityHeading = true
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4f) })
+            }, LinearLayout.LayoutParams(-1, -2))
             return box
         }
     }

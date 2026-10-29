@@ -47,8 +47,6 @@ class HomeScreen(
     private val feed = FeedHost(hm)
     /** The top bars, chips, suggestions, error and picks bar (Compose, HomeTop.kt). */
     private val chrome = HomeChrome()
-    /** Autoplay in feed for Home's lists. */
-    val feedPreview get() = feed.preview
 
     private fun computeTabs(): List<Pair<String, String>> =
         if (YtAccount.isSignedIn(act)) listOf(
@@ -79,13 +77,12 @@ class HomeScreen(
     /** A channel's banner, name, Subscribe and tabs (Compose, ChannelHeaderUi.kt): the top of its list. */
     private val chUi = ChannelHeaderUi()
     private val channelHeaderView = androidx.compose.ui.platform.ComposeView(act).apply {
-        setContent { RxTheme { RxModern { ChannelHeader(chUi, { toggleChannelSubscribe() }, { label -> pickChannelTab(label) }) } } }
+        setContent { RxTheme { ChannelHeader(chUi, { toggleChannelSubscribe() }, { label -> pickChannelTab(label) }) } }
     }
     private val channelAdapter = FeedModel(false, { open(it) }, { download(it) }).also { it.header = channelHeaderView }
 
     private val bigAdapter = FeedModel(true, { open(it) }, { download(it) }).also {
-        it.hero = true
-        it.hideShorts = true          // Home's tabs and magazine: videos only; Shorts live in the Shorts feed
+        it.hideShorts = true          // Home's tabs: videos only; Shorts live in the Shorts feed
     }
     private val smallAdapter = FeedModel(false, { open(it) }, { download(it) })
     /** Continue watching + Shorts, on top of the first Home tab. */
@@ -106,8 +103,6 @@ class HomeScreen(
         }
     )
     private var musicSeenVersion = -1
-    /** Soft glow at the top of the Music tab, in the colour of the song playing (like YouTube Music). */
-    private var musicGlow = androidx.core.graphics.ColorUtils.setAlphaComponent(Ui.accent(act), 0x30)
     /**
      * A list opened from the side menu, the bell or the You tab (title bar with Back):
      * "acc:<YouTube list>" (needs the account), "q:<topic search>" or "local:history".
@@ -130,57 +125,6 @@ class HomeScreen(
         listOf(channelAdapter, playlistAdapter, specialAdapter).forEach { ad ->
             ad.onMore = { item, _ -> VideoMenu.show(act, item, { download(it) }, { onAccount() }) }
         }
-        setupMagazine()
-    }
-
-    // ---------- magazine Home (first tab): chapters with their own rows ----------
-
-    private fun setupMagazine() {
-        bigAdapter.chapters = MAG_CHAPTERS
-        bigAdapter.moviesId = MAG_MOVIES
-        bigAdapter.weekStats = {
-            val w = WatchHistory.week(act)
-            val since = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
-            val dl = TaskRepository.tasks.value.count { it.status == Status.DONE && it.createdAt >= since && !it.format.startsWith(AppUpdater.TASK_PREFIX) }
-            WeekStats(w.watchedMs, w.videos, dl, w.topChannel)
-        }
-        bigAdapter.onNeedChapter = { id -> loadChapter(id) }
-        bigAdapter.onChapterMore = { id -> openTab(id) }
-    }
-
-    /** A chapter's posters: from the saved tab list when there is one, otherwise its first page. */
-    private fun loadChapter(id: String) {
-        fun pick(list: List<VideoItem>): List<VideoItem> {
-            val videos = list.filter { !it.isChannel && !it.isPlaylist && !it.isShort && !it.url.contains("/shorts/") }
-            if (id != MAG_MOVIES) return videos.take(12)
-            // the cinema: real films only (an hour or longer) and not ones almost nobody watched
-            val films = videos.filter { it.seconds >= 3600 && (it.views < 0 || it.views >= 10_000) }
-            return (if (films.size >= 4) films else videos.filter { it.seconds >= 2400 || it.seconds == 0L }).take(20)
-        }
-        val cached = vm.feedCache["tab:$id"]
-        if (cached != null) {
-            hm.post { bigAdapter.setChapter(id, pick(cached.first)) }      // never while the list lays out
-            return
-        }
-        act.lifecycleScope.launch {
-            val res = try {
-                withContext(Dispatchers.IO) { YtCatalog.kiosk(id, null) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                null
-            }
-            if (res != null && res.items.isNotEmpty()) vm.feedCache["tab:$id"] = res.items to res.next
-            hm.post { bigAdapter.setChapter(id, pick(res?.items.orEmpty())) }
-        }
-    }
-
-    /** MORE on a chapter: that chip opens (Music, Gaming...). */
-    private fun openTab(id: String) {
-        if (query != null) return
-        val i = tabs.indexOfFirst { it.second == id }
-        if (i < 0) return
-        onChip(i)
     }
 
     private val adapter get() = when {
@@ -199,14 +143,10 @@ class HomeScreen(
         val shelfHere = tabIndex == 0 && query == null && playlistUrl == null && channelUrl == null && special == null
         val wantHeader = if (shelfHere) shelf.root else null
         if (bigAdapter.header !== wantHeader) bigAdapter.header = wantHeader
-        // the first tab reads like a magazine (not in the new look: there Home is a clean list of cards)
-        bigAdapter.magazine = shelfHere && navBar == null
         if (shelfHere) shelf.refresh()
-        if (shelfHere) bigAdapter.headerEarly = shelf.hasContinue
-        // the Music tab's rows or a video list, with the Music tab's soft glow behind it
+        // the Music tab's rows or a video list
         if (isMusic) feed.showMusic(musicHome) else feed.show(adapter)
         if (isMusic != lastMusic) { lastMusic = isMusic; onMusicChanged?.invoke(isMusic) }
-        feed.glow = if (isMusic) musicGlow else null
         FeedAutoplay.refresh()
     }
     private fun fillSearch(text: String) {
@@ -301,15 +241,11 @@ class HomeScreen(
         load(reset = true)
     }
 
-    /** Pull down: a fresh list (not the saved one); a film countdown shows while it loads. */
+    /** Pull down: a fresh list (not the saved one); the round spinner shows while it loads. */
     private fun pulled() {
         run {
             feed.refreshing = true
             if (isMusic) vm.musicCache.remove(musicHome.mood.orEmpty()) else vm.feedCache.remove(cacheKey())
-            if (!isMusic && bigAdapter.magazine) {                    // the magazine's chapters come fresh too
-                (MAG_CHAPTERS.map { it.second } + MAG_MOVIES).forEach { vm.feedCache.remove("tab:$it") }
-                bigAdapter.clearChapters()
-            }
             if (!isMusic && bigAdapter.header === shelf.root) shelf.refreshShorts()      // fresh Shorts strip too
             load(reset = true, pulled = true)
         }
@@ -590,7 +526,6 @@ class HomeScreen(
     /** Music is on screen (the bottom bar's Music button lights up). */
     var onMusicChanged: ((Boolean) -> Unit)? = null
     private var lastMusic = false
-    val showingMusic get() = isMusic
 
     /** Back to the normal feed (the bottom bar's Home button, when Music was showing). */
     fun showFeed() {
@@ -722,8 +657,6 @@ class HomeScreen(
         }
     }
 
-    private fun imm() = act.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-
     // ---------- tabs and list ----------
 
     /** Filter chips: YouTube / Music on Home, Videos / Playlists for search results. */
@@ -752,16 +685,6 @@ class HomeScreen(
     }
 
     // ---------- Music tab ----------
-
-    /** The playing song's cover colour: the Music tab's glow takes it (bright and soft, for light and dark). */
-    fun musicTone(c: Int) {
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(c, hsv)
-        val glow = if (hsv[1] < 0.1f) Ui.accent(act)
-        else android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1].coerceAtMost(0.8f), 0.9f))
-        musicGlow = androidx.core.graphics.ColorUtils.setAlphaComponent(glow, 0x38)
-        if (isMusic) feed.glow = musicGlow
-    }
 
     /** The song playing in the Music player (its cover in the rows shows the equalizer). */
     fun musicNowPlaying(url: String?) = musicHome.setNowPlaying(url)
@@ -870,7 +793,7 @@ class HomeScreen(
             if (cached != null) {
                 feed.refreshing = false
                 // the saved list (after a theme / accent change the screen is rebuilt and shows it at once):
-                // set the magazine, shelf and adapter first, or Home fell back to the old "Top pick" layout
+                // set the shelf and adapter first
                 applyListAdapter()
                 a.submit(cached.first)
                 next = cached.second
@@ -967,8 +890,7 @@ class HomeScreen(
     /** Grey placeholder rows while the first page loads (feels faster than a spinner). */
     private fun showSkeleton() {
         chrome.loading = false
-        feed.showSkeleton(navBar == null && adapter === bigAdapter && tabIndex == 0 && query == null && playlistUrl == null &&
-            channelUrl == null && special == null)
+        feed.showSkeleton()
     }
 
     /** Signed in or out: new chips and lists. */
@@ -1011,17 +933,6 @@ class HomeScreen(
     private companion object {
         const val FOR_YOU = "acc:FEwhat_to_watch"
 
-        /** Magazine Home chapters (title to list id): the same lists as their chips. */
-        val MAG_CHAPTERS = listOf(
-            "Music" to YtCatalog.MUSIC,
-            "Gaming" to "q:gaming",
-            "News" to "q:news today",
-            "Cricket" to "q:cricket highlights",
-            "Comedy" to "q:comedy"
-        )
-
-        /** The magazine's Movies section: the same list as the Movies chip. */
-        const val MAG_MOVIES = "q:full movie"
         /** The bell's list (YouTube's notifications, recent ones only). */
         const val NOTIFICATIONS = "acc:notifications"
     }

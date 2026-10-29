@@ -76,7 +76,7 @@ class NotificationsPage(
     private val open: (VideoItem) -> Unit,
     private val download: (VideoItem) -> Unit
 ) {
-    private val dialog = androidx.activity.ComponentDialog(act, if (AppPrefs.themeMode(act) == 3) R.style.Theme_Rainax_Page_Amoled else R.style.Theme_Rainax_Page)
+    private val dialog = androidx.activity.ComponentDialog(act, R.style.Theme_Rainax_Page)
     private val view = androidx.compose.ui.platform.ComposeView(act)
     private val all = mutableListOf<YtAccount.Notif>()
     private var next: String? = null

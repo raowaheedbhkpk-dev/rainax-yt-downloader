@@ -119,7 +119,6 @@ class LibraryScreen(
     var onMoveToPrivate: (DownloadTask) -> Unit = {}
 
     val mode get() = s.libMode
-    val showingDownloads get() = s.libMode == 0
 
     fun setMode(index: Int) {
         if (s.libMode == index) return

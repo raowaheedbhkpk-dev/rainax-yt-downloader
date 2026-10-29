@@ -27,26 +27,6 @@ object Ui {
     }
 
     /**
-     * Makes a small button easier to hit: its touch area grows to at least [minDp] square (the picture stays
-     * the same size). Uses the parent's TouchDelegate, so it suits one small button per parent.
-     */
-    fun expandTouch(v: android.view.View, minDp: Int = 48) {
-        val min = (minDp * v.resources.displayMetrics.density).toInt()
-        fun apply() {
-            val parent = v.parent as? android.view.View ?: return
-            val r = android.graphics.Rect()
-            v.getHitRect(r)
-            if (r.isEmpty) return
-            r.inset(-((min - r.width()) / 2).coerceAtLeast(0), -((min - r.height()) / 2).coerceAtLeast(0))
-            parent.touchDelegate = android.view.TouchDelegate(r, v)
-        }
-        // worked out again whenever the button is laid out (it may start hidden or move)
-        v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> apply() }
-        v.post { apply() }
-    }
-
-
-    /**
      * How big everything is drawn, worked out from the screen itself (no setting): roomy screens (Pixel 8:
      * about 411 × 914 dp, tablets) keep the phone's own size; narrow or short ones (HD phones like the itel A70:
      * about 360 × 800 dp) are drawn a little smaller, so text isn't cut and buttons at the bottom stay on screen.
@@ -87,20 +67,6 @@ object Ui {
         return if (change) over else null
     }
 
-    /** YouTube-style Subscribe button: solid when not subscribed, grey "Subscribed" when subscribed. */
-    fun subscribeButton(b: MaterialButton, subscribed: Boolean) {
-        val ctx = b.context
-        if (subscribed) {
-            b.text = "Subscribed"
-            b.backgroundTintList = ColorStateList.valueOf(MaterialColors.getColor(b, R.attr.rxSurfaceAlt))
-            b.setTextColor(ContextCompat.getColor(ctx, R.color.rx_text))
-        } else {
-            b.text = "Subscribe"
-            b.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.rx_text))
-            b.setTextColor(MaterialColors.getColor(b, R.attr.rxBg))
-        }
-    }
-
     /**
      * Switches, chips and text boxes under [v] are filled by the app, never by Android's "put the screen back"
      * after a theme or colour change. That replay matched views by number; chips made in code get new numbers
@@ -118,18 +84,8 @@ object Ui {
     /** The accent colour itself (right for light and dark; works with any context, services too). */
     fun accent(c: android.content.Context): Int = ContextCompat.getColor(c, accentRes(c))
 
-    /** The accent for small text (film red is a touch lighter in the dark theme so it stays readable). */
+    /** The accent for small text (black in light, white in dark). */
     fun accentText(c: android.content.Context): Int =
         ContextCompat.getColor(c, R.color.rx_primary_text)
 
-    /** Every screen: buttons, bars, chips and switches take the chosen accent (?attr/rxAccent). */
-    fun applyAccent(a: android.app.Activity) {
-        // v19.2: black and white only; the theme's own colours are used (no accent overlay)
-    }
-
-    /** Like / dislike / save pill: red icon when active. */
-    fun toggleButton(b: MaterialButton, active: Boolean) {
-        val color = if (active) Ui.accent(b.context) else androidx.core.content.ContextCompat.getColor(b.context, R.color.rx_text)
-        b.iconTint = ColorStateList.valueOf(color)
-    }
 }
