@@ -115,6 +115,13 @@ internal fun MainActivity.extractUrls(text: String): List<String> =
 
 /** Links shared from other apps (Share > RAINAX). */
 internal fun MainActivity.handleIntent(intent: Intent?) {
+    // a tab tapped on the Shorts screen's tab bar (Shorts closes, this place opens)
+    val nav = intent?.getIntExtra(EXTRA_NAV, 0) ?: 0
+    if (nav != 0) {
+        intent?.removeExtra(EXTRA_NAV)
+        selectNav(nav)
+        return
+    }
     // "N new WhatsApp statuses saved" tapped: the Social page at the status saver
     if (intent?.getBooleanExtra(StatusAutoSave.EXTRA_OPEN_STATUS, false) == true) {
         intent.removeExtra(StatusAutoSave.EXTRA_OPEN_STATUS)
@@ -480,3 +487,6 @@ internal fun MainActivity.showDownloadSheet(
     }
     dialog.show()
 }
+
+/** Intent extra: the bottom-bar place to open (from the Shorts screen's tab bar). */
+internal const val EXTRA_NAV = "rx_nav"

@@ -355,7 +355,7 @@ class MainActivity : AppCompatActivity() {
         val p = YtAccount.profile(this)
         val view = androidx.compose.ui.platform.ComposeView(this)
         view.setContent {
-            RxTheme { AccountSheet(p?.name ?: "Signed in", p?.handle, p?.avatar) { dialog.dismiss(); signOut() } }
+            RxTheme(glass = true) { AccountSheet(p?.name ?: "Signed in", p?.handle, p?.avatar) { dialog.dismiss(); signOut() } }
         }
         dialog.setContentView(view)
         dialog.show()
@@ -903,7 +903,7 @@ class MainActivity : AppCompatActivity() {
                 b.root.postDelayed({ closeExplore(); e.action() }, 140)
             }
         )
-        b.explore.setContent { RxTheme { SideMenu(menu, actions) } }
+        b.explore.setContent { RxTheme(glass = true) { SideMenu(menu, actions) } }
         setMenuActive("Home")
     }
 

@@ -96,7 +96,7 @@ object PicksSheet {
         dialog.setOnDismissListener { Picks.unlisten(listener) }
         val view = androidx.compose.ui.platform.ComposeView(act)
         view.setContent {
-            RxTheme {
+            RxTheme(glass = true) {
                 PicksList(items, clear = { Picks.clear() }, remove = { Picks.toggle(it) }) {
                     val all = Picks.all()
                     dialog.dismiss()

@@ -53,4 +53,6 @@
     <!-- black and white (v19.2) -->
     <color name="rx_grad_start">#3A3A3C</color>
     <color name="rx_snack_bg">#FF3A3A3C</color>
+    <!-- see-through card for boxes (v20.2), over the blurred screen -->
+    <color name="rx_glass">#CC2C2C2E</color>
 </resources>

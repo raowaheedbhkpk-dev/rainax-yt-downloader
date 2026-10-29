@@ -127,12 +127,15 @@ fun Modifier.rxDrawableBg(id: Int): Modifier {
     }
 }
 
-/** Wrap every Compose screen in this: Material 3 in RAINAX's colours and fonts. */
+/**
+ * Wrap every Compose screen in this: Material 3 in RAINAX's colours and fonts. [glass] (sheets, popups, the side
+ * menu): the page and card colours become see-through, like the floating tab bar, over the blurred screen behind.
+ */
 @Composable
-fun RxTheme(content: @Composable () -> Unit) {
+fun RxTheme(glass: Boolean = false, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     // v19.2: every screen is in the new black-and-white look (ModernStyle.kt)
-    val rx = remember(ctx) { monoColors(RxColors.of(ctx)) }
+    val rx = remember(ctx, glass) { monoColors(RxColors.of(ctx)).let { if (glass) glassColors(it) else it } }
     val scheme = if (rx.dark) darkColorScheme(
         primary = rx.accent, onPrimary = rx.onAccent, primaryContainer = rx.accentContainer,
         background = rx.bg, onBackground = rx.text, surface = rx.surface, onSurface = rx.text,

@@ -921,7 +921,7 @@ class MusicPlayer(
                     player()?.let { p -> if (index < p.mediaItemCount && index != p.currentMediaItemIndex) p.removeMediaItem(index) }
                 }
             )
-            view.setContent { RxTheme { QueueScreen(ui, actions) } }
+            view.setContent { RxTheme(glass = true) { QueueScreen(ui, actions) } }
             dialog.setContentView(view)
             dialog.setOnDismissListener { if (queueSheet === this) queueSheet = null }
             dialog.behavior.peekHeight = (act.resources.displayMetrics.heightPixels * 0.6).toInt()

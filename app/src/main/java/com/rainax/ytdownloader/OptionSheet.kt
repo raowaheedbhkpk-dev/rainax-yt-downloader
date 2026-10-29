@@ -102,7 +102,7 @@ object RxOptions {
     fun sheet(act: AppCompatActivity, title: String, opts: List<RxOption>, expanded: Boolean = false): BottomSheetDialog {
         val dialog = RxSheetDialog(act)
         val view = ComposeView(act)
-        view.setContent { RxTheme { OptionList(title, opts) { o -> dialog.dismiss(); o.action() } } }
+        view.setContent { RxTheme(glass = true) { OptionList(title, opts) { o -> dialog.dismiss(); o.action() } } }
         dialog.setContentView(view)
         if (expanded) {
             dialog.behavior.skipCollapsed = true

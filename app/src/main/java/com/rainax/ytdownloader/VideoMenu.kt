@@ -86,7 +86,7 @@ object VideoMenu {
                 say(act, if (!ok) "Couldn't change $where. Try again" else if (want) "Saved to $where" else "Removed from $where")
             }
         }
-        view.setContent { RxTheme { SavePlaylistSheet(ui, { toggle(it) }, { newPlaylist(act, videoId) { dialog.dismiss() } }) } }
+        view.setContent { RxTheme(glass = true) { SavePlaylistSheet(ui, { toggle(it) }, { newPlaylist(act, videoId) { dialog.dismiss() } }) } }
         dialog.setContentView(view)
         dialog.show()
         act.lifecycleScope.launch {

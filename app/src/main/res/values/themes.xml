@@ -183,8 +183,8 @@
     </style>
 
     <style name="Widget.Rainax.Dialog" parent="MaterialAlertDialog.Material3">
-        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Sharp</item>
-        <item name="backgroundTint">?attr/rxSurface</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Large</item>
+        <item name="backgroundTint">@color/rx_glass</item>
         <item name="backgroundInsetStart">20dp</item>
         <item name="backgroundInsetEnd">20dp</item>
     </style>
@@ -249,7 +249,8 @@
     </style>
 
     <style name="Widget.Rainax.BottomSheet" parent="Widget.Material3.BottomSheet">
-        <item name="backgroundTint">?attr/rxSurface</item>
+        <!-- see-through: each sheet's own see-through colour shows over the blurred screen (v20.2) -->
+        <item name="backgroundTint">@android:color/transparent</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Rainax.Sheet</item>
     </style>
 

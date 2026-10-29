@@ -83,7 +83,7 @@ internal fun MainActivity.showThemePopup(anchor: View) {
     val view = androidx.compose.ui.platform.ComposeView(this)
     val mode = AppPrefs.themeMode(this)
     view.setContent {
-        RxTheme {
+        RxTheme(glass = true) {
             ThemeMenu(mode, pick = { m -> dialog.dismiss(); chooseTheme(m) })
         }
     }

@@ -142,7 +142,7 @@ object DlSheet {
     fun create(act: AppCompatActivity, ui: DlSheetUi, a: DlSheetActions): Pair<BottomSheetDialog, ComposeView> {
         val dialog = RxSheetDialog(act)
         val view = ComposeView(act)
-        view.setContent { RxTheme { DownloadSheet(ui, a) } }
+        view.setContent { RxTheme(glass = true) { DownloadSheet(ui, a) } }
         dialog.setContentView(view)
         dialog.behavior.skipCollapsed = true
         dialog.setOnShowListener {
@@ -172,7 +172,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
 
     Column(
         Modifier.fillMaxWidth().heightIn(min = sheetH).height(sheetH)
-            .background(colorResource(R.color.dl_bg_top))
+            .background(colorResource(R.color.dl_bg_top).copy(alpha = 0.82f))       // see-through, like the tab bar
             .nestedScroll(rememberNestedScrollInteropConnection())
     ) {
         // handle
@@ -262,7 +262,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
         // the bar: what is selected, and DOWNLOAD
         Box(Modifier.fillMaxWidth().height(1.dp).background(colorResource(R.color.dl_bar_line)))
         Row(
-            Modifier.fillMaxWidth().background(colorResource(R.color.dl_bar_bg))
+            Modifier.fillMaxWidth()
                 .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

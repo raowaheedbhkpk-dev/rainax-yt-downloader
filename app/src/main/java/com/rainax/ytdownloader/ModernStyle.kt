@@ -68,3 +68,13 @@ fun rxHeadCase(s: String): String = s
 
 /** Cards and pictures: soft rounded corners. */
 fun rxShape(radius: Int = 16): Shape = RoundedCornerShape(radius.dp)
+
+/** See-through page and surface colours (v20.2) for sheets, popups and the side menu, like the floating tab bar. */
+fun glassColors(rx: RxColors): RxColors {
+    val a = if (rx.dark) 0.80f else 0.82f
+    return RxColors(
+        bg = rx.bg.copy(alpha = a), surface = rx.surface.copy(alpha = a), card = rx.card, text = rx.text, text2 = rx.text2,
+        divider = rx.divider, accent = rx.accent, accentText = rx.accentText, accentContainer = rx.accentContainer,
+        onAccent = rx.onAccent, outline = rx.outline, surfaceAlt = rx.surfaceAlt, gold = rx.gold, dark = rx.dark
+    )
+}

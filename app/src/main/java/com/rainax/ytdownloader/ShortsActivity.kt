@@ -182,7 +182,13 @@ class ShortsActivity : AppCompatActivity() {
             dislike = { rate(it.url, "DISLIKE") },
             comments = { CommentsSheet(this, it.url, { askSignIn() }).show() },
             download = { chooseDownload(it) },
-            share = { share(it) }
+            share = { share(it) },
+            nav = { id ->
+                // back to the main screen at that place (it is already open underneath)
+                startActivity(Intent(this, MainActivity::class.java).putExtra(EXTRA_NAV, id)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                finish()
+            }
         )
         setContent { RxTheme { ShortsScreen(ui, playerView, actions) } }
         if (items.isEmpty()) loadMore()

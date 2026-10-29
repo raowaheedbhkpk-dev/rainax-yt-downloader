@@ -77,7 +77,9 @@ class ShortsActions(
     val dislike: (VideoItem) -> Unit,
     val comments: (VideoItem) -> Unit,
     val download: (VideoItem) -> Unit,
-    val share: (VideoItem) -> Unit
+    val share: (VideoItem) -> Unit,
+    /** A tab on the floating tab bar (Home, Music, You or +). */
+    val nav: (Int) -> Unit = {}
 )
 
 @Composable
@@ -103,6 +105,11 @@ internal fun ShortsScreen(ui: ShortsUi, playerView: android.view.View, a: Shorts
             }
             Text("Shorts", Modifier.padding(start = 4.dp), color = Color.White, fontSize = 20.sp, fontFamily = RxFonts.display,
                 letterSpacing = 0.02.em)
+        }
+        // the same floating tab bar as the rest of the app (Shorts chosen): tap another place to go there
+        val nav = remember { NavUi().apply { selected = R.id.nav_shorts } }
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding()) {
+            FloatingTabBar(nav) { id -> if (id != R.id.nav_shorts) a.nav(id) }
         }
     }
 }
@@ -160,7 +167,8 @@ private fun ShortPage(ui: ShortsUi, item: VideoItem, index: Int, playerView: and
         val mine = id?.let { ui.rating[it] }
         val accent = LocalRx.current.accent
         Row(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 10.dp, bottom = 20.dp),
+            // above the floating tab bar
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 10.dp, bottom = 100.dp),
             verticalAlignment = Alignment.Bottom
         ) {
             Column(Modifier.weight(1f).padding(end = 12.dp)) {

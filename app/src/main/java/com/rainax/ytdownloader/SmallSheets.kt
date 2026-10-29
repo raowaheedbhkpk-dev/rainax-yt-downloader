@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -147,7 +148,8 @@ private fun Stat(value: String, label: String, modifier: Modifier) {
 @Composable
 internal fun ThemeMenu(mode: Int, pick: (Int) -> Unit) {
     val rx = LocalRx.current
-    Column(Modifier.width(240.dp).rxDrawableBg(R.drawable.bg_theme_popup).padding(vertical = 8.dp)) {
+    Column(Modifier.width(240.dp).clip(RoundedCornerShape(18.dp)).background(rx.surface)
+        .border(0.5.dp, rx.outline, RoundedCornerShape(18.dp)).padding(vertical = 8.dp)) {
         run {
             Text("Appearance", Modifier.padding(start = 16.dp, top = 8.dp, bottom = 6.dp), color = rx.text2, fontSize = 12.sp,
                 fontWeight = FontWeight.Bold, fontFamily = RxFonts.body)

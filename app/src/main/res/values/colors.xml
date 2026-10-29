@@ -109,4 +109,6 @@
     <color name="ic_launcher_plum_end">#8E2477</color>
     <color name="ic_launcher_rose_start">#D25862</color>
     <color name="ic_launcher_rose_end">#CA3843</color>
+    <!-- see-through card for boxes (v20.2), over the blurred screen -->
+    <color name="rx_glass">#D1FFFFFF</color>
 </resources>

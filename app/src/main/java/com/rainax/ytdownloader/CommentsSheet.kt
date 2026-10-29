@@ -65,7 +65,7 @@ class CommentsSheet(
             },
             canReply = { c -> full && !c.mine && (c.replyParams != null || !YtAccount.isSignedIn(act)) }
         )
-        root.setContent { RxTheme { CommentsScreen(ui, actions) } }
+        root.setContent { RxTheme(glass = true) { CommentsScreen(ui, actions) } }
         dialog.setContentView(root)
         val tall = heightPx.takeIf { it > act.resources.displayMetrics.heightPixels / 3 }
             ?: (act.resources.displayMetrics.heightPixels * 0.85).toInt()

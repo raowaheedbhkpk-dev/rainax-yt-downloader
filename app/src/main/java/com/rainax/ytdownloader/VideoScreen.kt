@@ -184,7 +184,7 @@ class VideoScreen(
             }
         }
         val view = androidx.compose.ui.platform.ComposeView(act)
-        view.setContent { RxTheme { UpNextSheet("Mix - " + d.title, sub, rows) } }
+        view.setContent { RxTheme(glass = true) { UpNextSheet("Mix - " + d.title, sub, rows) } }
         dialog.setContentView(view)
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         dialog.show()
@@ -913,7 +913,7 @@ class VideoScreen(
         val text = if (desc.isEmpty()) androidx.compose.ui.text.AnnotatedString("No description") else richDescription(desc, dialog)
         val view = androidx.compose.ui.platform.ComposeView(act)
         view.setContent {
-            RxTheme {
+            RxTheme(glass = true) {
                 DescriptionSheet(
                     d.title,
                     if (likeCount > 0) YtCatalog.count(likeCount) else if (d.likes > 0) YtCatalog.count(d.likes) else "–",

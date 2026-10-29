@@ -104,7 +104,7 @@ internal fun SideMenu(ui: SideMenuUi, a: SideMenuActions) {
         if (shown <= 0f && !ui.open) return@BoxWithConstraints
         // the dark layer behind (a tap closes)
         Box(
-            Modifier.fillMaxSize().alpha(shown).background(Color(0x80000000))
+            Modifier.fillMaxSize().alpha(shown).background(Color(0x33000000))
                 .clickable(remember { MutableInteractionSource() }, null) { a.close() }
         )
         // the card: drag it to the left to close (it follows your finger and springs back if let go early)
@@ -113,8 +113,8 @@ internal fun SideMenu(ui: SideMenuUi, a: SideMenuActions) {
             Modifier.systemBarsPadding().padding(start = 10.dp, top = 10.dp, bottom = 12.dp).width(panelW).fillMaxHeight()
                 .offset { IntOffset(shift.value.roundToInt(), 0) }
                 .graphicsLayer { alpha = 0.6f + 0.4f * shown }
-                .background(rx.bg, RoundedCornerShape(12.dp))
-                .border(1.dp, colorResource(R.color.menu_stroke), RoundedCornerShape(12.dp))
+                .background(rx.bg, RoundedCornerShape(24.dp))       // see-through (RxTheme glass), like the tab bar
+                .border(0.5.dp, colorResource(R.color.menu_stroke), RoundedCornerShape(24.dp))
                 .draggable(drag, Orientation.Horizontal, onDragStopped = { v ->
                     if (shift.value < -panelPx * 0.4f || v < -1500f) a.close()
                     else scope.launch { shift.animateTo(0f, tween(180)) }
