@@ -158,13 +158,13 @@ internal fun HomeTopBar(c: HomeChrome, a: HomeChromeActions) {
                     fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.02).em, maxLines = 1)
                 RoundTopButton("Theme", onClick = { a.theme(view) }, onPlaced = { r -> ThemeAnchor.rect = r }) {
                     Image(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_brightness), null, Modifier.size(20.dp),
-                        colorFilter = ColorFilter.tint(rx.accent))
+                        colorFilter = ColorFilter.tint(rx.accentText))
                 }
                 RoundTopButton("Search", onClick = { a.openSearch() }, onLong = { a.voice() }) {
-                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
+                    Image(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accentText))
                 }
                 RoundTopButton("Menu", onClick = { a.menu() }) {
-                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
+                    Image(painterResource(R.drawable.ic_menu), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accentText))
                 }
             }
         } else
@@ -255,7 +255,7 @@ private fun SearchBar(c: HomeChrome, a: HomeChromeActions) {
             ).padding(start = 18.dp, end = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(painterResource(R.drawable.ic_search), null, Modifier.padding(end = 10.dp).size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
+            Image(painterResource(R.drawable.ic_search), null, Modifier.padding(end = 10.dp).size(20.dp), colorFilter = ColorFilter.tint(rx.accentText))
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (c.input.text.isEmpty()) Text("Search YouTube or paste a link", color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont(),
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -296,11 +296,11 @@ internal fun HomeOverlay(c: HomeChrome, a: HomeChromeActions) {
         val err = c.error
         if (err != null && !c.suggestOpen) {
             Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(rx.accent))
+                Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(rx.accentText))
                 Text(err, Modifier.padding(top = 12.dp), color = rx.text2, fontSize = 14.sp, fontFamily = rxBodyFont(), textAlign = TextAlign.Center)
                 Button(
                     onClick = { a.retry() }, modifier = Modifier.padding(top = 16.dp), shape = rxShape(24),
-                    colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
+                    colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.accentText)
                 ) { Text("Try again", fontFamily = rxBodyFont(), fontWeight = FontWeight.Bold) }
                 if (c.errorOffline) {
                     TextButton(onClick = { a.netSettings() }) { Text("Internet settings", color = rx.accentText, fontFamily = rxBodyFont(), fontWeight = FontWeight.Bold) }

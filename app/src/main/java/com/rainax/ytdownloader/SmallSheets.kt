@@ -170,6 +170,6 @@ private fun ModeRow(icon: Int, label: String, chosen: Boolean, onClick: () -> Un
     ) {
         Image(painterResource(icon), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.text))
         Text(label, Modifier.weight(1f).padding(start = 14.dp), color = rx.text, fontSize = 15.sp, fontFamily = RxFonts.body)
-        if (chosen) Image(painterResource(R.drawable.ic_check), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accent))
+        if (chosen) Image(painterResource(R.drawable.ic_check), null, Modifier.size(20.dp), colorFilter = ColorFilter.tint(rx.accentText))
     }
 }

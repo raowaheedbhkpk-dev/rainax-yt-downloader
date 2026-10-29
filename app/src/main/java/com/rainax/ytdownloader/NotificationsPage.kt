@@ -219,14 +219,14 @@ class NotificationsPage(
                     if (m != null) {
                         Column(Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(Modifier.size(96.dp).rxDrawableBg(R.drawable.bg_welcome_circle), contentAlignment = Alignment.Center) {
-                                Image(painterResource(R.drawable.ic_bell), null, Modifier.size(44.dp), colorFilter = ColorFilter.tint(rx.accent))
+                                Image(painterResource(R.drawable.ic_bell), null, Modifier.size(44.dp), colorFilter = ColorFilter.tint(rx.accentText))
                             }
                             Text(m.first, Modifier.padding(top = 18.dp), color = rx.text, fontSize = 20.sp, fontFamily = RxFonts.display, textAlign = TextAlign.Center)
                             Text(m.second, Modifier.padding(top = 6.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, textAlign = TextAlign.Center)
                             if (m.third) {
                                 Button(
                                     onClick = { load(reset = true) }, modifier = Modifier.padding(top = 16.dp), shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
+                                    colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.accentText)
                                 ) { Text("Try again", fontFamily = RxFonts.body, fontWeight = FontWeight.Bold) }
                             }
                         }

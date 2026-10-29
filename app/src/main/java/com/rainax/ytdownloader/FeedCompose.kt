@@ -378,7 +378,7 @@ private fun WatchBar(item: VideoItem, modifier: Modifier) {
 @Composable
 private fun RoundButton(icon: Int, label: String, tint: Color, size: Int, pad: Int, bg: Int = R.drawable.bg_circle_btn, onClick: () -> Unit) {
     Box(
-        Modifier.size(size.dp).then(Modifier.clip(CircleShape).background(if (tint == LocalRx.current.accent) LocalRx.current.accentContainer else LocalRx.current.card))
+        Modifier.size(size.dp).then(Modifier.clip(CircleShape).background(if (tint == Color.White) RxRed else LocalRx.current.card))
             .clickable(onClick = onClick).semantics { contentDescription = label }.padding(pad.dp)
     ) {
         Image(painterResource(icon), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(tint))
@@ -412,7 +412,7 @@ private fun SmallVideoRow(m: FeedModel, item: VideoItem) {
                     if (on) rx.accent else rx.text, 34, 8) { picker(item) }
             }
             Spacer(Modifier.width(6.dp))
-            RoundButton(R.drawable.ic_download, "Download", rx.accent, 38, 8) { m.onDownload(item) }
+            RoundButton(R.drawable.ic_download, "Download", Color.White, 38, 8) { m.onDownload(item) }
             val menu = if (item.isChannel) null else m.onMore
             if (menu != null) {
                 Box(Modifier.padding(start = 2.dp).size(28.dp, 38.dp).clickable { menu(item, view) }.semantics { contentDescription = "More" },

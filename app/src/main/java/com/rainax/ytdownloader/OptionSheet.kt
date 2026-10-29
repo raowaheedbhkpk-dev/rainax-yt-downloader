@@ -92,7 +92,7 @@ private fun OptionRow(o: RxOption, onClick: () -> Unit) {
             Text(it, Modifier.padding(start = 12.dp), color = rx.text2, fontSize = 14.sp, fontFamily = RxFonts.body, maxLines = 1)
         }
         if (o.checked) {
-            Image(painterResource(R.drawable.ic_check), null, Modifier.padding(start = 12.dp).size(22.dp), colorFilter = ColorFilter.tint(rx.accent))
+            Image(painterResource(R.drawable.ic_check), null, Modifier.padding(start = 12.dp).size(22.dp), colorFilter = ColorFilter.tint(rx.accentText))
         }
     }
 }

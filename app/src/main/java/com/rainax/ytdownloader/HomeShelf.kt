@@ -193,7 +193,7 @@ class HomeShelf(private val act: AppCompatActivity, private val openVideo: (Vide
         Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Image(painterResource(icon), null, Modifier.padding(end = 8.dp).size(22.dp), colorFilter = ColorFilter.tint(rx.accent))
+                Image(painterResource(icon), null, Modifier.padding(end = 8.dp).size(22.dp), colorFilter = ColorFilter.tint(rx.accentText))
             }
             Text(text, color = rx.text, fontSize = 22.sp, fontFamily = ModernFonts.family, fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-0.02).em)

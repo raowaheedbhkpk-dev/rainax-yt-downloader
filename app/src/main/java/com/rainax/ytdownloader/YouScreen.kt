@@ -371,7 +371,7 @@ private fun SmallButton(label: String, modifier: Modifier, danger: Boolean = fal
         }
     } else {
         Button(onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text),
+            colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.accentText),
             contentPadding = PaddingValues(horizontal = 4.dp)) {
             Text(label, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
@@ -522,7 +522,7 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
                         verticalArrangement = Arrangement.Center) {
                         Image(painterResource(R.drawable.ic_film_reel), null, Modifier.size(26.dp).rotate(spin), colorFilter = ColorFilter.tint(Color.White))
                         Text(if (t.progress in 1..100) "${t.progress}%" else "···", Modifier.padding(top = 3.dp),
-                            color = colorResource(R.color.rx_cinema_gold), fontSize = 14.sp, fontFamily = RxFonts.display)
+                            color = Color.White, fontSize = 14.sp, fontFamily = RxFonts.display)
                     }
                 }
                 if (showCheck) {
@@ -536,11 +536,12 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
                 val live = if (t.status == Status.RUNNING) LiveStats.get(t.id) else null
                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     val pill: Pair<String, Color>? = when (t.status) {
-                        Status.RUNNING -> "Downloading" to rx.accent
-                        Status.QUEUED -> "Queued" to Color(0xFF6E6E79)
-                        Status.PAUSED -> "Paused" to Color(0xFFE08A00)
-                        Status.WAITING -> "Waiting" to Color(0xFF3D7BE0)
-                        Status.FAILED -> "Failed" to Color(0xFFD32F2F)
+                        // red only for what needs you (downloading, failed); waiting states in grey, paused in amber
+                        Status.RUNNING -> "Downloading" to rx.accentText
+                        Status.QUEUED -> "Queued" to rx.text2
+                        Status.PAUSED -> "Paused" to (if (rx.dark) Color(0xFFFFB340) else Color(0xFFB25E00))
+                        Status.WAITING -> "Waiting" to rx.text2
+                        Status.FAILED -> "Failed" to rx.accentText
                         Status.DONE -> null
                     }
                     if (pill != null && live == null) {
@@ -567,7 +568,7 @@ private fun TaskRow(act: MainActivity, s: YouState, t: DownloadTask) {
                         Status.FAILED -> "Retry"
                         Status.DONE -> "Open"
                     }
-                    Image(painterResource(icon), label, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.accent))
+                    Image(painterResource(icon), label, Modifier.size(24.dp), colorFilter = ColorFilter.tint(rx.accentText))
                 }
                 if (t.status == Status.DONE) {
                     var open by remember { mutableStateOf(false) }
@@ -783,7 +784,7 @@ private fun LibraryList(act: MainActivity, s: YouState) {
                 Button(
                     onClick = { if (files.isNotEmpty()) lib.playList(files, files.indices.random(), shuffle = true) }, enabled = on,
                     modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
+                    colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.accentText)
                 ) {
                     Image(painterResource(R.drawable.ic_shuffle), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.text))
                     Text("Shuffle", Modifier.padding(start = 8.dp), fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)

@@ -172,12 +172,12 @@ internal fun VideoCard(
             }
             Box(
                 Modifier.padding(start = 6.dp).size(36.dp).then(
-                    Modifier.clip(CircleShape).background(rx.accentContainer)
+                    Modifier.clip(CircleShape).background(RxRed)
                 ).clickable { onDownload(item) }
                     .semantics { contentDescription = "Download" }.padding(9.dp)
             ) {
-                // a soft pink round button with a red arrow (W1)
-                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.accent))
+                // red with a white arrow, like the tab bar's round +
+                Image(painterResource(R.drawable.ic_download), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(Color.White))
             }
             if (menu != null) {
                 Box(

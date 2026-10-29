@@ -352,7 +352,7 @@ private fun StatusSaverCard(act: MainActivity, st: StatusUi) {
         Button(
             onClick = { saver.saveAll() }, enabled = st.saveAllEnabled,
             modifier = Modifier.padding(top = 10.dp).fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.text)
+            colors = ButtonDefaults.buttonColors(containerColor = rx.accentContainer, contentColor = rx.accentText)
         ) {
             Image(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp), colorFilter = ColorFilter.tint(rx.text))
             Text(st.saveAllText, Modifier.padding(start = 8.dp), fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)

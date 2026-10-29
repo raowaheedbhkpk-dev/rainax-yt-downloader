@@ -167,7 +167,7 @@ class WelcomeActivity : AppCompatActivity() {
                     .background(rx.accentContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (p.tint) Image(painterResource(p.icon), null, Modifier.size(80.dp), colorFilter = ColorFilter.tint(rx.accent))
+                if (p.tint) Image(painterResource(p.icon), null, Modifier.size(80.dp), colorFilter = ColorFilter.tint(rx.accentText))
                 else Image(rxDrawable(p.icon, 80), null, Modifier.size(80.dp))      // the logo is a layer-list
             }
             Spacer(Modifier.height(40.dp))

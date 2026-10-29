@@ -117,7 +117,7 @@ internal fun UpdatePill(ui: UpdatePillUi) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-                val gold = androidx.compose.ui.res.colorResource(R.color.rx_cinema_gold)
+                val gold = RxRed
                 val track = androidx.compose.ui.res.colorResource(R.color.rx_cinema_track)
                 if (ui.done) Box(Modifier.size(9.dp).background(Color.White, CircleShape))
                 else if (ui.progress in 0..100) androidx.compose.material3.CircularProgressIndicator(

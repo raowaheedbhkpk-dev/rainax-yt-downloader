@@ -72,7 +72,8 @@ fun rxShape(radius: Int = 16): Shape = RoundedCornerShape(radius.dp)
 
 /** See-through page and surface colours (v20.2) for sheets, popups and the side menu, like the floating tab bar. */
 fun glassColors(rx: RxColors): RxColors {
-    val a = if (rx.dark) 0.80f else 0.82f
+    // nearly solid (v20.6): at 80% the words behind showed through and made menus hard to read
+    val a = if (rx.dark) 0.94f else 0.92f
     return RxColors(
         bg = rx.bg.copy(alpha = a), surface = rx.surface.copy(alpha = a), card = rx.card, text = rx.text, text2 = rx.text2,
         divider = rx.divider, accent = rx.accent, accentText = rx.accentText, accentContainer = rx.accentContainer,

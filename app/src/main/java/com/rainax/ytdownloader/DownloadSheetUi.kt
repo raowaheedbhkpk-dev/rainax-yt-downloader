@@ -172,7 +172,7 @@ private fun DownloadSheet(ui: DlSheetUi, a: DlSheetActions) {
 
     Column(
         Modifier.fillMaxWidth().heightIn(min = sheetH).height(sheetH)
-            .background(colorResource(R.color.dl_bg_top).copy(alpha = 0.82f))       // see-through, like the tab bar
+            .background(colorResource(R.color.dl_bg_top).copy(alpha = 0.94f))       // see-through, like the tab bar
             .nestedScroll(rememberNestedScrollInteropConnection())
     ) {
         // handle

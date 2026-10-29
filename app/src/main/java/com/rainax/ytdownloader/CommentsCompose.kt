@@ -224,7 +224,7 @@ internal fun CommentsScreen(ui: CommentsUi, a: CommentsActions) {
                 Modifier.padding(start = 4.dp).size(44.dp).alpha(if (ui.sending) 0.4f else 1f)
                     .clickable(enabled = !ui.sending) { a.send() }.semantics { contentDescription = "Post comment" }.padding(10.dp)
             ) {
-                Image(painterResource(R.drawable.ic_send), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.accent))
+                Image(painterResource(R.drawable.ic_send), null, Modifier.fillMaxSize(), colorFilter = ColorFilter.tint(rx.accentText))
             }
         }
 
@@ -287,7 +287,7 @@ private fun CommentRow(c: YtComments.Item, full: Boolean, a: CommentsActions) {
             }
             a.repliesLabel(c)?.let { label ->
                 Text(label, Modifier.padding(top = 6.dp).clickable { a.replies(c) }.padding(vertical = 4.dp),
-                    color = rx.accent, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)
+                    color = rx.accentText, fontSize = 14.sp, fontFamily = RxFonts.body, fontWeight = FontWeight.Bold)
             }
         }
     }
