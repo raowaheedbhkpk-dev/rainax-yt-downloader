@@ -1,0 +1,59 @@
+name: Build RAINAX for Windows
+
+# Builds the Windows installers (.msi and .exe) from desktop/.
+# Download them from the run's "Artifacts" (RAINAX-Tube-Windows). No GitHub release is made.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - ".github/workflows/windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        with:
+          gradle-version: "8.10.2"
+
+      # ffmpeg (LGPL build): joins HD picture + sound into one MP4 and makes MP3s. Shipped inside the app.
+      - name: Get ffmpeg
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\ffmpeg.zip"
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip" -OutFile $zip
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\ffmpeg" -Force
+          $exe = Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path desktop\resources\windows | Out-Null
+          Copy-Item $exe.FullName desktop\resources\windows\ffmpeg.exe
+          & desktop\resources\windows\ffmpeg.exe -hide_banner -version | Select-Object -First 1
+
+      - name: Build installers
+        working-directory: desktop
+        run: gradle packageMsi packageExe --stacktrace --no-daemon
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: RAINAX-Tube-Windows
+          path: |
+            desktop/build/compose/binaries/main/msi/*.msi
+            desktop/build/compose/binaries/main/exe/*.exe
+          if-no-files-found: error
